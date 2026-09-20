@@ -1,0 +1,11 @@
+{
+  "name": "slama-finance",
+  "private": true,
+  "packageManager": "pnpm@10.16.1",
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./api --filter ./ui dev",
+    "build": "pnpm --filter ./api build && pnpm --filter ./ui build",
+    "lint": "pnpm --filter ./api lint && pnpm --filter ./ui lint",
+    "test": "pnpm --filter ./api test && pnpm --filter ./ui test"
+  }
+}
