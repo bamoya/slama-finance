@@ -1,0 +1,379 @@
+paths:
+  /v1/clients:
+    get:
+      operationId: listClients
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - {
+            name: type,
+            in: query,
+            schema: { type: string, enum: [individual, company, all], default: all },
+          }
+        - {
+            name: status,
+            in: query,
+            schema: { type: string, enum: [active, archived, all], default: active },
+          }
+        - { name: city, in: query, schema: { type: string, maxLength: 120 } }
+        - {
+            name: balanceMin,
+            in: query,
+            schema: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' },
+          }
+        - {
+            name: balanceMax,
+            in: query,
+            schema: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' },
+          }
+        - { name: overdueOnly, in: query, schema: { type: boolean } }
+        - { name: lastActivityFrom, in: query, schema: { type: string, format: date } }
+        - { name: lastActivityTo, in: query, schema: { type: string, format: date } }
+        - {
+            name: sortBy,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [displayName, createdAt, invoiced, outstanding, lastActivity],
+                default: displayName,
+              },
+          }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          {
+            description: Client page,
+            content: { application/json: { schema: { $ref: '#/components/schemas/ClientPage' } } },
+          }
+    post:
+      operationId: createClient
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientInput' } } },
+        }
+      responses:
+        '201':
+          {
+            description: Created client,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
+          }
+  /v1/clients/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getClient
+      responses:
+        '200':
+          {
+            description: Client,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
+          }
+    patch:
+      operationId: updateClient
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientUpdate' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Updated client,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
+          }
+    delete:
+      operationId: deleteClient
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientVersion' } } },
+        }
+      responses:
+        '204': { description: Deleted unreferenced client }
+  /v1/clients/{id}/overview:
+    get:
+      operationId: getClientOverview
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          {
+            description: Client overview with permission-sensitive finance and recent activity,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/ClientOverview' } } },
+          }
+  /v1/clients/{id}/archive:
+    post:
+      operationId: archiveClient
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientVersion' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Archived client,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
+          }
+  /v1/clients/{id}/restore:
+    post:
+      operationId: restoreClient
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/ClientVersion' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Restored client,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
+          }
+components:
+  schemas:
+    ClientVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties: { expectedVersion: { type: integer, minimum: 1 } }
+    ClientInput:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          type,
+          firstName,
+          lastName,
+          legalName,
+          tradeName,
+          contactName,
+          email,
+          phone,
+          ice,
+          taxIdentifier,
+          registrationNumber,
+          registrationCity,
+          professionalTaxNumber,
+          addressLine1,
+          addressLine2,
+          city,
+          postalCode,
+          countryCode,
+          deliveryAddressLine1,
+          deliveryAddressLine2,
+          deliveryCity,
+          deliveryPostalCode,
+          deliveryCountryCode,
+          locale,
+          notes,
+        ]
+      properties:
+        type: { type: string, enum: [individual, company] }
+        firstName: { type: [string, 'null'], maxLength: 120 }
+        lastName: { type: [string, 'null'], maxLength: 120 }
+        legalName: { type: [string, 'null'], maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        contactName: { type: [string, 'null'], maxLength: 200 }
+        email: { type: [string, 'null'], format: email, maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        ice: { type: [string, 'null'], pattern: '^[0-9]{15}$' }
+        taxIdentifier: { type: [string, 'null'], maxLength: 30 }
+        registrationNumber: { type: [string, 'null'], maxLength: 50 }
+        registrationCity: { type: [string, 'null'], maxLength: 120 }
+        professionalTaxNumber: { type: [string, 'null'], maxLength: 50 }
+        addressLine1: { type: string, minLength: 1, maxLength: 250 }
+        addressLine2: { type: [string, 'null'], maxLength: 250 }
+        city: { type: string, minLength: 1, maxLength: 120 }
+        postalCode: { type: [string, 'null'], maxLength: 20 }
+        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        deliveryAddressLine1: { type: [string, 'null'], maxLength: 250 }
+        deliveryAddressLine2: { type: [string, 'null'], maxLength: 250 }
+        deliveryCity: { type: [string, 'null'], maxLength: 120 }
+        deliveryPostalCode: { type: [string, 'null'], maxLength: 20 }
+        deliveryCountryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
+        locale: { type: string, enum: [fr-MA, ar-MA] }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+    ClientUpdate:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        type: { type: string, enum: [individual, company] }
+        firstName: { type: [string, 'null'], maxLength: 120 }
+        lastName: { type: [string, 'null'], maxLength: 120 }
+        legalName: { type: [string, 'null'], maxLength: 200 }
+        tradeName: { type: [string, 'null'], maxLength: 200 }
+        contactName: { type: [string, 'null'], maxLength: 200 }
+        email: { type: [string, 'null'], format: email, maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        ice: { type: [string, 'null'], pattern: '^[0-9]{15}$' }
+        taxIdentifier: { type: [string, 'null'], maxLength: 30 }
+        registrationNumber: { type: [string, 'null'], maxLength: 50 }
+        registrationCity: { type: [string, 'null'], maxLength: 120 }
+        professionalTaxNumber: { type: [string, 'null'], maxLength: 50 }
+        addressLine1: { type: string, minLength: 1, maxLength: 250 }
+        addressLine2: { type: [string, 'null'], maxLength: 250 }
+        city: { type: string, minLength: 1, maxLength: 120 }
+        postalCode: { type: [string, 'null'], maxLength: 20 }
+        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        deliveryAddressLine1: { type: [string, 'null'], maxLength: 250 }
+        deliveryAddressLine2: { type: [string, 'null'], maxLength: 250 }
+        deliveryCity: { type: [string, 'null'], maxLength: 120 }
+        deliveryPostalCode: { type: [string, 'null'], maxLength: 20 }
+        deliveryCountryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
+        locale: { type: string, enum: [fr-MA, ar-MA] }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+    Client:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          displayName,
+          type,
+          firstName,
+          lastName,
+          legalName,
+          tradeName,
+          contactName,
+          email,
+          phone,
+          ice,
+          taxIdentifier,
+          registrationNumber,
+          registrationCity,
+          professionalTaxNumber,
+          addressLine1,
+          addressLine2,
+          city,
+          postalCode,
+          countryCode,
+          deliveryAddressLine1,
+          deliveryAddressLine2,
+          deliveryCity,
+          deliveryPostalCode,
+          deliveryCountryCode,
+          locale,
+          notes,
+          archivedAt,
+          version,
+          createdAt,
+          updatedAt,
+          createdByUserId,
+          updatedByUserId,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        type: { type: string, enum: [individual, company] }
+        firstName: { type: [string, 'null'] }
+        lastName: { type: [string, 'null'] }
+        legalName: { type: [string, 'null'] }
+        tradeName: { type: [string, 'null'] }
+        contactName: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        ice: { type: [string, 'null'] }
+        taxIdentifier: { type: [string, 'null'] }
+        registrationNumber: { type: [string, 'null'] }
+        registrationCity: { type: [string, 'null'] }
+        professionalTaxNumber: { type: [string, 'null'] }
+        addressLine1: { type: string }
+        addressLine2: { type: [string, 'null'] }
+        city: { type: string }
+        postalCode: { type: [string, 'null'] }
+        countryCode: { type: string }
+        deliveryAddressLine1: { type: [string, 'null'] }
+        deliveryAddressLine2: { type: [string, 'null'] }
+        deliveryCity: { type: [string, 'null'] }
+        deliveryPostalCode: { type: [string, 'null'] }
+        deliveryCountryCode: { type: [string, 'null'] }
+        locale: { type: string }
+        notes: { type: [string, 'null'] }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdByUserId: { type: [string, 'null'], format: uuid }
+        updatedByUserId: { type: [string, 'null'], format: uuid }
+        financialSummary:
+          {
+            type: [object, 'null'],
+            properties:
+              {
+                currencies:
+                  { type: array, items: { $ref: '#/components/schemas/ClientCurrencySummary' } },
+              },
+            required: [currencies],
+          }
+        lastActivityAt: { type: [string, 'null'], format: date-time }
+    ClientPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset, financialCurrency]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Client' } }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1 }
+        offset: { type: integer, minimum: 0 }
+        financialCurrency:
+          {
+            type: string,
+            description: Currency used by balance filters and invoiced/outstanding sorting.,
+          }
+    ClientFinancialSummary:
+      type: object
+      additionalProperties: false
+      required: [currencies]
+      properties:
+        currencies: { type: array, items: { $ref: '#/components/schemas/ClientCurrencySummary' } }
+    ClientCurrencySummary:
+      type: object
+      additionalProperties: false
+      required: [currency, invoicedAmount, receivedAmount, outstandingAmount, overdueAmount]
+      properties:
+        currency: { type: string }
+        invoicedAmount: { type: string }
+        receivedAmount: { type: string }
+        outstandingAmount: { type: string }
+        overdueAmount: { type: string }
+    ClientActivity:
+      type: object
+      additionalProperties: false
+      required: [id, type, number, status, date, amount, currency]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [estimate, delivery_note, invoice, payment] }
+        number: { type: [string, 'null'] }
+        status: { type: string }
+        date: { type: string, format: date-time }
+        amount: { type: [string, 'null'] }
+        currency: { type: [string, 'null'] }
+    ClientOverview:
+      type: object
+      additionalProperties: false
+      required: [client, financialSummary, recentActivity]
+      properties:
+        client: { $ref: '#/components/schemas/Client' }
+        financialSummary:
+          {
+            type: [object, 'null'],
+            properties:
+              {
+                currencies:
+                  { type: array, items: { $ref: '#/components/schemas/ClientCurrencySummary' } },
+              },
+            required: [currencies],
+          }
+        recentActivity: { type: array, items: { $ref: '#/components/schemas/ClientActivity' } }

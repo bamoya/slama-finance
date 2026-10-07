@@ -1,0 +1,110 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LightsailDiscoveryAndBootstrapInParis",
+      "Effect": "Allow",
+      "Action": [
+        "lightsail:GetRegions",
+        "lightsail:GetBlueprints",
+        "lightsail:GetBundles",
+        "lightsail:GetInstance",
+        "lightsail:GetInstances",
+        "lightsail:GetInstanceState",
+        "lightsail:GetInstancePortStates",
+        "lightsail:GetStaticIp",
+        "lightsail:GetStaticIps",
+        "lightsail:GetOperation",
+        "lightsail:GetOperations",
+        "lightsail:GetOperationsForResource",
+        "lightsail:AllocateStaticIp",
+        "lightsail:AttachStaticIp",
+        "lightsail:DetachStaticIp",
+        "lightsail:ReleaseStaticIp"
+      ],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "eu-west-3" } }
+    },
+    {
+      "Sid": "CreateTaggedSlamaInstance",
+      "Effect": "Allow",
+      "Action": "lightsail:CreateInstances",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "eu-west-3",
+          "aws:RequestTag/Project": "slama-finance"
+        }
+      }
+    },
+    {
+      "Sid": "TagSlamaInstanceOnCreation",
+      "Effect": "Allow",
+      "Action": "lightsail:TagResource",
+      "Resource": "arn:aws:lightsail:eu-west-3:314431539508:Instance/*",
+      "Condition": { "StringEquals": { "aws:RequestTag/Project": "slama-finance" } }
+    },
+    {
+      "Sid": "ConfigureTaggedSlamaInstance",
+      "Effect": "Allow",
+      "Action": [
+        "lightsail:PutInstancePublicPorts",
+        "lightsail:TagResource",
+        "lightsail:UntagResource"
+      ],
+      "Resource": "arn:aws:lightsail:eu-west-3:314431539508:Instance/*",
+      "Condition": { "StringEquals": { "aws:ResourceTag/Project": "slama-finance" } }
+    },
+    {
+      "Sid": "CreateSlamaBucketsInParis",
+      "Effect": "Allow",
+      "Action": "s3:CreateBucket",
+      "Resource": [
+        "arn:aws:s3:::slama-finance-media-314431539508",
+        "arn:aws:s3:::slama-finance-backups-314431539508"
+      ],
+      "Condition": { "StringEquals": { "s3:LocationConstraint": "eu-west-3" } }
+    },
+    {
+      "Sid": "ConfigureSlamaBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucket*",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetReplicationConfiguration",
+        "s3:PutBucketVersioning",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketTagging",
+        "s3:PutBucketPolicy",
+        "s3:PutEncryptionConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:s3:::slama-finance-media-314431539508",
+        "arn:aws:s3:::slama-finance-backups-314431539508"
+      ]
+    },
+    {
+      "Sid": "ManageOnlySlamaStoragePolicyDefinitions",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:ListPolicyTags",
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:TagPolicy",
+        "iam:UntagPolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::314431539508:policy/slama-finance-media-objects",
+        "arn:aws:iam::314431539508:policy/slama-finance-backups-objects"
+      ]
+    }
+  ]
+}

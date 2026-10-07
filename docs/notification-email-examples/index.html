@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slama Agricole — Exemples d’e-mails</title>
+    <style>
+      :root {
+        --gold: #8f6515;
+        --ink: #20242b;
+        --muted: #4f5661;
+        --border: #e4e7ec;
+        --surface: #ffffff;
+        --wheat: #faf3df;
+        --canvas: #f7f8fa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          15px/1.6 Arial,
+          sans-serif;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 16px;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+        margin: 8px 0 16px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 0;
+      }
+      p {
+        margin: 8px 0;
+        color: var(--muted);
+      }
+      .brand {
+        color: var(--gold);
+        font-weight: 700;
+      }
+      .instructions {
+        background: var(--wheat);
+        padding: 16px;
+        border-radius: 12px;
+        margin: 24px 0;
+      }
+      details {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        margin: 16px 0;
+        overflow: hidden;
+      }
+      summary {
+        cursor: pointer;
+        padding: 16px;
+        font-weight: 700;
+        min-height: 48px;
+      }
+      summary:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 2px;
+      }
+      .meta {
+        padding: 0 16px 16px;
+        overflow-wrap: anywhere;
+      }
+      code {
+        font-size: 13px;
+      }
+      a {
+        color: var(--gold);
+        display: inline-block;
+        padding: 8px 0;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 1040px;
+        border: 0;
+        background: var(--surface);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">SLAMA AGRICOLE</div>
+      <h1>Cinq e-mails, une même identité.</h1>
+      <p>
+        Blanc dominant, détails dorés et encarts couleur blé. Aperçus avec des données fictives,
+        rendus par le moteur d’e-mails de l’application.
+      </p>
+      <div class="instructions">
+        <strong>Utilisation</strong>
+        <p>
+          Dans Paramètres → Notifications, configurez la règle correspondante. Copiez l’objet
+          ci-dessous, puis le contenu du fichier HTML dans « Code HTML ». Vérifiez l’aperçu,
+          enregistrez et envoyez un test à votre adresse.
+        </p>
+        <p>
+          Gardez le mode HTML pour préserver cette mise en page. La conversion en édition visuelle
+          peut simplifier les styles. Aucun paramètre ni aucune règle existante n’a été modifié.
+        </p>
+      </div>
+      <details open>
+        <summary>Envoi de facture</summary>
+        <div class="meta">
+          <p><strong>Objet :</strong> Slama Agricole — Facture {{documentNumber}}</p>
+          <a href="invoice_sent.html" download>Télécharger le HTML à copier</a>
+          <p><code>invoice_sent</code></p>
+        </div>
+        <iframe
+          title="Envoi de facture"
+          sandbox=""
+          srcdoc='&lt;!doctype html&gt;&lt;html lang="fr"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;&lt;/head&gt;&lt;body style="margin:0"&gt;&lt;div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px"&gt;&lt;div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px"&gt;
+  &lt;div style="height:5px;background-color:#ad7d1d;border-radius:16px"&gt;&lt;/div&gt;
+  &lt;div style="padding:24px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:26px;font-weight:700;color:#8f6515"&gt;SLAMA&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;font-weight:700;color:#4f5661"&gt;AGRICOLE&lt;/p&gt;
+    &lt;div style="padding:24px 0 12px"&gt;
+      &lt;span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700"&gt;FACTURATION&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;h1 style="margin:0 0 20px;font-size:27px;line-height:1.25;font-weight:700;color:#20242b"&gt;Votre facture est disponible&lt;/h1&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 12px"&gt;Bonjour &lt;strong&gt;Atlas Distribution&lt;/strong&gt;,&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 24px;color:#4f5661"&gt;Merci pour votre confiance. Vous trouverez ci-dessous le récapitulatif de votre facture.&lt;/p&gt;
+    &lt;div style="padding:20px;border-radius:12px;background-color:#faf3df"&gt;
+      &lt;p style="margin:0 0 12px;margin:0 0 4px;font-size:13px;color:#8f6515"&gt;Montant de la facture&lt;/p&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:30px;line-height:1.3;font-weight:700;color:#8f6515"&gt;1 250,00 MAD&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px 0 20px"&gt;
+      &lt;table width="100%" cellpadding="0" cellspacing="0" style="max-width:100%;border-collapse:collapse;width:100%;border-collapse:collapse"&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Référence&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;FAC-2026-482931&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Date d’émission&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;04/10/2026&lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px;border:1px solid #e4e7ec;border-radius:10px;background-color:#f7f8fa"&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:13px;color:#4f5661"&gt;Le document joint reprend le détail des produits et les conditions de règlement.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p style="margin:0 0 12px;margin:0;padding:24px 0 16px;color:#4f5661"&gt;Pour toute question concernant cette facture, contactez votre interlocuteur habituel.&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-weight:700"&gt;L’équipe Slama Agricole&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;color:#4f5661"&gt;Slama Agricole · Suivi de votre relation commerciale&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:4px 0 0;font-size:11px;color:#4f5661"&gt;Message automatique. Pour toute demande, contactez votre interlocuteur habituel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;'
+        ></iframe>
+      </details>
+      <details>
+        <summary>Envoi de devis</summary>
+        <div class="meta">
+          <p><strong>Objet :</strong> Slama Agricole — Devis {{documentNumber}}</p>
+          <a href="estimate_sent.html" download>Télécharger le HTML à copier</a>
+          <p><code>estimate_sent</code></p>
+        </div>
+        <iframe
+          title="Envoi de devis"
+          sandbox=""
+          srcdoc='&lt;!doctype html&gt;&lt;html lang="fr"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;&lt;/head&gt;&lt;body style="margin:0"&gt;&lt;div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px"&gt;&lt;div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px"&gt;
+  &lt;div style="height:5px;background-color:#ad7d1d;border-radius:16px"&gt;&lt;/div&gt;
+  &lt;div style="padding:24px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:26px;font-weight:700;color:#8f6515"&gt;SLAMA&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;font-weight:700;color:#4f5661"&gt;AGRICOLE&lt;/p&gt;
+    &lt;div style="padding:24px 0 12px"&gt;
+      &lt;span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700"&gt;VOTRE PROJET&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;h1 style="margin:0 0 20px;font-size:27px;line-height:1.25;font-weight:700;color:#20242b"&gt;Votre devis est prêt&lt;/h1&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 12px"&gt;Bonjour &lt;strong&gt;Atlas Distribution&lt;/strong&gt;,&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 24px;color:#4f5661"&gt;Nous avons le plaisir de vous transmettre notre proposition. Prenez le temps de consulter le détail des produits et des tarifs.&lt;/p&gt;
+    &lt;div style="padding:20px;border-radius:12px;background-color:#faf3df"&gt;
+      &lt;p style="margin:0 0 12px;margin:0 0 4px;font-size:13px;color:#8f6515"&gt;Montant du devis&lt;/p&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:30px;line-height:1.3;font-weight:700;color:#8f6515"&gt;1 250,00 MAD&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px 0 20px"&gt;
+      &lt;table width="100%" cellpadding="0" cellspacing="0" style="max-width:100%;border-collapse:collapse;width:100%;border-collapse:collapse"&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Référence&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;DEV-2026-482931&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Date d’émission&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;04/10/2026&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Valable jusqu’au&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;04/11/2026&lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px;border:1px solid #e4e7ec;border-radius:10px;background-color:#f7f8fa"&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:13px;color:#4f5661"&gt;Ce devis est une proposition commerciale, et non une facture. Contactez-nous pour confirmer votre accord ou demander un ajustement.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p style="margin:0 0 12px;margin:0;padding:24px 0 16px;color:#4f5661"&gt;Nous restons à votre disposition pour vous accompagner dans votre commande.&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-weight:700"&gt;L’équipe Slama Agricole&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;color:#4f5661"&gt;Slama Agricole · Suivi de votre relation commerciale&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:4px 0 0;font-size:11px;color:#4f5661"&gt;Message automatique. Pour toute demande, contactez votre interlocuteur habituel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;'
+        ></iframe>
+      </details>
+      <details>
+        <summary>Confirmation de paiement</summary>
+        <div class="meta">
+          <p><strong>Objet :</strong> Slama Agricole — Paiement {{paymentNumber}} reçu</p>
+          <a href="payment_received.html" download>Télécharger le HTML à copier</a>
+          <p><code>payment_received</code></p>
+        </div>
+        <iframe
+          title="Confirmation de paiement"
+          sandbox=""
+          srcdoc='&lt;!doctype html&gt;&lt;html lang="fr"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;&lt;/head&gt;&lt;body style="margin:0"&gt;&lt;div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px"&gt;&lt;div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px"&gt;
+  &lt;div style="height:5px;background-color:#ad7d1d;border-radius:16px"&gt;&lt;/div&gt;
+  &lt;div style="padding:24px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:26px;font-weight:700;color:#8f6515"&gt;SLAMA&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;font-weight:700;color:#4f5661"&gt;AGRICOLE&lt;/p&gt;
+    &lt;div style="padding:24px 0 12px"&gt;
+      &lt;span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700"&gt;CONFIRMATION DE PAIEMENT&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;h1 style="margin:0 0 20px;font-size:27px;line-height:1.25;font-weight:700;color:#20242b"&gt;Merci pour votre règlement&lt;/h1&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 12px"&gt;Bonjour &lt;strong&gt;Atlas Distribution&lt;/strong&gt;,&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 24px;color:#4f5661"&gt;Nous vous confirmons la réception du règlement suivant, enregistré sur votre facture.&lt;/p&gt;
+    &lt;div style="padding:20px;border-radius:12px;background-color:#faf3df"&gt;
+      &lt;p style="margin:0 0 12px;margin:0 0 4px;font-size:13px;color:#8f6515"&gt;Montant reçu&lt;/p&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:30px;line-height:1.3;font-weight:700;color:#8f6515"&gt;500,00 MAD&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px 0 20px"&gt;
+      &lt;table width="100%" cellpadding="0" cellspacing="0" style="max-width:100%;border-collapse:collapse;width:100%;border-collapse:collapse"&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Paiement&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;PAY-2026-729451&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Facture concernée&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;FAC-2026-482931&lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px;border:1px solid #e4e7ec;border-radius:10px;background-color:#f7f8fa"&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:13px;color:#4f5661"&gt;Cette confirmation concerne uniquement le montant indiqué. Elle ne signifie pas nécessairement que la facture est intégralement réglée.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p style="margin:0 0 12px;margin:0;padding:24px 0 16px;color:#4f5661"&gt;Merci pour votre confiance et pour votre collaboration.&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-weight:700"&gt;L’équipe Slama Agricole&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;color:#4f5661"&gt;Slama Agricole · Suivi de votre relation commerciale&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:4px 0 0;font-size:11px;color:#4f5661"&gt;Message automatique. Pour toute demande, contactez votre interlocuteur habituel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;'
+        ></iframe>
+      </details>
+      <details>
+        <summary>Rappel d’échéance de facture</summary>
+        <div class="meta">
+          <p><strong>Objet :</strong> Slama Agricole — Échéance de la facture {{documentNumber}}</p>
+          <a href="invoice_due_reminder.html" download>Télécharger le HTML à copier</a>
+          <p><code>invoice_due_reminder</code></p>
+        </div>
+        <iframe
+          title="Rappel d’échéance de facture"
+          sandbox=""
+          srcdoc='&lt;!doctype html&gt;&lt;html lang="fr"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;&lt;/head&gt;&lt;body style="margin:0"&gt;&lt;div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px"&gt;&lt;div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px"&gt;
+  &lt;div style="height:5px;background-color:#ad7d1d;border-radius:16px"&gt;&lt;/div&gt;
+  &lt;div style="padding:24px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:26px;font-weight:700;color:#8f6515"&gt;SLAMA&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;font-weight:700;color:#4f5661"&gt;AGRICOLE&lt;/p&gt;
+    &lt;div style="padding:24px 0 12px"&gt;
+      &lt;span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700"&gt;SUIVI DE FACTURE&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;h1 style="margin:0 0 20px;font-size:27px;line-height:1.25;font-weight:700;color:#20242b"&gt;Un point sur votre règlement&lt;/h1&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 12px"&gt;Bonjour &lt;strong&gt;Atlas Distribution&lt;/strong&gt;,&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 24px;color:#4f5661"&gt;Nous vous adressons ce rappel concernant le solde de votre facture. Vous trouverez son échéance et le montant restant ci-dessous.&lt;/p&gt;
+    &lt;div style="padding:20px;border-radius:12px;background-color:#faf3df"&gt;
+      &lt;p style="margin:0 0 12px;margin:0 0 4px;font-size:13px;color:#8f6515"&gt;Solde restant à régler&lt;/p&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:30px;line-height:1.3;font-weight:700;color:#8f6515"&gt;750,00 MAD&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px 0 20px"&gt;
+      &lt;table width="100%" cellpadding="0" cellspacing="0" style="max-width:100%;border-collapse:collapse;width:100%;border-collapse:collapse"&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Facture&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;FAC-2026-482931&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Date d’échéance&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;04/11/2026&lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px;border:1px solid #e4e7ec;border-radius:10px;background-color:#f7f8fa"&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:13px;color:#4f5661"&gt;Si votre règlement vient d’être effectué, contactez-nous afin que nous puissions vérifier sa prise en compte.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p style="margin:0 0 12px;margin:0;padding:24px 0 16px;color:#4f5661"&gt;En cas de question sur votre échéance ou votre règlement, votre interlocuteur habituel reste à votre écoute.&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-weight:700"&gt;L’équipe Slama Agricole&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;color:#4f5661"&gt;Slama Agricole · Suivi de votre relation commerciale&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:4px 0 0;font-size:11px;color:#4f5661"&gt;Message automatique. Pour toute demande, contactez votre interlocuteur habituel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;'
+        ></iframe>
+      </details>
+      <details>
+        <summary>Rappel de validité du devis</summary>
+        <div class="meta">
+          <p><strong>Objet :</strong> Slama Agricole — Validité du devis {{documentNumber}}</p>
+          <a href="estimate_expiry_reminder.html" download>Télécharger le HTML à copier</a>
+          <p><code>estimate_expiry_reminder</code></p>
+        </div>
+        <iframe
+          title="Rappel de validité du devis"
+          sandbox=""
+          srcdoc='&lt;!doctype html&gt;&lt;html lang="fr"&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;&lt;/head&gt;&lt;body style="margin:0"&gt;&lt;div dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px"&gt;&lt;div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px"&gt;
+  &lt;div style="height:5px;background-color:#ad7d1d;border-radius:16px"&gt;&lt;/div&gt;
+  &lt;div style="padding:24px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:26px;font-weight:700;color:#8f6515"&gt;SLAMA&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;font-weight:700;color:#4f5661"&gt;AGRICOLE&lt;/p&gt;
+    &lt;div style="padding:24px 0 12px"&gt;
+      &lt;span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700"&gt;SUIVI DE DEVIS&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;h1 style="margin:0 0 20px;font-size:27px;line-height:1.25;font-weight:700;color:#20242b"&gt;Faisons le point sur votre devis&lt;/h1&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 12px"&gt;Bonjour &lt;strong&gt;Atlas Distribution&lt;/strong&gt;,&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0 0 24px;color:#4f5661"&gt;Nous revenons vers vous au sujet de notre proposition. Sa date de validité est rappelée ci-dessous pour vous aider à organiser votre commande.&lt;/p&gt;
+    &lt;div style="padding:20px;border-radius:12px;background-color:#faf3df"&gt;
+      &lt;p style="margin:0 0 12px;margin:0 0 4px;font-size:13px;color:#8f6515"&gt;Montant de la proposition&lt;/p&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:30px;line-height:1.3;font-weight:700;color:#8f6515"&gt;1 250,00 MAD&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px 0 20px"&gt;
+      &lt;table width="100%" cellpadding="0" cellspacing="0" style="max-width:100%;border-collapse:collapse;width:100%;border-collapse:collapse"&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Devis&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;DEV-2026-482931&lt;/td&gt;
+          &lt;/tr&gt;
+          &lt;tr&gt;
+            &lt;th scope="row" style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 8px 10px 0;border:0px solid #ffffff;text-align:left;vertical-align:top;font-size:13px;font-weight:400;color:#4f5661"&gt;Valable jusqu’au&lt;/th&gt;
+            &lt;td style="padding:8px;border:1px solid #dddddd;vertical-align:top;padding:10px 0 10px 8px;border:0px solid #ffffff;text-align:right;vertical-align:top;font-size:13px;font-weight:700;color:#20242b"&gt;04/11/2026&lt;/td&gt;
+          &lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+    &lt;div style="padding:16px;border:1px solid #e4e7ec;border-radius:10px;background-color:#f7f8fa"&gt;
+      &lt;p style="margin:0 0 12px;margin:0;font-size:13px;color:#4f5661"&gt;Si vous souhaitez donner suite au devis, contactez-nous. Si sa date de validité est dépassée, nous pourrons vérifier les conditions et préparer une nouvelle proposition.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p style="margin:0 0 12px;margin:0;padding:24px 0 16px;color:#4f5661"&gt;Nous serons ravis de vous accompagner dans la suite de votre projet.&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-weight:700"&gt;L’équipe Slama Agricole&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px"&gt;
+    &lt;p style="margin:0 0 12px;margin:0;font-size:12px;color:#4f5661"&gt;Slama Agricole · Suivi de votre relation commerciale&lt;/p&gt;
+    &lt;p style="margin:0 0 12px;margin:4px 0 0;font-size:11px;color:#4f5661"&gt;Message automatique. Pour toute demande, contactez votre interlocuteur habituel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;'
+        ></iframe>
+      </details>
+      <p>
+        Les montants, noms et références de ces aperçus sont fictifs. Les fichiers HTML conservent
+        les variables originales pour les vrais envois.
+      </p>
+      <p>
+        Le nom de marque est affiché en texte pour éviter une image manquante. Un logo peut être
+        ajouté avec une URL HTTPS publique. Aucun lien de paiement ni de téléchargement n’est
+        inventé.
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+# Install as /data/coolify/source/docker-compose.custom.yml on this dev host.
+# Preserved and merged by Coolify's official upgrade script.
+services:
+  coolify:
+    ports: !override
+      - '100.118.130.26:8000:8080'
+  soketi:
+    ports: !override
+      - '100.118.130.26:6001:6001'
+      - '100.118.130.26:6002:6002'

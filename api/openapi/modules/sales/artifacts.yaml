@@ -1,0 +1,54 @@
+paths:
+  /v1/documents/{documentType}/{id}/regenerate-pdf:
+    post:
+      operationId: regenerateDocumentPdf
+      description: Regenerate only presentation of a finalized document. Business snapshots are immutable. Requires resource read and update permissions, including payments.read and payments.update for receipts. Replaces the active PDF atomically; a concurrent replacement returns 409. Receipt status reflects the current payment state; recorded balances never change.
+      parameters:
+        - {
+            name: documentType,
+            in: path,
+            required: true,
+            schema: { type: string, enum: [invoice, estimate, delivery_note, payment_receipt] },
+          }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegenerateDocumentPdfInput' }
+      responses:
+        '200':
+          description: Replacement PDF is ready to download
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegeneratedDocumentPdf' }
+        '403': { description: Missing document read or update permission }
+        '409': { description: 'Draft document, unavailable template, or concurrent regeneration' }
+        '503': { description: Rendering or storage unavailable; previous PDF preserved }
+  /v1/artifacts/{id}/download:
+    get:
+      operationId: downloadArtifact
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: Private immutable document file
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            text/csv:
+              schema: { type: string, format: binary }
+components:
+  schemas:
+    RegenerateDocumentPdfInput:
+      type: object
+      additionalProperties: false
+      required: [design]
+      properties:
+        design: { type: string, enum: [saved, latest] }
+    RegeneratedDocumentPdf:
+      type: object
+      additionalProperties: false
+      required: [id, generatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        generatedAt: { type: string, format: date-time }

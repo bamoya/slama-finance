@@ -1,0 +1,417 @@
+paths:
+  /v1/invoices/from-deliveries:
+    post:
+      operationId: createInvoiceFromDeliveries
+      x-permissions: [invoices.create, delivery_notes.read]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/DeliveryInvoiceConversion' } },
+            },
+        }
+      responses:
+        '201':
+          {
+            description: New draft invoice with reserved delivery lines,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+  /v1/invoices:
+    get:
+      operationId: listInvoices
+      x-permissions: [invoices.read]
+      parameters:
+        - {
+            name: status,
+            in: query,
+            schema: { type: string, enum: [all, draft, issued, sent, cancelled], default: all },
+          }
+        - { name: clientId, in: query, schema: { type: string, format: uuid } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: dateFrom, in: query, schema: { type: string, format: date } }
+        - { name: dateTo, in: query, schema: { type: string, format: date } }
+        - {
+            name: amountMin,
+            in: query,
+            schema: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' },
+          }
+        - {
+            name: amountMax,
+            in: query,
+            schema: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' },
+          }
+        - {
+            name: source,
+            in: query,
+            schema: { type: string, enum: [all, direct, estimate, delivery], default: all },
+          }
+        - {
+            name: paymentStatus,
+            in: query,
+            schema: { type: string, enum: [all, unpaid, partial, paid], default: all },
+          }
+        - { name: overdue, in: query, schema: { type: boolean } }
+        - {
+            name: sortBy,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [createdAt, issueDate, dueDate, number, clientName, total, outstandingAmount],
+                default: createdAt,
+              },
+          }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          {
+            description: Invoice page,
+            content: { application/json: { schema: { $ref: '#/components/schemas/InvoicePage' } } },
+          }
+    post:
+      operationId: createInvoice
+      x-permissions: [invoices.create]
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceInput' } } },
+        }
+      responses:
+        '201':
+          {
+            description: Draft invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+  /v1/invoices/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getInvoice
+      x-permissions: [invoices.read]
+      responses:
+        '200':
+          {
+            description: Invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+    patch:
+      operationId: updateInvoice
+      x-permissions: [invoices.update]
+      requestBody:
+        {
+          required: true,
+          content: { application/json: { schema: { $ref: '#/components/schemas/InvoiceUpdate' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Updated invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+    delete:
+      operationId: deleteInvoice
+      x-permissions: [invoices.delete]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/InvoiceVersion' } } },
+        }
+      responses:
+        '204': { description: Deleted draft }
+  /v1/invoices/{id}/issue:
+    post:
+      operationId: issueInvoice
+      x-permissions: [invoices.update]
+      description: Finalize a draft using the current client identity and contact details. The client snapshot is frozen from this point; later client edits and PDF regeneration never change it. Products, prices and payment data are not refreshed.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/InvoiceVersion' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Issued invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+  /v1/invoices/{id}/cancel:
+    post:
+      operationId: cancelInvoice
+      x-permissions: [invoices.update]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/InvoiceCancellation' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Cancelled invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+  /v1/invoices/{id}/pdf:
+    post:
+      operationId: prepareInvoicePdf
+      x-permissions: [invoices.read]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '202':
+          {
+            description: PDF preparation queued,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/InvoicePdfJob' } } },
+          }
+  /v1/invoices/{id}/artifacts:
+    get:
+      operationId: listInvoiceArtifacts
+      x-permissions: [invoices.read]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          {
+            description: Stored PDFs,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { type: array, items: { $ref: '#/components/schemas/InvoiceArtifact' } },
+                  },
+              },
+          }
+  /v1/estimates/{id}/invoices:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listInvoicesFromEstimate
+      x-permissions: [invoices.read, estimates.read]
+      responses:
+        '200':
+          {
+            description: Linked invoices,
+            content:
+              {
+                application/json:
+                  { schema: { type: array, items: { $ref: '#/components/schemas/Invoice' } } },
+              },
+          }
+    post:
+      operationId: createInvoiceFromEstimate
+      x-permissions: [invoices.create, estimates.read]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/InvoiceConversion' } } },
+        }
+      responses:
+        '201':
+          {
+            description: New draft invoice,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
+          }
+components:
+  schemas:
+    DeliveryInvoiceConversionLine:
+      type: object
+      additionalProperties: false
+      required: [deliveryNoteLineId, quantity, unitPrice, vatRate]
+      properties:
+        deliveryNoteLineId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+        unitPrice: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' }
+        vatRate: { type: [string, 'null'], pattern: '^(0|[1-9][0-9]?|100)(\.[0-9]{1,2})?$' }
+    DeliveryInvoiceConversion:
+      type: object
+      additionalProperties: false
+      required: [operationId, templateId, issueDate, dueDate, notes, paymentTerms, lines]
+      properties:
+        operationId: { type: string, format: uuid }
+        templateId: { type: [string, 'null'], format: uuid }
+        issueDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+        paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        lines:
+          {
+            type: array,
+            minItems: 1,
+            maxItems: 100,
+            items: { $ref: '#/components/schemas/DeliveryInvoiceConversionLine' },
+          }
+    InvoiceVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties: { expectedVersion: { type: integer, minimum: 1 } }
+    InvoiceCancellation:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        {
+          expectedVersion: { type: integer, minimum: 1 },
+          reason: { type: string, minLength: 1, maxLength: 1000 },
+        }
+    InvoiceConversion:
+      type: object
+      additionalProperties: false
+      required: [operationId, dueDate]
+      properties:
+        operationId: { type: string, format: uuid }
+        dueDate: { type: [string, 'null'], format: date }
+    InvoiceInput:
+      type: object
+      additionalProperties: false
+      required: [clientId, templateId, issueDate, dueDate, notes, paymentTerms, lines]
+      properties:
+        clientId: { type: string, format: uuid }
+        templateId: { type: [string, 'null'], format: uuid }
+        issueDate: { type: string, format: date }
+        dueDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+        paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        lines:
+          {
+            type: array,
+            maxItems: 100,
+            items: { $ref: './estimates.yaml#/components/schemas/EstimateLineInput' },
+          }
+    InvoiceUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        [expectedVersion, clientId, templateId, issueDate, dueDate, notes, paymentTerms, lines]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        clientId: { type: string, format: uuid }
+        templateId: { type: [string, 'null'], format: uuid }
+        issueDate: { type: string, format: date }
+        dueDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 4000 }
+        paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        lines:
+          {
+            type: array,
+            maxItems: 100,
+            items: { $ref: './estimates.yaml#/components/schemas/EstimateLineInput' },
+          }
+    Invoice:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          number,
+          status,
+          clientId,
+          clientDisplayName,
+          templateId,
+          sourceEstimateId,
+          sourceEstimateNumber,
+          deliveryNoteIds,
+          deliveryNotes,
+          issueDate,
+          dueDate,
+          currency,
+          locale,
+          notes,
+          paymentTerms,
+          subtotal,
+          taxTotal,
+          total,
+          paidAmount,
+          pendingAmount,
+          outstandingAmount,
+          availableBalance,
+          paymentStatus,
+          overdue,
+          version,
+          contentVersion,
+          lines,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, issued, sent, cancelled] }
+        clientId: { type: string, format: uuid }
+        clientDisplayName: { type: string }
+        templateId: { type: [string, 'null'], format: uuid }
+        sourceEstimateId: { type: [string, 'null'], format: uuid }
+        sourceEstimateNumber: { type: [string, 'null'] }
+        deliveryNoteIds: { type: array, items: { type: string, format: uuid } }
+        deliveryNotes:
+          {
+            type: array,
+            items:
+              {
+                type: object,
+                additionalProperties: false,
+                required: [id, number],
+                properties:
+                  { id: { type: string, format: uuid }, number: { type: [string, 'null'] } },
+              },
+          }
+        issueDate: { type: string, format: date }
+        dueDate: { type: [string, 'null'], format: date }
+        currency: { type: string }
+        locale: { type: string }
+        notes: { type: [string, 'null'] }
+        paymentTerms: { type: [string, 'null'] }
+        subtotal: { type: string }
+        taxTotal: { type: string }
+        total: { type: string }
+        paidAmount: { type: string }
+        pendingAmount: { type: string }
+        outstandingAmount: { type: string }
+        availableBalance: { type: string }
+        paymentStatus: { type: string, enum: [unpaid, partial, paid] }
+        overdue: { type: boolean }
+        version: { type: integer }
+        contentVersion: { type: integer }
+        lines: { type: array, items: { $ref: './estimates.yaml#/components/schemas/EstimateLine' } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    InvoicePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Invoice' } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    InvoicePdfJob:
+      type: object
+      additionalProperties: false
+      required: [jobId, status]
+      properties:
+        {
+          jobId: { type: string, format: uuid },
+          status: { type: string, enum: [queued, running, succeeded, failed, cancelled] },
+        }
+    InvoiceArtifact:
+      type: object
+      additionalProperties: false
+      required: [id, sourceVersion, format, byteSize, generatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceVersion: { type: integer }
+        format: { type: string, enum: [pdf] }
+        byteSize: { type: integer }
+        generatedAt: { type: string, format: date-time }

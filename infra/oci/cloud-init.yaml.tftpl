@@ -1,0 +1,21 @@
+#cloud-config
+# Minimal host initialization only. Coolify installation is a separate reviewed
+# operation; no remote installer is executed and no attached data disk is formatted.
+ssh_pwauth: false
+disable_root: true
+package_update: true
+package_upgrade: false
+packages:
+  - ca-certificates
+  - curl
+write_files:
+  - path: /etc/ssh/sshd_config.d/00-slama-security.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+      PubkeyAuthentication yes
+runcmd:
+  - [sh, -c, '/usr/sbin/sshd -t && systemctl reload ssh']

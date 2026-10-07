@@ -1,0 +1,2 @@
+ALTER TABLE "notification_rules" ADD COLUMN "body_format" text DEFAULT 'text' NOT NULL;--> statement-breakpoint
+ALTER TABLE "notification_rules" ADD CONSTRAINT "notification_rules_body_format" CHECK ("notification_rules"."body_format" in ('text','html'));

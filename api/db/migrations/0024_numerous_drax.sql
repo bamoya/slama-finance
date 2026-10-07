@@ -1,0 +1,4 @@
+ALTER TABLE "document_artifacts" DROP CONSTRAINT "document_artifacts_format";--> statement-breakpoint
+ALTER TABLE "report_schedules" ADD COLUMN "output" text DEFAULT 'pdf' NOT NULL;--> statement-breakpoint
+ALTER TABLE "document_artifacts" ADD CONSTRAINT "document_artifacts_format" CHECK ("document_artifacts"."format" in ('pdf', 'csv', 'xlsx') and ("document_artifacts"."format" <> 'xlsx' or "document_artifacts"."document_type" = 'report_run'));--> statement-breakpoint
+ALTER TABLE "report_schedules" ADD CONSTRAINT "report_schedules_output" CHECK ("report_schedules"."output" in ('pdf', 'excel', 'both'));

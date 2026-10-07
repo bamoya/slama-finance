@@ -1,0 +1,16 @@
+node_modules
+**/dist
+**/coverage
+**/.vite
+.pnpm-store
+pnpm-lock.yaml
+api/db/migrations
+api/openapi
+ui/src/api/generated
+api/src/contracts/generated
+api/openapi/generated
+api/db/schema/generated
+api/db/schema/**/*.js
+ui/public
+# Literal email defaults mirrored by applied migration 0026; preserve their bytes.
+docs/notification-email-examples/*_*.html

@@ -1,0 +1,208 @@
+paths:
+  /v1/rbac/roles/{roleId}:
+    delete:
+      operationId: deleteRole
+      x-permissions: [roles.delete]
+      description: Deletes a custom role and its staff/permission assignments, never staff accounts. Requires roles.delete and all permissions held by the target role. System roles are protected.
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Role and assignments deleted
+        default:
+          description: Standard error envelope; 403 forbidden, 404 missing role, 409 protected system role
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/rbac/permissions:
+    get:
+      operationId: listPermissions
+      description: Canonical resource permissions use read (View), create, update (Edit, including state changes) and delete (permanent deletion only). Unsupported operations are omitted. Reports keeps its single reports.read access grant. Legacy granular slugs are no longer accepted for role assignments.
+      x-permissions: [roles.read]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../../openapi.yaml#/components/schemas/Permission
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/rbac/roles:
+    get:
+      operationId: listRoles
+      x-permissions: [roles.read]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../../openapi.yaml#/components/schemas/Role
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    post:
+      operationId: createRole
+      x-permissions: [roles.create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/CreateRole
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Role
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/rbac/roles/{roleId}/permissions:
+    put:
+      operationId: replaceRolePermissions
+      x-permissions: [roles.update]
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/PermissionAssignment
+      responses:
+        "204":
+          description: Completed without response body
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+components:
+  schemas:
+    Role:
+      type: object
+      properties:
+        permissionKeys:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        isSystem:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - permissionKeys
+        - id
+        - key
+        - name
+        - description
+        - isSystem
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    Permission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - key
+        - description
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    CreateRole:
+      type: object
+      properties:
+        key:
+          type: string
+          pattern: ^[a-z][a-z0-9-]*$
+          maxLength: 80
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+      required:
+        - key
+        - name
+      additionalProperties: false
+    PermissionAssignment:
+      type: object
+      properties:
+        permissionKeys:
+          type: array
+          description: Unique permission keys (slugs), such as roles.read. Duplicates are deduplicated; an
+            empty list clears assignments. Unknown keys reject the entire update.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 120
+      required:
+        - permissionKeys
+      additionalProperties: false

@@ -1,0 +1,21 @@
+# Non-secret example. Copy to an ignored terraform.tfvars and fill real values.
+region              = "af-casablanca-1"
+oci_profile         = "slama-finance"
+oci_auth            = "SecurityToken"
+compartment_ocid    = "ocid1.compartment.oc1..REPLACE"
+create_compartment  = false # Set true and supply the parent tenancy OCID to create a dedicated compartment.
+availability_domain = "REPLACE:AF-CASABLANCA-1-AD-1"
+image_ocid          = "ocid1.image.oc1.af-casablanca-1.REPLACE"
+ssh_public_key      = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"
+admin_cidrs         = ["203.0.113.10/32"] # Documentation address: replace before planning.
+instance_name       = "slama-finance"
+ocpus               = 2
+memory_in_gbs       = 12
+boot_volume_size_in_gbs = 50
+data_volume_size_gb = 50
+media_bucket_name   = "slama-finance-media"
+backup_bucket_name  = "slama-finance-backups"
+
+# Existing dedicated groups. Null means policies are NOT created.
+media_group_ocid  = null
+backup_group_ocid = null

@@ -1,0 +1,136 @@
+# Coolify production stack. Pull immutable, matching release images; never build on the VPS.
+# From repository root, explicitly pass --env-file .env.production for CLI use.
+# Assign the HTTPS domain to ui:80 only. Do not publish API or PostgreSQL ports.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: slama_finance
+      POSTGRES_USER: slama_owner
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?Set a strong database owner password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [database]
+    shm_size: 256m
+    mem_limit: 2g
+    cpus: 0.65
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U slama_owner -d slama_finance']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  api:
+    image: ${API_IMAGE:?Set the prebuilt API image for this release}
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '3000'
+      # A separately provisioned non-owner role, never slama_owner.
+      DATABASE_URL: ${DATABASE_URL:?Set the restricted runtime database URL}
+      DATABASE_POOL_SIZE: '5'
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:?Set the exact HTTPS origin without trailing slash}
+      # Empty is fail-safe: forwarded addresses are ignored until proxy IPs are verified.
+      TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set the Resend API key}
+      EMAIL_FROM: ${EMAIL_FROM:?Set the verified sender email address}
+      PASSWORD_RESET_URL: ${PUBLIC_ORIGIN:?Set the public HTTPS origin}/reset-password
+      NOTIFICATION_TRANSPORT: resend
+      # PostgreSQL-backed workers run inside this single API process; no Redis needed.
+      NOTIFICATION_WORKER_ENABLED: 'true'
+      NOTIFICATION_POLL_MS: '2000'
+      REPORT_POLL_MS: '10000'
+      NOTIFICATION_PAYLOAD_RETENTION_DAYS: ${NOTIFICATION_PAYLOAD_RETENTION_DAYS:-0}
+      S3_ENDPOINT: ${S3_ENDPOINT:?Set the HTTPS S3 endpoint}
+      S3_REGION: ${S3_REGION:?Set the storage region}
+      S3_BUCKET: ${S3_BUCKET:?Set the private media bucket name}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Set the dedicated media access key ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set the dedicated media secret access key}
+      LOG_LEVEL: info
+      NODE_OPTIONS: --max-old-space-size=1536
+    networks: [application, database]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 3g
+    cpus: 0.90
+    stop_grace_period: 60s
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/ready', {signal: AbortSignal.timeout(3000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+
+  ui:
+    image: ${UI_IMAGE:?Set the prebuilt UI image for this release}
+    restart: unless-stopped
+    expose: ['80']
+    networks:
+      default: {}
+      application:
+        # Stable immediate proxy address; trust it only together with verified ingress hops.
+        ipv4_address: ${UI_PROXY_IP:-172.30.84.2}
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 0.15
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/index.html']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *logging
+
+  # Run explicitly before starting/replacing runtime services. Never automatic on API boot.
+  migrate:
+    image: ${RELEASE_IMAGE:?Set the matching prebuilt release-tooling image}
+    profiles: ['release']
+    restart: 'no'
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set the migration-owner database URL}
+    networks: [database]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 0.40
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    logging: *logging
+
+volumes:
+  # Provision deliberately once. A missing volume fails instead of creating an empty database.
+  # External does not mean backed up; deletion from Docker/Coolify can still destroy the data.
+  postgres-data:
+    external: true
+    name: ${POSTGRES_VOLUME_NAME:?Set the existing production PostgreSQL volume name}
+
+networks:
+  # Coolify connects its proxy here. Only ui is attached from this application.
+  default: {}
+  # No published ports. API keeps outbound access for object storage and Resend.
+  application:
+    ipam:
+      config:
+        - subnet: ${APPLICATION_SUBNET:-172.30.84.0/24}
+  database:
+    internal: true

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+id ubuntu >/dev/null
+install -d -m 700 -o ubuntu -g ubuntu /home/ubuntu/.ssh
+touch /home/ubuntu/.ssh/authorized_keys
+public_key=$(printf '%s' '${public_key_base64}' | base64 -d)
+if ! grep -qxF "$public_key" /home/ubuntu/.ssh/authorized_keys; then
+  printf '\n%s\n' "$public_key" >> /home/ubuntu/.ssh/authorized_keys
+fi
+chown ubuntu:ubuntu /home/ubuntu/.ssh/authorized_keys
+chmod 600 /home/ubuntu/.ssh/authorized_keys
+printf '%s\n' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' 'PermitRootLogin no' 'PubkeyAuthentication yes' > /etc/ssh/sshd_config.d/00-slama-security.conf
+install -d -m 0755 -o root -g root /run/sshd
+/usr/sbin/sshd -t
+systemctl reload ssh
+# No remote installer, secrets, Docker or disk initialization during provisioning.

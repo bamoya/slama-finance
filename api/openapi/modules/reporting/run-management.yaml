@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info: { title: Report run management, version: 1.0.0 }
+paths:
+  /v1/report-runs/{id}/cleanup:
+    post:
+      operationId: cleanupReportRun
+      tags: [reporting]
+      security: [{ sessionCookie: [] }]
+      description: Requires reports.read. Files mode preserves the frozen snapshot; run mode permanently removes it. Queued/running production or queued/sending email blocks cleanup. Terminal email attachment references are released and those messages cannot be retried. Delivered emails cannot be recalled. Unreferenced objects are removed immediately where possible, otherwise by storage maintenance.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportRunCleanupInput' }
+      responses:
+        '200':
+          description: Cleanup committed; retained or pending objects are reported separately.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportRunCleanupResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/report-runs/{id}/regenerate-files:
+    post:
+      operationId: regenerateReportRunFiles
+      tags: [reporting]
+      security: [{ sessionCookie: [] }]
+      description: Requires reports.read. Restores missing PDF/CSV from a succeeded run's frozen snapshot and language. Does not recapture business data or send email. Existing files are unchanged.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Files available.
+          content:
+            application/json:
+              schema: { $ref: './reporting.yaml#/components/schemas/ReportRun' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Request failed.
+      content:
+        application/json:
+          schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  schemas:
+    ReportRunCleanupInput:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [files, run] }
+    ReportRunCleanupResult:
+      type: object
+      additionalProperties: false
+      required: [removedFiles, freedBytes, retainedFiles, pendingFiles]
+      properties:
+        removedFiles: { type: integer, minimum: 0 }
+        freedBytes: { type: integer, minimum: 0 }
+        retainedFiles: { type: integer, minimum: 0 }
+        pendingFiles: { type: integer, minimum: 0 }

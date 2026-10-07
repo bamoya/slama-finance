@@ -1,0 +1,29 @@
+# Merge AFTER docker-compose.production.yml. This is remote dev, not local Compose.
+# In Coolify select both files in this order. Never build images on the 2-GB host.
+services:
+  postgres:
+    mem_limit: 256m
+    shm_size: 64m
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
+  api:
+    mem_limit: 512m
+    environment:
+      DATABASE_POOL_SIZE: '3'
+      NODE_OPTIONS: --max-old-space-size=256
+      NOTIFICATION_POLL_MS: '10000'
+      REPORT_POLL_MS: '60000'
+  ui:
+    mem_limit: 64m
+  migrate:
+    mem_limit: 512m
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256

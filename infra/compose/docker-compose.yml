@@ -1,0 +1,98 @@
+# Preserve existing local volume names after moving the file out of the root.
+name: slama-finance
+
+services:
+  minio:
+    build:
+      context: ../../api/docker
+      dockerfile: minio.Dockerfile
+    environment:
+      MINIO_ROOT_USER: slama-local
+      MINIO_ROOT_PASSWORD: slama-local-development-only
+    ports:
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:9000/minio/health/live']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres-test:
+    image: postgres:17-alpine
+    profiles: ['test']
+    environment:
+      POSTGRES_DB: slama_finance_test
+      POSTGRES_USER: slama_test
+      POSTGRES_PASSWORD: slama_test
+    ports:
+      - '127.0.0.1:55439:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U slama_test -d slama_finance_test']
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  # api:
+  #   build:
+  #     context: ../..
+  #     dockerfile: api/Dockerfile
+  #   environment:
+  #     PORT: 3000
+  #     NODE_ENV: development
+  #     DATABASE_URL: postgres://slama:slama@postgres:5432/slama_finance
+  #     REDIS_URL: redis://redis:6379
+  #     CORS_ORIGIN: http://localhost:8080
+  #     RESEND_API_KEY: ${RESEND_API_KEY:-}
+  #     EMAIL_FROM: ${EMAIL_FROM:-}
+  #     PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   ports:
+  #     - '3000:3000'
+
+  # ui:
+  #   build:
+  #     context: ../..
+  #     dockerfile: ui/Dockerfile
+  #   depends_on:
+  #     - api
+  #   ports:
+  #     - '8080:80'
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - '127.0.0.1:5433:5432'
+    environment:
+      POSTGRES_DB: slama_finance
+      POSTGRES_USER: slama
+      POSTGRES_PASSWORD: slama
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U slama -d slama_finance']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '127.0.0.1:6380:6379'
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - '8025:8025'
+
+volumes:
+  minio-data:
+  postgres-data:

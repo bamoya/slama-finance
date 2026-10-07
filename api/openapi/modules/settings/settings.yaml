@@ -1,0 +1,1138 @@
+paths:
+  /v1/company-settings:
+    get:
+      operationId: getCompanySettings
+      x-permissions:
+        - company_settings.read
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    patch:
+      operationId: updateCompanySettings
+      x-permissions:
+        - company_settings.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanySettings"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/bank-accounts:
+    get:
+      operationId: listBankAccounts
+      x-permissions:
+        - bank_accounts.read
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    post:
+      operationId: createBankAccount
+      x-permissions:
+        - bank_accounts.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBankAccount"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/bank-accounts/{id}:
+    delete:
+      operationId: deleteBankAccount
+      x-permissions:
+        - bank_accounts.delete
+      description: Requires bank_accounts.delete. Permanently deletes only an
+        unreferenced record. Retains audit history and assets. Returns 409 when
+        referenced or version is stale.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRecordVersion"
+      responses:
+        "204":
+          description: Deleted
+        default:
+          description: Authorization, missing record, stale version or referenced record
+            conflict
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    get:
+      operationId: getBankAccount
+      x-permissions:
+        - bank_accounts.read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    patch:
+      operationId: updateBankAccount
+      x-permissions:
+        - bank_accounts.update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBankAccount"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/bank-accounts/{id}/restore:
+    post:
+      operationId: restoreBankAccount
+      x-permissions:
+        - bank_accounts.update
+      description: Requires bank_accounts.update. Restores an archived account with a
+        version check. Active accounts return 409.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRecordVersion"
+      responses:
+        "200":
+          description: Restored account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Authorization, missing record, stale version or referenced record
+            conflict
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/bank-accounts/{id}/archive:
+    post:
+      operationId: archiveBankAccount
+      x-permissions:
+        - bank_accounts.update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRecordVersion"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/document-templates:
+    get:
+      operationId: listDocumentTemplates
+      x-permissions:
+        - templates.read
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentTemplate"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    post:
+      operationId: createDocumentTemplate
+      x-permissions:
+        - templates.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentTemplate"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTemplate"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/document-templates/{id}:
+    delete:
+      operationId: deleteDocumentTemplate
+      x-permissions:
+        - templates.delete
+      description: Requires templates.delete. Permanently deletes only an unreferenced
+        record. Retains audit history and assets. Returns 409 when referenced or
+        version is stale.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRecordVersion"
+      responses:
+        "204":
+          description: Deleted
+        default:
+          description: Authorization, missing record, stale version or referenced record
+            conflict
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    get:
+      operationId: getDocumentTemplate
+      x-permissions:
+        - templates.read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTemplate"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    patch:
+      operationId: updateDocumentTemplate
+      x-permissions:
+        - templates.update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDocumentTemplate"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTemplate"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/document-templates/{id}/archive:
+    post:
+      operationId: archiveDocumentTemplate
+      x-permissions:
+        - templates.update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsRecordVersion"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentTemplate"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/document-templates/preview:
+    post:
+      operationId: previewDocumentTemplate
+      parameters:
+        - name: documentType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [invoice, estimate, delivery, payment_receipt]
+            default: invoice
+        - name: sampleSize
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [short, many]
+            default: short
+      x-permissions:
+        - templates.read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentTemplate"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplatePreview"
+        default:
+          description: Validation, authorization, version conflict or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+components:
+  schemas:
+    DocumentLayout:
+      type: string
+      enum: [classic, modern, minimal, signature, atelier, ledger, essential]
+    TemplateDensity:
+      type: string
+      enum: [standard, compact]
+      default: standard
+    CompanySettings:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          enum:
+            - 1
+        legalName:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        tradeName:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        legalForm:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        shareCapital:
+          type:
+            - string
+            - "null"
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+        addressLine1:
+          type:
+            - string
+            - "null"
+          maxLength: 300
+        addressLine2:
+          type:
+            - string
+            - "null"
+          maxLength: 300
+        city:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        postalCode:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{5}$
+        countryCode:
+          type: string
+          enum:
+            - MA
+        ice:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{15}$
+        taxIdentifier:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        registrationNumber:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        registrationCity:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        professionalTaxNumber:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        email:
+          type:
+            - string
+            - "null"
+          format: email
+          maxLength: 320
+        phone:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        logoAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        currency:
+          type: string
+          enum:
+            - MAD
+            - EUR
+            - USD
+        locale:
+          type: string
+          enum:
+            - fr-MA
+            - ar-MA
+            - en-GB
+        timezone:
+          type: string
+          enum:
+            - Africa/Casablanca
+        paymentDueDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        estimateValidDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        defaultTemplateId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        updatedByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - id
+        - legalName
+        - tradeName
+        - legalForm
+        - shareCapital
+        - addressLine1
+        - addressLine2
+        - city
+        - postalCode
+        - countryCode
+        - ice
+        - taxIdentifier
+        - registrationNumber
+        - registrationCity
+        - professionalTaxNumber
+        - email
+        - phone
+        - logoAssetId
+        - currency
+        - locale
+        - timezone
+        - paymentDueDays
+        - estimateValidDays
+        - defaultTemplateId
+        - version
+        - createdAt
+        - updatedAt
+        - createdByUserId
+        - updatedByUserId
+    UpdateCompanySettings:
+      type: object
+      additionalProperties: false
+      properties:
+        legalName:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        tradeName:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        legalForm:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        shareCapital:
+          type:
+            - string
+            - "null"
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+        addressLine1:
+          type:
+            - string
+            - "null"
+          maxLength: 300
+        addressLine2:
+          type:
+            - string
+            - "null"
+          maxLength: 300
+        city:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        postalCode:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{5}$
+        countryCode:
+          type: string
+          enum:
+            - MA
+        ice:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{15}$
+        taxIdentifier:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        registrationNumber:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        registrationCity:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        professionalTaxNumber:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{1,20}$
+        email:
+          type:
+            - string
+            - "null"
+          format: email
+          maxLength: 320
+        phone:
+          type:
+            - string
+            - "null"
+          maxLength: 30
+        logoAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        currency:
+          type: string
+          enum:
+            - MAD
+            - EUR
+            - USD
+        locale:
+          type: string
+          enum:
+            - fr-MA
+            - ar-MA
+            - en-GB
+        timezone:
+          type: string
+          enum:
+            - Africa/Casablanca
+        paymentDueDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        estimateValidDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
+        defaultTemplateId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+        - legalName
+        - tradeName
+        - legalForm
+        - shareCapital
+        - addressLine1
+        - addressLine2
+        - city
+        - postalCode
+        - countryCode
+        - ice
+        - taxIdentifier
+        - registrationNumber
+        - registrationCity
+        - professionalTaxNumber
+        - email
+        - phone
+        - logoAssetId
+        - currency
+        - locale
+        - timezone
+        - paymentDueDays
+        - estimateValidDays
+        - defaultTemplateId
+        - expectedVersion
+    BankAccount:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        bankName:
+          type: string
+          maxLength: 160
+          minLength: 1
+        accountHolder:
+          type: string
+          maxLength: 200
+          minLength: 1
+        rib:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{24}$
+        iban:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$
+        currency:
+          type: string
+          enum:
+            - MAD
+            - EUR
+            - USD
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        updatedByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - id
+        - name
+        - bankName
+        - accountHolder
+        - rib
+        - iban
+        - currency
+        - archivedAt
+        - version
+        - createdAt
+        - updatedAt
+        - createdByUserId
+        - updatedByUserId
+    CreateBankAccount:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        bankName:
+          type: string
+          maxLength: 160
+          minLength: 1
+        accountHolder:
+          type: string
+          maxLength: 200
+          minLength: 1
+        rib:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{24}$
+        iban:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$
+        currency:
+          type: string
+          enum:
+            - MAD
+            - EUR
+            - USD
+      required:
+        - name
+        - bankName
+        - accountHolder
+        - rib
+        - iban
+        - currency
+    UpdateBankAccount:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        bankName:
+          type: string
+          maxLength: 160
+          minLength: 1
+        accountHolder:
+          type: string
+          maxLength: 200
+          minLength: 1
+        rib:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]{24}$
+        iban:
+          type:
+            - string
+            - "null"
+          pattern: ^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$
+        currency:
+          type: string
+          enum:
+            - MAD
+            - EUR
+            - USD
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+        - name
+        - bankName
+        - accountHolder
+        - rib
+        - iban
+        - currency
+        - expectedVersion
+    DocumentTemplate:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        layout:
+          $ref: "#/components/schemas/DocumentLayout"
+        density:
+          $ref: "#/components/schemas/TemplateDensity"
+        accentColor:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        logoAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        signatureAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        showBankDetails:
+          type: boolean
+        showSignature:
+          type: boolean
+        showPaymentTerms:
+          type: boolean
+        footerText:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        paymentTerms:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        updatedByUserId:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - id
+        - name
+        - layout
+        - density
+        - accentColor
+        - logoAssetId
+        - signatureAssetId
+        - showBankDetails
+        - showSignature
+        - showPaymentTerms
+        - footerText
+        - paymentTerms
+        - archivedAt
+        - version
+        - createdAt
+        - updatedAt
+        - createdByUserId
+        - updatedByUserId
+    CreateDocumentTemplate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        layout:
+          $ref: "#/components/schemas/DocumentLayout"
+        density:
+          $ref: "#/components/schemas/TemplateDensity"
+        accentColor:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        logoAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        signatureAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        showBankDetails:
+          type: boolean
+        showSignature:
+          type: boolean
+        showPaymentTerms:
+          type: boolean
+        footerText:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        paymentTerms:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - name
+        - layout
+        - accentColor
+        - logoAssetId
+        - signatureAssetId
+        - showBankDetails
+        - showSignature
+        - showPaymentTerms
+        - footerText
+        - paymentTerms
+    UpdateDocumentTemplate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+        layout:
+          $ref: "#/components/schemas/DocumentLayout"
+        density:
+          $ref: "#/components/schemas/TemplateDensity"
+        accentColor:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        logoAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        signatureAssetId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        showBankDetails:
+          type: boolean
+        showSignature:
+          type: boolean
+        showPaymentTerms:
+          type: boolean
+        footerText:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
+        paymentTerms:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+        - name
+        - layout
+        - accentColor
+        - logoAssetId
+        - signatureAssetId
+        - showBankDetails
+        - showSignature
+        - showPaymentTerms
+        - footerText
+        - paymentTerms
+        - expectedVersion
+    SettingsRecordVersion:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+        - expectedVersion
+    TemplatePreview:
+      type: object
+      additionalProperties: false
+      properties:
+        html:
+          type: string
+          maxLength: 4000000
+        pageCount:
+          type: integer
+          minimum: 1
+      required:
+        - html
+        - pageCount

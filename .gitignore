@@ -4,6 +4,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.tsbuildinfo
 pnpm-debug.log*
 npm-debug.log*
@@ -17,15 +18,28 @@ yarn-debug.log*
 .pnpm-store/
 *.log
 tmp/
-
+**/.local/
+.pnpm-store/
 # Generated contracts and schemas; regenerate from api/openapi/openapi.yaml.
 ui/src/api/generated/
 api/src/contracts/generated/
 api/openapi/generated/
 api/db/schema/generated/
+api/db/schema/**/*.js
 
 # Local database files and backups. SQL migrations remain versioned.
 *.sqlite
 *.sqlite3
 *.db
 backups/
+
+# Infrastructure state, plans and operator configuration may contain secrets.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log

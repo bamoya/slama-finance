@@ -1,0 +1,275 @@
+paths:
+  /v1/auth/profile:
+    patch:
+      operationId: updateProfile
+      description: Update the signed-in user's personal details. Full session and current password required. No roles or account-status changes allowed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfile'
+      responses:
+        '200':
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid input or current password
+        '401':
+          description: No active session
+        '403':
+          description: Password replacement required
+        '409':
+          description: Email already in use
+  /v1/auth/login:
+    post:
+      operationId: login
+      description: Limited to five attempts per minute per client IP per API instance. Excess attempts
+        return 429 with Retry-After. Temporary staff passwords expire after 24 hours and can log in
+        once, creating a restricted 15-minute password_change session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/Login
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default: &a2
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/auth/session:
+    get:
+      operationId: getSession
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      responses:
+        "204":
+          description: Completed without response body
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/auth/password-reset/request:
+    post:
+      operationId: requestPasswordReset
+      security: []
+      description: Generic response for eligible, unknown and inactive accounts; requires configured email
+        adapter. Five requests per minute per IP, one email per account per minute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/PasswordResetRequest
+      responses:
+        "202":
+          description: Request accepted
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/PasswordResetAccepted
+        default: &a1
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/auth/password-reset/confirm:
+    post:
+      operationId: confirmPasswordReset
+      security: []
+      description: Single-use link, expires after 15 minutes. Revokes all sessions on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/PasswordResetConfirm
+      responses:
+        "204":
+          description: Password changed; sign in again
+        default: *a1
+  /v1/auth/change-password:
+    post:
+      operationId: changePassword
+      description: Requires an active full or password_change session. Rotates all sessions; returns a new
+        full-session cookie. Five attempts per minute per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/ChangePassword
+      responses:
+        "200":
+          description: Password changed and full session issued
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default: *a2
+components:
+  schemas:
+    UpdateProfile:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, email, currentPassword]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        currentPassword:
+          type: string
+          minLength: 1
+          maxLength: 1024
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        lastName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        avatarUrl:
+          type:
+            - string
+            - "null"
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - avatarUrl
+      additionalProperties: false
+    Session:
+      type: object
+      properties:
+        permissionKeys:
+          type: array
+          items:
+            type: string
+        user:
+          $ref: ../../openapi.yaml#/components/schemas/User
+        purpose:
+          type: string
+          enum:
+            - full
+            - password_change
+      required:
+        - user
+        - purpose
+        - permissionKeys
+      additionalProperties: false
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 256
+      required:
+        - email
+        - password
+      additionalProperties: false
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+      additionalProperties: false
+    PasswordResetConfirm:
+      type: object
+      properties:
+        token:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+        password:
+          type: string
+          minLength: 12
+          maxLength: 256
+      required:
+        - token
+        - password
+      additionalProperties: false
+    PasswordResetAccepted:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+      additionalProperties: false
+    ChangePassword:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Required for a full session; unnecessary for a restricted onboarding session.
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 256
+      required:
+        - newPassword
+      additionalProperties: false

@@ -1,0 +1,13 @@
+aws_account_id    = "123456789012" # Replace with verified STS identity.
+aws_profile       = "slama-finance"
+region            = "eu-west-3" # Provisional Paris; confirm before ordering.
+availability_zone = "eu-west-3a" # Verify with Lightsail get-regions.
+blueprint_id      = "REPLACE_VERIFIED_UBUNTU_AMD64_BLUEPRINT"
+bundle_id         = "small_3_0" # Verify regional $12 dev bundle: 2 vCPU / 2 GB / 60 GB.
+ssh_public_key    = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"
+admin_cidrs       = ["203.0.113.10/32"] # Replace; [] only after private SSH is verified.
+bucket_names = {
+  media   = "slama-finance-media-123456789012"
+}
+storage_versioning_enabled = false
+storage_iam_users = null

@@ -1,0 +1,422 @@
+paths:
+  /v1/categories/insights:
+    get:
+      operationId: listCategoryInsights
+      description: Catalog counts are available with categories.read. includeFinancial requires reports.read. Financial values use issued/sent invoice lines, issue date, and one currency.
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [name, productCount, units, revenue], default: name } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { $ref: '#/components/parameters/CatalogDateFrom' }
+        - { $ref: '#/components/parameters/CatalogDateTo' }
+        - { $ref: '#/components/parameters/CatalogPeriod' }
+        - { $ref: '#/components/parameters/CatalogCurrency' }
+        - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
+      responses:
+        '200': { description: Paginated category insights, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInsightsPage' } } } }
+  /v1/categories/{id}/insights:
+    get:
+      operationId: getCategoryInsights
+      description: Category details and paginated product ranking require categories.read and products.read. Financial values require reports.read.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [name, units, revenue], default: name } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { $ref: '#/components/parameters/CatalogDateFrom' }
+        - { $ref: '#/components/parameters/CatalogDateTo' }
+        - { $ref: '#/components/parameters/CatalogPeriod' }
+        - { $ref: '#/components/parameters/CatalogCurrency' }
+        - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
+      responses:
+        '200': { description: Category insights, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInsightsDetail' } } } }
+  /v1/products/insights:
+    get:
+      operationId: listProductInsights
+      description: Catalog counts are available with products.read. includeFinancial requires reports.read.
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+        - { name: uncategorized, in: query, schema: { type: boolean, default: false } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [name, reference, units, weight, revenue], default: name } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { $ref: '#/components/parameters/CatalogDateFrom' }
+        - { $ref: '#/components/parameters/CatalogDateTo' }
+        - { $ref: '#/components/parameters/CatalogPeriod' }
+        - { $ref: '#/components/parameters/CatalogCurrency' }
+        - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
+      responses:
+        '200': { description: Paginated product insights, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInsightsPage' } } } }
+  /v1/products/{id}/insights:
+    get:
+      operationId: getProductInsights
+      description: Variant sales use historical invoice-line package-weight snapshots. Recent invoice links additionally require invoices.read.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/CatalogDateFrom' }
+        - { $ref: '#/components/parameters/CatalogDateTo' }
+        - { $ref: '#/components/parameters/CatalogPeriod' }
+        - { $ref: '#/components/parameters/CatalogCurrency' }
+        - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
+        - { name: includeRecentInvoices, in: query, schema: { type: boolean, default: false } }
+        - { name: recentInvoiceLimit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 10 } }
+        - { name: recentInvoiceOffset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200': { description: Product insights, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInsightsDetail' } } } }
+  /v1/categories:
+    get:
+      operationId: listCategories
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+      responses:
+        '200': { description: Categories, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } } }
+    post:
+      operationId: createCategory
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInput' } } } }
+      responses:
+        '201': { description: Created category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+  /v1/categories/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      operationId: getCategory
+      responses:
+        '200': { description: Category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+    patch:
+      operationId: updateCategory
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryUpdate' } } } }
+      responses:
+        '200': { description: Updated category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+    delete:
+      operationId: deleteCategory
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '204': { description: Deleted unreferenced category }
+  /v1/categories/{id}/archive:
+    post:
+      operationId: archiveCategory
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '200': { description: Archived category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+  /v1/categories/{id}/restore:
+    post:
+      operationId: restoreCategory
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '200': { description: Restored category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
+  /v1/products:
+    get:
+      operationId: listProducts
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, archived, all], default: active } }
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Products, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Product' } } } } }
+    post:
+      operationId: createProduct
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInput' } } } }
+      responses:
+        '201': { description: Created product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+  /v1/products/{id}:
+    parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      operationId: getProduct
+      responses:
+        '200': { description: Product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+    patch:
+      operationId: updateProduct
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductUpdate' } } } }
+      responses:
+        '200': { description: Updated product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+    delete:
+      operationId: deleteProduct
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '204': { description: Deleted unreferenced product }
+  /v1/products/{id}/archive:
+    post:
+      operationId: archiveProduct
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '200': { description: Archived product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+  /v1/products/{id}/restore:
+    post:
+      operationId: restoreProduct
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
+      responses:
+        '200': { description: Restored product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+components:
+  parameters:
+    CatalogDateFrom: { name: dateFrom, in: query, schema: { type: string, format: date } }
+    CatalogDateTo: { name: dateTo, in: query, schema: { type: string, format: date } }
+    CatalogPeriod: { name: period, in: query, schema: { type: string, enum: [this_month, last_month, this_year, all, custom], default: this_month } }
+    CatalogCurrency: { name: currency, in: query, schema: { type: string, pattern: '^[A-Z]{3}$' } }
+    CatalogIncludeFinancial: { name: includeFinancial, in: query, schema: { type: boolean, default: false } }
+  schemas:
+    CatalogFinancialSummary:
+      type: object
+      additionalProperties: false
+      required: [unitsSold, weightSoldG, netRevenue, invoiceCount, currency]
+      properties:
+        unitsSold: { type: integer, minimum: 0 }
+        weightSoldG: { type: integer, minimum: 0 }
+        netRevenue: { type: string }
+        invoiceCount: { type: integer, minimum: 0 }
+        currency: { type: string }
+    NullableCatalogFinancialSummary:
+      type: [object, 'null']
+      additionalProperties: false
+      required: [unitsSold, weightSoldG, netRevenue, invoiceCount, currency]
+      properties:
+        unitsSold: { type: integer, minimum: 0 }
+        weightSoldG: { type: integer, minimum: 0 }
+        netRevenue: { type: string }
+        invoiceCount: { type: integer, minimum: 0 }
+        currency: { type: string }
+    ProductInsight:
+      type: object
+      additionalProperties: false
+      required: [product, categoryName, variantCount, activeVariantCount, financial]
+      properties:
+        product: { $ref: '#/components/schemas/Product' }
+        categoryName: { type: [string, 'null'] }
+        variantCount: { type: integer, minimum: 0 }
+        activeVariantCount: { type: integer, minimum: 0 }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+    ProductInsightSummary:
+      type: object
+      additionalProperties: false
+      required: [productCount, activeProductCount, archivedProductCount, activeVariantCount, financial]
+      properties:
+        productCount: { type: integer, minimum: 0 }
+        activeProductCount: { type: integer, minimum: 0 }
+        archivedProductCount: { type: integer, minimum: 0 }
+        activeVariantCount: { type: integer, minimum: 0 }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+    ProductInsightsPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, pageSize, summary, financialIncluded, currency, catalogCurrency]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ProductInsight' } }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        summary: { $ref: '#/components/schemas/ProductInsightSummary' }
+        financialIncluded: { type: boolean }
+        currency: { type: string }
+        catalogCurrency: { type: string }
+    CategoryInsight:
+      type: object
+      additionalProperties: false
+      required: [category, productCount, activeProductCount, archivedProductCount, financial]
+      properties:
+        category: { $ref: '#/components/schemas/Category' }
+        productCount: { type: integer, minimum: 0 }
+        activeProductCount: { type: integer, minimum: 0 }
+        archivedProductCount: { type: integer, minimum: 0 }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+    CategoryInsightSummary:
+      type: object
+      additionalProperties: false
+      required: [categoryCount, activeCategoryCount, archivedCategoryCount, uncategorizedProductCount, financial, topCategory]
+      properties:
+        categoryCount: { type: integer, minimum: 0 }
+        activeCategoryCount: { type: integer, minimum: 0 }
+        archivedCategoryCount: { type: integer, minimum: 0 }
+        uncategorizedProductCount: { type: integer, minimum: 0 }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+        topCategory: { $ref: '#/components/schemas/NullableTopCategoryInsight' }
+    TopCategoryInsight:
+      type: object
+      additionalProperties: false
+      required: [id, name, netRevenue]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        netRevenue: { type: string }
+    NullableTopCategoryInsight:
+      type: [object, 'null']
+      additionalProperties: false
+      required: [id, name, netRevenue]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        netRevenue: { type: string }
+    CategoryInsightsPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, pageSize, summary, financialIncluded, currency, catalogCurrency]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CategoryInsight' } }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        summary: { $ref: '#/components/schemas/CategoryInsightSummary' }
+        financialIncluded: { type: boolean }
+        currency: { type: string }
+        catalogCurrency: { type: string }
+    VariantInsight:
+      type: object
+      additionalProperties: false
+      required: [variant, financial]
+      properties:
+        variant: { $ref: '#/components/schemas/ProductVariant' }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+    RecentProductInvoice:
+      type: object
+      additionalProperties: false
+      required: [id, number, issueDate, status, quantity, weightSoldG, netRevenue, currency]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string }
+        issueDate: { type: string, format: date }
+        status: { type: string, enum: [issued, sent] }
+        quantity: { type: integer, minimum: 0 }
+        weightSoldG: { type: integer, minimum: 0 }
+        netRevenue: { type: string }
+        currency: { type: string }
+    ProductInsightsDetail:
+      type: object
+      additionalProperties: false
+      required: [product, categoryName, financial, variants, recentInvoices, recentInvoicesIncluded, recentInvoiceTotal, currency, catalogCurrency]
+      properties:
+        product: { $ref: '#/components/schemas/Product' }
+        categoryName: { type: [string, 'null'] }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+        variants: { type: array, items: { $ref: '#/components/schemas/VariantInsight' } }
+        recentInvoices: { type: array, items: { $ref: '#/components/schemas/RecentProductInvoice' } }
+        recentInvoicesIncluded: { type: boolean }
+        recentInvoiceTotal: { type: integer, minimum: 0 }
+        currency: { type: string }
+        catalogCurrency: { type: string }
+    CategoryInsightsDetail:
+      type: object
+      additionalProperties: false
+      required: [category, productCount, activeProductCount, archivedProductCount, financial, products, currency, catalogCurrency]
+      properties:
+        category: { $ref: '#/components/schemas/Category' }
+        productCount: { type: integer, minimum: 0 }
+        activeProductCount: { type: integer, minimum: 0 }
+        archivedProductCount: { type: integer, minimum: 0 }
+        financial: { $ref: '#/components/schemas/NullableCatalogFinancialSummary' }
+        products: { $ref: '#/components/schemas/ProductInsightsPage' }
+        currency: { type: string }
+        catalogCurrency: { type: string }
+    CatalogRecordVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties: { expectedVersion: { type: integer, minimum: 1 } }
+    CategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name, description]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+    CategoryUpdate:
+      type: object
+      additionalProperties: false
+      required: [name, description, expectedVersion]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+        expectedVersion: { type: integer, minimum: 1 }
+    Category:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdByUserId: { type: [string, 'null'], format: uuid }
+        updatedByUserId: { type: [string, 'null'], format: uuid }
+    VariantInput:
+      type: object
+      additionalProperties: false
+      required: [weightG, pricePerItem, costPerItem, active]
+      properties:
+        id: { type: string, format: uuid }
+        weightG: { type: integer, minimum: 1, maximum: 2147483647 }
+        pricePerItem: { type: string, pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' }
+        costPerItem: { type: [string, 'null'], pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$' }
+        active: { type: boolean }
+    ProductInput:
+      type: object
+      additionalProperties: false
+      required: [reference, name, description, categoryId, imageAssetId, suggestedVatRate, variants]
+      properties:
+        reference: { type: string, minLength: 1, maxLength: 80 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        categoryId: { type: [string, 'null'], format: uuid }
+        imageAssetId: { type: [string, 'null'], format: uuid }
+        suggestedVatRate: { type: [string, 'null'], pattern: '^(0|[1-9][0-9]{0,2})(\.[0-9]{1,2})?$' }
+        variants: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/VariantInput' } }
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      required: [reference, name, description, categoryId, imageAssetId, suggestedVatRate, variants, expectedVersion]
+      properties:
+        reference: { type: string, minLength: 1, maxLength: 80 }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        categoryId: { type: [string, 'null'], format: uuid }
+        imageAssetId: { type: [string, 'null'], format: uuid }
+        suggestedVatRate: { type: [string, 'null'], pattern: '^(0|[1-9][0-9]{0,2})(\.[0-9]{1,2})?$' }
+        variants: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/VariantInput' } }
+        expectedVersion: { type: integer, minimum: 1 }
+    ProductVariant:
+      type: object
+      additionalProperties: false
+      required: [id, productId, weightG, pricePerItem, costPerItem, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        weightG: { type: integer, minimum: 1 }
+        pricePerItem: { type: string }
+        costPerItem: { type: [string, 'null'] }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdByUserId: { type: [string, 'null'], format: uuid }
+        updatedByUserId: { type: [string, 'null'], format: uuid }
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, reference, name, description, categoryId, imageAssetId, suggestedVatRate, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId, variants]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        categoryId: { type: [string, 'null'], format: uuid }
+        imageAssetId: { type: [string, 'null'], format: uuid }
+        suggestedVatRate: { type: [string, 'null'] }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdByUserId: { type: [string, 'null'], format: uuid }
+        updatedByUserId: { type: [string, 'null'], format: uuid }
+        variants: { type: array, items: { $ref: '#/components/schemas/ProductVariant' } }

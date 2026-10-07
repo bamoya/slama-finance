@@ -1,0 +1,104 @@
+paths:
+  /v1/media/uploads:
+    post:
+      operationId: uploadMedia
+      summary: Upload a private image for an authorized business purpose
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadMedia'
+      responses:
+        '201':
+          description: Validated image ready for attachment; expires after 24 hours if unused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        default:
+          $ref: '#/components/responses/Error'
+  /v1/media/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getMedia
+      responses:
+        '200':
+          description: Authorized media metadata; storage keys are not exposed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: deleteMedia
+      summary: Delete an unreferenced asset owned by the caller with its upload permission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteMedia'
+      responses:
+        '204':
+          description: Deleted
+        default:
+          $ref: '#/components/responses/Error'
+  /v1/media/{id}/download:
+    get:
+      operationId: downloadMedia
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Authorized private image stream
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  responses:
+    Error:
+      description: Validation, authorization, conflict or service error
+      content:
+        application/json:
+          schema:
+            $ref: ../../openapi.yaml#/components/schemas/Error
+  schemas:
+    UploadMedia:
+      type: object
+      additionalProperties: false
+      required: [purpose, originalFilename, contentType, data]
+      properties:
+        purpose:
+          type: string
+          enum: [company_logo, company_signature, product_image, template_asset]
+        originalFilename: { type: string, minLength: 1, maxLength: 255 }
+        contentType: { type: string, enum: [image/png, image/jpeg, image/webp] }
+        data: { type: string, minLength: 1, maxLength: 2796204, pattern: '^[A-Za-z0-9+/]+={0,2}$' }
+    DeleteMedia:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1, maximum: 2147483647 }
+    MediaAsset:
+      type: object
+      additionalProperties: false
+      required: [id, originalFilename, contentType, byteSize, purpose, status, uploadedBy, expiresAt, version, createdAt, updatedAt, deletedAt]
+      properties:
+        id: { type: string, format: uuid }
+        originalFilename: { type: string, minLength: 1, maxLength: 255 }
+        contentType: { type: string, enum: [image/png] }
+        byteSize: { type: integer, minimum: 1, maximum: 8388608 }
+        purpose: { type: string, enum: [company_logo, company_signature, product_image, template_asset] }
+        status: { type: string, enum: [pending, ready, deleting, deleted] }
+        uploadedBy: { type: [string, 'null'], format: uuid }
+        expiresAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: [string, 'null'], format: date-time }

@@ -5,7 +5,16 @@
   "scripts": {
     "dev": "pnpm --parallel --filter ./api --filter ./ui dev",
     "build": "pnpm --filter ./api build && pnpm --filter ./ui build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "pnpm --filter ./api lint && pnpm --filter ./ui lint",
-    "test": "pnpm --filter ./api test && pnpm --filter ./ui test"
+    "test": "pnpm --filter ./api test && pnpm --filter ./ui test",
+    "test:integration": "pnpm --filter ./api test:integration",
+    "contract:check": "pnpm --filter ./api contract:check",
+    "typecheck": "pnpm --filter ./api typecheck && pnpm --filter ./ui typecheck"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.8"
   }
 }

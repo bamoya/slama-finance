@@ -2,10 +2,569 @@ openapi: 3.1.0
 info:
   title: Slama Finance API
   version: 0.1.0
+  description:
+    Foundation contracts plus existing auth/RBAC scaffolding. Temporary-password onboarding
+    and full RBAC safety are implemented in sequences 01/02.
+security:
+  - sessionCookie: []
 paths:
+  /v1/invoices/{id}/send:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1invoices~1{id}~1send
+  /v1/estimates/{id}/send:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1estimates~1{id}~1send
+  /v1/documents/{documentType}/{id}/notifications:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1notifications
+  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/retry:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1notifications~1{dispatchId}~1retry
+  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/cancel:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1notifications~1{dispatchId}~1cancel
+  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/retry:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1notification-preparations~1{jobId}~1retry
+  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/cancel:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1notification-preparations~1{jobId}~1cancel
+  /v1/notification-rules:
+    $ref: ./modules/settings/notifications.yaml#/paths/~1v1~1notification-rules
+  /v1/notification-rules/{id}/preview:
+    $ref: ./modules/settings/notifications.yaml#/paths/~1v1~1notification-rules~1{id}~1preview
+  /v1/notification-rules/{id}:
+    $ref: ./modules/settings/notifications.yaml#/paths/~1v1~1notification-rules~1{id}
+  /v1/notification-rules/{id}/test:
+    $ref: ./modules/settings/notifications.yaml#/paths/~1v1~1notification-rules~1{id}~1test
+  /v1/clients/{id}/notification-preferences:
+    $ref: ./modules/clients/notification-preferences.yaml#/paths/~1v1~1clients~1{id}~1notification-preferences
+  /v1/clients/{id}/notification-preferences/{ruleId}:
+    $ref: ./modules/clients/notification-preferences.yaml#/paths/~1v1~1clients~1{id}~1notification-preferences~1{ruleId}
+  /v1/dashboard:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1dashboard
+  /v1/reports/analysis:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1reports~1analysis
+  /v1/reports/sections:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1reports~1sections
+  /v1/reports/exports:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1reports~1exports
+  /v1/report-schedules:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules
+  /v1/report-schedules/preview:
+    $ref: ./modules/reporting/schedule-preview.yaml#/paths/~1v1~1report-schedules~1preview
+  /v1/report-schedules/{id}/test-email:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1test-email
+  /v1/report-schedules/eligible-recipients:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1eligible-recipients
+  /v1/report-schedules/{id}:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}
+  /v1/report-schedules/{id}/enable:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1enable
+  /v1/report-schedules/{id}/disable:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1disable
+  /v1/report-schedules/{id}/archive:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1archive
+  /v1/report-schedules/{id}/restore:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1restore
+  /v1/report-schedules/{id}/runs:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-schedules~1{id}~1runs
+  /v1/report-runs/{id}:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-runs~1{id}
+  /v1/report-runs/{id}/cleanup:
+    $ref: ./modules/reporting/run-management.yaml#/paths/~1v1~1report-runs~1{id}~1cleanup
+  /v1/report-runs/{id}/regenerate-files:
+    $ref: ./modules/reporting/run-management.yaml#/paths/~1v1~1report-runs~1{id}~1regenerate-files
+  /v1/report-runs/{id}/retry:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-runs~1{id}~1retry
+  /v1/report-runs/{id}/artifacts:
+    $ref: ./modules/reporting/reporting.yaml#/paths/~1v1~1report-runs~1{id}~1artifacts
+  /v1/documents/{documentType}/{id}/regenerate-pdf:
+    $ref: ./modules/sales/artifacts.yaml#/paths/~1v1~1documents~1{documentType}~1{id}~1regenerate-pdf
+  /v1/payments:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments
+  /v1/payments/{id}/receipt:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}~1receipt
+  /v1/payments/{id}:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}
+  /v1/payments/{id}/confirm:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}~1confirm
+  /v1/payments/{id}/cancel:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}~1cancel
+  /v1/payments/{id}/restore:
+    $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}~1restore
+  /v1/delivery-notes:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes
+  /v1/delivery-notes/{id}:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}
+  /v1/delivery-notes/{id}/prepare:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1prepare
+  /v1/delivery-notes/{id}/deliver:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1deliver
+  /v1/delivery-notes/{id}/acknowledge:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1acknowledge
+  /v1/delivery-notes/{id}/cancel:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1cancel
+  /v1/delivery-notes/{id}/pdf:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1pdf
+  /v1/delivery-notes/{id}/artifacts:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1artifacts
+  /v1/invoices:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices
+  /v1/invoices/from-deliveries:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1from-deliveries
+  /v1/invoices/{id}:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1{id}
+  /v1/invoices/{id}/issue:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1{id}~1issue
+  /v1/invoices/{id}/cancel:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1{id}~1cancel
+  /v1/invoices/{id}/pdf:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1{id}~1pdf
+  /v1/invoices/{id}/artifacts:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1invoices~1{id}~1artifacts
+  /v1/estimates/{id}/invoices:
+    $ref: ./modules/sales/invoices.yaml#/paths/~1v1~1estimates~1{id}~1invoices
+  /v1/artifacts/{id}/download:
+    $ref: ./modules/sales/artifacts.yaml#/paths/~1v1~1artifacts~1{id}~1download
+  /v1/estimates:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates
+  /v1/estimates/{id}:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}
+  /v1/estimates/{id}/issue:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1issue
+  /v1/estimates/{id}/revisions:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1revisions
+  /v1/estimates/{id}/accept:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1accept
+  /v1/estimates/{id}/reject:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1reject
+  /v1/estimates/{id}/cancel:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1cancel
+  /v1/estimates/{id}/pdf:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1pdf
+  /v1/estimates/{id}/artifacts:
+    $ref: ./modules/sales/estimates.yaml#/paths/~1v1~1estimates~1{id}~1artifacts
+  /v1/clients:
+    $ref: ./modules/clients/clients.yaml#/paths/~1v1~1clients
+  /v1/clients/{id}:
+    $ref: ./modules/clients/clients.yaml#/paths/~1v1~1clients~1{id}
+  /v1/clients/{id}/overview:
+    $ref: ./modules/clients/clients.yaml#/paths/~1v1~1clients~1{id}~1overview
+  /v1/clients/{id}/archive:
+    $ref: ./modules/clients/clients.yaml#/paths/~1v1~1clients~1{id}~1archive
+  /v1/clients/{id}/restore:
+    $ref: ./modules/clients/clients.yaml#/paths/~1v1~1clients~1{id}~1restore
+  /v1/categories:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories
+  /v1/categories/insights:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories~1insights
+  /v1/categories/{id}/insights:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories~1{id}~1insights
+  /v1/categories/{id}:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories~1{id}
+  /v1/categories/{id}/archive:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories~1{id}~1archive
+  /v1/categories/{id}/restore:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1categories~1{id}~1restore
+  /v1/products:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products
+  /v1/products/insights:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products~1insights
+  /v1/products/{id}/insights:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products~1{id}~1insights
+  /v1/products/{id}:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products~1{id}
+  /v1/products/{id}/archive:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products~1{id}~1archive
+  /v1/products/{id}/restore:
+    $ref: ./modules/catalog/catalog.yaml#/paths/~1v1~1products~1{id}~1restore
+  /v1/media/uploads:
+    $ref: ./modules/media/media.yaml#/paths/~1v1~1media~1uploads
+  /v1/media/{id}:
+    $ref: ./modules/media/media.yaml#/paths/~1v1~1media~1{id}
+  /v1/media/{id}/download:
+    $ref: ./modules/media/media.yaml#/paths/~1v1~1media~1{id}~1download
+  /v1/company-settings:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1company-settings
+  /v1/bank-accounts:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1bank-accounts
+  /v1/bank-accounts/{id}:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1bank-accounts~1{id}
+  /v1/bank-accounts/{id}/restore:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1bank-accounts~1{id}~1restore
+  /v1/bank-accounts/{id}/archive:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1bank-accounts~1{id}~1archive
+  /v1/document-templates:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1document-templates
+  /v1/document-templates/{id}:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1document-templates~1{id}
+  /v1/document-templates/{id}/archive:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1document-templates~1{id}~1archive
+  /v1/document-templates/preview:
+    $ref: ./modules/settings/settings.yaml#/paths/~1v1~1document-templates~1preview
+  /v1/auth/profile:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1profile
   /health:
-    get:
-      operationId: healthCheck
-      responses:
-        '200':
-          description: API is available
+    $ref: ./shared/common.yaml#/paths/~1health
+  /ready:
+    $ref: ./shared/common.yaml#/paths/~1ready
+  /v1/auth/login:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1login
+  /v1/auth/session:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1session
+  /v1/auth/logout:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1logout
+  /v1/rbac/permissions:
+    $ref: ./modules/identity/rbac.yaml#/paths/~1v1~1rbac~1permissions
+  /v1/rbac/roles:
+    $ref: ./modules/identity/rbac.yaml#/paths/~1v1~1rbac~1roles
+  /v1/rbac/roles/{roleId}/permissions:
+    $ref: ./modules/identity/rbac.yaml#/paths/~1v1~1rbac~1roles~1{roleId}~1permissions
+  /v1/rbac/roles/{roleId}:
+    $ref: ./modules/identity/rbac.yaml#/paths/~1v1~1rbac~1roles~1{roleId}
+  /v1/staff:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff
+  /v1/staff/{userId}/roles:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1roles
+  /v1/staff/{userId}:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}
+  /v1/staff/{userId}/disable:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1disable
+  /v1/staff/{userId}/enable:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1enable
+  /v1/auth/password-reset/request:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1password-reset~1request
+  /v1/auth/password-reset/confirm:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1password-reset~1confirm
+  /v1/staff/{userId}/temporary-password:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1temporary-password
+  /v1/auth/change-password:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1change-password
+components:
+  parameters:
+    CatalogDateFrom:
+      $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogDateFrom
+    CatalogDateTo:
+      $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogDateTo
+    CatalogPeriod:
+      $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogPeriod
+    CatalogCurrency:
+      $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogCurrency
+    CatalogIncludeFinancial:
+      $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogIncludeFinancial
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: slama_session
+  schemas:
+    ReportRunCleanupInput:
+      $ref: ./modules/reporting/run-management.yaml#/components/schemas/ReportRunCleanupInput
+    ReportRunCleanupResult:
+      $ref: ./modules/reporting/run-management.yaml#/components/schemas/ReportRunCleanupResult
+    SendDocumentInput:
+      $ref: ./modules/sales/notifications.yaml#/components/schemas/SendDocumentInput
+    NotificationPreparation:
+      $ref: ./modules/sales/notifications.yaml#/components/schemas/NotificationPreparation
+    NotificationTimelineItem:
+      $ref: ./modules/sales/notifications.yaml#/components/schemas/NotificationTimelineItem
+    NotificationTimeline:
+      $ref: ./modules/sales/notifications.yaml#/components/schemas/NotificationTimeline
+    NotificationRule:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRule
+    NotificationRulePreviewInput:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRulePreviewInput
+    NotificationRulePreview:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRulePreview
+    NotificationRuleList:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRuleList
+    NotificationRuleUpdate:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRuleUpdate
+    NotificationRuleTest:
+      $ref: ./modules/settings/notifications.yaml#/components/schemas/NotificationRuleTest
+    ClientNotificationPreference:
+      $ref: ./modules/clients/notification-preferences.yaml#/components/schemas/ClientNotificationPreference
+    ClientNotificationPreferenceList:
+      $ref: ./modules/clients/notification-preferences.yaml#/components/schemas/ClientNotificationPreferenceList
+    ClientNotificationPreferenceInput:
+      $ref: ./modules/clients/notification-preferences.yaml#/components/schemas/ClientNotificationPreferenceInput
+    ClientNotificationPreferenceVersion:
+      $ref: ./modules/clients/notification-preferences.yaml#/components/schemas/ClientNotificationPreferenceVersion
+    ReportSectionKey:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSectionKey
+    ReportCriteria:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportCriteria
+    ReportFilters:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportFilters
+    ReportMetric:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportMetric
+    ReportRow:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRow
+    ReportSeriesPoint:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSeriesPoint
+    ReportSection:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSection
+    ReportAnalysis:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportAnalysis
+    ReportSectionInfo:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSectionInfo
+    ReportSectionRegistry:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSectionRegistry
+    ReportExportInput:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportExportInput
+    ReportVersionInput:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportVersionInput
+    ReportScheduleInput:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportScheduleInput
+    ReportSchedulePreviewInput:
+      $ref: ./modules/reporting/schedule-preview.yaml#/components/schemas/ReportSchedulePreviewInput
+    ReportSchedulePreview:
+      $ref: ./modules/reporting/schedule-preview.yaml#/components/schemas/ReportSchedulePreview
+    ReportSchedule:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSchedule
+    ReportRecipient:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRecipient
+    ReportRecipientPage:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRecipientPage
+    ReportSchedulePage:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportSchedulePage
+    ReportArtifact:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportArtifact
+    ReportRecipientDelivery:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRecipientDelivery
+    ReportRun:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRun
+    ReportRunPage:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportRunPage
+    ReportScheduleUpdate:
+      $ref: ./modules/reporting/reporting.yaml#/components/schemas/ReportScheduleUpdate
+    RegenerateDocumentPdfInput:
+      $ref: ./modules/sales/artifacts.yaml#/components/schemas/RegenerateDocumentPdfInput
+    RegeneratedDocumentPdf:
+      $ref: ./modules/sales/artifacts.yaml#/components/schemas/RegeneratedDocumentPdf
+    PaymentInput:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentInput
+    PaymentReceiptSnapshot:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentReceiptSnapshot
+    PaymentConfirmation:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentConfirmation
+    PaymentCancellation:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentCancellation
+    PaymentVersion:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentVersion
+    Payment:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/Payment
+    PaymentPage:
+      $ref: ./modules/sales/payments.yaml#/components/schemas/PaymentPage
+    ClientFinancialSummary:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientFinancialSummary
+    ClientCurrencySummary:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientCurrencySummary
+    ClientActivity:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientActivity
+    ClientOverview:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientOverview
+    DeliveryNoteVersion:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteVersion
+    DeliveryNoteAcknowledgment:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteAcknowledgment
+    DeliveryNoteCancellation:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteCancellation
+    DeliveryNoteLineInput:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteLineInput
+    DeliveryNoteInput:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteInput
+    DeliveryNoteUpdate:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteUpdate
+    DeliveryNoteLine:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteLine
+    DeliveryNote:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNote
+    DeliveryNotePage:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNotePage
+    DeliveryNotePdfJob:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNotePdfJob
+    DeliveryNoteArtifact:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteArtifact
+    InvoiceVersion:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceVersion
+    InvoiceCancellation:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceCancellation
+    InvoiceConversion:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceConversion
+    DeliveryInvoiceConversionLine:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/DeliveryInvoiceConversionLine
+    DeliveryInvoiceConversion:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/DeliveryInvoiceConversion
+    InvoiceInput:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceInput
+    InvoiceUpdate:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceUpdate
+    Invoice:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/Invoice
+    InvoicePage:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoicePage
+    InvoicePdfJob:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoicePdfJob
+    InvoiceArtifact:
+      $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceArtifact
+    EstimateVersion:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateVersion
+    EstimateCancellation:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateCancellation
+    EstimateLineInput:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateLineInput
+    EstimateInput:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateInput
+    EstimateUpdate:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateUpdate
+    EstimateLine:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateLine
+    Estimate:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/Estimate
+    EstimatePage:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimatePage
+    EstimatePdfJob:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimatePdfJob
+    EstimateArtifact:
+      $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateArtifact
+    ClientVersion:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientVersion
+    ClientInput:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientInput
+    ClientUpdate:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientUpdate
+    Client:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/Client
+    ClientPage:
+      $ref: ./modules/clients/clients.yaml#/components/schemas/ClientPage
+    CatalogRecordVersion:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CatalogRecordVersion
+    CategoryInput:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryInput
+    CategoryUpdate:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryUpdate
+    Category:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/Category
+    CatalogFinancialSummary:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CatalogFinancialSummary
+    NullableCatalogFinancialSummary:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/NullableCatalogFinancialSummary
+    ProductInsight:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductInsight
+    ProductInsightSummary:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductInsightSummary
+    ProductInsightsPage:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductInsightsPage
+    CategoryInsight:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryInsight
+    CategoryInsightSummary:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryInsightSummary
+    TopCategoryInsight:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/TopCategoryInsight
+    NullableTopCategoryInsight:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/NullableTopCategoryInsight
+    CategoryInsightsPage:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryInsightsPage
+    VariantInsight:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/VariantInsight
+    RecentProductInvoice:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/RecentProductInvoice
+    ProductInsightsDetail:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductInsightsDetail
+    CategoryInsightsDetail:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/CategoryInsightsDetail
+    VariantInput:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/VariantInput
+    ProductInput:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductInput
+    ProductUpdate:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductUpdate
+    ProductVariant:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductVariant
+    Product:
+      $ref: ./modules/catalog/catalog.yaml#/components/schemas/Product
+    CompanySettings:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/CompanySettings
+    UpdateCompanySettings:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/UpdateCompanySettings
+    BankAccount:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/BankAccount
+    CreateBankAccount:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/CreateBankAccount
+    UpdateBankAccount:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/UpdateBankAccount
+    DocumentTemplate:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/DocumentTemplate
+    CreateDocumentTemplate:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/CreateDocumentTemplate
+    UpdateDocumentTemplate:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/UpdateDocumentTemplate
+    SettingsRecordVersion:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/SettingsRecordVersion
+    TemplatePreview:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/TemplatePreview
+    UploadMedia:
+      $ref: ./modules/media/media.yaml#/components/schemas/UploadMedia
+    DeleteMedia:
+      $ref: ./modules/media/media.yaml#/components/schemas/DeleteMedia
+    MediaAsset:
+      $ref: ./modules/media/media.yaml#/components/schemas/MediaAsset
+    Error:
+      $ref: ./shared/errors.yaml#/components/schemas/Error
+    Health:
+      $ref: ./shared/common.yaml#/components/schemas/Health
+    Readiness:
+      $ref: ./shared/common.yaml#/components/schemas/Readiness
+    User:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/User
+    Session:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/Session
+    Login:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/Login
+    Role:
+      $ref: ./modules/identity/rbac.yaml#/components/schemas/Role
+    Permission:
+      $ref: ./modules/identity/rbac.yaml#/components/schemas/Permission
+    CreateRole:
+      $ref: ./modules/identity/rbac.yaml#/components/schemas/CreateRole
+    CreateStaff:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/CreateStaff
+    StaffCreated:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/StaffCreated
+    PermissionAssignment:
+      $ref: ./modules/identity/rbac.yaml#/components/schemas/PermissionAssignment
+    RoleAssignment:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/RoleAssignment
+    Money:
+      $ref: ./shared/common.yaml#/components/schemas/Money
+    PageMetadata:
+      $ref: ./shared/pagination.yaml#/components/schemas/PageMetadata
+    VersionedUpdate:
+      $ref: ./shared/pagination.yaml#/components/schemas/VersionedUpdate
+    UpdateStaff:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/UpdateStaff
+    StaffDetail:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/StaffDetail
+    StaffPage:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/StaffPage
+    PasswordResetRequest:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/PasswordResetRequest
+    PasswordResetConfirm:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/PasswordResetConfirm
+    PasswordResetAccepted:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/PasswordResetAccepted
+    StaffOnboarding:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/StaffOnboarding
+    TemporaryPassword:
+      $ref: ./modules/identity/staff.yaml#/components/schemas/TemporaryPassword
+    ChangePassword:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/ChangePassword
+    UpdateProfile:
+      $ref: ./modules/identity/auth.yaml#/components/schemas/UpdateProfile
+    Uuid:
+      $ref: ./shared/common.yaml#/components/schemas/Uuid
+    Timestamp:
+      $ref: ./shared/common.yaml#/components/schemas/Timestamp
+    CalendarDate:
+      $ref: ./shared/common.yaml#/components/schemas/CalendarDate
+    UnitPrice:
+      $ref: ./shared/common.yaml#/components/schemas/UnitPrice
+    Weight:
+      $ref: ./shared/common.yaml#/components/schemas/Weight
+    ExpectedVersion:
+      $ref: ./shared/common.yaml#/components/schemas/ExpectedVersion

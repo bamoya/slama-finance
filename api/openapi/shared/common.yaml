@@ -1,0 +1,85 @@
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Health
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Error
+  /ready:
+    get:
+      operationId: readinessCheck
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Readiness
+        "503":
+          description: Database unavailable or readiness deadline exceeded
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Error
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Error
+components:
+  schemas:
+    Health:
+      type: object
+      properties:
+        status:
+          const: ok
+          type: string
+      required:
+        - status
+      additionalProperties: false
+    Readiness:
+      type: object
+      properties:
+        status:
+          const: ready
+          type: string
+      required:
+        - status
+      additionalProperties: false
+    Money:
+      type: string
+      pattern: ^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$
+      description: Nonnegative decimal string, never a JSON number.
+    Uuid:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+    CalendarDate:
+      type: string
+      format: date
+    UnitPrice:
+      type: string
+      pattern: ^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$
+    Weight:
+      type: string
+      pattern: ^(?!0(?:\.0{1,3})?$)(?:0|[1-9]\d{0,14})(?:\.\d{1,3})?$
+    ExpectedVersion:
+      type: integer
+      minimum: 1

@@ -1,0 +1,309 @@
+paths:
+  /v1/notification-rules/{id}/preview:
+    post:
+      operationId: previewNotificationRule
+      tags: [settings]
+      description: Requires notification_rules.update. Render unsaved content with synthetic values using the delivery sanitizer. Does not save or send email. Only safe inline HTML is supported; active content is removed.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationRulePreviewInput' }
+      responses:
+        '200':
+          description: Safe rendered email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationRulePreview' }
+        '400':
+          description: Invalid template
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many previews
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/notification-rules:
+    get:
+      operationId: listNotificationRules
+      tags: [settings]
+      description: Requires notification_rules.read. Rules are fixed and default disabled. Tests send synthetic data only to the current operator.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationRuleList' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/notification-rules/{id}:
+    patch:
+      operationId: updateNotificationRule
+      tags: [settings]
+      description: Requires notification_rules.update. Rules are fixed and default disabled. Tests send synthetic data only to the current operator.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationRuleUpdate' }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationRule' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/notification-rules/{id}/test:
+    post:
+      operationId: testNotificationRule
+      tags: [settings]
+      description: Requires notification_rules.update. Rules are fixed and default disabled. Tests send synthetic data only to the current operator.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '202':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationRuleTest' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+components:
+  schemas:
+    NotificationRule:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          eventKey,
+          enabled,
+          offsetDays,
+          repeatEveryDays,
+          senderName,
+          senderEmail,
+          locale,
+          subjectTemplate,
+          bodyTemplate,
+          bodyFormat,
+          version,
+          variables,
+          timingSupported,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        eventKey:
+          {
+            type: string,
+            enum:
+              [
+                invoice_sent,
+                estimate_sent,
+                payment_received,
+                invoice_due_reminder,
+                estimate_expiry_reminder,
+              ],
+          }
+        enabled: { type: boolean }
+        offsetDays: { type: integer, minimum: -365, maximum: 365 }
+        repeatEveryDays: { type: [integer, 'null'], minimum: 1, maximum: 365 }
+        senderName: { type: string, minLength: 1, maxLength: 100 }
+        senderEmail: { type: string, format: email }
+        locale: { type: string, enum: [fr-MA, ar-MA] }
+        subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
+        bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
+        bodyFormat: { type: string, enum: [text, html], default: text }
+        version: { type: integer, minimum: 1 }
+        variables: { type: array, items: { type: string } }
+        timingSupported: { type: boolean }
+    NotificationRuleList:
+      type: object
+      additionalProperties: false
+      required: [items, permittedSenderEmails]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/NotificationRule' } }
+        permittedSenderEmails: { type: array, items: { type: string, format: email } }
+    NotificationRuleUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          expectedVersion,
+          enabled,
+          offsetDays,
+          repeatEveryDays,
+          senderName,
+          senderEmail,
+          locale,
+          subjectTemplate,
+          bodyTemplate,
+        ]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        enabled: { type: boolean }
+        offsetDays: { type: integer, minimum: -365, maximum: 365 }
+        repeatEveryDays: { type: [integer, 'null'], minimum: 1, maximum: 365 }
+        senderName: { type: string, minLength: 1, maxLength: 100 }
+        senderEmail: { type: string, format: email }
+        locale: { type: string, enum: [fr-MA, ar-MA] }
+        subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
+        bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
+        bodyFormat:
+          {
+            type: string,
+            enum: [text, html],
+            default: text,
+            description: HTML is sanitized on save and again at delivery. Legacy requests default to text.,
+          }
+    NotificationRulePreviewInput:
+      type: object
+      additionalProperties: false
+      required: [subjectTemplate, bodyTemplate, bodyFormat]
+      properties:
+        subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
+        bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
+        bodyFormat: { type: string, enum: [text, html] }
+        locale:
+          { type: string, enum: [fr-MA, ar-MA], description: Defaults to the saved rule language. }
+    NotificationRulePreview:
+      type: object
+      additionalProperties: false
+      required: [subject, html, text, sanitizedBodyTemplate, modified]
+      properties:
+        subject: { type: string }
+        html: { type: string }
+        text: { type: string }
+        sanitizedBodyTemplate: { type: string }
+        modified:
+          {
+            type: boolean,
+            description: Sanitization changed the submitted HTML; review the preview before saving.,
+          }
+    NotificationRuleTest:
+      type: object
+      additionalProperties: false
+      required: [messageId, status]
+      properties:
+        messageId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, sending, sent, failed, cancelled] }

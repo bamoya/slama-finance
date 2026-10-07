@@ -1,0 +1,434 @@
+paths:
+  /v1/staff:
+    post:
+      operationId: createStaff
+      description: Creating with nonempty roleIds also requires roles.update. Granting roles remains limited to permissions held by the actor. Editing existing staff role assignments requires both staff.update and roles.update.
+      x-permissions: [staff.create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/CreateStaff
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffOnboarding
+        default: &a1
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    get:
+      operationId: listStaff
+      x-permissions: [staff.read]
+      parameters:
+        - name: roleId
+          in: query
+          description: Only staff assigned to this role; combines with search and status filters. A nonexistent role returns an empty page.
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - email
+              - firstName
+              - lastName
+            default: email
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - current
+              - archived
+              - all
+            default: current
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffPage
+        default: *a1
+  /v1/staff/{userId}/roles:
+    put:
+      operationId: replaceUserRoles
+      x-permissions: [staff.update, roles.update]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/RoleAssignment
+      responses:
+        "204":
+          description: Completed without response body
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/staff/{userId}:
+    get:
+      operationId: getStaff
+      x-permissions: [staff.read]
+      parameters:
+        - &a2
+          name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffDetail
+        default: *a1
+    patch:
+      operationId: updateStaff
+      x-permissions: [staff.update]
+      parameters:
+        - *a2
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffCreated
+        default: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/UpdateStaff
+    delete:
+      operationId: archiveStaff
+      x-permissions: [staff.update]
+      parameters:
+        - *a2
+      responses:
+        "204": &a3
+          description: Completed without response body
+        default: *a1
+  /v1/staff/{userId}/disable:
+    post:
+      operationId: disableStaff
+      x-permissions: [staff.update]
+      parameters:
+        - *a2
+      responses:
+        "204": *a3
+        default: *a1
+  /v1/staff/{userId}/enable:
+    post:
+      operationId: enableStaff
+      x-permissions: [staff.update]
+      parameters:
+        - *a2
+      responses:
+        "204": *a3
+        default: *a1
+  /v1/staff/{userId}/temporary-password:
+    post:
+      operationId: reissueTemporaryPassword
+      x-permissions: [staff.update]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: New one-use password; previous credentials and sessions invalidated
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/TemporaryPassword
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+components:
+  schemas:
+    CreateStaff:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        roleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          default: []
+      required:
+        - email
+        - firstName
+        - lastName
+      additionalProperties: false
+    StaffCreated:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        lastName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        disabledAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - disabledAt
+        - archivedAt
+      additionalProperties: false
+    RoleAssignment:
+      type: object
+      properties:
+        roleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - roleIds
+      additionalProperties: false
+    UpdateStaff:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+    StaffDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        lastName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        disabledAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              key:
+                type: string
+              name:
+                type: string
+            required:
+              - id
+              - key
+              - name
+            additionalProperties: false
+        permissionKeys:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - disabledAt
+        - archivedAt
+        - roles
+        - permissionKeys
+      additionalProperties: false
+    StaffPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: ../../openapi.yaml#/components/schemas/StaffCreated
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      additionalProperties: false
+    StaffOnboarding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        lastName:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        disabledAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        temporaryPassword:
+          type: string
+          description: Shown once. Never persist in client storage or logs.
+        temporaryPasswordExpiresAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - disabledAt
+        - archivedAt
+        - temporaryPassword
+        - temporaryPasswordExpiresAt
+      additionalProperties: false
+    TemporaryPassword:
+      type: object
+      properties:
+        temporaryPassword:
+          type: string
+        temporaryPasswordExpiresAt:
+          type: string
+          format: date-time
+      required:
+        - temporaryPassword
+        - temporaryPasswordExpiresAt
+      additionalProperties: false

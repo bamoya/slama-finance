@@ -1,0 +1,398 @@
+paths:
+  /v1/invoices/{id}/send:
+    post:
+      operationId: sendInvoice
+      tags: [sales]
+      description: Requires invoices.read and invoices.update. Durable consent-aware preparation; provider acceptance later sets eligible send metadata. Same requestId and canonical input returns existing work.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendDocumentInput' }
+      responses:
+        '202':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreparation' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/estimates/{id}/send:
+    post:
+      operationId: sendEstimate
+      tags: [sales]
+      description: Requires estimates.read and estimates.update. Durable consent-aware preparation; provider acceptance later sets eligible send metadata. Same requestId and canonical input returns existing work.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendDocumentInput' }
+      responses:
+        '202':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreparation' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/documents/{documentType}/{id}/notifications:
+    get:
+      operationId: listDocumentNotifications
+      tags: [sales]
+      description: Requires owner read and notification_dispatches.read. Includes preparation jobs separately from dispatches. Sent means accepted by provider, not delivered.
+      parameters:
+        - { name: documentType, in: path, required: true, schema: { type: string, enum: [invoice, estimate, report_run] } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationTimeline' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/retry:
+    post:
+      operationId: retryDocumentNotification
+      tags: [sales]
+      description: Requires owner read plus notification_dispatches.update and original producer authority. Current eligibility and ownership are rechecked; claimed work cannot be cancelled.
+      parameters:
+        - { name: documentType, in: path, required: true, schema: { type: string, enum: [invoice, estimate, report_run] } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: dispatchId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationTimelineItem' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/cancel:
+    post:
+      operationId: cancelDocumentNotification
+      tags: [sales]
+      description: Requires owner read plus notification_dispatches.update. Current eligibility and ownership are rechecked; claimed work cannot be cancelled.
+      parameters:
+        - { name: documentType, in: path, required: true, schema: { type: string, enum: [invoice, estimate, report_run] } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: dispatchId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationTimelineItem' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/retry:
+    post:
+      operationId: retryNotificationPreparation
+      tags: [sales]
+      description: Requires owner read plus notification_dispatches.update and original producer authority. Current eligibility and ownership are rechecked; claimed work cannot be cancelled.
+      parameters:
+        - { name: documentType, in: path, required: true, schema: { type: string, enum: [invoice, estimate, report_run] } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationTimelineItem' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/cancel:
+    post:
+      operationId: cancelNotificationPreparation
+      tags: [sales]
+      description: Requires owner read plus notification_dispatches.update. Current eligibility and ownership are rechecked; claimed work cannot be cancelled.
+      parameters:
+        - { name: documentType, in: path, required: true, schema: { type: string, enum: [invoice, estimate, report_run] } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationTimelineItem' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+components:
+  schemas:
+    SendDocumentInput:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, requestId]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        requestId: { type: string, format: uuid }
+    NotificationPreparation:
+      type: object
+      additionalProperties: false
+      required: [jobId, status, recipient, sourceVersion]
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
+        recipient: { type: string, format: email }
+        sourceVersion: { type: integer, minimum: 1 }
+    NotificationTimelineItem:
+      type: object
+      additionalProperties: false
+      required: [id, kind, status, createdAt, attempts, errorCode, recipient, eventKey]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [preparation, dispatch] }
+        status: { type: string, enum: [queued, running, succeeded, sending, sent, failed, cancelled, skipped] }
+        createdAt: { type: string, format: date-time }
+        attempts: { type: integer, minimum: 0 }
+        errorCode: { type: [string, 'null'] }
+        recipient: { type: [string, 'null'] }
+        eventKey: { type: string }
+    NotificationTimeline:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/NotificationTimelineItem' } }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1 }
+        offset: { type: integer, minimum: 0 }

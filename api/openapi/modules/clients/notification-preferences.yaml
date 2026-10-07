@@ -1,0 +1,188 @@
+paths:
+  /v1/clients/{id}/notification-preferences:
+    get:
+      operationId: listClientNotificationPreferences
+      tags: [clients]
+      description: Requires clients.read and client_notification_preferences.read. Missing override inherits. Global disable cannot be bypassed.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientNotificationPreferenceList' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/clients/{id}/notification-preferences/{ruleId}:
+    put:
+      operationId: updateClientNotificationPreference
+      tags: [clients]
+      description: Requires clients.read and client_notification_preferences.update. Missing override inherits. Global disable cannot be bypassed.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientNotificationPreferenceInput' }
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientNotificationPreference' }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+    delete:
+      operationId: deleteClientNotificationPreference
+      tags: [clients]
+      description: Requires clients.read and client_notification_preferences.update. Missing override inherits. Global disable cannot be bypassed.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientNotificationPreferenceVersion' }
+      responses:
+        '204': { description: Override reset to inherit }
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '403':
+          description: Current permission denied
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '409':
+          description: Version, identity, eligibility or claim conflict
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+        '503':
+          description: Delivery unavailable
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+components:
+  schemas:
+    ClientNotificationPreference:
+      type: object
+      additionalProperties: false
+      required: [ruleId, eventKey, globalEnabled, overrideEnabled, cc, version, effectiveEnabled, reason, recipient]
+      properties:
+        ruleId: { type: string, format: uuid }
+        eventKey: { type: string }
+        globalEnabled: { type: boolean }
+        overrideEnabled: { type: [boolean, 'null'] }
+        cc: { type: array, maxItems: 10, uniqueItems: true, items: { type: string, format: email } }
+        version: { type: integer, minimum: 0 }
+        effectiveEnabled: { type: boolean }
+        reason: { type: [string, 'null'], enum: [RULE_DISABLED, CLIENT_OPT_OUT, MISSING_EMAIL, CLIENT_ARCHIVED, null] }
+        recipient: { type: [string, 'null'] }
+    ClientNotificationPreferenceList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ClientNotificationPreference' } }
+    ClientNotificationPreferenceInput:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, enabled, cc]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        enabled: { type: boolean }
+        cc: { type: array, maxItems: 10, uniqueItems: true, items: { type: string, format: email } }
+    ClientNotificationPreferenceVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }

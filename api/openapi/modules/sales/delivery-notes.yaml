@@ -1,0 +1,413 @@
+paths:
+  /v1/delivery-notes:
+    get:
+      operationId: listDeliveryNotes
+      x-permissions: [delivery_notes.read]
+      parameters:
+        - {
+            name: status,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [all, draft, prepared, delivered, acknowledged, cancelled],
+                default: all,
+              },
+          }
+        - { name: clientId, in: query, schema: { type: string, format: uuid } }
+        - { name: invoiceId, in: query, schema: { type: string, format: uuid } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: dateFrom, in: query, schema: { type: string, format: date } }
+        - { name: dateTo, in: query, schema: { type: string, format: date } }
+        - {
+            name: billingStatus,
+            in: query,
+            schema: { type: string, enum: [all, billed, unbilled], default: all },
+          }
+        - {
+            name: sortBy,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [createdAt, deliveryDate, number, clientName],
+                default: createdAt,
+              },
+          }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          {
+            description: Delivery note page,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNotePage' } } },
+          }
+    post:
+      operationId: createDeliveryNote
+      x-permissions: [delivery_notes.create]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteInput' } } },
+        }
+      responses:
+        '201':
+          {
+            description: Draft delivery note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+  /v1/delivery-notes/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getDeliveryNote
+      x-permissions: [delivery_notes.read]
+      responses:
+        '200':
+          {
+            description: Delivery note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+    patch:
+      operationId: updateDeliveryNote
+      x-permissions: [delivery_notes.update]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteUpdate' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Updated draft,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+    delete:
+      operationId: deleteDeliveryNote
+      x-permissions: [delivery_notes.delete]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteVersion' } } },
+        }
+      responses:
+        '204': { description: Deleted draft }
+  /v1/delivery-notes/{id}/prepare:
+    post:
+      operationId: prepareDeliveryNote
+      x-permissions: [delivery_notes.update]
+      description: Finalize a draft using current client identity and contact details, even when linked to an older invoice. Freeze this snapshot for subsequent PDFs. Preserve the delivery address entered on the note and its product quantities.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteVersion' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Prepared delivery note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+  /v1/delivery-notes/{id}/deliver:
+    post:
+      operationId: deliverDeliveryNote
+      x-permissions: [delivery_notes.update]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteVersion' } } },
+        }
+      responses:
+        '200':
+          {
+            description: Delivered note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+  /v1/delivery-notes/{id}/acknowledge:
+    post:
+      operationId: acknowledgeDeliveryNote
+      x-permissions: [delivery_notes.update]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/DeliveryNoteAcknowledgment' } },
+            },
+        }
+      responses:
+        '200':
+          {
+            description: Acknowledged note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+  /v1/delivery-notes/{id}/cancel:
+    post:
+      operationId: cancelDeliveryNote
+      x-permissions: [delivery_notes.update]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/DeliveryNoteCancellation' } },
+            },
+        }
+      responses:
+        '200':
+          {
+            description: Cancelled note,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
+          }
+  /v1/delivery-notes/{id}/pdf:
+    post:
+      operationId: prepareDeliveryNotePdf
+      x-permissions: [delivery_notes.read]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '202':
+          {
+            description: PDF preparation queued,
+            content:
+              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNotePdfJob' } } },
+          }
+  /v1/delivery-notes/{id}/artifacts:
+    get:
+      operationId: listDeliveryNoteArtifacts
+      x-permissions: [delivery_notes.read]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          {
+            description: Stored PDFs,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { type: array, items: { $ref: '#/components/schemas/DeliveryNoteArtifact' } },
+                  },
+              },
+          }
+components:
+  schemas:
+    DeliveryNoteVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties: { expectedVersion: { type: integer, minimum: 1 } }
+    DeliveryNoteAcknowledgment:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, receivedByName]
+      properties:
+        {
+          expectedVersion: { type: integer, minimum: 1 },
+          receivedByName: { type: string, minLength: 1, maxLength: 200 },
+        }
+    DeliveryNoteCancellation:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        {
+          expectedVersion: { type: integer, minimum: 1 },
+          reason: { type: string, minLength: 1, maxLength: 1000 },
+        }
+    DeliveryNoteLineInput:
+      type: object
+      additionalProperties: false
+      required: [productVariantId, sourceInvoiceLineId, productName, quantity]
+      properties:
+        productVariantId: { type: [string, 'null'], format: uuid }
+        sourceInvoiceLineId: { type: [string, 'null'], format: uuid }
+        productName: { type: string, minLength: 1, maxLength: 200 }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+    DeliveryNoteInput:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          clientId,
+          invoiceId,
+          deliveryDate,
+          deliveryAddress,
+          instructions,
+          includeReceptionSignature,
+          lines,
+        ]
+      properties:
+        clientId: { type: string, format: uuid }
+        invoiceId: { type: [string, 'null'], format: uuid }
+        deliveryDate: { type: string, format: date }
+        deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
+        instructions: { type: [string, 'null'], maxLength: 4000 }
+        includeReceptionSignature: { type: boolean }
+        lines:
+          {
+            type: array,
+            maxItems: 100,
+            items: { $ref: '#/components/schemas/DeliveryNoteLineInput' },
+          }
+    DeliveryNoteUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          expectedVersion,
+          clientId,
+          invoiceId,
+          deliveryDate,
+          deliveryAddress,
+          instructions,
+          includeReceptionSignature,
+          lines,
+        ]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        clientId: { type: string, format: uuid }
+        invoiceId: { type: [string, 'null'], format: uuid }
+        deliveryDate: { type: string, format: date }
+        deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
+        instructions: { type: [string, 'null'], maxLength: 4000 }
+        includeReceptionSignature: { type: boolean }
+        lines:
+          {
+            type: array,
+            maxItems: 100,
+            items: { $ref: '#/components/schemas/DeliveryNoteLineInput' },
+          }
+    DeliveryNoteLine:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          position,
+          productId,
+          productVariantId,
+          sourceInvoiceLineId,
+          productName,
+          productReference,
+          packageWeightG,
+          quantity,
+          billedQuantity,
+          remainingBillableQuantity,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        position: { type: integer }
+        productId: { type: [string, 'null'], format: uuid }
+        productVariantId: { type: [string, 'null'], format: uuid }
+        sourceInvoiceLineId: { type: [string, 'null'], format: uuid }
+        productName: { type: string }
+        productReference: { type: [string, 'null'] }
+        packageWeightG: { type: [integer, 'null'] }
+        quantity: { type: integer }
+        billedQuantity: { type: integer }
+        remainingBillableQuantity: { type: integer }
+    DeliveryNote:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          number,
+          status,
+          clientId,
+          clientDisplayName,
+          invoiceId,
+          invoiceNumber,
+          invoices,
+          deliveryDate,
+          deliveryAddress,
+          instructions,
+          includeReceptionSignature,
+          receivedByName,
+          version,
+          contentVersion,
+          lines,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, prepared, delivered, acknowledged, cancelled] }
+        clientId: { type: string, format: uuid }
+        clientDisplayName: { type: string }
+        invoiceId: { type: [string, 'null'], format: uuid }
+        invoiceNumber: { type: [string, 'null'] }
+        invoices:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, number, status]
+            properties:
+              id: { type: string, format: uuid }
+              number: { type: [string, 'null'] }
+              status: { type: string, enum: [draft, issued, sent, cancelled] }
+        deliveryDate: { type: string, format: date }
+        deliveryAddress: { type: string }
+        instructions: { type: [string, 'null'] }
+        includeReceptionSignature: { type: boolean }
+        receivedByName: { type: [string, 'null'] }
+        version: { type: integer }
+        contentVersion: { type: integer }
+        lines: { type: array, items: { $ref: '#/components/schemas/DeliveryNoteLine' } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DeliveryNotePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/DeliveryNote' } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    DeliveryNotePdfJob:
+      type: object
+      additionalProperties: false
+      required: [jobId, status]
+      properties:
+        {
+          jobId: { type: string, format: uuid },
+          status: { type: string, enum: [queued, running, succeeded, failed, cancelled] },
+        }
+    DeliveryNoteArtifact:
+      type: object
+      additionalProperties: false
+      required: [id, sourceVersion, format, byteSize, generatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceVersion: { type: integer }
+        format: { type: string, enum: [pdf] }
+        byteSize: { type: integer }
+        generatedAt: { type: string, format: date-time }

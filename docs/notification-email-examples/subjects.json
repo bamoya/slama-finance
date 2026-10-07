@@ -1,0 +1,7 @@
+{
+  "invoice_sent": "Slama Agricole — Facture {{documentNumber}}",
+  "estimate_sent": "Slama Agricole — Devis {{documentNumber}}",
+  "payment_received": "Slama Agricole — Paiement {{paymentNumber}} reçu",
+  "invoice_due_reminder": "Slama Agricole — Échéance de la facture {{documentNumber}}",
+  "estimate_expiry_reminder": "Slama Agricole — Validité du devis {{documentNumber}}"
+}
