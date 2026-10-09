@@ -2,6 +2,10 @@
 
 ## Image delivery
 
+Configure repository Actions secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+(a read-only Docker Hub access token) for authenticated public base-image pulls.
+Application images continue to publish exclusively to GHCR using `GITHUB_TOKEN`.
+
 The manual `publish-images.yml` workflow validates the selected checkout, then
 publishes AMD64 and ARM64 API, UI and release-tooling images to GHCR. Use one commit's images
 together. Production pulls images; it does not build or automatically deploy when
