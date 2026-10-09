@@ -59,7 +59,6 @@ export function TemporaryCredential({
         <div className="mt-5 flex flex-wrap justify-end gap-3">
           <Button
             variant="outline"
-
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(credential.temporaryPassword)

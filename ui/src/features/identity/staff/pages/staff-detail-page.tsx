@@ -326,7 +326,6 @@ function StaffRoles({ person, canManage }: { person: StaffDetail; canManage: boo
           <FormActionBar>
             <Button
               variant="outline"
-
               disabled={!dirty && !changed}
               onClick={() => {
                 const ids = person.roles.map((role) => role.id)

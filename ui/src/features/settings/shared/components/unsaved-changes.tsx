@@ -63,18 +63,12 @@ export function UnsavedChanges({ dirty }: { dirty: boolean }) {
           )}
         </DialogDescription>
         <div className="mt-6 flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-
-            onClick={() => setDestination(null)}
-          >
+          <Button type="button" variant="outline" onClick={() => setDestination(null)}>
             {translate('Keep editing')}
           </Button>
           <Button
             type="button"
             variant="destructive"
-
             onClick={() => {
               if (destination?.startsWith('/')) navigate(destination)
               else if (destination) window.location.assign(destination)

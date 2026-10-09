@@ -86,17 +86,11 @@ export function ConfirmAction({
             <FormError error={error} />
           </div>
           <div className="mt-6 flex justify-end gap-3">
-            <Button
-              variant="outline"
-
-              disabled={pending}
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>
               {translate('Cancel')}
             </Button>
             <Button
               variant={variant === 'destructive' ? 'destructive' : 'default'}
-
               disabled={pending}
               onClick={async () => {
                 setPending(true)

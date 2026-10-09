@@ -64,9 +64,8 @@ docker compose -f infra/compose/docker-compose.yml --profile test stop postgres-
 ```
 
 The test service is localhost-only and uses tmpfs, no application data volume.
-Tests fail, rather than silently skip, when TEST_DATABASE_URL is absent. The fixture
-requires a localhost database ending `_test`, creates random `foundation_test_*`
-schemas and `foundation_app_*` roles, seeds a deterministic test user, and drops
+Tests fail, rather than silently skip, when TEST*DATABASE_URL is absent. The fixture
+requires a localhost database ending `_test`, creates random `foundation_test*_`schemas and`foundation*app*_` roles, seeds a deterministic test user, and drops
 only its generated identifiers. This requires an owner-level test connection.
 Never use the application database URL. Tests verify audit rollback, constraints,
 role restrictions and real readiness; they do not migrate your app database.

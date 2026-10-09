@@ -231,7 +231,6 @@ function PermissionEditor({
       <FormActionBar>
         <Button
           variant="outline"
-
           disabled={!dirty && !changedOnServer}
           onClick={() => {
             setSelected(role.permissionKeys)

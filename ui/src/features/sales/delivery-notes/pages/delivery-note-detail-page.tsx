@@ -135,12 +135,7 @@ export function DeliveryNoteDetailPage() {
                 </Can>
               )}
             {row.status !== 'draft' && (
-              <Button
-                variant="outline"
-
-                disabled={busy}
-                onClick={() => void download()}
-              >
+              <Button variant="outline" disabled={busy} onClick={() => void download()}>
                 <Download size={16} />
                 {artifacts.data?.length ? t('downloadPdf') : t('preparePdf')}
               </Button>

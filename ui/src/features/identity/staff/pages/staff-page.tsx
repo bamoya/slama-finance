@@ -146,7 +146,6 @@ export function StaffPage() {
           </label>
           <Button
             variant="outline"
-
             onClick={() =>
               setQuery({ ...query, direction: query.direction === 'asc' ? 'desc' : 'asc', page: 1 })
             }

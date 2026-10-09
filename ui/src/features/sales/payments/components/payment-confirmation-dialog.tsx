@@ -41,7 +41,6 @@ export function PaymentConfirmationDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-
           disabled={disabled}
           onClick={() => {
             setCollectedOn(today())
@@ -107,7 +106,6 @@ export function PaymentConfirmationDialog({
             <Button
               type="button"
               variant="outline"
-
               disabled={pending}
               onClick={() => setOpen(false)}
             >

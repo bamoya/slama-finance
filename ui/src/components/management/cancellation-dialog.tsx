@@ -147,18 +147,12 @@ export function CancellationDialog({
             <Button
               type="button"
               variant="outline"
-
               disabled={pending}
               onClick={() => setOpen(false)}
             >
               {t('back')}
             </Button>
-            <Button
-              type="submit"
-              variant="destructive"
-
-              disabled={pending || disabled}
-            >
+            <Button type="submit" variant="destructive" disabled={pending || disabled}>
               {pending ? t('saving') : t('confirm')}
             </Button>
           </div>

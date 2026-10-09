@@ -204,6 +204,7 @@ do not remove the directory/state to simulate cleanup.
 
 References: [Lightsail bundles](https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-bundles.html),
 [Terraform Lightsail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lightsail_instance).
+
 # RETIRED — do not apply
 
 AWS resources were destroyed after the move to Hostinger. The S3 backend bucket

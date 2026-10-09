@@ -38,7 +38,6 @@ export function DeliveryAcknowledgmentDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-
           disabled={disabled}
           onClick={() => {
             setReceiver('')
@@ -106,7 +105,6 @@ export function DeliveryAcknowledgmentDialog({
             <Button
               type="button"
               variant="outline"
-
               disabled={pending}
               onClick={() => setOpen(false)}
             >

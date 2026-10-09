@@ -261,12 +261,7 @@ export function SettingsForm({
       </form.Subscribe>
       <FormError error={error} />
       {error instanceof ApiError && error.code === 'STALE_VERSION' && (
-        <Button
-          type="button"
-          variant="outline"
-
-          onClick={() => void onReload().catch(setError)}
-        >
+        <Button type="button" variant="outline" onClick={() => void onReload().catch(setError)}>
           {translate('Discard edits and reload latest')}
         </Button>
       )}

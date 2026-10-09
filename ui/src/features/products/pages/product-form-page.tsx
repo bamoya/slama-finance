@@ -436,12 +436,7 @@ function ProductEditor({
         <FormError error={error} />
         <FormActionBar>
           {onReload && (
-            <Button
-              type="button"
-              variant="outline"
-
-              onClick={() => void onReload()}
-            >
+            <Button type="button" variant="outline" onClick={() => void onReload()}>
               <RotateCcw size={16} />
               {translate('Reload saved version')}
             </Button>
