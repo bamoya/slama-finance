@@ -14,6 +14,11 @@ long-running application or public service. Runtime images do not auto-migrate.
 
 ## First-launch gates — not yet automated
 
+For the current Hostinger/Dokploy deployment, runtime-role provisioning, explicit
+grants, and migrations are now automated by the one-shot startup initializer;
+see [Dokploy startup](dokploy-startup.md). The historical production Compose below
+still uses manual release-profile migrations. Administrator bootstrap remains pending.
+
 1. Initialize PostgreSQL in its persistent external volume. Keep its owner
    credential only in database/release administration, never in API settings.
 2. Create a distinct non-owner runtime role and reviewed least-privilege grants.

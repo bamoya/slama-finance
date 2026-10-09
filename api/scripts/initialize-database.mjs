@@ -1,0 +1,144 @@
+import { pathToFileURL } from 'node:url'
+
+import { drizzle } from 'drizzle-orm/postgres-js'
+import { migrate } from 'drizzle-orm/postgres-js/migrator'
+import postgres from 'postgres'
+
+export function configuration(env) {
+  if (!env.DATABASE_URL || !env.MIGRATION_DATABASE_URL)
+    throw new Error('Both runtime and migration database URLs are required')
+  const runtime = new URL(env.DATABASE_URL)
+  const owner = new URL(env.MIGRATION_DATABASE_URL)
+  if (
+    !['postgres:', 'postgresql:'].includes(runtime.protocol) ||
+    !['postgres:', 'postgresql:'].includes(owner.protocol) ||
+    runtime.hostname !== owner.hostname ||
+    (runtime.port || '5432') !== (owner.port || '5432') ||
+    runtime.pathname !== owner.pathname
+  )
+    throw new Error('Database URLs must target the same PostgreSQL database')
+  const role = decodeURIComponent(runtime.username)
+  const password = decodeURIComponent(runtime.password)
+  if (
+    !/^[a-z_][a-z0-9_]{0,62}$/.test(role) ||
+    role.startsWith('pg_') ||
+    role === decodeURIComponent(owner.username)
+  )
+    throw new Error('A distinct, simple runtime role is required')
+  if (password.length < 16) throw new Error('Runtime password must contain at least 16 characters')
+  return { role, password, database: decodeURIComponent(owner.pathname.slice(1)) }
+}
+
+// Explicit allowlist: new tables require a reviewed grant, never automatic ALL privileges.
+export const writableTables = [
+  'password_reset_tokens',
+  'role_permissions',
+  'roles',
+  'sessions',
+  'user_roles',
+  'user_settings',
+  'users',
+  'bank_accounts',
+  'company_settings',
+  'document_templates',
+  'media_assets',
+  'product_categories',
+  'product_variants',
+  'products',
+  'clients',
+  'payments',
+  'estimates',
+  'estimate_lines',
+  'invoices',
+  'invoice_lines',
+  'delivery_notes',
+  'delivery_note_lines',
+  'client_notification_preferences',
+  'report_schedules',
+  'report_schedule_recipients',
+  'document_artifacts',
+  'outbound_messages',
+  'notification_dispatches',
+  'report_runs',
+]
+const identifier = (value) => '"' + value.replaceAll('"', '""') + '"'
+const literal = (value) => "'" + value.replaceAll("'", "''") + "'"
+
+export async function initializeDatabase(env = process.env) {
+  const config = configuration(env)
+  const owner = postgres(env.MIGRATION_DATABASE_URL, {
+    max: 1,
+    onnotice: () => {},
+    connect_timeout: 10,
+    idle_timeout: 0,
+    max_lifetime: 0,
+  })
+  const runtime = postgres(env.DATABASE_URL, { max: 1, onnotice: () => {}, connect_timeout: 10 })
+  const connection = owner
+  try {
+    // A dedicated single-connection client (no idle/lifetime recycling) holds this
+    // session lock through migrations and provisioning; no parallel queries use it.
+    await connection`SELECT pg_advisory_lock(1936482669, 1)`
+    const roles =
+      await connection`SELECT rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls FROM pg_roles WHERE rolname = ${config.role}`
+    if (roles.some((role) => Object.values(role).some(Boolean)))
+      throw new Error('Existing runtime role has elevated privileges; refusing initialization')
+    const memberships =
+      await connection`SELECT 1 FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.member WHERE r.rolname = ${config.role}`
+    const ownership =
+      await connection`SELECT 1 FROM pg_database d JOIN pg_roles r ON r.oid = d.datdba WHERE r.rolname = ${config.role}`
+    if (memberships.length || ownership.length)
+      throw new Error('Runtime role must not inherit roles or own databases')
+    // Validate existing credentials before changing schema; never silently rotate passwords.
+    if (roles.length) await runtime`SELECT 1`
+    await migrate(drizzle(connection), {
+      migrationsFolder: new URL('../db/migrations/', import.meta.url).pathname,
+    })
+    await connection.begin(async (tx) => {
+      await tx`SET LOCAL standard_conforming_strings = on`
+      if (!roles.length)
+        await tx.unsafe(
+          `CREATE ROLE ${identifier(config.role)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD ${literal(config.password)}`,
+        )
+      const role = identifier(config.role)
+      await tx.unsafe(`GRANT CONNECT ON DATABASE ${identifier(config.database)} TO ${role}`)
+      await tx.unsafe(`GRANT USAGE ON SCHEMA public TO ${role}`)
+      await tx.unsafe(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM ${role}`)
+      for (const table of writableTables)
+        await tx.unsafe(
+          `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.${identifier(table)} TO ${role}`,
+        )
+      for (const [privileges, tables] of [
+        ['SELECT', ['permissions']],
+        ['SELECT, INSERT', ['audit_events']],
+        ['SELECT, INSERT, UPDATE', ['background_jobs', 'notification_rules']],
+        [
+          'SELECT, INSERT, DELETE',
+          ['outbound_message_attachments', 'delivery_invoice_allocations'],
+        ],
+      ])
+        for (const table of tables)
+          await tx.unsafe(`GRANT ${privileges} ON TABLE public.${identifier(table)} TO ${role}`)
+    })
+    await runtime`SELECT 1 FROM public.users LIMIT 1`
+  } finally {
+    if (connection) {
+      await connection`SELECT pg_advisory_unlock(1936482669, 1)`.catch(() => {})
+    }
+    await Promise.all([owner.end({ timeout: 5 }), runtime.end({ timeout: 5 })])
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  initializeDatabase()
+    .then(() => {
+      console.log('Database migrations and runtime access initialized successfully.')
+    })
+    .catch((error) => {
+      // Never log SQL/URLs/passwords from driver errors, especially CREATE ROLE queries.
+      console.error('Database initialization failed.', {
+        code: error.code || 'INITIALIZATION_FAILED',
+      })
+      process.exitCode = 1
+    })
+}

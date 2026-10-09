@@ -1,5 +1,13 @@
 # Lightsail development setup
 
+> RETIRED: AWS Slama infrastructure was destroyed at the owner's request after
+> switching to Hostinger. Lightsail instance/disk, static IP, media bucket, storage
+> policy, versioned state bucket and its CloudFormation stack were deleted.
+> Server disk data and remote state history cannot be recovered from these resources.
+> The instructions below are historical, not a description of a live deployment.
+> OCI cleanup remains pending because its CLI session expired. Remove the retired
+> Tailscale device and any DNS record pointing at 51.44.43.230 separately.
+
 ## Verified 2026-10-06
 
 - Lightsail `slama-finance`, account `054119522048`, Paris, 2 vCPU / 2 GB.

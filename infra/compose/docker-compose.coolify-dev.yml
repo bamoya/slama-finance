@@ -1,0 +1,166 @@
+# Generated from production + Lightsail dev overlay; paste into Coolify's Compose editor.
+networks:
+  application:
+    ipam:
+      config:
+        - subnet: ${APPLICATION_SUBNET:-172.30.84.0/24}
+  database:
+    internal: true
+  default: {}
+services:
+  api:
+    cap_drop:
+      - ALL
+    cpus: 0.9
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      - CORS_ORIGIN=${PUBLIC_ORIGIN:?Set the exact HTTPS origin without trailing slash}
+      - DATABASE_POOL_SIZE=3
+      - DATABASE_URL=${DATABASE_URL:?Set the restricted runtime database URL}
+      - EMAIL_FROM=${EMAIL_FROM:?Set the verified sender email address}
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=256
+      - NOTIFICATION_PAYLOAD_RETENTION_DAYS=${NOTIFICATION_PAYLOAD_RETENTION_DAYS:-0}
+      - NOTIFICATION_POLL_MS=10000
+      - NOTIFICATION_TRANSPORT=resend
+      - NOTIFICATION_WORKER_ENABLED=true
+      - PASSWORD_RESET_URL=${PUBLIC_ORIGIN:?Set the public HTTPS origin}/reset-password
+      - PORT=3000
+      - REPORT_POLL_MS=60000
+      - RESEND_API_KEY=${RESEND_API_KEY:?Set the Resend API key}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:?Set the dedicated media access key ID}
+      - S3_BUCKET=${S3_BUCKET:?Set the private media bucket name}
+      - S3_ENDPOINT=${S3_ENDPOINT:?Set the HTTPS S3 endpoint}
+      - S3_REGION=${S3_REGION:?Set the storage region}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:?Set the dedicated media secret access key}
+      - TRUST_PROXY_IPS=${TRUST_PROXY_IPS:-}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/ready', {signal: AbortSignal.timeout(3000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      timeout: 5s
+    image: ${API_IMAGE:?Set the prebuilt API image for this release}
+    init: true
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    mem_limit: 512m
+    networks:
+      application: null
+      database: null
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+  migrate:
+    cap_drop:
+      - ALL
+    cpus: 0.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      - MIGRATION_DATABASE_URL=${MIGRATION_DATABASE_URL:?Set the migration-owner database URL}
+      - NODE_OPTIONS=--max-old-space-size=256
+    image: ${RELEASE_IMAGE:?Set the matching prebuilt release-tooling image}
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    mem_limit: 512m
+    networks:
+      database: null
+    profiles:
+      - release
+    restart: 'no'
+    security_opt:
+      - no-new-privileges:true
+  postgres:
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
+    cpus: 0.65
+    environment:
+      POSTGRES_DB: slama_finance
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?Set a strong database owner password}
+      POSTGRES_USER: slama_owner
+    healthcheck:
+      interval: 10s
+      retries: 10
+      start_period: 30s
+      test:
+        - CMD-SHELL
+        - pg_isready -U slama_owner -d slama_finance
+      timeout: 5s
+    image: postgres:17-alpine
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    mem_limit: 256m
+    networks:
+      database: null
+    restart: unless-stopped
+    shm_size: 64m
+    volumes:
+      - source: postgres-data
+        target: /var/lib/postgresql/data
+        type: volume
+        volume: {}
+  ui:
+    cpus: 0.15
+    depends_on:
+      api:
+        condition: service_healthy
+        required: true
+    expose:
+      - '80'
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      test:
+        - CMD
+        - wget
+        - -q
+        - --spider
+        - http://127.0.0.1/index.html
+      timeout: 5s
+    image: ${UI_IMAGE:?Set the prebuilt UI image for this release}
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    mem_limit: 64m
+    networks:
+      application:
+        ipv4_address: ${UI_PROXY_IP:-172.30.84.2}
+      default: {}
+    restart: unless-stopped
+volumes:
+  postgres-data:
+    external: true
+    name: ${POSTGRES_VOLUME_NAME:?Set the existing production PostgreSQL volume name}
