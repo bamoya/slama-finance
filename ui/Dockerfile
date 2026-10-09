@@ -16,4 +16,4 @@ RUN pnpm build
 FROM nginx:1.27-alpine
 COPY ui/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/ui/dist /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080
