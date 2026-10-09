@@ -1,7 +1,20 @@
 # Dokploy database startup
 
 Use `infra/compose/docker-compose.dokploy.yml` as a single raw Compose file.
-Only route the `ui` service, port 80, through Dokploy Domains. Supply real R2
+Configure HTTPS in Dokploy Domains for `slama-finance.bamoya.com` → `ui:8080`
+and `api-slama-finance.bamoya.com` → `api:3000`. Point both DNS A records to
+the Hostinger server. Dokploy supplies Traefik routing; no host port mappings
+are required. Nginx serves React assets and SPA routes only.
+The image publishing workflow builds the UI with
+GitHub Actions variable `VITE_API_BASE_URL`, defaulting to
+`https://api-slama-finance.bamoya.com`. Configure it under repository Settings →
+Secrets and variables → Actions → Variables. Publish a new UI image
+and set `UI_IMAGE` to its digest. Setting this variable at container runtime
+does not modify a compiled Vite build. Keep `PUBLIC_ORIGIN` set to the UI origin;
+it controls API CORS and reset links. Axios already enables credentials and the
+API uses secure, host-only session cookies. Verify the Traefik address before
+setting `TRUST_PROXY_IPS` for accurate client rate limits.
+Supply real R2
 and Resend credentials and override both development password defaults.
 
 Startup order is PostgreSQL healthy → migrate exits successfully → API healthy

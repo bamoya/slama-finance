@@ -4,7 +4,8 @@
 # Changing env passwords after database initialization does NOT rotate database roles.
 # Initialization runs before API startup. Admin bootstrap and real S3/Resend credentials remain required.
 # From repository root, explicitly pass --env-file .env.production for CLI use.
-# Assign the HTTPS domain to ui:80 only. Do not publish API or PostgreSQL ports.
+# Dokploy Domains: slama-finance.bamoya.com -> ui:8080;
+# api-slama-finance.bamoya.com -> api:3000. Enable HTTPS for both.
 services:
   postgres:
     image: postgres:17-alpine
@@ -35,6 +36,7 @@ services:
     image: ${API_IMAGE:-ghcr.io/bamoya/slama-finance-api@sha256:578dd8b75559661e1a5ea430eda7c60dca43c11aca698e84a3e5823bf48e61bb}
     restart: unless-stopped
     init: true
+    expose: ['3000']
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
@@ -88,18 +90,14 @@ services:
     image: ${UI_IMAGE:-ghcr.io/bamoya/slama-finance-ui@sha256:a903ccf9d7f9c2bda20b81e71804420980e58f3e03feddfa50eb17a91d30cd84}
     restart: unless-stopped
     expose: ['8080']
-    networks:
-      default: {}
-      application:
-        # Stable immediate proxy address; trust it only together with verified ingress hops.
-        ipv4_address: ${UI_PROXY_IP:-172.30.84.2}
+    networks: [default, application]
     depends_on:
       api:
         condition: service_healthy
     mem_limit: 128m
     cpus: 0.15
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/index.html']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/index.html']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -132,12 +130,9 @@ volumes:
     name: ${POSTGRES_VOLUME_NAME:-slama-finance-dokploy-postgres}
 
 networks:
-  # Assign the domain to ui port 80 in Dokploy's Domains tab; Dokploy manages proxy routing.
+  # Dokploy attaches its proxy network to each service selected in Domains.
   default: {}
   # No published ports. API keeps outbound access for object storage and Resend.
-  application:
-    ipam:
-      config:
-        - subnet: ${APPLICATION_SUBNET:-172.30.84.0/24}
+  application: {}
   database:
     internal: true

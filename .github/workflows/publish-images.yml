@@ -94,10 +94,12 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'https://api-slama-finance.bamoya.com' }}
           platforms: linux/amd64,linux/arm64
           push: true
           # No mutable latest tag, runtime credentials, or deployment webhook.
-          # The UI defaults to the same-origin /v1 reverse proxy.
+          # UI requests use the public API origin baked into the Vite build.
           tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
