@@ -113,7 +113,7 @@ export function ReportRunPage() {
           {t('production')}: {t(row.status)}
         </strong>
         {row.errorCode && (
-          <p role="alert" className="mt-2 text-sm text-destructive">
+          <p role="alert" className="mt-2 text-sm text-[var(--error-text)]">
             {row.errorCode}
           </p>
         )}

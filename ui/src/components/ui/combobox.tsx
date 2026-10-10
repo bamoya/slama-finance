@@ -156,7 +156,7 @@ export function Combobox({
               </ComboboxPrimitive.Status>
             )}
             {error && (
-              <div role="alert" className="grid gap-2 p-4 text-sm text-[var(--destructive)]">
+              <div role="alert" className="grid gap-2 p-4 text-sm text-[var(--error-text)]">
                 {t('error')}
                 {onRetry && (
                   <Button type="button" variant="outline" size="sm" onClick={onRetry}>

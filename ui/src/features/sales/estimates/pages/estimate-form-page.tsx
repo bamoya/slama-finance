@@ -223,7 +223,7 @@ function EstimateEditor({ estimate }: { estimate: Estimate | null }) {
         {issues.length > 0 && (
           <div
             role="alert"
-            className="rounded-2xl border border-[var(--destructive)] p-4 text-sm text-[var(--destructive)]"
+            className="rounded-2xl border border-[var(--error-border)] bg-[var(--error-bg)] p-4 text-sm text-[var(--error-text)]"
           >
             {issues.map((issue) => (
               <p key={issue}>{issue}</p>

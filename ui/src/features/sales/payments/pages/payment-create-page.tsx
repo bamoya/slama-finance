@@ -176,7 +176,7 @@ export function PaymentCreatePage() {
           }
         />
         {validation && (
-          <p role="alert" className="text-sm text-[var(--destructive)]">
+          <p role="alert" className="text-sm text-[var(--error-text)]">
             {validation}
           </p>
         )}

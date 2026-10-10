@@ -87,7 +87,7 @@ export function SendDocumentDialog({
         <DialogDescription>{t('sendDescription')}</DialogDescription>
         <div className="mt-4 grid gap-4">
           {!canPreview ? (
-            <p role="status" className="text-sm text-destructive">
+            <p role="status" className="text-sm text-[var(--error-text)]">
               {t('loadPreferences')}
             </p>
           ) : query.isPending || query.isError ? (
@@ -105,7 +105,7 @@ export function SendDocumentDialog({
                 </p>
               )}
               {preference.reason && (
-                <p role="status" className="text-sm text-destructive">
+                <p role="status" className="text-sm text-[var(--error-text)]">
                   {t(`reasons.${preference.reason}`)}
                 </p>
               )}

@@ -2,6 +2,7 @@ import type {
   CreateDocumentTemplate,
   PreviewDocumentTemplateQuery,
 } from '../../../contracts/generated/settings/settings.schemas.js'
+import { documentTitle } from '../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../lib/documents/render-document.js'
 import type { DocumentImages, DocumentModel } from '../../../lib/documents/types.js'
 
@@ -15,12 +16,7 @@ export async function renderTemplatePreview(
   const receipt = kind === 'payment_receipt'
   const many = sampleSize === 'many'
   const model: DocumentModel = {
-    title: {
-      invoice: 'Invoice',
-      estimate: 'Estimate',
-      delivery: 'Delivery note',
-      payment_receipt: 'Payment receipt',
-    }[kind],
+    title: documentTitle(kind),
     number: receipt ? 'REC-2026-3188460612' : 'SAMPLE-2026-A7K9M2',
     issuer: [
       'Sample company',

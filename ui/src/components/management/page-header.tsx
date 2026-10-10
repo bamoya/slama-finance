@@ -35,9 +35,9 @@ export function PageHeader({
   return (
     <header
       data-slot="page-header"
-      className="page-header flex flex-col gap-3 rounded-panel border border-border bg-[var(--surface)] p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between"
+      className="page-header flex flex-col gap-3 rounded-panel border border-border bg-[var(--surface)] p-4 md:p-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
     >
-      <div className="flex min-w-0 flex-1 items-start gap-2 lg:gap-4">
+      <div className="flex min-w-0 flex-1 items-start gap-2 lg:basis-80 lg:gap-4">
         <Link
           href={back}
           aria-label={t('back')}
@@ -76,12 +76,12 @@ export function PageHeader({
           </p>
         </div>
       </div>
-      <div className="page-header-actions flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 lg:max-w-[60%]">
+      <div className="page-header-actions flex w-full max-w-full flex-wrap items-center justify-end gap-2 lg:ml-auto lg:w-auto">
         {actions && (
           <div
             role="group"
             aria-label={t('actions')}
-            className="flex max-w-full flex-wrap items-center gap-2 lg:justify-end"
+            className="flex max-w-full flex-wrap items-center justify-end gap-2"
           >
             {actions}
           </div>

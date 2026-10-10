@@ -1,3 +1,4 @@
+import { documentTitle } from '../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../lib/documents/render-document.js'
 import { type DocumentImages, party, record, text } from '../../../../lib/documents/types.js'
 import type {
@@ -17,7 +18,7 @@ export async function renderSalesPdf(
   const bank = record('bankDetailsSnapshot' in row ? row.bankDetailsSnapshot : null)
   const result = await renderDocument(
     {
-      title: title === 'INVOICE' ? 'Invoice' : 'Estimate',
+      title: documentTitle(title === 'INVOICE' ? 'invoice' : 'estimate', row.locale),
       number: row.number ?? '',
       issuer: party(row.issuerSnapshot),
       client: party(row.clientSnapshot),
