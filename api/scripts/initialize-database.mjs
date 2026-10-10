@@ -64,6 +64,15 @@ export const writableTables = [
 const identifier = (value) => '"' + value.replaceAll('"', '""') + '"'
 const literal = (value) => "'" + value.replaceAll("'", "''") + "'"
 
+const safeFailureMessages = new Set([
+  'Both runtime and migration database URLs are required',
+  'Database URLs must target the same PostgreSQL database',
+  'A distinct, simple runtime role is required',
+  'Runtime password must contain at least 16 characters',
+  'Existing runtime role has elevated privileges; refusing initialization',
+  'Runtime role must not inherit roles or own databases',
+])
+
 export async function initializeDatabase(env = process.env) {
   const config = configuration(env)
   const owner = postgres(env.MIGRATION_DATABASE_URL, {
@@ -138,6 +147,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       // Never log SQL/URLs/passwords from driver errors, especially CREATE ROLE queries.
       console.error('Database initialization failed.', {
         code: error.code || 'INITIALIZATION_FAILED',
+        reason: safeFailureMessages.has(error.message)
+          ? error.message
+          : 'Check database connection, URL encoding, and migration configuration',
       })
       process.exitCode = 1
     })
