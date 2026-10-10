@@ -1,18 +1,18 @@
-name: Publish production images
+name: Check and publish images
 
-# Publishing is deliberately manual. This workflow does not deploy a server.
+# Checks run on pushes and pull requests. Only master pushes publish images.
 on:
-  workflow_dispatch:
+  push:
+  pull_request:
 
 permissions:
   contents: read
 
 concurrency:
-  group: publish-images-${{ github.sha }}
+  group: check-publish-${{ github.event_name }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
-  # Keep this gate aligned with check.yml, which is not a reusable workflow.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -50,6 +50,7 @@ jobs:
 
   publish:
     needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:

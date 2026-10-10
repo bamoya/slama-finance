@@ -25,7 +25,7 @@ export function configuration(env) {
     role === decodeURIComponent(owner.username)
   )
     throw new Error('A distinct, simple runtime role is required')
-  if (password.length < 16) throw new Error('Runtime password must contain at least 16 characters')
+  if (!password) throw new Error('Runtime password is required')
   return { role, password, database: decodeURIComponent(owner.pathname.slice(1)) }
 }
 
@@ -68,7 +68,7 @@ const safeFailureMessages = new Set([
   'Both runtime and migration database URLs are required',
   'Database URLs must target the same PostgreSQL database',
   'A distinct, simple runtime role is required',
-  'Runtime password must contain at least 16 characters',
+  'Runtime password is required',
   'Existing runtime role has elevated privileges; refusing initialization',
   'Runtime role must not inherit roles or own databases',
 ])
