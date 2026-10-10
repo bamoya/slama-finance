@@ -69,6 +69,95 @@ test('startup migrates once, serializes, provisions restricted access, and prese
     expect(
       (await owner`SELECT count(*) FROM product_variants WHERE price_per_item = 99`)[0].count,
     ).toBe('16')
+    // An error late in creation must not leave half a demo or a success marker.
+    await owner`CREATE FUNCTION public.reject_demo_payment() RETURNS trigger LANGUAGE plpgsql AS
+      $$ BEGIN RAISE EXCEPTION 'test seed failure'; END; $$`
+    await owner`CREATE TRIGGER reject_demo_payment BEFORE INSERT ON public.payments
+      FOR EACH ROW EXECUTE FUNCTION public.reject_demo_payment()`
+    await expect(initializeDatabase({ ...env, SEED_DEMO: 'true' })).rejects.toThrow(
+      'test seed failure',
+    )
+    expect((await owner`SELECT count(*) FROM clients`)[0].count).toBe('0')
+    expect((await owner`SELECT count(*) FROM invoices`)[0].count).toBe('0')
+    expect(
+      (await owner`SELECT count(*) FROM audit_events WHERE entity_table='demo_seed'`)[0].count,
+    ).toBe('0')
+    await owner`DROP TRIGGER reject_demo_payment ON public.payments`
+    await owner`DROP FUNCTION public.reject_demo_payment()`
+    await initializeDatabase({ ...env, SEED_DEMO: 'true' })
+    const demoCounts = async () =>
+      (
+        await owner`SELECT
+      (SELECT count(*) FROM clients) AS clients,
+      (SELECT count(*) FROM estimates) AS estimates,
+      (SELECT count(*) FROM invoices) AS invoices,
+      (SELECT count(*) FROM payments) AS payments,
+      (SELECT count(*) FROM delivery_notes) AS deliveries`
+      )[0]
+    expect(await demoCounts()).toEqual({
+      clients: '20',
+      estimates: '40',
+      invoices: '60',
+      payments: '75',
+      deliveries: '30',
+    })
+    expect((await owner`SELECT count(*) FROM clients WHERE email IS NOT NULL`)[0].count).toBe('0')
+    expect((await owner`SELECT count(*) FROM background_jobs`)[0].count).toBe('0')
+    expect((await owner`SELECT count(*) FROM outbound_messages`)[0].count).toBe('0')
+    expect((await owner`SELECT count(*) FROM document_artifacts`)[0].count).toBe('0')
+    expect(
+      (await owner`SELECT legal_name FROM company_settings WHERE id=1`)[0].legal_name,
+    ).toBeNull()
+    expect(
+      (await owner`SELECT count(*) FROM estimates WHERE revision_of_id IS NOT NULL`)[0].count,
+    ).toBe('4')
+    expect((await owner`SELECT count(*) FROM estimates WHERE status='superseded'`)[0].count).toBe(
+      '2',
+    )
+    expect(
+      (await owner`SELECT count(*) FROM invoices WHERE source_estimate_id IS NOT NULL`)[0].count,
+    ).toBe('24')
+    expect((await owner`SELECT count(*) FROM delivery_invoice_allocations`)[0].count).not.toBe('0')
+    expect(
+      (
+        await owner`SELECT count(*) FROM invoices i WHERE i.total > 0 AND i.total =
+      (SELECT coalesce(sum(amount),0) FROM payments p WHERE p.invoice_id=i.id AND p.status='confirmed')`
+      )[0].count,
+    ).toBe('30')
+    expect(
+      (
+        await owner`SELECT count(DISTINCT date_trunc('month', issue_date::timestamp)) FROM invoices WHERE status='issued'`
+      )[0].count,
+    ).toBe('12')
+    expect(
+      (
+        await owner`SELECT count(*) FROM invoices i JOIN estimates e ON e.id=i.source_estimate_id WHERE i.issue_date < e.issue_date`
+      )[0].count,
+    ).toBe('0')
+    expect(
+      (
+        await owner`SELECT count(*) FROM invoices i WHERE
+      (SELECT coalesce(sum(amount),0) FROM payments p WHERE p.invoice_id=i.id AND p.status IN ('confirmed','pending')) > i.total`
+      )[0].count,
+    ).toBe('0')
+    expect(
+      (
+        await owner`SELECT count(*) FROM invoices i WHERE i.total <>
+      (SELECT coalesce(sum(total_amount),0) FROM invoice_lines l WHERE l.invoice_id=i.id)`
+      )[0].count,
+    ).toBe('0')
+    await owner`UPDATE clients SET notes='Administrator edit' WHERE id=(SELECT id FROM clients LIMIT 1)`
+    await initializeDatabase({ ...env, SEED_DEMO: 'true' })
+    expect(await demoCounts()).toEqual({
+      clients: '20',
+      estimates: '40',
+      invoices: '60',
+      payments: '75',
+      deliveries: '30',
+    })
+    expect(
+      (await owner`SELECT count(*) FROM clients WHERE notes='Administrator edit'`)[0].count,
+    ).toBe('1')
     runtime = postgres(env.DATABASE_URL, { max: 1 })
     expect((await runtime`SELECT count(*) FROM public.permissions`)[0].count).not.toBe('0')
     const [access] = await runtime`SELECT

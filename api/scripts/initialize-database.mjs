@@ -75,6 +75,8 @@ const safeFailureMessages = new Set([
   'Runtime role must not inherit roles or own databases',
   'Valid bootstrap email and password are required',
   'Administrator role missing; run migrations first',
+  'Demo seed requires an existing administrator',
+  'Demo seed requires active starter catalogue variants',
 ])
 
 export async function initializeDatabase(env = process.env) {
@@ -159,6 +161,10 @@ export async function initializeDatabase(env = process.env) {
     }
     // Business seed is deliberately opt-in, and journaled separately from schema migrations.
     if (env.SEED_CATALOG === 'true') await seedCatalog(connection)
+    if (env.SEED_DEMO === 'true') {
+      const { seedDemo } = await import('./seed-demo.mjs')
+      await seedDemo(connection)
+    }
   } finally {
     if (connection) {
       await connection`SELECT pg_advisory_unlock(1936482669, 1)`.catch(() => {})
@@ -171,6 +177,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   initializeDatabase()
     .then(() => {
       console.log('Database migrations and runtime access initialized successfully.')
+      console.log('Seed configuration:', {
+        catalog: process.env.SEED_CATALOG === 'true',
+        demo: process.env.SEED_DEMO === 'true',
+      })
     })
     .catch((error) => {
       // Never log SQL/URLs/passwords from driver errors, especially CREATE ROLE queries.

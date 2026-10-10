@@ -56,3 +56,39 @@ Repeated deployments do not duplicate data or reset edited prices. Conflicting p
 references are skipped completely. Deleted seeded products are not recreated on restart.
 Existing administrator-entered company fields are preserved. A failed seed rolls back
 its business changes and is retried on the next initialization.
+
+## Optional full demo
+
+For a demonstration installation only, set **`SEED_DEMO=true`** in Dokploy and use
+the updated Compose file and release image. The flag must reach the **migrate**
+service, not just the API. Recreate/run that one-shot service after changing it.
+The initializer logs both seed flags on completion. Demo mode also ensures the
+starter catalogue is available; `SEED_CATALOG=true` is not additionally required.
+
+It adds:
+
+- 20 fictional Moroccan clients (companies and individuals; two without activity).
+- 40 estimates including four revisions, two superseded originals and two open revision drafts.
+- 60 invoices: 50 issued, four cancelled and six drafts. Twenty-four derive from
+  12 accepted estimates, and five derive from independent delivery notes.
+- 75 payments: 30 fully paid invoices in two installments, ten partially paid,
+  pending and cancelled cheques, cash and bank transfers. Other invoices remain unpaid.
+- 30 delivery notes: ten independent and 20 invoice-linked, with draft, prepared,
+  delivered and acknowledged examples and partial quantities.
+- Four demo templates, including a compact theme, and two fictitious bank accounts.
+- Rolling 12-month activity with varied quantities and optional VAT on a minority of lines.
+
+All clients, document numbers, templates, accounts and issuer snapshots are marked
+**DEMO**. Client email/phone and issuer tax details are deliberately empty. No
+staff accounts, scheduled reports, outgoing messages, PDF jobs or stored PDFs are
+created. Financial creation, revisions, conversions, delivery allocations and
+payments use existing domain services; backdated timestamps and DEMO prefixes
+are seed-only fixture metadata. Real company identity and defaults are not replaced.
+
+The complete demo is committed in one transaction under an advisory lock, with a
+separate `slama-demo-v1` marker and exact created IDs recorded in `audit_events`.
+It requires an existing active administrator but does not change that account's
+password, onboarding status or permissions. Reruns preserve user edits and do not
+recreate removed demo records. Keep the seed disabled on real accounting databases:
+demo records intentionally contribute to dashboard/report totals. Disable the flag
+after initialization; disabling it does **not** delete existing demo records.

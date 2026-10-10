@@ -113,6 +113,7 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-yassin.bassim11@gmail.com}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       SEED_CATALOG: ${SEED_CATALOG:-false}
+      SEED_DEMO: ${SEED_DEMO:-false}
       MIGRATION_DATABASE_URL: postgres://slama_owner:${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}@postgres:5432/slama_finance
       DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@postgres:5432/slama_finance
     networks: [database]
