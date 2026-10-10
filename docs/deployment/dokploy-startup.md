@@ -55,7 +55,11 @@ URL-safe (hexadecimal passwords are simplest).
 
 ## Remaining first-launch work
 
-Initial administrator provisioning is NOT performed by this service. The existing
-local bootstrap script remains local-only; do not bypass that restriction. Complete
-a reviewed administrator bootstrap before opening the app to users. Configure and
-test backups independently; persistent volumes are not backups.
+The initializer creates the first administrator only when the users table is empty.
+Set `BOOTSTRAP_ADMIN_EMAIL` (default: `yassin.bassim11@gmail.com`) and
+`BOOTSTRAP_ADMIN_PASSWORD` in Dokploy's deployment secrets before first launch.
+The password is hashed, expires after seven days, and must be replaced on first login.
+The administrator receives all existing permissions. Repeated deployments never
+overwrite existing accounts or passwords. Remove the bootstrap password after login.
+The local bootstrap script remains local-only. Configure and test backups
+independently; persistent volumes are not backups.

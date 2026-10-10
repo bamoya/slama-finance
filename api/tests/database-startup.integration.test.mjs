@@ -23,12 +23,36 @@ test('startup migrates once, serializes, provisions restricted access, and prese
     const ownerUrl = url.toString()
     url.username = role
     url.password = "test_password_with_quote'and_more"
-    const env = { MIGRATION_DATABASE_URL: ownerUrl, DATABASE_URL: url.toString() }
+    const env = {
+      MIGRATION_DATABASE_URL: ownerUrl,
+      DATABASE_URL: url.toString(),
+      BOOTSTRAP_ADMIN_EMAIL: 'bootstrap@example.test',
+      BOOTSTRAP_ADMIN_PASSWORD: 'test-initial-password',
+    }
     owner = postgres(ownerUrl, { max: 1, onnotice: () => {} })
     const attempts = await Promise.allSettled([initializeDatabase(env), initializeDatabase(env)])
     for (const attempt of attempts) if (attempt.status === 'rejected') throw attempt.reason
     const before = await owner`SELECT count(*) FROM drizzle.__drizzle_migrations`
     expect(Number(before[0].count)).toBeGreaterThan(0)
+    const [user] = await owner`SELECT * FROM public.users`
+    expect(user.email).toBe(env.BOOTSTRAP_ADMIN_EMAIL)
+    expect(user.must_change_password).toBe(true)
+    expect(user.temporary_password_expires_at).not.toBeNull()
+    const { createPasswordService } =
+      await import('../dist/src/modules/identity/auth/services/password.service.js')
+    expect(
+      await createPasswordService().verify(env.BOOTSTRAP_ADMIN_PASSWORD, user.password_hash),
+    ).toBe(true)
+    expect((await owner`SELECT count(*) FROM public.user_roles`)[0].count).toBe('1')
+    expect(
+      (
+        await owner`SELECT count(*) FROM public.role_permissions rp JOIN public.roles r ON r.id = rp.role_id WHERE r.key = 'admin'`
+      )[0].count,
+    ).toBe((await owner`SELECT count(*) FROM public.permissions`)[0].count)
+    await initializeDatabase({ ...env, BOOTSTRAP_ADMIN_PASSWORD: '' })
+    expect((await owner`SELECT password_hash FROM public.users`)[0].password_hash).toBe(
+      user.password_hash,
+    )
     await initializeDatabase(env)
     expect(await owner`SELECT count(*) FROM drizzle.__drizzle_migrations`).toEqual(before)
     runtime = postgres(env.DATABASE_URL, { max: 1 })

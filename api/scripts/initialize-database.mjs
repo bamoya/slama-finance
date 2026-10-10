@@ -71,6 +71,8 @@ const safeFailureMessages = new Set([
   'Runtime password is required',
   'Existing runtime role has elevated privileges; refusing initialization',
   'Runtime role must not inherit roles or own databases',
+  'Valid bootstrap email and password are required',
+  'Administrator role missing; run migrations first',
 ])
 
 export async function initializeDatabase(env = process.env) {
@@ -130,6 +132,29 @@ export async function initializeDatabase(env = process.env) {
           await tx.unsafe(`GRANT ${privileges} ON TABLE public.${identifier(table)} TO ${role}`)
     })
     await runtime`SELECT 1 FROM public.users LIMIT 1`
+    if (env.BOOTSTRAP_ADMIN_EMAIL || env.BOOTSTRAP_ADMIN_PASSWORD) {
+      const email = env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase()
+      const password = env.BOOTSTRAP_ADMIN_PASSWORD
+      await connection.begin(async (tx) => {
+        // Bootstrap only an empty installation. Never reset or elevate existing accounts.
+        if ((await tx`SELECT id FROM public.users LIMIT 1`).length) return
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password)
+          throw new Error('Valid bootstrap email and password are required')
+        const [role] =
+          await tx`SELECT id FROM public.roles WHERE key = 'admin' AND is_system = true`
+        if (!role) throw new Error('Administrator role missing; run migrations first')
+        const { createPasswordService } =
+          await import('../dist/src/modules/identity/auth/services/password.service.js')
+        const hash = await createPasswordService().hash(password)
+        const [user] = await tx`INSERT INTO public.users
+          (email, password_hash, first_name, last_name, must_change_password, temporary_password_expires_at)
+          VALUES (${email}, ${hash}, 'Yassin', 'Bassim', true, now() + interval '7 days') RETURNING id`
+        await tx`INSERT INTO public.user_settings (user_id) VALUES (${user.id})`
+        await tx`INSERT INTO public.user_roles (user_id, role_id) VALUES (${user.id}, ${role.id})`
+        await tx`INSERT INTO public.role_permissions (role_id, permission_id)
+          SELECT ${role.id}, id FROM public.permissions ON CONFLICT DO NOTHING`
+      })
+    }
   } finally {
     if (connection) {
       await connection`SELECT pg_advisory_unlock(1936482669, 1)`.catch(() => {})
