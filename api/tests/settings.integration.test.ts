@@ -433,7 +433,7 @@ describe('Company settings module', () => {
     expect(preview.statusCode).toBe(200)
     expect(preview.json().html).toContain('&lt;script&gt;')
     expect(preview.json().html).not.toContain('<script>')
-    expect(preview.json().html).toContain('Product name')
+    expect(preview.json().html).toContain('Nom du produit')
     const receiptPreview = await app.inject({
       method: 'POST',
       url: '/v1/document-templates/preview?documentType=payment_receipt',
@@ -447,7 +447,7 @@ describe('Company settings module', () => {
       },
     })
     expect(receiptPreview.statusCode, receiptPreview.body).toBe(200)
-    expect(receiptPreview.json().html).toContain('Payment receipt')
+    expect(receiptPreview.json().html).toContain('Reçu de paiement')
     expect(receiptPreview.json().html).toContain(
       'aria-label="Company signature" href="data:image/png;base64,',
     )

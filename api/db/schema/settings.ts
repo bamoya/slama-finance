@@ -93,6 +93,7 @@ export const companySettings = pgTable(
   },
   (t) => [
     check('company_singleton', sql`${t.id} = 1`),
+    check('company_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
     check('company_capital', sql`${t.shareCapital} is null or ${t.shareCapital} >= 0`),
     check(
       'company_rc_pair',

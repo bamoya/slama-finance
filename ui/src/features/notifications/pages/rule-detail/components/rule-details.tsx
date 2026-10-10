@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
+import { translate } from '../../../../../lib/i18n'
 import { Can } from '../../../../identity'
 import type { NotificationRule } from '../../../../settings'
 import { RuleEmailPreview } from '../../../components/rule-email-preview'
@@ -9,7 +10,14 @@ export function RuleDetails({ rule }: { rule: NotificationRule }) {
   const values = [
     [t('senderName'), rule.senderName],
     [t('senderEmail'), rule.senderEmail],
-    [t('locale'), t(rule.locale === 'ar-MA' ? 'localeArabic' : 'localeFrench')],
+    [
+      t('locale'),
+      rule.locale === 'company'
+        ? translate('Company defaults')
+        : rule.locale === 'en-GB'
+          ? translate('English')
+          : t('localeFrench'),
+    ],
     [t('subjectTemplate'), rule.subjectTemplate],
     ...(rule.timingSupported
       ? [

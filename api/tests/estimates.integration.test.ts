@@ -92,6 +92,24 @@ describe('Estimates lifecycle', () => {
       },
     ],
   })
+  it('resolves draft company defaults at issue time and freezes the chosen document language', async () => {
+    const draft = (await post('/v1/estimates', revisionInput())).json()
+    expect(draft.locale).toBe('fr-MA')
+    expect(draft.localeOverride).toBeNull()
+    await fixture.client`update company_settings set locale='en-GB' where id=1`
+    const refreshed = await app.inject({ method: 'GET', url: `/v1/estimates/${draft.id}`, cookies })
+    expect(refreshed.json().locale).toBe('en-GB')
+    const issued = await post(`/v1/estimates/${draft.id}/issue`, { expectedVersion: draft.version })
+    expect(issued.statusCode, issued.body).toBe(200)
+    expect(issued.json().locale).toBe('en-GB')
+    await fixture.client`update company_settings set locale='fr-MA' where id=1`
+    expect(
+      (await app.inject({ method: 'GET', url: `/v1/estimates/${draft.id}`, cookies })).json()
+        .locale,
+    ).toBe('en-GB')
+    const explicit = await post('/v1/estimates', { ...revisionInput(), localeOverride: 'en-GB' })
+    expect(explicit.json()).toMatchObject({ locale: 'en-GB', localeOverride: 'en-GB' })
+  })
   async function acceptedEstimate() {
     const created = await post('/v1/estimates', revisionInput())
     expect(created.statusCode, created.body).toBe(201)

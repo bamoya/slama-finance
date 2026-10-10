@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 
 import type { PasswordResetDelivery } from '../../../../integrations/contracts.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLanguage } from '../../../../lib/language.js'
 import type { createPasswordRecoveryRepository } from '../repositories/password-recovery.repository.js'
 import type { createPasswordService } from './password.service.js'
 
@@ -32,7 +33,12 @@ export function createPasswordRecoveryService(
       // Fragment avoids placing the secret in server/proxy URL query logs.
       url.hash = new URLSearchParams({ token }).toString()
       try {
-        await delivery.adapter.send({ to: normalized, resetUrl: url.toString(), expiresAt })
+        await delivery.adapter.send({
+          to: normalized,
+          resetUrl: url.toString(),
+          expiresAt,
+          language: resolveLanguage(undefined, await repository.companyLocale()),
+        })
       } catch {
         await repository.invalidate(tokenHash)
         // Same public response as unknown/disabled accounts; never expose a delivery error or token.

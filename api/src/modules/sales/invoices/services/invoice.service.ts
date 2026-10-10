@@ -12,6 +12,7 @@ import {
 } from '../../../../contracts/generated/sales/invoices.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion, companyDate, FinancialDecimal } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
@@ -46,6 +47,14 @@ export function createInvoiceService(
       ])
     return dto(InvoiceSchema.strip(), {
       ...row,
+      locale:
+        row.status === 'draft'
+          ? resolveLocale(
+              row.localeOverride,
+              (await (tx ? repo.company(tx) : repo.transaction((inner) => repo.company(inner))))
+                .locale,
+            )
+          : row.locale,
       clientDisplayName,
       sourceEstimateNumber,
       deliveryNoteIds: deliveryNotes.map((note) => note.id),
@@ -95,8 +104,10 @@ export function createInvoiceService(
         issueDate: input.issueDate,
         dueDate: input.dueDate,
         currency: company.currency,
-        locale: company.locale,
+        locale: resolveLocale(input.localeOverride, company.locale),
+        localeOverride: input.localeOverride ?? null,
         issuerSnapshot: {
+          locale: resolveLocale(input.localeOverride, company.locale),
           legalName: company.legalName,
           tradeName: company.tradeName,
           legalForm: company.legalForm,
@@ -346,6 +357,7 @@ export function createInvoiceService(
           throw new AppError(400, 'INVALID_DATE', 'A due date is required before issuing.')
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_INVOICE', 'Add at least one product before issuing.')
+        const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
         const currentClientSnapshot = clientSnapshot(await repo.client(before.clientId, tx))
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
@@ -360,6 +372,11 @@ export function createInvoiceService(
                 id,
                 {
                   status: 'issued',
+                  locale: issuedLocale,
+                  issuerSnapshot: {
+                    ...(before.issuerSnapshot as Record<string, unknown>),
+                    locale: issuedLocale,
+                  },
                   number,
                   issuedAt: new Date(),
                   updatedByUserId: actor,
@@ -496,6 +513,7 @@ export function createInvoiceService(
             dueDate,
             currency: estimate.currency,
             locale: estimate.locale,
+            localeOverride: estimate.locale,
             issuerSnapshot: estimate.issuerSnapshot,
             clientSnapshot: clientSnapshot(await repo.client(estimate.clientId, tx)),
             appearanceSnapshot: estimate.appearanceSnapshot,

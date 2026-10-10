@@ -96,7 +96,7 @@ registerTranslations('reports', {
   cancel: 'Cancel',
   frequency: 'Frequency',
   reportLanguage: 'Email and report language',
-  languages: { fr: 'French', en: 'English' },
+  languages: { company: 'Company defaults', fr: 'French', en: 'English' },
   daily: 'Daily',
   weekly: 'Weekly',
   monthly: 'Monthly',

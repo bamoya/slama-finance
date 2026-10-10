@@ -13,6 +13,7 @@ export function RuleEmailPreview({ id, value }: { id: string; value: Notificatio
   const [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true)
   const [mobile, setMobile] = useState(false)
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr')
   useEffect(() => {
     let current = true
     setLoading(true)
@@ -20,10 +21,11 @@ export function RuleEmailPreview({ id, value }: { id: string; value: Notificatio
       void mutateAsync({
         id,
         data: {
-          subjectTemplate: value.subjectTemplate,
-          bodyTemplate: value.bodyTemplate,
-          bodyFormat: value.bodyFormat ?? 'text',
-          locale: value.locale,
+          subjectTemplate:
+            language === 'en' ? (value.englishSubjectTemplate ?? '') : value.subjectTemplate,
+          bodyTemplate: language === 'en' ? (value.englishBodyTemplate ?? '') : value.bodyTemplate,
+          bodyFormat: language === 'en' ? 'html' : (value.bodyFormat ?? 'text'),
+          locale: language === 'en' ? 'en-GB' : 'fr-MA',
         },
       })
         .then((data) => {
@@ -46,7 +48,16 @@ export function RuleEmailPreview({ id, value }: { id: string; value: Notificatio
       current = false
       clearTimeout(timer)
     }
-  }, [id, value.subjectTemplate, value.bodyTemplate, value.bodyFormat, value.locale, mutateAsync])
+  }, [
+    id,
+    value.subjectTemplate,
+    value.bodyTemplate,
+    value.bodyFormat,
+    value.englishSubjectTemplate,
+    value.englishBodyTemplate,
+    language,
+    mutateAsync,
+  ])
   return (
     <section
       className="min-w-0 space-y-3 rounded-xl border border-border bg-muted/20 p-3"
@@ -55,6 +66,22 @@ export function RuleEmailPreview({ id, value }: { id: string; value: Notificatio
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold">{translate('Email preview')}</h3>
         <div className="flex gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={language === 'fr' ? 'default' : 'outline'}
+            onClick={() => setLanguage('fr')}
+          >
+            FR
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={language === 'en' ? 'default' : 'outline'}
+            onClick={() => setLanguage('en')}
+          >
+            EN
+          </Button>
           <Button
             type="button"
             size="icon"

@@ -1,10 +1,18 @@
 import { and, eq, gt, isNull, sql } from 'drizzle-orm'
 
 import { passwordResetTokens, sessions, users } from '../../../../../db/schema/auth.js'
+import { companySettings } from '../../../../../db/schema/settings.js'
 import type { Database } from '../../../../lib/db.js'
 
 export function createPasswordRecoveryRepository(database: () => Database) {
   return {
+    async companyLocale() {
+      const [row] = await database()
+        .select({ locale: companySettings.locale })
+        .from(companySettings)
+        .where(eq(companySettings.id, 1))
+      return row?.locale ?? 'fr-MA'
+    },
     async issue(email: string, tokenHash: string, expiresAt: Date) {
       return database().transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(73619001)`)

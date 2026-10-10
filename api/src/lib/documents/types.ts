@@ -12,6 +12,7 @@ export type DocumentAppearance = Pick<
   | 'footerText'
 >
 export type DocumentModel = {
+  locale?: string
   title: string
   number: string
   issuer: string[]

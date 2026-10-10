@@ -5,6 +5,7 @@ import {
 import type { ReportRunCleanupInput } from '../../../../contracts/generated/reporting/run-management.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLanguage } from '../../../../lib/language.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { IdentityPublicApi } from '../../../identity/identity.public.js'
 import { assertReportPermissions } from '../../analysis/services/analysis.service.js'
@@ -99,7 +100,7 @@ export function createRunManagementService(
       const files = await Promise.all(
         reportFormats(config.output).map(async (format) => ({
           format,
-          bytes: await renderReport(snapshot, format, config.language),
+          bytes: await renderReport(snapshot, format, resolveLanguage(config.language)),
         })),
       )
       await repo.transaction(async (tx) => {

@@ -9,6 +9,7 @@ import {
 } from '../../../../contracts/generated/sales/delivery-notes.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
@@ -115,7 +116,9 @@ export function createDeliveryNoteService(repo: Repository, jobs: Jobs, artifact
         deliveryAddress: input.deliveryAddress.trim(),
         instructions: input.instructions?.trim() || null,
         includeReceptionSignature: input.includeReceptionSignature,
+        localeOverride: input.localeOverride ?? null,
         issuerSnapshot: invoice?.issuerSnapshot ?? {
+          locale: company.locale,
           legalName: company.legalName,
           tradeName: company.tradeName,
           addressLine1: company.addressLine1,
@@ -202,6 +205,11 @@ export function createDeliveryNoteService(repo: Repository, jobs: Jobs, artifact
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_DELIVERY', 'Add at least one product before preparing.')
         const currentClientSnapshot = clientSnapshot(await repo.client(before.clientId, tx))
+        const issuer = before.issuerSnapshot as Record<string, unknown>
+        const locale = resolveLocale(
+          before.localeOverride,
+          before.invoiceId ? issuer.locale : (await repo.company(tx)).locale,
+        )
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
           timeZone: 'Africa/Casablanca',
@@ -215,6 +223,7 @@ export function createDeliveryNoteService(repo: Repository, jobs: Jobs, artifact
                 id,
                 {
                   status: 'prepared',
+                  issuerSnapshot: { ...issuer, locale },
                   number,
                   updatedByUserId: actor,
                   clientSnapshot: currentClientSnapshot,

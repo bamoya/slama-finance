@@ -94,7 +94,7 @@ describe('Payment receipt PDF', () => {
       })
       const pdf = await PDFDocument.load(bytes)
       expect(pdf.getPageCount()).toBe(1)
-      expect(pdf.getTitle()).toBe('Payment receipt REC-2026-3188460612')
+      expect(pdf.getTitle()).toBe('Reçu de paiement REC-2026-3188460612')
       if (process.env.PDF_VISUAL_OUTPUT) {
         await mkdir(process.env.PDF_VISUAL_OUTPUT, { recursive: true })
         await writeFile(path.join(process.env.PDF_VISUAL_OUTPUT, `receipt-${layout}.pdf`), bytes)

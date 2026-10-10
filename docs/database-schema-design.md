@@ -55,7 +55,7 @@ names as references; they do not define duplicate tables.
   `individual` from `company`, with type-specific identity fields and Moroccan
   business identifiers. This adds no relationship to authentication users.
 - The company profile and client addresses target Morocco: default country
-  `MA`, currency `MAD`, document locale `fr-MA` with `ar-MA` supported, and
+  `MA`, currency `MAD`, document locale `fr-MA` with `en-GB` supported, and
   company timezone `Africa/Casablanca`.
 - Products are sold as fixed-weight packages, priced per item. Each product has
   one or more `product_variants`, each with immutable `weight_g` and its own
@@ -385,7 +385,7 @@ erDiagram
         text phone "nullable"
         uuid logo_asset_id FK "nullable"
         char currency "3 chars; default MAD"
-        text locale "default fr-MA; supports ar-MA"
+        text locale "default fr-MA; supports en-GB"
         text timezone "default Africa/Casablanca"
         int payment_due_days "default 15"
         int estimate_valid_days "default 15"
@@ -465,7 +465,7 @@ erDiagram
         text delivery_city "nullable; required for separate delivery address"
         text delivery_postal_code "nullable"
         char delivery_country_code "nullable; required for separate delivery address"
-        text locale "default fr-MA; supports ar-MA"
+        text locale "default fr-MA; supports en-GB"
         text notes "nullable"
         timestamptz archived_at "nullable"
     }
@@ -537,7 +537,8 @@ erDiagram
         date issue_date
         date due_date "nullable in draft; required on issue"
         char currency "3 chars; default MAD"
-        text locale
+        text locale "resolved fr-MA or en-GB; frozen on issue"
+        text locale_override "nullable; null inherits company language"
         jsonb issuer_snapshot
         jsonb client_snapshot
         jsonb appearance_snapshot
@@ -579,7 +580,8 @@ erDiagram
         date issue_date
         date valid_until "nullable in draft; required on issue"
         char currency "3 chars; default MAD"
-        text locale
+        text locale "resolved fr-MA or en-GB; frozen on issue"
+        text locale_override "nullable; null inherits company language"
         jsonb issuer_snapshot
         jsonb client_snapshot
         jsonb appearance_snapshot
@@ -685,6 +687,7 @@ erDiagram
         uuid client_id FK
         uuid invoice_id FK "nullable"
         text status "draft prepared delivered acknowledged cancelled"
+        text locale_override "nullable; null inherits company language at preparation"
         date delivery_date
         jsonb issuer_snapshot
         jsonb client_snapshot
@@ -740,9 +743,11 @@ erDiagram
         int repeat_every_days "nullable; positive"
         text sender_name
         text sender_email
-        text locale
+        text locale "company fr-MA en-GB; default company"
         text subject_template
         text body_template
+        text english_subject_template "nullable; required when sending English"
+        text english_body_template "nullable; sanitized HTML"
         text body_format "text or html; legacy default text"
     }
     client_notification_preferences {
@@ -759,6 +764,7 @@ erDiagram
         smallint month_day "nullable; 1 to 28 for MVP"
         time local_time
         text timezone
+        text language "company fr en; default company; resolved in each run snapshot"
         text period "previous_day previous_week previous_month"
         text_array included_sections "nonempty; predefined report section keys"
         boolean enabled
@@ -1127,9 +1133,10 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   while accepting valid foreign numbers. Email notifications require a valid
   email address; an absent address must not prevent cash sales.
 - Company settings use `MAD`, `fr-MA` and `Africa/Casablanca` by default.
-  Client locale defaults to `fr-MA`; `ar-MA` supports Arabic documents.
-  New invoices/estimates copy the client's locale (or the company fallback)
-  into their own locale field. Staff UI preferences remain independent.
+  System language is centrally configured by company locale (`fr-MA` or `en-GB`).
+  Draft invoices/estimates/delivery notes have nullable `locale_override`; issuing freezes
+  the resolved company default or explicit override. Client locale is contact metadata,
+  not an implicit document override. Staff UI preferences remain independent.
 - Company bank details stay in `bank_accounts`, already designed to support
   multiple accounts. Snapshot the selected payment details on issued documents;
   do not duplicate editable RIB/IBAN columns in `company_settings`.

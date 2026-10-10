@@ -12,6 +12,7 @@ import {
 import type { ReportSchedulePreviewInput } from '../../../../contracts/generated/reporting/schedule-preview.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLanguage } from '../../../../lib/language.js'
 import { observeWorker, type WorkerObserver } from '../../../../lib/worker-observer.js'
 import type {
   ArtifactOwnerAccess,
@@ -68,11 +69,16 @@ export function createScheduleService(
   // Strip persistence-only audit columns before strict contract validation.
   const config = async (row: ScheduleRow, tx: Transaction) => {
     const { createdByUserId: _created, updatedByUserId: _updated, ...rest } = row
-    return dto(
+    const saved = dto(
       rest as ScheduleRow,
       (await repo.recipients(row.id, tx)).map((item) => item.userId),
     )
+    return saved
   }
+  const captureConfig = async (row: ScheduleRow, tx: Transaction) => ({
+    ...(await config(row, tx)),
+    language: resolveLanguage(row.language, await repo.companyLocale(tx)),
+  })
   const authorize = async (actor: string, tx: Transaction) => {
     await repo.authorizeLock(tx)
     assertReportPermissions(await identity.grants(actor, tx))
@@ -105,7 +111,7 @@ export function createScheduleService(
   }
   async function materialize(row: ScheduleRow, tx: Transaction) {
     let occurrence = row.nextRunAt
-    const snapshot = await config(row, tx)
+    const snapshot = await captureConfig(row, tx)
     let count = 0
     const clock = now()
     while (occurrence && occurrence <= clock && count < REPORT_LIMITS.catchUp) {
@@ -182,7 +188,7 @@ export function createScheduleService(
           )
         if (!options.notifications || !options.sender || !options.uiOrigin)
           throw new AppError(503, 'EMAIL_UNAVAILABLE', 'Email delivery is not configured.')
-        const configuration = await config(row, tx)
+        const configuration = await captureConfig(row, tx)
         const recipient = await identity.reportingRecipient(
           actor,
           configuration.includedSections,
@@ -575,7 +581,7 @@ export function createScheduleService(
           const files = await Promise.all(
             reportFormats(saved.output).map(async (format) => ({
               format,
-              bytes: await renderReport(snapshot, format, saved.language),
+              bytes: await renderReport(snapshot, format, resolveLanguage(saved.language)),
             })),
           )
           const artifactBytes = files.reduce((sum, file) => sum + file.bytes.length, 0)
@@ -648,7 +654,7 @@ export function createScheduleService(
                 snapshot,
                 configuration.name,
                 link,
-                configuration.language,
+                resolveLanguage(configuration.language),
                 configuration.output,
               )
               const message = await options.notifications!.enqueue(

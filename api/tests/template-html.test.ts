@@ -52,28 +52,28 @@ describe('canonical document preview', () => {
           expect(result.html).not.toContain('<script>')
           expect(result.html).not.toContain('>VAT<')
           const title = {
-            invoice: 'Invoice',
-            estimate: 'Estimate',
-            delivery: 'Delivery note',
-            payment_receipt: 'Payment receipt',
+            invoice: 'Facture',
+            estimate: 'Devis',
+            delivery: 'Bon de livraison',
+            payment_receipt: 'Reçu de paiement',
           }[kind]
           const textX = (label: string) =>
             Number(result.html.match(new RegExp(`<text x="([\\d.-]+)"[^>]*>${label}</text>`))?.[1])
           if (layout === 'atelier' || layout === 'essential') {
-            expect(textX('DOCUMENT DATE')).toBeGreaterThan(textX(title))
+            expect(textX('DATE DU DOCUMENT')).toBeGreaterThan(textX(title))
           } else {
-            expect(textX('DOCUMENT DATE')).toBeCloseTo(textX(title), 5)
+            expect(textX('DATE DU DOCUMENT')).toBeCloseTo(textX(title), 5)
           }
           if (kind === 'delivery') {
-            expect(result.html).toContain('Received by / signature')
-            expect(result.html).not.toContain('Unit price')
+            expect(result.html).toContain('Réceptionnaire / signature')
+            expect(result.html).not.toContain('Prix unitaire')
             expect(result.html).not.toContain('700.00')
           }
           if (kind === 'payment_receipt') {
-            expect(result.html).toContain('Cheque received - awaiting collection')
+            expect(result.html).toContain('Chèque reçu — en attente d’encaissement')
             expect(result.html).toContain('1500.00 MAD')
             expect(result.html).toContain('3500.00 MAD')
-            expect(result.html).not.toContain('Product name')
+            expect(result.html).not.toContain('Nom du produit')
             expect(result.html).not.toContain('Bank details from')
           }
           // Every drawn text baseline stays inside A4, including notes and signatures.
@@ -100,7 +100,7 @@ describe('canonical document preview', () => {
           'many',
         )
         expect(result.pageCount).toBeGreaterThan(1)
-        expect(result.html.match(/>Product name<\/text>/g)).toHaveLength(result.pageCount)
+        expect(result.html.match(/>Nom du produit<\/text>/g)).toHaveLength(result.pageCount)
         for (let index = 1; index <= 45; index++) expect(result.html).toContain(`Item ${index}<`)
         expect(result.html).toContain('4500.00 MAD')
       })

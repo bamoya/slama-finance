@@ -254,6 +254,7 @@ components:
       properties:
         clientId: { type: string, format: uuid }
         templateId: { type: [string, 'null'], format: uuid }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         issueDate: { type: string, format: date }
         validUntil: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
@@ -269,6 +270,7 @@ components:
         expectedVersion: { type: integer, minimum: 1 }
         clientId: { type: string, format: uuid }
         templateId: { type: [string, 'null'], format: uuid }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         issueDate: { type: string, format: date }
         validUntil: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
@@ -344,6 +346,7 @@ components:
         clientId: { type: string, format: uuid }
         clientDisplayName: { type: string }
         templateId: { type: [string, 'null'], format: uuid }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         issueDate: { type: string, format: date }
         validUntil: { type: [string, 'null'], format: date }
         currency: { type: string }

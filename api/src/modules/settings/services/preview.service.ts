@@ -8,7 +8,10 @@ import {
 import type { MediaPublicApi } from '../../media/index.js'
 import { renderTemplatePreview } from './template-html.js'
 
-export function createPreviewService(media: MediaPublicApi) {
+export function createPreviewService(
+  media: MediaPublicApi,
+  companyLocale: () => Promise<string> = async () => 'fr-MA',
+) {
   return async (
     input: CreateDocumentTemplate,
     actor: string,
@@ -25,6 +28,6 @@ export function createPreviewService(media: MediaPublicApi) {
         : undefined
     const logo = await image(data.logoAssetId)
     const signature = data.showSignature ? await image(data.signatureAssetId) : undefined
-    return renderTemplatePreview(data, kind, { logo, signature }, sampleSize)
+    return renderTemplatePreview(data, kind, { logo, signature }, sampleSize, await companyLocale())
   }
 }

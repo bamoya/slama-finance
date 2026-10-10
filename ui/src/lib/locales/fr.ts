@@ -1,5 +1,8 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'System language': 'Langue du système',
+  'Export language': 'Langue de l’export',
+  'English email content': 'Contenu de l’e-mail en anglais',
   'Edit: {{event}}': 'Modifier : {{event}}',
   '← Back to notification rules': '← Retour aux règles de notification',
   '← Back to rule': '← Retour à la règle',

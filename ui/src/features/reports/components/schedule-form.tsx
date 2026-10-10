@@ -53,7 +53,7 @@ export function ScheduleForm({
     schedule
       ? {
           name: schedule.name,
-          language: schedule.language ?? 'fr',
+          language: schedule.language ?? 'company',
           output: schedule.output ?? 'pdf',
           frequency: schedule.frequency,
           weekday: schedule.weekday,
@@ -67,7 +67,7 @@ export function ScheduleForm({
         }
       : {
           name: '',
-          language: 'fr',
+          language: 'company',
           output: 'pdf',
           frequency: 'weekly',
           weekday: 1,
@@ -158,10 +158,12 @@ export function ScheduleForm({
                           id="report-language"
                           value={field.state.value}
                           onValueChange={(value) => {
-                            if (value === 'fr' || value === 'en') field.handleChange(value)
+                            if (value === 'company' || value === 'fr' || value === 'en')
+                              field.handleChange(value)
                           }}
                         >
                           <SelectGroup>
+                            <SelectOption value="company">{t('languages.company')}</SelectOption>
                             <SelectOption value="fr">{t('languages.fr')}</SelectOption>
                             <SelectOption value="en">{t('languages.en')}</SelectOption>
                           </SelectGroup>

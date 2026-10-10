@@ -367,7 +367,7 @@ describe('persisted schedules and frozen reports', () => {
     })
     expect(screen.getByRole('combobox', { name: 'Output format' })).toHaveTextContent('PDF')
     expect(screen.getByRole('combobox', { name: 'Email and report language' })).toHaveTextContent(
-      'French',
+      'Company defaults',
     )
     fireEvent.click(screen.getByRole('combobox', { name: 'Email and report language' }))
     fireEvent.click(await screen.findByRole('option', { name: 'English' }))

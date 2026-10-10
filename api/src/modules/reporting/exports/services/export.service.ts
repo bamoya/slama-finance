@@ -1,5 +1,6 @@
 import type { ReportExportInput } from '../../../../contracts/generated/reporting/reporting.schemas.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLanguage } from '../../../../lib/language.js'
 import type { IdentityPublicApi } from '../../../identity/identity.public.js'
 import type { createAnalysisRepository } from '../../analysis/repositories/analysis.repository.js'
 import {
@@ -27,19 +28,23 @@ export function createExportService(
         'Wait one minute before requesting another export.',
       )
     requests.set(actor, [...recent, clock])
-    const snapshot = await repo.snapshot(async (tx) => {
+    const { snapshot, language } = await repo.snapshot(async (tx) => {
       const grants = await identity.grants(actor, tx)
       assertReportPermissions(grants)
-      return analysis.capture(
+      const snapshot = await analysis.capture(
         input,
         actor,
         tx,
         (input.format === 'pdf' ? REPORT_LIMITS.pdfRows : REPORT_LIMITS.csvRows) + 1,
         grants,
       )
+      return {
+        snapshot,
+        language: resolveLanguage(input.language, (await repo.context(tx)).locale),
+      }
     })
     try {
-      const bytes = await renderReport(snapshot, input.format, input.language)
+      const bytes = await renderReport(snapshot, input.format, language)
       await repo.audit(actor, snapshot.filters, input.format, snapshot.capturedAt, 'succeeded')
       return {
         bytes,

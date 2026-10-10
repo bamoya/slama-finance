@@ -13,6 +13,7 @@ export async function renderPaymentReceiptPdf(
     saved.capturedAt && saved.paidAtRecording !== null && saved.remainingAtRecording !== null
   const result = await renderDocument(
     {
+      locale: String(record(saved.issuer).locale ?? 'fr-MA'),
       title: documentTitle('payment_receipt', record(saved.issuer).locale),
       number: row.number.replace(/^PAY-/, 'REC-'),
       issuer: party(saved.issuer),

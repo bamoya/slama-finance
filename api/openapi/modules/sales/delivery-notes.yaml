@@ -268,6 +268,7 @@ components:
         deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
         instructions: { type: [string, 'null'], maxLength: 4000 }
         includeReceptionSignature: { type: boolean }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         lines:
           {
             type: array,
@@ -296,6 +297,7 @@ components:
         deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
         instructions: { type: [string, 'null'], maxLength: 4000 }
         includeReceptionSignature: { type: boolean }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         lines:
           {
             type: array,
@@ -377,6 +379,7 @@ components:
         deliveryAddress: { type: string }
         instructions: { type: [string, 'null'] }
         includeReceptionSignature: { type: boolean }
+        localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         receivedByName: { type: [string, 'null'] }
         version: { type: integer }
         contentVersion: { type: integer }

@@ -74,7 +74,7 @@ const fromClient = (client: Client): ClientInput => ({
   deliveryCity: client.deliveryCity,
   deliveryPostalCode: client.deliveryPostalCode,
   deliveryCountryCode: client.deliveryCountryCode,
-  locale: client.locale as 'fr-MA' | 'ar-MA',
+  locale: client.locale as 'fr-MA' | 'en-GB',
   notes: client.notes,
 })
 
@@ -336,7 +336,7 @@ function ClientEditor({ client }: { client: Client | null }) {
                       }
                     >
                       <SelectOption value="fr-MA">{translate('French (Morocco)')}</SelectOption>
-                      <SelectOption value="ar-MA">{translate('Arabic (Morocco)')}</SelectOption>
+                      <SelectOption value="en-GB">{translate('English')}</SelectOption>
                     </Select>
                   </label>
                 )}

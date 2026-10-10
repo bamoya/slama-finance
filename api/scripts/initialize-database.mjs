@@ -4,6 +4,8 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
 
+import { seedCatalog } from './seed-catalog.mjs'
+
 export function configuration(env) {
   if (!env.DATABASE_URL || !env.MIGRATION_DATABASE_URL)
     throw new Error('Both runtime and migration database URLs are required')
@@ -155,6 +157,8 @@ export async function initializeDatabase(env = process.env) {
           SELECT ${role.id}, id FROM public.permissions ON CONFLICT DO NOTHING`
       })
     }
+    // Business seed is deliberately opt-in, and journaled separately from schema migrations.
+    if (env.SEED_CATALOG === 'true') await seedCatalog(connection)
   } finally {
     if (connection) {
       await connection`SELECT pg_advisory_unlock(1936482669, 1)`.catch(() => {})

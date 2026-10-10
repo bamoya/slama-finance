@@ -5,6 +5,7 @@ import { createPasswordRecoveryService } from '../src/modules/identity/auth/serv
 describe('password recovery delivery boundary', () => {
   function fixture() {
     const repository = {
+      companyLocale: vi.fn().mockResolvedValue('fr-MA'),
       issue: vi.fn().mockResolvedValue(true),
       invalidate: vi.fn(),
       consume: vi.fn().mockResolvedValue(true),

@@ -8,6 +8,7 @@ import {
 } from '../../../../contracts/generated/sales/estimates.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion, FinancialDecimal } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
@@ -44,7 +45,15 @@ export function createEstimateService(
       issueDate: row.issueDate,
       validUntil: row.validUntil,
       currency: row.currency,
-      locale: row.locale,
+      locale:
+        row.status === 'draft'
+          ? resolveLocale(
+              row.localeOverride,
+              (await (tx ? repo.company(tx) : repo.transaction((inner) => repo.company(inner))))
+                .locale,
+            )
+          : row.locale,
+      localeOverride: row.localeOverride,
       notes: row.notes,
       paymentTerms: row.paymentTerms,
       subtotal: row.subtotal,
@@ -108,6 +117,7 @@ export function createEstimateService(
       })
     }
     const issuerSnapshot = {
+      locale: resolveLocale(input.localeOverride, company.locale),
       legalName: company.legalName,
       tradeName: company.tradeName,
       legalForm: company.legalForm,
@@ -162,7 +172,8 @@ export function createEstimateService(
         issueDate: input.issueDate,
         validUntil: input.validUntil,
         currency: company.currency,
-        locale: company.locale,
+        locale: resolveLocale(input.localeOverride, company.locale),
+        localeOverride: input.localeOverride ?? null,
         issuerSnapshot,
         clientSnapshot,
         appearanceSnapshot,
@@ -264,6 +275,7 @@ export function createEstimateService(
             validUntil: source.validUntil,
             currency: source.currency,
             locale: source.locale,
+            localeOverride: source.locale,
             issuerSnapshot: source.issuerSnapshot,
             clientSnapshot: snapshotClient(await repo.client(source.clientId, tx)),
             appearanceSnapshot: source.appearanceSnapshot,
@@ -372,6 +384,7 @@ export function createEstimateService(
           throw new AppError(400, 'INVALID_DATE', 'A valid-until date is required before issuing.')
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_ESTIMATE', 'Add at least one product before issuing.')
+        const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
         const currentClientSnapshot = snapshotClient(await repo.client(before.clientId, tx))
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
@@ -386,6 +399,11 @@ export function createEstimateService(
                 id,
                 {
                   status: 'issued',
+                  locale: issuedLocale,
+                  issuerSnapshot: {
+                    ...(before.issuerSnapshot as Record<string, unknown>),
+                    locale: issuedLocale,
+                  },
                   number,
                   issuedAt: new Date(),
                   updatedByUserId: actor,

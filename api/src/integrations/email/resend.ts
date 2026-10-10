@@ -11,6 +11,7 @@ export function createResendResetDelivery(options: {
   const send = options.fetch ?? globalThis.fetch
   return {
     async send(message) {
+      const fr = message.language !== 'en'
       const idempotencyKey = `password-reset/${createHash('sha256').update(message.resetUrl).digest('hex')}`
       // One bounded retry for network/5xx failures, with the same idempotency key.
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -27,8 +28,12 @@ export function createResendResetDelivery(options: {
             body: JSON.stringify({
               from: options.from,
               to: [message.to],
-              subject: 'Reset your Slama Finance password',
-              text: `A password reset was requested for your Slama Finance account.\n\nOpen this link to choose a new password:\n${message.resetUrl}\n\nThis link expires at ${message.expiresAt.toISOString()} and can only be used once. If you did not request this, ignore this email.`,
+              subject: fr
+                ? 'Réinitialisez votre mot de passe Slama Finance'
+                : 'Reset your Slama Finance password',
+              text: fr
+                ? `Une réinitialisation du mot de passe de votre compte Slama Finance a été demandée.\n\nChoisissez un nouveau mot de passe :\n${message.resetUrl}\n\nCe lien expire le ${message.expiresAt.toISOString()} et ne peut être utilisé qu’une fois. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.`
+                : `A password reset was requested for your Slama Finance account.\n\nOpen this link to choose a new password:\n${message.resetUrl}\n\nThis link expires at ${message.expiresAt.toISOString()} and can only be used once. If you did not request this, ignore this email.`,
             }),
           })
           if (response.ok) {

@@ -14,6 +14,7 @@ export function createNotificationRuleRepository(database: () => Database) {
   return {
     transaction: base.transaction,
     authorize: base.authorizeWrite,
+    company: base.company,
     list(tx: Database | Transaction = database()) {
       return tx.select().from(notificationRules).orderBy(notificationRules.eventKey)
     },

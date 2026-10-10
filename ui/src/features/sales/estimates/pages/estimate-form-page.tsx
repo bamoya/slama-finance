@@ -13,6 +13,7 @@ import {
 } from '../../../../api/generated/schemas/sales/estimates.schemas'
 import { FormActionBar } from '../../../../components/management/form-action-bar'
 import { FormError } from '../../../../components/management/form-error'
+import { LanguageSelect } from '../../../../components/management/language-select'
 import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button, buttonVariants } from '../../../../components/ui/button'
@@ -37,6 +38,7 @@ const empty: EstimateInput = {
 const fromEstimate = (estimate: Estimate): EstimateInput => ({
   clientId: estimate.clientId,
   templateId: estimate.templateId,
+  localeOverride: estimate.localeOverride ?? null,
   issueDate: estimate.issueDate,
   validUntil: estimate.validUntil,
   notes: estimate.notes,
@@ -187,6 +189,11 @@ function EstimateEditor({ estimate }: { estimate: Estimate | null }) {
           <div className="grid content-start gap-section">
             <section className="grid gap-4 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
               <h2 className="text-lg font-bold">{translate('Appearance & terms')}</h2>
+              <form.Field name="localeOverride">
+                {(field) => (
+                  <LanguageSelect value={field.state.value} onValueChange={field.handleChange} />
+                )}
+              </form.Field>
               <form.Field name="templateId">
                 {(field) => (
                   <label className="grid gap-2 text-sm font-medium">

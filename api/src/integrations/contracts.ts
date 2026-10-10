@@ -10,7 +10,12 @@ export interface ListedObject {
 }
 // Production Resend adapter is configured through the environment; tests can inject a fake.
 export interface PasswordResetDelivery {
-  send(input: { to: string; resetUrl: string; expiresAt: Date }): Promise<void>
+  send(input: {
+    to: string
+    resetUrl: string
+    expiresAt: Date
+    language?: 'fr' | 'en'
+  }): Promise<void>
 }
 export interface ObjectStorage {
   putImmutable(input: {

@@ -14,8 +14,8 @@ describe('document titles', () => {
       expect(documentTitle(kind as Parameters<typeof documentTitle>[0], 'fr-MA')).toBe(title)
     }
   })
-  it('respects English and Arabic document locales', () => {
+  it('respects English and falls back to French for unsupported locales', () => {
     expect(documentTitle('estimate', 'en-GB')).toBe('Estimate')
-    expect(documentTitle('invoice', 'ar-MA')).toBe('فاتورة')
+    expect(documentTitle('invoice', 'ar-MA')).toBe('Facture')
   })
 })

@@ -14,7 +14,7 @@ import { Input } from '../../../components/ui/input'
 import { Select, SelectGroup, SelectOption } from '../../../components/ui/select'
 import { Switch } from '../../../components/ui/switch'
 import { ApiError } from '../../../lib/api-error'
-import { useUiLanguage } from '../../../lib/i18n'
+import { translate, useUiLanguage } from '../../../lib/i18n'
 import {
   type NotificationRule,
   type NotificationRuleUpdate,
@@ -46,6 +46,7 @@ export function RuleForm({
     [invalid, setInvalid] = useState(false),
     [conflict, setConflict] = useState(false)
   const [editorKey, setEditorKey] = useState(0)
+  const [englishOpen, setEnglishOpen] = useState(false)
   const initial: NotificationRuleUpdate = {
     expectedVersion: snapshot.version,
     enabled: snapshot.enabled,
@@ -57,6 +58,8 @@ export function RuleForm({
     subjectTemplate: snapshot.subjectTemplate,
     bodyTemplate: snapshot.bodyTemplate,
     bodyFormat: snapshot.bodyFormat ?? 'text',
+    englishSubjectTemplate: snapshot.englishSubjectTemplate ?? null,
+    englishBodyTemplate: snapshot.englishBodyTemplate ?? null,
   }
   const form = useForm({
     defaultValues: initial,
@@ -144,12 +147,16 @@ export function RuleForm({
                         aria-label={t('locale')}
                         value={field.state.value}
                         onValueChange={(value) => {
-                          if (value === 'fr-MA' || value === 'ar-MA') field.handleChange(value)
+                          if (value === 'company' || value === 'fr-MA' || value === 'en-GB')
+                            field.handleChange(value)
                         }}
                       >
                         <SelectGroup>
+                          <SelectOption value="company">
+                            {translate('Company defaults')}
+                          </SelectOption>
                           <SelectOption value="fr-MA">{t('localeFrench')}</SelectOption>
-                          <SelectOption value="ar-MA">{t('localeArabic')}</SelectOption>
+                          <SelectOption value="en-GB">{translate('English')}</SelectOption>
                         </SelectGroup>
                       </Select>
                     </Field>
@@ -186,7 +193,9 @@ export function RuleForm({
                 {(value) => (
                   <div className="mt-5 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
                     <div className="flex min-w-0 flex-col gap-3">
-                      <FieldLabel>{t('bodyTemplate')}</FieldLabel>
+                      <FieldLabel>
+                        {translate('French')} · {t('bodyTemplate')}
+                      </FieldLabel>
                       <EmailStartingDesign
                         locale={value.locale}
                         variables={rule.variables}
@@ -217,6 +226,49 @@ export function RuleForm({
                   </div>
                 )}
               </form.Subscribe>
+              <details
+                className="mt-5 rounded-xl border border-border p-4"
+                onToggle={(event) => setEnglishOpen(event.currentTarget.open)}
+              >
+                <summary className="cursor-pointer text-sm font-semibold">
+                  {translate('English email content')}
+                </summary>
+                {englishOpen && (
+                  <div className="mt-4 grid gap-4">
+                    <form.Field name="englishSubjectTemplate">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>
+                            {translate('English')} · {t('subjectTemplate')}
+                          </FieldLabel>
+                          <Input
+                            value={field.state.value ?? ''}
+                            onChange={(event) => field.handleChange(event.target.value || null)}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="englishBodyTemplate">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>
+                            {translate('English')} · {t('bodyTemplate')}
+                          </FieldLabel>
+                          <EmailEditor
+                            disabled={busy}
+                            value={field.state.value ?? ''}
+                            format="html"
+                            variables={rule.variables}
+                            onChange={(html) => {
+                              field.handleChange(html || null)
+                            }}
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                  </div>
+                )}
+              </details>
             </fieldset>
           )}
         </form.Subscribe>

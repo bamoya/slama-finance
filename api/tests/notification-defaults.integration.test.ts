@@ -15,7 +15,9 @@ describe('branded notification defaults migration', () => {
       expect(rows).toHaveLength(5)
       for (const row of rows) {
         expect(row.body_format).toBe('html')
-        expect(row.locale).toBe('fr-MA')
+        expect(row.locale).toBe('company')
+        expect(row.english_subject_template).toContain('Slama Agricole')
+        expect(row.english_body_template).toContain('Hello {{clientName}}')
         expect(row.enabled).toBe(false)
         expect(row.subject_template).toContain('Slama Agricole')
         expect(row.body_template.trim()).toBe(
@@ -79,7 +81,7 @@ describe('branded notification defaults migration', () => {
         version: 9,
       })
       expect(byEvent('estimate_expiry_reminder')).toMatchObject({
-        locale: 'ar-MA',
+        locale: 'company',
         body_format: 'text',
         version: 10,
       })

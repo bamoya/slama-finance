@@ -296,7 +296,6 @@ export function DocumentEditorPage({
           <Field label={translate('Language')}>
             <Select disabled={readOnly}>
               <SelectOption>{translate('French')}</SelectOption>
-              <SelectOption>{translate('Arabic')}</SelectOption>
               <SelectOption>{translate('English')}</SelectOption>
             </Select>
           </Field>

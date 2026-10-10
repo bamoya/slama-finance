@@ -76,7 +76,7 @@ export const clients = pgTable(
       and ${t.deliveryCountryCode} is not null and ${t.deliveryCountryCode} ~ '^[A-Z]{2}$')
   )`,
     ),
-    check('client_locale_valid', sql`${t.locale} in ('fr-MA', 'ar-MA')`),
+    check('client_locale_valid', sql`${t.locale} in ('fr-MA', 'en-GB')`),
     check('client_version_positive', sql`${t.version} > 0`),
   ],
 )

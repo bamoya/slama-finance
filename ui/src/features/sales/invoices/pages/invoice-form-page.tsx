@@ -13,6 +13,7 @@ import {
 } from '../../../../api/generated/schemas/sales/invoices.schemas'
 import { FormActionBar } from '../../../../components/management/form-action-bar'
 import { FormError } from '../../../../components/management/form-error'
+import { LanguageSelect } from '../../../../components/management/language-select'
 import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button, buttonVariants } from '../../../../components/ui/button'
@@ -37,6 +38,7 @@ const empty: InvoiceInput = {
 const fromInvoice = (invoice: Invoice): InvoiceInput => ({
   clientId: invoice.clientId,
   templateId: invoice.templateId,
+  localeOverride: invoice.localeOverride ?? null,
   issueDate: invoice.issueDate,
   dueDate: invoice.dueDate,
   notes: invoice.notes,
@@ -209,6 +211,11 @@ function InvoiceEditor({ invoice }: { invoice: Invoice | null }) {
           <div className="grid content-start gap-section">
             <section className="grid gap-4 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
               <h2 className="text-lg font-bold">{translate('Appearance & terms')}</h2>
+              <form.Field name="localeOverride">
+                {(field) => (
+                  <LanguageSelect value={field.state.value} onValueChange={field.handleChange} />
+                )}
+              </form.Field>
               <form.Field name="templateId">
                 {(field) => (
                   <label className="grid gap-2 text-sm font-medium">

@@ -13,7 +13,7 @@ import {
   reportScheduleRecipients,
   reportSchedules,
 } from '../../../../../db/schema/reporting.js'
-import { auditEvents } from '../../../../../db/schema/settings.js'
+import { auditEvents, companySettings } from '../../../../../db/schema/settings.js'
 import type {
   ListReportScheduleRunsQuery,
   ReportAnalysis,
@@ -45,6 +45,13 @@ export function createScheduleRepository(database: () => Database) {
       .where(eq(reportScheduleRecipients.scheduleId, id))
       .orderBy(asc(reportScheduleRecipients.userId))
   return {
+    async companyLocale(tx: Transaction) {
+      const [row] = await tx
+        .select({ locale: companySettings.locale })
+        .from(companySettings)
+        .where(eq(companySettings.id, 1))
+      return row?.locale ?? 'fr-MA'
+    },
     async pinFile(id: string, key: string, tx: Transaction) {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${key}, 91036))`)
       const [artifact] = await tx

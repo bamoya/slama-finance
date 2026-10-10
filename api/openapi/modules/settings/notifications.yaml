@@ -230,7 +230,9 @@ components:
         repeatEveryDays: { type: [integer, 'null'], minimum: 1, maximum: 365 }
         senderName: { type: string, minLength: 1, maxLength: 100 }
         senderEmail: { type: string, format: email }
-        locale: { type: string, enum: [fr-MA, ar-MA] }
+        locale: { type: string, enum: [company, fr-MA, en-GB] }
+        englishSubjectTemplate: { type: [string, 'null'], minLength: 1, maxLength: 200 }
+        englishBodyTemplate: { type: [string, 'null'], minLength: 1, maxLength: 50000 }
         subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
         bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
         bodyFormat: { type: string, enum: [text, html], default: text }
@@ -266,7 +268,9 @@ components:
         repeatEveryDays: { type: [integer, 'null'], minimum: 1, maximum: 365 }
         senderName: { type: string, minLength: 1, maxLength: 100 }
         senderEmail: { type: string, format: email }
-        locale: { type: string, enum: [fr-MA, ar-MA] }
+        locale: { type: string, enum: [company, fr-MA, en-GB] }
+        englishSubjectTemplate: { type: [string, 'null'], minLength: 1, maxLength: 200 }
+        englishBodyTemplate: { type: [string, 'null'], minLength: 1, maxLength: 50000 }
         subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
         bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
         bodyFormat:
@@ -281,11 +285,13 @@ components:
       additionalProperties: false
       required: [subjectTemplate, bodyTemplate, bodyFormat]
       properties:
+        englishSubjectTemplate: { type: [string, 'null'], minLength: 1, maxLength: 200 }
+        englishBodyTemplate: { type: [string, 'null'], minLength: 1, maxLength: 50000 }
         subjectTemplate: { type: string, minLength: 1, maxLength: 200 }
         bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
         bodyFormat: { type: string, enum: [text, html] }
         locale:
-          { type: string, enum: [fr-MA, ar-MA], description: Defaults to the saved rule language. }
+          { type: string, enum: [company, fr-MA, en-GB], description: Defaults to the saved rule language. }
     NotificationRulePreview:
       type: object
       additionalProperties: false

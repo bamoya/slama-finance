@@ -13,6 +13,7 @@ export async function renderDeliveryPdf(
 ) {
   const result = await renderDocument(
     {
+      locale: String(record(row.issuerSnapshot).locale ?? 'fr-MA'),
       title: documentTitle('delivery', record(row.issuerSnapshot).locale),
       number: row.number ?? '',
       issuer: party(row.issuerSnapshot),

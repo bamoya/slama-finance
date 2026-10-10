@@ -13,6 +13,7 @@ import {
 } from '../../../../api/generated/schemas/sales/delivery-notes.schemas'
 import { FormActionBar } from '../../../../components/management/form-action-bar'
 import { FormError } from '../../../../components/management/form-error'
+import { LanguageSelect } from '../../../../components/management/language-select'
 import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button, buttonVariants } from '../../../../components/ui/button'
@@ -49,6 +50,7 @@ const fromNote = (note: DeliveryNote): DeliveryNoteInput => ({
   deliveryAddress: note.deliveryAddress,
   instructions: note.instructions,
   includeReceptionSignature: note.includeReceptionSignature,
+  localeOverride: note.localeOverride ?? null,
   lines: note.lines.map((line) => ({
     productVariantId: line.productVariantId,
     sourceInvoiceLineId: line.sourceInvoiceLineId,
@@ -246,6 +248,11 @@ function Editor({ note }: { note: DeliveryNote | null }) {
                       onChange={(event) => field.handleChange(event.target.value || null)}
                     />
                   </label>
+                )}
+              </form.Field>
+              <form.Field name="localeOverride">
+                {(field) => (
+                  <LanguageSelect value={field.state.value} onValueChange={field.handleChange} />
                 )}
               </form.Field>
               <form.Field name="includeReceptionSignature">

@@ -117,5 +117,5 @@ export const emailPlainText = (html: string) =>
 
 export function emailDocument(fragment: string, locale?: string) {
   const styled = sanitizeEmailHtml(fragment, true)
-  return `<div dir="${locale === 'ar-MA' ? 'rtl' : 'ltr'}" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px">${styled}</div>`
+  return `<div lang="${locale?.startsWith('en') ? 'en' : 'fr'}" dir="ltr" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222222;background-color:#ffffff;padding:16px">${styled}</div>`
 }

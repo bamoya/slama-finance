@@ -38,6 +38,7 @@ export const estimates = pgTable(
     validUntil: date('valid_until'),
     currency: text('currency').notNull().default('MAD'),
     locale: text('locale').notNull().default('fr-MA'),
+    localeOverride: text('locale_override'),
     issuerSnapshot: jsonb('issuer_snapshot').notNull(),
     clientSnapshot: jsonb('client_snapshot').notNull(),
     appearanceSnapshot: jsonb('appearance_snapshot').notNull(),
@@ -78,7 +79,11 @@ export const estimates = pgTable(
       sql`${t.status} in ('draft','issued','sent','accepted','rejected','expired','cancelled','superseded')`,
     ),
     check('estimates_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
-    check('estimates_locale', sql`${t.locale} in ('fr-MA','ar-MA')`),
+    check('estimates_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
+    check(
+      'estimates_locale_override',
+      sql`${t.localeOverride} is null or ${t.localeOverride} in ('fr-MA','en-GB')`,
+    ),
     check('estimates_versions', sql`${t.version} > 0 and ${t.contentVersion} > 0`),
     check(
       'estimates_totals',

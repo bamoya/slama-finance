@@ -1,0 +1,2 @@
+ALTER TABLE "delivery_notes" ADD COLUMN "locale_override" text;--> statement-breakpoint
+ALTER TABLE "delivery_notes" ADD CONSTRAINT "delivery_notes_locale_override" CHECK ("delivery_notes"."locale_override" is null or "delivery_notes"."locale_override" in ('fr-MA','en-GB'));

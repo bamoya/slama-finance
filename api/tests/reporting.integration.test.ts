@@ -137,6 +137,40 @@ describe('Live and frozen reporting', () => {
   const post = (url: string, payload: object) =>
     app.inject({ method: 'POST', url, cookies, headers, payload })
   const criteria = 'from=2026-09-01&to=2026-09-30&timezone=Africa%2FCasablanca'
+  it('captures company language per run, while explicit overrides and prior runs remain unchanged', async () => {
+    await fixture.client`update company_settings set locale='en-GB' where id=1`
+    const input = {
+      name: 'Inherited language',
+      frequency: 'weekly',
+      weekday: 1,
+      monthDay: null,
+      localTime: '08:00',
+      timezone: 'Africa/Casablanca',
+      period: 'previous_week',
+      includedSections: ['summary'],
+      recipientIds: [testUserId],
+      enabled: false,
+    }
+    const response = await post('/v1/report-schedules', input)
+    expect(response.statusCode, response.body).toBe(201)
+    const saved = response.json()
+    expect(saved.language).toBe('company')
+    const run = await post(`/v1/report-schedules/${saved.id}/test-email`, {
+      expectedVersion: saved.version,
+    })
+    expect(run.statusCode, run.body).toBe(202)
+    expect(run.json().configurationSnapshot.language).toBe('en')
+    await fixture.client`update company_settings set locale='fr-MA' where id=1`
+    const frozen = await get(`/v1/report-runs/${run.json().id}`)
+    expect(frozen.statusCode, frozen.body).toBe(200)
+    expect(frozen.json().configurationSnapshot.language).toBe('en')
+    const override = await post('/v1/report-schedules', { ...input, language: 'en' })
+    expect(override.statusCode, override.body).toBe(201)
+    const explicitRun = await post(`/v1/report-schedules/${override.json().id}/test-email`, {
+      expectedVersion: override.json().version,
+    })
+    expect(explicitRun.json().configurationSnapshot.language).toBe('en')
+  })
   it('queues a self-only test on a disabled schedule, deduplicates clicks and preserves automatic scheduling', async () => {
     const input = {
       name: 'Test weekly finance',
@@ -472,7 +506,7 @@ describe('Live and frozen reporting', () => {
     })
     expect(response.statusCode, response.body).toBe(201)
     const schedule = response.json()
-    expect(schedule.language).toBe('fr')
+    expect(schedule.language).toBe('company')
     await fixture.client`update report_schedules set next_run_at='2026-10-01T09:00:00Z' where id=${schedule.id}`
     const repeatedEnable = await post(`/v1/report-schedules/${schedule.id}/enable`, {
       expectedVersion: schedule.version,

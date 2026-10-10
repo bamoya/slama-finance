@@ -55,6 +55,20 @@ test('startup migrates once, serializes, provisions restricted access, and prese
     )
     await initializeDatabase(env)
     expect(await owner`SELECT count(*) FROM drizzle.__drizzle_migrations`).toEqual(before)
+    expect((await owner`SELECT count(*) FROM products`)[0].count).toBe('0')
+    await owner`UPDATE company_settings SET phone = '+212600000000' WHERE id = 1`
+    await initializeDatabase({ ...env, SEED_CATALOG: 'true' })
+    expect((await owner`SELECT count(*) FROM products`)[0].count).toBe('8')
+    expect((await owner`SELECT count(*) FROM product_variants`)[0].count).toBe('16')
+    expect((await owner`SELECT phone FROM company_settings WHERE id = 1`)[0].phone).toBe(
+      '+212600000000',
+    )
+    await owner`UPDATE product_variants SET price_per_item = '99.00'`
+    await initializeDatabase({ ...env, SEED_CATALOG: 'true' })
+    expect((await owner`SELECT count(*) FROM products`)[0].count).toBe('8')
+    expect(
+      (await owner`SELECT count(*) FROM product_variants WHERE price_per_item = 99`)[0].count,
+    ).toBe('16')
     runtime = postgres(env.DATABASE_URL, { max: 1 })
     expect((await runtime`SELECT count(*) FROM public.permissions`)[0].count).not.toBe('0')
     const [access] = await runtime`SELECT

@@ -111,11 +111,10 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
     },
     {
       name: 'locale',
-      label: translate('Document language'),
+      label: translate('System language'),
       type: 'select',
       options: [
         { value: 'fr-MA', label: translate('French (Morocco)') },
-        { value: 'ar-MA', label: translate('Arabic (Morocco)') },
         { value: 'en-GB', label: translate('English') },
       ],
     },

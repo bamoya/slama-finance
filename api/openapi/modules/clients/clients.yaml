@@ -201,7 +201,7 @@ components:
         deliveryCity: { type: [string, 'null'], maxLength: 120 }
         deliveryPostalCode: { type: [string, 'null'], maxLength: 20 }
         deliveryCountryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
-        locale: { type: string, enum: [fr-MA, ar-MA] }
+        locale: { type: string, enum: [fr-MA, en-GB] }
         notes: { type: [string, 'null'], maxLength: 4000 }
     ClientUpdate:
       type: object
@@ -232,7 +232,7 @@ components:
         deliveryCity: { type: [string, 'null'], maxLength: 120 }
         deliveryPostalCode: { type: [string, 'null'], maxLength: 20 }
         deliveryCountryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
-        locale: { type: string, enum: [fr-MA, ar-MA] }
+        locale: { type: string, enum: [fr-MA, en-GB] }
         notes: { type: [string, 'null'], maxLength: 4000 }
     Client:
       type: object

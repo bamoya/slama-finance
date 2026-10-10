@@ -56,7 +56,10 @@ export function createPaymentReceiptService(
           receiptSnapshot: PaymentReceiptSnapshotSchema.parse({
             invoiceNumber: invoice.number,
             invoiceTotal: invoice.total,
-            issuer: invoice.issuerSnapshot,
+            issuer: {
+              ...(invoice.issuerSnapshot as Record<string, unknown>),
+              locale: invoice.locale,
+            },
             client: invoice.clientSnapshot,
             appearance: invoice.appearanceSnapshot,
             templateId: invoice.templateId,

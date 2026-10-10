@@ -9,6 +9,7 @@ import {
 } from '../../../../contracts/generated/settings/notifications.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion } from '../../../../lib/validation.js'
 import type { NotificationPublicApi } from '../../../../support/notifications/index.js'
 import type {
@@ -86,6 +87,8 @@ const output = (row: RuleRow) =>
     senderName: row.senderName,
     senderEmail: row.senderEmail,
     locale: row.locale,
+    englishSubjectTemplate: row.englishSubjectTemplate,
+    englishBodyTemplate: row.englishBodyTemplate,
     subjectTemplate: row.subjectTemplate,
     bodyTemplate: row.bodyTemplate,
     bodyFormat: row.bodyFormat,
@@ -102,10 +105,27 @@ export function createNotificationRuleService(
     onPolicyChange?: (tx: Transaction, event: string) => Promise<void>
   },
 ) {
+  async function resolved(row: RuleRow, tx?: Transaction) {
+    const locale = resolveLocale(row.locale, (await repo.company(tx)).locale)
+    if (locale === 'en-GB' && (!row.englishSubjectTemplate || !row.englishBodyTemplate))
+      throw new AppError(
+        409,
+        'TRANSLATION_REQUIRED',
+        'Add English subject and body before sending in English.',
+      )
+    return {
+      ...output(row),
+      locale,
+      subjectTemplate: locale === 'en-GB' ? row.englishSubjectTemplate! : row.subjectTemplate,
+      bodyTemplate: locale === 'en-GB' ? row.englishBodyTemplate! : row.bodyTemplate,
+      bodyFormat: locale === 'en-GB' ? ('html' as const) : (row.bodyFormat as 'text' | 'html'),
+    }
+  }
   return {
     publicApi: {
-      rule: async (event: string, tx?: Transaction) => output(await repo.event(event, tx)),
-      rules: async (tx?: Transaction) => (await repo.list(tx)).map(output),
+      rule: async (event: string, tx?: Transaction) => resolved(await repo.event(event, tx), tx),
+      rules: async (tx?: Transaction) =>
+        Promise.all((await repo.list(tx)).map((row) => resolved(row, tx))),
       compose: composeNotification,
     },
     async list() {
@@ -115,7 +135,8 @@ export function createNotificationRuleService(
       return repo.transaction(async (tx) => {
         await repo.authorize(tx, actor, 'notification_rules.update')
         const rule = output(await repo.rule(id, tx))
-        const content = composeNotification({ ...rule, ...input }, emailSample)
+        const locale = resolveLocale(input.locale ?? rule.locale, (await repo.company(tx)).locale)
+        const content = composeNotification({ ...rule, ...input, locale }, emailSample)
         const sanitizedBodyTemplate =
           input.bodyFormat === 'html' ? sanitizeEmailHtml(input.bodyTemplate) : input.bodyTemplate
         return {
@@ -139,9 +160,25 @@ export function createNotificationRuleService(
         )
           throw new AppError(400, 'INVALID_TIMING', 'Timing applies only to reminder rules.')
         validateRuleTemplates(before.eventKey, data.subjectTemplate, data.bodyTemplate)
+        if (data.englishSubjectTemplate && data.englishBodyTemplate)
+          validateRuleTemplates(
+            before.eventKey,
+            data.englishSubjectTemplate,
+            data.englishBodyTemplate,
+          )
+        if (!!data.englishSubjectTemplate !== !!data.englishBodyTemplate)
+          throw new AppError(400, 'TRANSLATION_REQUIRED', 'Provide both English subject and body.')
         const { expectedVersion: _version, ...changes } = data
         if (changes.bodyFormat === 'html')
           changes.bodyTemplate = sanitizeEmailHtml(changes.bodyTemplate)
+        if (changes.englishBodyTemplate)
+          changes.englishBodyTemplate = sanitizeEmailHtml(changes.englishBodyTemplate)
+        if (data.englishBodyTemplate && !changes.englishBodyTemplate?.trim())
+          throw new AppError(
+            400,
+            'INVALID_TEMPLATE',
+            'The English email body must contain safe content.',
+          )
         if (!changes.bodyTemplate.trim())
           throw new AppError(400, 'INVALID_TEMPLATE', 'The email body must contain safe content.')
         const row = await repo.update(id, changes, actor, tx)
@@ -161,7 +198,7 @@ export function createNotificationRuleService(
     test(id: string, actor: string) {
       return repo.transaction(async (tx) => {
         await repo.authorize(tx, actor, 'notification_rules.update')
-        const row = output(await repo.rule(id, tx))
+        const row = await resolved(await repo.rule(id, tx), tx)
         if (!options.allowedFrom.includes(row.senderEmail))
           throw new AppError(
             400,

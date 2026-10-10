@@ -40,6 +40,7 @@ export const invoices = pgTable(
     dueDate: date('due_date'),
     currency: text('currency').notNull().default('MAD'),
     locale: text('locale').notNull().default('fr-MA'),
+    localeOverride: text('locale_override'),
     issuerSnapshot: jsonb('issuer_snapshot').notNull(),
     clientSnapshot: jsonb('client_snapshot').notNull(),
     appearanceSnapshot: jsonb('appearance_snapshot').notNull(),
@@ -69,7 +70,11 @@ export const invoices = pgTable(
     index('invoices_source_estimate_idx').on(t.sourceEstimateId),
     check('invoices_status', sql`${t.status} in ('draft','issued','sent','cancelled')`),
     check('invoices_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
-    check('invoices_locale', sql`${t.locale} in ('fr-MA','ar-MA')`),
+    check('invoices_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
+    check(
+      'invoices_locale_override',
+      sql`${t.localeOverride} is null or ${t.localeOverride} in ('fr-MA','en-GB')`,
+    ),
     check('invoices_versions', sql`${t.version} > 0 and ${t.contentVersion} > 0`),
     check(
       'invoices_totals',

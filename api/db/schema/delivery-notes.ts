@@ -31,6 +31,7 @@ export const deliveryNotes = pgTable(
     status: text('status').notNull().default('draft'),
     deliveryDate: date('delivery_date').notNull(),
     issuerSnapshot: jsonb('issuer_snapshot').notNull(),
+    localeOverride: text('locale_override'),
     clientSnapshot: jsonb('client_snapshot').notNull(),
     deliveryAddress: text('delivery_address').notNull(),
     instructions: text('instructions'),
@@ -59,6 +60,10 @@ export const deliveryNotes = pgTable(
       sql`${t.status} in ('draft','prepared','delivered','acknowledged','cancelled')`,
     ),
     check('delivery_notes_versions', sql`${t.version} > 0 and ${t.contentVersion} > 0`),
+    check(
+      'delivery_notes_locale_override',
+      sql`${t.localeOverride} is null or ${t.localeOverride} in ('fr-MA','en-GB')`,
+    ),
     check('delivery_notes_address', sql`length(trim(${t.deliveryAddress})) > 0`),
     check(
       'delivery_notes_prepared_data',

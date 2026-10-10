@@ -22,7 +22,7 @@ export const reportSchedules = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     frequency: text('frequency').notNull(),
-    language: text('language').notNull().default('fr'),
+    language: text('language').notNull().default('company'),
     output: text('output').notNull().default('pdf'),
     weekday: integer('weekday'),
     monthDay: integer('month_day'),
@@ -49,7 +49,7 @@ export const reportSchedules = pgTable(
       .where(sql`${t.enabled} and ${t.archivedAt} is null`),
     check('report_schedules_name', sql`length(trim(${t.name})) between 1 and 160`),
     check('report_schedules_version', sql`${t.version} > 0`),
-    check('report_schedules_language', sql`${t.language} in ('fr', 'en')`),
+    check('report_schedules_language', sql`${t.language} in ('company', 'fr', 'en')`),
     check('report_schedules_output', sql`${t.output} in ('pdf', 'excel', 'both')`),
     check(
       'report_schedules_cadence',

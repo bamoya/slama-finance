@@ -2804,7 +2804,7 @@
                       'default': 'date_desc',
                     },
                   'format': { 'type': 'string', 'enum': ['pdf', 'xlsx', 'csv'], 'description': 'PDF or Excel for new report downloads. CSV remains a legacy compatibility format.' },
-                  'language': { 'type': 'string', 'enum': ['fr', 'en'], 'default': 'fr' },
+                  'language': { 'type': 'string', 'enum': ['company', 'fr', 'en'], 'default': 'company' },
                   'segment':
                     {
                       'type': 'string',
@@ -2848,9 +2848,9 @@
                   'language':
                     {
                       'type': 'string',
-                      'enum': ['fr', 'en'],
-                      'default': 'fr',
-                      'description': 'Language of the email and PDF, frozen per run. Defaults to French.',
+                      'enum': ['company', 'fr', 'en'],
+                      'default': 'company',
+                      'description': 'Language of the email and PDF, frozen per run. Company default is resolved when each run is created.',
                     },
                   'name': { 'type': 'string', 'minLength': 1, 'maxLength': 160 },
                   'frequency': { 'type': 'string', 'enum': ['daily', 'weekly', 'monthly'] },
@@ -2909,7 +2909,7 @@
               'properties':
                 {
                   'output': { 'type': 'string', 'enum': ['pdf', 'excel', 'both'], 'description': 'Always present on current schedules. Absent only on legacy frozen run configurations, which retain PDF/CSV generation and PDF-only email.' },
-                  'language': { 'type': 'string', 'enum': ['fr', 'en'], 'default': 'fr' },
+                  'language': { 'type': 'string', 'enum': ['company', 'fr', 'en'], 'default': 'fr' },
                   'id': { 'type': 'string', 'format': 'uuid' },
                   'name': { 'type': 'string' },
                   'frequency': { 'type': 'string', 'enum': ['daily', 'weekly', 'monthly'] },
@@ -3109,7 +3109,7 @@
               'properties':
                 {
                   'output': { 'type': 'string', 'enum': ['pdf', 'excel', 'both'], 'default': 'pdf' },
-                  'language': { 'type': 'string', 'enum': ['fr', 'en'], 'default': 'fr' },
+                  'language': { 'type': 'string', 'enum': ['company', 'fr', 'en'], 'default': 'company' },
                   'name': { 'type': 'string', 'minLength': 1, 'maxLength': 160 },
                   'frequency': { 'type': 'string', 'enum': ['daily', 'weekly', 'monthly'] },
                   'weekday': { 'type': ['integer', 'null'], 'minimum': 1, 'maximum': 7 },

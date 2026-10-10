@@ -34,7 +34,9 @@ export const notificationRules = pgTable(
     repeatEveryDays: integer('repeat_every_days'),
     senderName: text('sender_name').notNull().default('Slama Finance'),
     senderEmail: text('sender_email').notNull().default('notifications@example.invalid'),
-    locale: text('locale').notNull().default('fr-MA'),
+    locale: text('locale').notNull().default('company'),
+    englishSubjectTemplate: text('english_subject_template'),
+    englishBodyTemplate: text('english_body_template'),
     subjectTemplate: text('subject_template').notNull(),
     bodyTemplate: text('body_template').notNull(),
     bodyFormat: text('body_format').notNull().default('text'),
@@ -52,7 +54,7 @@ export const notificationRules = pgTable(
     ),
     check('notification_rules_version', sql`${t.version} > 0`),
     check('notification_rules_body_format', sql`${t.bodyFormat} in ('text','html')`),
-    check('notification_rules_locale', sql`${t.locale} in ('fr-MA','ar-MA')`),
+    check('notification_rules_locale', sql`${t.locale} in ('company','fr-MA','en-GB')`),
   ],
 )
 

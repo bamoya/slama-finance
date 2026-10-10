@@ -199,6 +199,27 @@ describe('consent-aware sales notifications', () => {
     )
     return { provider, transport, producer }
   }
+  it('resolves bilingual content from company language and honors explicit rule overrides', async () => {
+    const { transport } = workers()
+    const policies = createNotificationSettingsModule(() => fixture.db, transport, {
+      allowedFrom: ['notifications@example.invalid'],
+    }).publicApi
+    const saved = await rule('invoice_sent', true, {
+      locale: 'company',
+      englishSubjectTemplate: 'Invoice {{documentNumber}}',
+      englishBodyTemplate: '<p>Hello {{clientName}}</p>',
+    })
+    expect((await policies.rule('invoice_sent')).locale).toBe('fr-MA')
+    await fixture.client`update company_settings set locale='en-GB' where id=1`
+    expect(await policies.rule('invoice_sent')).toMatchObject({
+      locale: 'en-GB',
+      subjectTemplate: 'Invoice {{documentNumber}}',
+      bodyTemplate: '<p>Hello {{clientName}}</p>',
+      bodyFormat: 'html',
+    })
+    await fixture.client`update notification_rules set locale='fr-MA' where id=${saved.id}`
+    expect((await policies.rule('invoice_sent')).locale).toBe('fr-MA')
+  })
   it('defaults disabled, inherits and resets overrides with first-create concurrency protection', async () => {
     const initial = await get(`/v1/clients/${clientId}/notification-preferences`)
     expect(

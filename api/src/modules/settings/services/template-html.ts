@@ -11,12 +11,14 @@ export async function renderTemplatePreview(
   kind: PreviewDocumentTemplateQuery['documentType'],
   images: DocumentImages = {},
   sampleSize: PreviewDocumentTemplateQuery['sampleSize'] = 'short',
+  locale = 'fr-MA',
 ) {
   const delivery = kind === 'delivery'
   const receipt = kind === 'payment_receipt'
   const many = sampleSize === 'many'
   const model: DocumentModel = {
-    title: documentTitle(kind),
+    locale: locale,
+    title: documentTitle(kind, locale),
     number: receipt ? 'REC-2026-3188460612' : 'SAMPLE-2026-A7K9M2',
     issuer: [
       'Sample company',

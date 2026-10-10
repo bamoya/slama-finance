@@ -18,6 +18,7 @@ export async function renderSalesPdf(
   const bank = record('bankDetailsSnapshot' in row ? row.bankDetailsSnapshot : null)
   const result = await renderDocument(
     {
+      locale: row.locale,
       title: documentTitle(title === 'INVOICE' ? 'invoice' : 'estimate', row.locale),
       number: row.number ?? '',
       issuer: party(row.issuerSnapshot),

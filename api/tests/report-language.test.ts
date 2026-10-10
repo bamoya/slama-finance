@@ -68,8 +68,8 @@ const snapshot = () =>
     ],
   })
 describe('scheduled report languages and visual parity', () => {
-  it('defaults old requests and frozen configurations to French and rejects unsupported languages', () => {
-    expect(ReportScheduleInputSchema.parse(schedule).language).toBe('fr')
+  it('defaults new schedules to company language and legacy frozen configurations to French', () => {
+    expect(ReportScheduleInputSchema.parse(schedule).language).toBe('company')
     expect(ReportScheduleInputSchema.parse({ ...schedule, language: 'en' }).language).toBe('en')
     expect(ReportScheduleInputSchema.safeParse({ ...schedule, language: 'es' }).success).toBe(false)
     expect(

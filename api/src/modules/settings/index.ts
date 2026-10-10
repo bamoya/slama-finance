@@ -27,7 +27,10 @@ export function createSettingsModule(database: () => Database, media: MediaPubli
         async (scope) =>
           registerSettingsRoutes(
             scope,
-            createSettingsController(service, createPreviewService(media)),
+            createSettingsController(
+              service,
+              createPreviewService(media, async () => (await service.getCompany()).locale),
+            ),
             permission,
           ),
         { prefix: '/v1' },

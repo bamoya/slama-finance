@@ -1,4 +1,5 @@
 import { createDocumentCanvas, H, W } from './canvas.js'
+import { documentLabel } from './document-labels.js'
 import type { DocumentImages, DocumentModel } from './types.js'
 import { text } from './types.js'
 
@@ -21,6 +22,25 @@ export async function renderDocument(
   appearance: Record<string, unknown>,
   images: DocumentImages = {},
 ) {
+  const label = (value: string) => documentLabel(value, model.locale)
+  // Translate generated labels only, never product names, customer data or custom terms.
+  model = {
+    ...model,
+    reference: model.reference ? [label(model.reference[0]), model.reference[1]] : undefined,
+    totals: model.totals?.map(([key, value]) => [label(key), value]),
+    sections: model.sections?.map((section) => ({ ...section, title: label(section.title) })),
+    receipt: model.receipt
+      ? {
+          ...model.receipt,
+          status: label(model.receipt.status),
+          fields: model.receipt.fields.map(([key, value]) => [
+            label(key),
+            key === 'Method' || key === 'Collection date' ? label(value) : value,
+          ]),
+          balances: model.receipt.balances.map(([key, value]) => [label(key), value]),
+        }
+      : undefined,
+  }
   const c = await createDocumentCanvas()
   const layout = text(appearance.layout) || 'classic'
   const compact = appearance.density === 'compact'
@@ -182,7 +202,7 @@ export async function renderDocument(
     c.wrap(value, clientWidth, index === 0 ? 10 : size),
   )
   const metadata: [string, string][] = [
-    ['Document date', model.date],
+    [label('Document date'), model.date],
     ...(model.reference ? [model.reference] : []),
   ]
   const metaHeight = metadata.reduce(
@@ -191,7 +211,13 @@ export async function renderDocument(
   )
   const partyHeight = Math.max(14 + clientRows.length * leading, metaHeight) + partyInset * 2
   if (ledger) c.rect(left, y, width, partyHeight, tint)
-  c.text(model.receipt ? 'RECEIVED FROM' : 'CUSTOMER', clientX, y + partyInset, 7.5, muted)
+  c.text(
+    model.receipt ? label('RECEIVED FROM') : label('CUSTOMER'),
+    clientX,
+    y + partyInset,
+    7.5,
+    muted,
+  )
   let clientY = y + partyInset + 14
   model.client.forEach((value, index) => {
     clientY += block(
@@ -223,7 +249,7 @@ export async function renderDocument(
     if (signature) c.rect(left, y, width, 1.5, accent)
     if (ledger) c.rect(left, y, 3, amountHeight, accent)
     const inset = essential ? 0 : 12
-    c.text('AMOUNT RECEIVED', left + inset, y + 10, 8, muted)
+    c.text(label('AMOUNT RECEIVED'), left + inset, y + 10, 8, muted)
     amountLines.forEach((value, i) =>
       c.text(
         value,
@@ -267,7 +293,7 @@ export async function renderDocument(
     }
     await ensure(30 + receipt.balances.length * 23)
     y += 6
-    c.text('INVOICE BALANCE AT PAYMENT RECORDING', left, y, 8, muted)
+    c.text(label('INVOICE BALANCE AT PAYMENT RECORDING'), left, y, 8, muted)
     y += 22
     for (const [index, [label, value]] of receipt.balances.entries()) {
       const last = index === receipt.balances.length - 1
@@ -290,9 +316,9 @@ export async function renderDocument(
     const numericWidths = financial ? (vat ? [34, 60, 38, 68] : [34, 65, 73]) : [54]
     const widths = [width - numericWidths.reduce((a, b) => a + b, 0), ...numericWidths]
     const headings = [
-      'Product name',
-      'Qty',
-      ...(financial ? ['Unit price', ...(vat ? ['VAT'] : []), 'Total'] : []),
+      label('Product name'),
+      label('Qty'),
+      ...(financial ? [label('Unit price'), ...(vat ? [label('VAT')] : []), 'Total'] : []),
     ]
     const padding = compact ? 3 : tight ? 5 : 8
     const headerHeight = compact ? 20 : 27
@@ -384,7 +410,7 @@ export async function renderDocument(
   if (model.receptionSignature) {
     await ensure(64)
     y += 15
-    c.text('Received by / signature', left, y, 9, ink)
+    c.text(label('Received by / signature'), left, y, 9, ink)
     y += 40
     c.rect(left, y, Math.min(width, 230), 0.5, rule)
   }
@@ -392,7 +418,7 @@ export async function renderDocument(
     const signatureHeight = compact ? 42 : 58
     await ensure(signatureHeight + 30)
     y = Math.max(y + 15, bottom - signatureHeight - 20)
-    c.text('Authorized signature', right - 130, y, 8, muted)
+    c.text(label('Authorized signature'), right - 130, y, 8, muted)
     await c.image(images.signature, right - 130, y + 14, 130, signatureHeight, 'Company signature')
   }
   for (let i = 0; i < c.pageCount; i++) {
