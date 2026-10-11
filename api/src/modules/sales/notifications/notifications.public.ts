@@ -6,7 +6,7 @@ export interface ReportNotificationOwner {
   assertRetryable(tx: Transaction, id: string, actor: string, messageId?: string): Promise<void>
 }
 export type PrepareNotificationAttachment = (
-  type: 'invoice' | 'estimate',
+  type: 'invoice' | 'estimate' | 'delivery_note',
   id: string,
   version: number,
   actor: string | null,

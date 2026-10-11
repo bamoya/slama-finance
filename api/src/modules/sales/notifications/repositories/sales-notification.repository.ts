@@ -9,21 +9,27 @@ import { payments } from '../../../../../db/schema/payments.js'
 import { auditEvents, companySettings } from '../../../../../db/schema/settings.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { createDeliveryNoteRepository } from '../../delivery-notes/repositories/delivery-note.repository.js'
 import { createEstimateRepository } from '../../estimates/repositories/estimate.repository.js'
 import { createInvoiceRepository } from '../../invoices/repositories/invoice.repository.js'
 
 export function createSalesNotificationRepository(database: () => Database) {
   const estimate = createEstimateRepository(database)
   const invoice = createInvoiceRepository(database)
+  const delivery = createDeliveryNoteRepository(database)
   return {
     transaction: estimate.transaction,
     authorize: estimate.authorize,
-    owner(
-      type: 'invoice' | 'estimate',
+    async owner(
+      type: 'invoice' | 'estimate' | 'delivery_note',
       id: string,
       tx: Database | Transaction = database(),
       lock = false,
     ) {
+      if (type === 'delivery_note') {
+        const row = await delivery.one(id, tx, lock)
+        return { ...row, issueDate: row.deliveryDate, total: '0.00', currency: 'MAD', sentAt: null }
+      }
       return type === 'invoice' ? invoice.one(id, tx, lock) : estimate.one(id, tx, lock)
     },
     async keyJob(key: string, tx: Transaction) {
@@ -150,7 +156,7 @@ export function createSalesNotificationRepository(database: () => Database) {
       const rows = await tx.execute<{
         id: string
         message_id: string
-        source_type: 'invoice' | 'estimate' | 'payment'
+        source_type: 'invoice' | 'estimate' | 'payment' | 'delivery_note'
         source_id: string
         event_key: string
         recipient: string
@@ -162,10 +168,11 @@ export function createSalesNotificationRepository(database: () => Database) {
         left join invoices i on d.source_type='invoice' and i.id=d.source_id
         left join estimates e on d.source_type='estimate' and e.id=d.source_id
         left join payments p on d.source_type='payment' and p.id=d.source_id
+        left join delivery_notes dn on d.source_type='delivery_note' and dn.id=d.source_id
         left join invoices pi on pi.id=p.invoice_id
-        where m.status='queued' and d.source_type in ('invoice','estimate','payment')
+        where m.status='queued' and d.source_type in ('invoice','estimate','payment','delivery_note')
         ${filters.event ? sql`and d.event_key=${filters.event}` : sql``}
-        ${filters.clientId ? sql`and coalesce(i.client_id,e.client_id,pi.client_id)=${filters.clientId}::uuid` : sql``}
+        ${filters.clientId ? sql`and coalesce(i.client_id,e.client_id,pi.client_id,dn.client_id)=${filters.clientId}::uuid` : sql``}
         order by d.created_at for update of m`)
       return rows
     },

@@ -71,6 +71,11 @@ export function createSalesModule(
     | {
         invalidate: (tx: Transaction) => Promise<void>
         paymentConfirmed: (tx: Transaction, id: string) => Promise<void>
+        documentFinalized?: (
+          tx: Transaction,
+          type: 'invoice' | 'estimate' | 'delivery_note',
+          id: string,
+        ) => Promise<void>
       }
     | undefined
   const changed = (tx: Transaction) => notificationCallbacks?.invalidate(tx) ?? Promise.resolve()
@@ -119,9 +124,29 @@ export function createSalesModule(
       return renderPaymentReceiptPdf(await paymentsRepo.one(id), images)
     },
   )
-  const estimates = createEstimateService(estimatesRepo, jobs, artifacts.service, changed)
-  const invoices = createInvoiceService(invoicesRepo, jobs, artifacts.service, changed)
-  const deliveryNotes = createDeliveryNoteService(deliveryNotesRepo, jobs, artifacts.service)
+  const finalized =
+    (type: 'invoice' | 'estimate' | 'delivery_note') => (tx: Transaction, id: string) =>
+      notificationCallbacks?.documentFinalized?.(tx, type, id) ?? Promise.resolve()
+  const estimates = createEstimateService(
+    estimatesRepo,
+    jobs,
+    artifacts.service,
+    changed,
+    finalized('estimate'),
+  )
+  const invoices = createInvoiceService(
+    invoicesRepo,
+    jobs,
+    artifacts.service,
+    changed,
+    finalized('invoice'),
+  )
+  const deliveryNotes = createDeliveryNoteService(
+    deliveryNotesRepo,
+    jobs,
+    artifacts.service,
+    finalized('delivery_note'),
+  )
   const regenerate = createRegeneratePdfService(
     { invoice: invoicesRepo, estimate: estimatesRepo, delivery_note: deliveryNotesRepo },
     artifacts.service,
@@ -197,11 +222,16 @@ export function createSalesModule(
     configureNotificationCallbacks(callbacks: {
       invalidate: (tx: Transaction) => Promise<void>
       paymentConfirmed: (tx: Transaction, id: string) => Promise<void>
+      documentFinalized?: (
+        tx: Transaction,
+        type: 'invoice' | 'estimate' | 'delivery_note',
+        id: string,
+      ) => Promise<void>
     }) {
       notificationCallbacks = callbacks
     },
     async prepareNotificationAttachment(
-      type: 'invoice' | 'estimate',
+      type: 'invoice' | 'estimate' | 'delivery_note',
       id: string,
       version: number,
       actor: string | null,
@@ -272,6 +302,7 @@ export function createSalesNotificationsModule(
     sweep: service.sweep,
     invalidate: service.invalidate,
     paymentConfirmed: service.paymentConfirmed,
+    documentFinalized: service.documentFinalized,
     registerRoutes: async (
       app: FastifyInstance,
       permission: (key: string) => preHandlerHookHandler,

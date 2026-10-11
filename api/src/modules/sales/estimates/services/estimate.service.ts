@@ -27,6 +27,7 @@ export function createEstimateService(
   jobs: Jobs,
   artifacts: Artifacts,
   onNotificationChange?: (tx: Transaction) => Promise<void>,
+  onIssued?: (tx: Transaction, id: string) => Promise<void>,
 ) {
   async function output(row: EstimateRow, tx?: Transaction) {
     const [lines, clientDisplayName] = await Promise.all([
@@ -435,6 +436,7 @@ export function createEstimateService(
           actor,
         )
         await repo.audit(tx, actor, 'issue', id, before, row)
+        await onIssued?.(tx, id)
         return output(row, tx)
       })
     },

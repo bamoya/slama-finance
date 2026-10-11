@@ -148,7 +148,7 @@ describe('notification policies, preferences and sends', () => {
   )
   it('opens a rule detail page and edits in the shared header instead of a modal', async () => {
     setup(ruleRoutes)
-    fireEvent.click(await screen.findByRole('link', { name: 'Invoice send' }))
+    fireEvent.click(await screen.findByRole('link', { name: 'Invoice issued' }))
     expect(await screen.findByText('Configuration')).toBeVisible()
     fireEvent.click(screen.getByRole('link', { name: 'Configure' }))
     expect(await screen.findByLabelText('Sender name')).toHaveValue('Slama')
@@ -251,18 +251,57 @@ describe('notification policies, preferences and sends', () => {
       screen.queryByRole('button', { name: 'Send synthetic test to me' }),
     ).not.toBeInTheDocument()
   })
-  it('defaults to company settings and cannot enable a disabled company rule when customized', async () => {
+  it('defaults to company settings and allows independent opt-in when customized', async () => {
     setup(<ClientNotificationPreferences id={id} />)
     await screen.findByText('Company defaults')
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('switch', { name: 'Customize preferences' }))
-    expect(screen.getByRole('switch', { name: 'Receive email Invoice send' })).toBeDisabled()
+    expect(screen.getByRole('switch', { name: 'Receive email Invoice issued' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('switch', { name: 'Receive email Invoice issued' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() =>
       expect(state.updateClientNotificationPreference).toHaveBeenCalledWith(id, ruleId, {
         expectedVersion: 0,
-        enabled: false,
+        enabled: true,
+        cc: [],
+      }),
+    )
+  })
+  it('groups document emails before reminders without changing their saved rule mapping', async () => {
+    const reminderId = '33333333-3333-4333-8333-333333333333'
+    state.updateClientNotificationPreference.mockImplementation(
+      async (_clientId, savedRuleId, input) => ({
+        ...preference,
+        ruleId: savedRuleId,
+        eventKey: savedRuleId === reminderId ? 'estimate_expiry_reminder' : 'invoice_sent',
+        overrideEnabled: input.enabled,
+        version: 1,
+      }),
+    )
+    state.listClientNotificationPreferences.mockResolvedValue({
+      items: [
+        { ...preference, ruleId: reminderId, eventKey: 'estimate_expiry_reminder' },
+        preference,
+      ],
+    })
+    setup(<ClientNotificationPreferences id={id} />)
+    const documents = await screen.findByRole('heading', { name: 'Document notifications' })
+    const reminders = screen.getByRole('heading', { name: 'Due-date & expiry reminders' })
+    expect(
+      documents.compareDocumentPosition(reminders) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(screen.getByRole('separator')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('switch', { name: 'Customize preferences' }))
+    const switches = screen.getAllByRole('switch')
+    expect(switches[1]).toHaveAccessibleName('Receive email Invoice issued')
+    expect(switches[2]).toHaveAccessibleName('Receive email Estimate expiry reminder')
+    fireEvent.click(switches[1]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(state.updateClientNotificationPreference).toHaveBeenCalledWith(id, ruleId, {
+        expectedVersion: 0,
+        enabled: true,
         cc: [],
       }),
     )
@@ -308,7 +347,7 @@ describe('notification policies, preferences and sends', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     fireEvent.click(help)
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'An explicit opt-in cannot bypass a disabled global rule',
+      'Client preferences override company defaults',
     )
   })
   it('adds removable email chips and includes uncommitted input in one save', async () => {
@@ -387,7 +426,7 @@ describe('notification policies, preferences and sends', () => {
     setup(<SendDocumentDialog documentType="invoice" id={id} clientId={id} version={7} />)
     fireEvent.click(screen.getByRole('button', { name: 'Send email' }))
     const dialog = await screen.findByRole('dialog')
-    await within(dialog).findByText('Global rule disabled')
+    await within(dialog).findByText('Company default disabled')
     expect(within(dialog).getByRole('button', { name: 'Send email' })).toBeDisabled()
     expect(state.sendInvoice).not.toHaveBeenCalled()
   })

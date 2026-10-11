@@ -4,6 +4,7 @@ export const emailSample = {
   documentNumber: 'FAC-2026-482931',
   paymentNumber: 'PAY-2026-729451',
   issueDate: '04/10/2026',
+  deliveryDate: '04/10/2026',
   dueDate: '04/11/2026',
   validUntil: '04/11/2026',
   total: '1 250,00',

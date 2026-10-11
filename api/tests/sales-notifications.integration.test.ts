@@ -98,7 +98,13 @@ describe('consent-aware sales notifications', () => {
     expect(update.statusCode, update.body).toBe(200)
     return update.json()
   }
-  async function document(type: 'invoice' | 'estimate', date = companyDate(new Date())) {
+  async function document(
+    type: 'invoice' | 'estimate',
+    date = companyDate(new Date()),
+    automatic = false,
+  ) {
+    // Legacy/manual-send scenarios start with a document issued before email became eligible.
+    if (!automatic) await fixture.client`update clients set email=null where id=${clientId}`
     const input = {
       clientId,
       templateId: null,
@@ -120,6 +126,8 @@ describe('consent-aware sales notifications', () => {
     expect(draft.statusCode, draft.body).toBe(201)
     const issued = await post(`/v1/${type}s/${draft.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
+    if (!automatic)
+      await fixture.client`update clients set email='client@example.test' where id=${clientId}`
     return issued.json()
   }
   it('previews unsaved HTML without sending, persists sanitized HTML and tests only to the operator', async () => {
@@ -173,6 +181,130 @@ describe('consent-aware sales notifications', () => {
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='notification_rules.update')`
     const forbidden = await post(`/v1/notification-rules/${r.id}/preview`, template)
     expect(forbidden.statusCode).toBe(403)
+  })
+  it.each(['invoice', 'estimate'] as const)(
+    'automatically sends %s PDFs once with a client opt-in even when company defaults are off',
+    async (type) => {
+      const r = await rule(`${type}_sent`, false)
+      await document(type, companyDate(new Date()), true)
+      expect(
+        (
+          await fixture.client`select count(*) from background_jobs where job_type='prepare_notification'`
+        )[0]!.count,
+      ).toBe('0')
+      const pref = await app.inject({
+        method: 'PUT',
+        url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+        headers,
+        cookies,
+        payload: { expectedVersion: 0, enabled: true, cc: [] },
+      })
+      expect(pref.statusCode, pref.body).toBe(200)
+      const doc = await document(type, companyDate(new Date()), true)
+      const w = workers()
+      await rule(`${type}_sent`, false)
+      expect(await w.producer.worker.runOne()).toBe(true)
+      expect(await w.producer.worker.runOne()).toBe(false)
+      expect(await w.transport.worker.runOne()).toBe(true)
+      expect(w.provider.messages).toHaveLength(1)
+      expect(w.provider.messages[0]!.attachments).toHaveLength(1)
+      expect(
+        (await post(`/v1/${type}s/${doc.id}/issue`, { expectedVersion: doc.version })).statusCode,
+      ).toBe(409)
+      await post(`/v1/${type}s/${doc.id}/pdf`, {})
+      expect(
+        (
+          await fixture.client`select count(*) from background_jobs where job_type='prepare_notification'`
+        )[0]!.count,
+      ).toBe('1')
+    },
+  )
+  it('keeps a client opt-out effective when company automatic notifications are enabled', async () => {
+    const r = await rule('invoice_sent', true)
+    await app.inject({
+      method: 'PUT',
+      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: 0, enabled: false, cc: [] },
+    })
+    await document('invoice', companyDate(new Date()), true)
+    expect(
+      (
+        await fixture.client`select count(*) from background_jobs where job_type='prepare_notification'`
+      )[0]!.count,
+    ).toBe('0')
+  })
+  it('cancels unstarted automatic preparation when the client opts out', async () => {
+    const r = await rule('invoice_sent', true)
+    const doc = await document('invoice', companyDate(new Date()), true)
+    const pref = await app.inject({
+      method: 'PUT',
+      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: 0, enabled: false, cc: [] },
+    })
+    expect(pref.statusCode, pref.body).toBe(200)
+    const [job] =
+      await fixture.client`select status from background_jobs where job_type='prepare_notification' and payload->>'sourceId'=${doc.id}`
+    expect(job!.status).toBe('cancelled')
+    const w = workers()
+    expect(await w.producer.worker.runOne()).toBe(false)
+    expect(await w.transport.worker.runOne()).toBe(false)
+  })
+  it('prepares a delivery-note email with a PDF through the same worker and client override', async () => {
+    const r = await rule('delivery_prepared', false)
+    const pref = await app.inject({
+      method: 'PUT',
+      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: 0, enabled: true, cc: [] },
+    })
+    expect(pref.statusCode, pref.body).toBe(200)
+    const draft = await post('/v1/delivery-notes', {
+      clientId,
+      invoiceId: null,
+      deliveryDate: companyDate(new Date()),
+      deliveryAddress: 'Rue Hassan, Rabat',
+      instructions: null,
+      includeReceptionSignature: true,
+      lines: [
+        { productVariantId: null, productName: 'Wheat', quantity: 2, sourceInvoiceLineId: null },
+      ],
+    })
+    expect(draft.statusCode, draft.body).toBe(201)
+    expect(
+      (await post(`/v1/delivery-notes/${draft.json().id}/prepare`, { expectedVersion: 1 }))
+        .statusCode,
+    ).toBe(200)
+    const w = workers()
+    expect(await w.producer.worker.runOne()).toBe(true)
+    expect(await w.transport.worker.runOne()).toBe(true)
+    expect(w.provider.messages).toHaveLength(1)
+    expect(w.provider.messages[0]!.attachments).toHaveLength(1)
+    expect(w.provider.messages[0]!.subject).toContain('Bon de livraison')
+    const history = await get(`/v1/documents/delivery_note/${draft.json().id}/notifications`)
+    expect(history.statusCode, history.body).toBe(200)
+    expect(history.json().items).toHaveLength(2)
+  })
+  it('sends reminders for client opt-ins even when company defaults are off', async () => {
+    const r = await rule('invoice_due_reminder', false)
+    const pref = await app.inject({
+      method: 'PUT',
+      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: 0, enabled: true, cc: [] },
+    })
+    expect(pref.statusCode, pref.body).toBe(200)
+    await document('invoice')
+    const w = workers()
+    expect((await w.producer.sweep()).reminders).toBe(1)
+    expect((await w.producer.sweep()).reminders).toBe(0)
+    expect(await w.transport.worker.runOne()).toBe(true)
+    expect(w.provider.messages).toHaveLength(1)
   })
   function workers(now = new Date(Date.now() + 5000)) {
     const provider = createRecordingEmailProvider()
@@ -425,9 +557,16 @@ describe('consent-aware sales notifications', () => {
       await fixture.client`select status from background_jobs where id=${send.json().jobId}`
     expect(job?.status).toBe('cancelled')
     const w = workers()
+    expect(await w.producer.worker.runOne()).toBe(true)
     expect(await w.producer.worker.runOne()).toBe(false)
+    expect(await w.transport.worker.runOne()).toBe(true)
     const [source] = await fixture.client`select status from estimates where id=${estimate.id}`
     expect(source?.status).toBe('superseded')
-    expect(w.provider.messages).toHaveLength(0)
+    expect(w.provider.messages).toHaveLength(1)
+    expect(
+      (
+        await fixture.client`select count(*) from notification_dispatches where source_id=${estimate.id}`
+      )[0]!.count,
+    ).toBe('0')
   })
 })

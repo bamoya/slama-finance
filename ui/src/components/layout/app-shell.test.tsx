@@ -99,6 +99,12 @@ describe('shadcn application sidebar', () => {
       'collapsed',
     )
     expect(document.cookie).toContain('sidebar_state=false')
+    // Invisible headings overlap the preceding group's final icon during collapse.
+    // They must not capture pointer events (jsdom cannot perform browser hit-testing).
+    const headings = document.querySelectorAll('[data-sidebar="group-label"]')
+    expect(headings.length).toBeGreaterThan(0)
+    for (const heading of headings)
+      expect(heading).toHaveClass('group-data-[collapsible=icon]:pointer-events-none')
     fireEvent.focus(screen.getByRole('link', { name: 'Staff' }))
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Staff')
     fireEvent.keyDown(window, { key: 'b', ctrlKey: true })

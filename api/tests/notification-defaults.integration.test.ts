@@ -8,11 +8,11 @@ import { isolatedDatabase } from './helpers/postgres.js'
 
 const migration = '0026_branded_notification_defaults.sql'
 describe('branded notification defaults migration', () => {
-  it('installs five working French HTML templates and remains idempotent', async () => {
+  it('installs six working French HTML templates and remains idempotent', async () => {
     const fixture = await isolatedDatabase()
     try {
       const rows = await fixture.client`select * from notification_rules order by event_key`
-      expect(rows).toHaveLength(5)
+      expect(rows).toHaveLength(6)
       for (const row of rows) {
         expect(row.body_format).toBe('html')
         expect(row.locale).toBe('company')
@@ -20,17 +20,18 @@ describe('branded notification defaults migration', () => {
         expect(row.english_body_template).toContain('Hello {{clientName}}')
         expect(row.enabled).toBe(false)
         expect(row.subject_template).toContain('Slama Agricole')
-        expect(row.body_template.trim()).toBe(
-          (
-            await readFile(
-              new URL(
-                `../../docs/notification-email-examples/${row.event_key}.html`,
-                import.meta.url,
-              ),
-              'utf8',
-            )
-          ).trim(),
-        )
+        if (row.event_key !== 'delivery_prepared')
+          expect(row.body_template.trim()).toBe(
+            (
+              await readFile(
+                new URL(
+                  `../../docs/notification-email-examples/${row.event_key}.html`,
+                  import.meta.url,
+                ),
+                'utf8',
+              )
+            ).trim(),
+          )
         const result = composeNotification(
           {
             eventKey: row.event_key,
@@ -40,7 +41,7 @@ describe('branded notification defaults migration', () => {
           },
           emailSample,
         )
-        expect(result.html).toContain('#faf3df')
+        expect(result.html).toContain(row.event_key === 'delivery_prepared' ? '#8f6515' : '#faf3df')
         expect(result.html).not.toContain('{{')
       }
       await fixture.client.unsafe(

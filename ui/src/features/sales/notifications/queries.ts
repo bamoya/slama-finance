@@ -3,7 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import * as api from '../../../api/generated/sales/sales'
 
 export const downloadArtifact = api.downloadArtifact
-export type NotificationDocumentType = 'invoice' | 'estimate' | 'report_run'
+export type NotificationDocumentType = 'invoice' | 'estimate' | 'delivery_note' | 'report_run'
 export const useDocumentNotifications = (
   documentType: NotificationDocumentType,
   id: string,

@@ -25,7 +25,12 @@ type Artifacts = ReturnType<typeof createArtifactSupport>['service']
 const dto = <T>(schema: { parse(value: unknown): T }, value: unknown): T =>
   schema.parse(JSON.parse(JSON.stringify(value)))
 
-export function createDeliveryNoteService(repo: Repository, jobs: Jobs, artifacts: Artifacts) {
+export function createDeliveryNoteService(
+  repo: Repository,
+  jobs: Jobs,
+  artifacts: Artifacts,
+  onPrepared?: (tx: Transaction, id: string) => Promise<void>,
+) {
   async function output(row: DeliveryNoteRow, tx?: Transaction) {
     const [lines, clientDisplayName, invoiceNumber, relatedInvoices] = await Promise.all([
       repo.lines(row.id, tx),
@@ -245,6 +250,7 @@ export function createDeliveryNoteService(repo: Repository, jobs: Jobs, artifact
           actor,
         )
         await repo.audit(tx, actor, 'prepare', id, before, row)
+        await onPrepared?.(tx, id)
         return output(row, tx)
       })
     },

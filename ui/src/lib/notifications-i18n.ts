@@ -11,10 +11,11 @@ registerTranslations('notifications', {
   noRepeat: 'No repetition',
   saving: 'Saving…',
   description:
-    'Configure optional client email rules. Rules start disabled and client overrides cannot enable a disabled global rule.',
+    'Configure company email defaults. Initially disabled; each client can inherit, enable or disable notifications independently.',
   events: {
-    invoice_sent: 'Invoice send',
-    estimate_sent: 'Estimate send',
+    invoice_sent: 'Invoice issued',
+    estimate_sent: 'Estimate issued',
+    delivery_prepared: 'Delivery note prepared',
     payment_received: 'Payment confirmation',
     invoice_due_reminder: 'Invoice due reminder',
     estimate_expiry_reminder: 'Estimate expiry reminder',
@@ -39,7 +40,7 @@ registerTranslations('notifications', {
   offsetDays: 'Days from due / expiry date',
   repeatEveryDays: 'Repeat every days (optional)',
   variables: 'Allowed variables: {{variables}}',
-  enabledLabel: 'Enable rule',
+  enabledLabel: 'Enabled by default for clients',
   invalid: 'Check the policy fields.',
   empty: 'No notification rules available.',
   timingHint:
@@ -74,9 +75,11 @@ registerTranslations('notifications', {
   cc: 'CC addresses (comma separated)',
   reset: 'Reset to inherit',
   preferenceHint:
-    'An explicit opt-in cannot bypass a disabled global rule. Queued work may be cancelled by policy changes; accepted mail cannot be recalled.',
+    'Client preferences override company defaults. Queued work may be cancelled by preference changes; accepted mail cannot be recalled.',
+  documentEmails: 'Document notifications',
+  reminderEmails: 'Due-date & expiry reminders',
   reasons: {
-    RULE_DISABLED: 'Global rule disabled',
+    RULE_DISABLED: 'Company default disabled',
     CLIENT_OPT_OUT: 'Client opted out',
     MISSING_EMAIL: 'A valid client email is required',
     CLIENT_ARCHIVED: 'Client archived',

@@ -1,5 +1,16 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Document notifications': 'Notifications des documents',
+  'Due-date & expiry reminders': 'Rappels d’échéance et d’expiration',
+  'Configure company email defaults. Initially disabled; each client can inherit, enable or disable notifications independently.':
+    'Configurez les notifications par défaut de l’entreprise. Désactivées au départ, elles peuvent être activées ou désactivées pour chaque client.',
+  'Enabled by default for clients': 'Activé par défaut pour les clients',
+  'Client preferences override company defaults. Queued work may be cancelled by preference changes; accepted mail cannot be recalled.':
+    'Les préférences client remplacent les réglages de l’entreprise. Les changements peuvent annuler les envois en attente ; les e-mails acceptés ne peuvent pas être rappelés.',
+  'Company default disabled': 'Désactivé par défaut dans l’entreprise',
+  'Delivery note prepared': 'Bon de livraison préparé',
+  'Invoice issued': 'Facture émise',
+  'Estimate issued': 'Devis émis',
   'System language': 'Langue du système',
   'Export language': 'Langue de l’export',
   'English email content': 'Contenu de l’e-mail en anglais',

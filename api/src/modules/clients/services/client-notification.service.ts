@@ -14,8 +14,8 @@ export function clientNotificationEligibility(
   email: string | null,
   archived: boolean,
 ) {
-  if (!ruleEnabled) return 'RULE_DISABLED'
   if (overrideEnabled === false) return 'CLIENT_OPT_OUT'
+  if (!(overrideEnabled ?? ruleEnabled)) return 'RULE_DISABLED'
   if (archived) return 'CLIENT_ARCHIVED'
   if (!email || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) return 'MISSING_EMAIL'
   return null

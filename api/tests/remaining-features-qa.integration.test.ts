@@ -198,6 +198,8 @@ describe('Independent remaining-feature regression QA', () => {
     return response.json().id as string
   }
   async function invoice() {
+    // These scenarios exercise explicit sends, not issue-time automatic notifications.
+    await fixture.client`update clients set email=null where id=${clientId}`
     const date = companyDate(new Date())
     const draft = await request('POST', '/v1/invoices', {
       clientId,
@@ -221,6 +223,7 @@ describe('Independent remaining-feature regression QA', () => {
       expectedVersion: 1,
     })
     expect(issued.statusCode, issued.body).toBe(200)
+    await fixture.client`update clients set email='qa-client@example.test' where id=${clientId}`
     return issued.json()
   }
   async function setCc(ruleId: string, cc: string[], expectedVersion = 0) {

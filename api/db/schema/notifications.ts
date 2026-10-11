@@ -46,7 +46,7 @@ export const notificationRules = pgTable(
   (t) => [
     check(
       'notification_rules_event',
-      sql`${t.eventKey} in ('invoice_sent','estimate_sent','payment_received','invoice_due_reminder','estimate_expiry_reminder')`,
+      sql`${t.eventKey} in ('invoice_sent','estimate_sent','payment_received','delivery_prepared','invoice_due_reminder','estimate_expiry_reminder')`,
     ),
     check(
       'notification_rules_timing',
@@ -188,11 +188,11 @@ export const notificationDispatches = pgTable(
     index('notification_dispatches_source_idx').on(t.sourceType, t.sourceId, t.createdAt),
     check(
       'notification_dispatches_source',
-      sql`${t.sourceType} in ('invoice','estimate','payment','report_run')`,
+      sql`${t.sourceType} in ('invoice','estimate','payment','delivery_note','report_run')`,
     ),
     check(
       'notification_dispatches_event',
-      sql`${t.eventKey} in ('invoice_sent','estimate_sent','payment_received','invoice_due_reminder','estimate_expiry_reminder','report_available')`,
+      sql`${t.eventKey} in ('invoice_sent','estimate_sent','payment_received','delivery_prepared','invoice_due_reminder','estimate_expiry_reminder','report_available')`,
     ),
   ],
 )

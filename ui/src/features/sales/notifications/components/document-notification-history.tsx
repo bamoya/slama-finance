@@ -37,7 +37,12 @@ export function DocumentNotificationHistory({
     query = useDocumentNotifications(documentType, id, { limit: 25, offset })
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>()
-  const sendAuthority = documentType === 'report_run' ? 'reports.read' : `${documentType}s.update`
+  const sendAuthority =
+    documentType === 'report_run'
+      ? 'reports.read'
+      : documentType === 'delivery_note'
+        ? 'delivery_notes.update'
+        : `${documentType}s.update`
   const act = async (action: () => Promise<unknown>) => {
     setBusy(true)
     setError(undefined)

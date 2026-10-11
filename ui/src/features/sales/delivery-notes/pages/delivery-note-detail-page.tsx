@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
+import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { DeliveryAcknowledgmentDialog } from '../components/delivery-acknowledgment-dialog'
 import {
   refreshDeliveries,
@@ -275,6 +276,9 @@ export function DeliveryNoteDetailPage() {
           </section>
         </div>
       </div>
+      <Can permission={['delivery_notes.read', 'notification_dispatches.read']}>
+        <DocumentNotificationHistory documentType="delivery_note" id={noteId} />
+      </Can>
     </div>
   )
 }

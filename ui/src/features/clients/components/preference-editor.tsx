@@ -15,6 +15,7 @@ import {
 } from '../../../components/ui/dialog'
 import { Field, FieldError, FieldGroup, FieldLabel } from '../../../components/ui/field'
 import { InfoHint } from '../../../components/ui/info-hint'
+import { Separator } from '../../../components/ui/separator'
 import { Switch } from '../../../components/ui/switch'
 import { PreferenceEmailInput } from './preference-email-input'
 import { usePreferenceEditor } from './use-preference-editor'
@@ -34,6 +35,24 @@ export function PreferenceEditor({
   const editor = usePreferenceEditor(id, initial, reload)
   const { form, rows, custom, editable, resetting } = editor
   const recipients = [...new Set(rows.flatMap((row) => (row.recipient ? [row.recipient] : [])))]
+  const indexedRows = rows.map((row, index) => ({ row, index }))
+  const groups = [
+    {
+      title: 'documentEmails',
+      events: ['invoice_sent', 'estimate_sent', 'payment_received', 'delivery_prepared'],
+    },
+    {
+      title: 'reminderEmails',
+      events: ['invoice_due_reminder', 'estimate_expiry_reminder'],
+    },
+  ]
+    .map((group) => ({
+      ...group,
+      items: group.events.flatMap((event) =>
+        indexedRows.filter(({ row }) => row.eventKey === event),
+      ),
+    }))
+    .filter((group) => group.items.length)
   return (
     <form
       noValidate
@@ -84,23 +103,33 @@ export function PreferenceEditor({
               )}
               {!rows.length && <p className="text-sm text-muted-foreground">{t('empty')}</p>}
               {!custom ? (
-                <div className="flex flex-wrap gap-2">
-                  {rows.map((row) => (
-                    <span
-                      key={row.ruleId}
-                      className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm"
-                    >
-                      {t(`events.${row.eventKey}`)}
-                      <StatusBadge
-                        label={t(row.effectiveEnabled ? 'enabled' : 'disabled')}
-                        tone={row.effectiveEnabled ? 'active' : 'archived'}
-                      />
-                      {row.reason && (
-                        <InfoHint label={t('eventHelp', { event: t(`events.${row.eventKey}`) })}>
-                          {t(`reasons.${row.reason}`)}
-                        </InfoHint>
-                      )}
-                    </span>
+                <div className="grid gap-4">
+                  {groups.map((group, groupIndex) => (
+                    <section key={group.title} className="grid gap-3">
+                      {groupIndex > 0 && <Separator decorative={false} />}
+                      <h3 className="text-sm font-semibold">{t(group.title)}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.map(({ row }) => (
+                          <span
+                            key={row.ruleId}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+                          >
+                            {t(`events.${row.eventKey}`)}
+                            <StatusBadge
+                              label={t(row.effectiveEnabled ? 'enabled' : 'disabled')}
+                              tone={row.effectiveEnabled ? 'active' : 'archived'}
+                            />
+                            {row.reason && (
+                              <InfoHint
+                                label={t('eventHelp', { event: t(`events.${row.eventKey}`) })}
+                              >
+                                {t(`reasons.${row.reason}`)}
+                              </InfoHint>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
                   ))}
                 </div>
               ) : (
@@ -113,82 +142,91 @@ export function PreferenceEditor({
                   <form.Field name="items">
                     {(field) => (
                       <FieldGroup className="gap-0">
-                        {rows.map((row, index) => {
-                          const value = field.state.value[index]!,
-                            invalid = editor.invalid.includes(index)
-                          const blocked = !row.globalEnabled,
-                            emailId = `${modeId}-cc-${index}`
-                          const update = (changes: Partial<typeof value>) =>
-                            field.handleChange(
-                              field.state.value.map((item, position) =>
-                                position === index ? { ...item, ...changes } : item,
-                              ),
-                            )
-                          return (
-                            <div
-                              key={row.ruleId}
-                              className="grid items-start gap-3 border-t border-border py-4 lg:grid-cols-[minmax(10rem,1fr)_11rem_minmax(0,1.5fr)] lg:gap-content"
-                            >
-                              <div className="flex min-h-control items-center gap-1">
-                                <h3 className="text-sm font-semibold">
-                                  {t(`events.${row.eventKey}`)}
-                                </h3>
-                                {row.reason && (
-                                  <InfoHint
-                                    label={t('eventHelp', { event: t(`events.${row.eventKey}`) })}
+                        {groups.map((group, groupIndex) => (
+                          <section key={group.title}>
+                            {groupIndex > 0 && <Separator decorative={false} className="my-4" />}
+                            <h3 className="pb-3 text-sm font-semibold">{t(group.title)}</h3>
+                            {group.items.map(({ row, index }) => {
+                              const value = field.state.value[index]!,
+                                invalid = editor.invalid.includes(index)
+                              const emailId = `${modeId}-cc-${index}`
+                              const update = (changes: Partial<typeof value>) =>
+                                field.handleChange(
+                                  field.state.value.map((item, position) =>
+                                    position === index ? { ...item, ...changes } : item,
+                                  ),
+                                )
+                              return (
+                                <div
+                                  key={row.ruleId}
+                                  className="grid items-start gap-3 border-t border-border py-4 lg:grid-cols-[minmax(10rem,1fr)_11rem_minmax(0,1.5fr)] lg:gap-content"
+                                >
+                                  <div className="flex min-h-control items-center gap-1">
+                                    <h3 className="text-sm font-semibold">
+                                      {t(`events.${row.eventKey}`)}
+                                    </h3>
+                                    {row.reason && (
+                                      <InfoHint
+                                        label={t('eventHelp', {
+                                          event: t(`events.${row.eventKey}`),
+                                        })}
+                                      >
+                                        {t(`reasons.${row.reason}`)}
+                                      </InfoHint>
+                                    )}
+                                  </div>
+                                  <Field data-disabled={busy || !editable}>
+                                    <FieldLabel
+                                      className="flex min-h-control items-center"
+                                      htmlFor={`${modeId}-enabled-${index}`}
+                                    >
+                                      {t('receiveEmail')}
+                                    </FieldLabel>
+                                    <label
+                                      className="flex min-h-control items-center gap-2"
+                                      htmlFor={`${modeId}-enabled-${index}`}
+                                    >
+                                      <Switch
+                                        id={`${modeId}-enabled-${index}`}
+                                        aria-label={`${t('receiveEmail')} ${t(`events.${row.eventKey}`)}`}
+                                        checked={value.enabled}
+                                        disabled={busy || !editable}
+                                        onCheckedChange={(enabled) => update({ enabled })}
+                                      />
+                                      <span className="text-xs text-muted-foreground">
+                                        {t(value.enabled ? 'on' : 'off')}
+                                      </span>
+                                    </label>
+                                  </Field>
+                                  <Field
+                                    data-invalid={invalid}
+                                    data-disabled={busy || !editable || !value.enabled}
                                   >
-                                    {t(`reasons.${row.reason}`)}
-                                  </InfoHint>
-                                )}
-                              </div>
-                              <Field data-disabled={busy || !editable || blocked}>
-                                <FieldLabel
-                                  className="flex min-h-control items-center"
-                                  htmlFor={`${modeId}-enabled-${index}`}
-                                >
-                                  {t('receiveEmail')}
-                                </FieldLabel>
-                                <label
-                                  className="flex min-h-control items-center gap-2"
-                                  htmlFor={`${modeId}-enabled-${index}`}
-                                >
-                                  <Switch
-                                    id={`${modeId}-enabled-${index}`}
-                                    aria-label={`${t('receiveEmail')} ${t(`events.${row.eventKey}`)}`}
-                                    checked={!blocked && value.enabled}
-                                    disabled={busy || !editable || blocked}
-                                    onCheckedChange={(enabled) => update({ enabled })}
-                                  />
-                                  <span className="text-xs text-muted-foreground">
-                                    {t(!blocked && value.enabled ? 'on' : 'off')}
-                                  </span>
-                                </label>
-                              </Field>
-                              <Field
-                                data-invalid={invalid}
-                                data-disabled={busy || !editable || blocked || !value.enabled}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <FieldLabel htmlFor={emailId}>
-                                    {t('additionalRecipients')}
-                                  </FieldLabel>
-                                  <InfoHint label={t('ccHelpLabel')}>{t('ccHelp')}</InfoHint>
+                                    <div className="flex items-center gap-1">
+                                      <FieldLabel htmlFor={emailId}>
+                                        {t('additionalRecipients')}
+                                      </FieldLabel>
+                                      <InfoHint label={t('ccHelpLabel')}>{t('ccHelp')}</InfoHint>
+                                    </div>
+                                    <PreferenceEmailInput
+                                      id={emailId}
+                                      emails={value.cc}
+                                      pending={value.pending}
+                                      invalid={invalid}
+                                      disabled={busy || !editable || !value.enabled}
+                                      onChange={(cc, pending) => update({ cc, pending })}
+                                    />
+                                    {invalid && (
+                                      <FieldError id={`${emailId}-error`}>
+                                        {t('invalidCc')}
+                                      </FieldError>
+                                    )}
+                                  </Field>
                                 </div>
-                                <PreferenceEmailInput
-                                  id={emailId}
-                                  emails={value.cc}
-                                  pending={value.pending}
-                                  invalid={invalid}
-                                  disabled={busy || !editable || blocked || !value.enabled}
-                                  onChange={(cc, pending) => update({ cc, pending })}
-                                />
-                                {invalid && (
-                                  <FieldError id={`${emailId}-error`}>{t('invalidCc')}</FieldError>
-                                )}
-                              </Field>
-                            </div>
-                          )
-                        })}
+                              )
+                            })}
+                          </section>
+                        ))}
                       </FieldGroup>
                     )}
                   </form.Field>

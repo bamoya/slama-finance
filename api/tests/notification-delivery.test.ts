@@ -32,10 +32,12 @@ const message: ComposedMessage = {
 }
 
 describe('notification policies and transport', () => {
-  it('requires global opt-in, valid email and current active client even when overridden', () => {
-    expect(clientNotificationEligibility(false, true, 'client@example.test', false)).toBe(
+  it('resolves client overrides before company defaults, while requiring a valid active recipient', () => {
+    expect(clientNotificationEligibility(false, true, 'client@example.test', false)).toBeNull()
+    expect(clientNotificationEligibility(false, null, 'client@example.test', false)).toBe(
       'RULE_DISABLED',
     )
+    expect(clientNotificationEligibility(false, true, null, false)).toBe('MISSING_EMAIL')
     expect(clientNotificationEligibility(true, false, 'client@example.test', false)).toBe(
       'CLIENT_OPT_OUT',
     )

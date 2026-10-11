@@ -16,9 +16,11 @@ import type {
 import type { createSalesNotificationRepository } from '../repositories/sales-notification.repository.js'
 
 type Jobs = ReturnType<typeof createJobSupport>
-type Type = 'invoice' | 'estimate' | 'report_run'
+type DocumentType = 'invoice' | 'estimate' | 'delivery_note'
+type Type = DocumentType | 'report_run'
 interface PreparationPayload {
-  sourceType: 'invoice' | 'estimate'
+  sourceType: DocumentType
+  automatic?: boolean
   sourceId: string
   sourceVersion: number
   requestId: string
@@ -55,8 +57,16 @@ export function reminderOccurs(
     elapsed === 0 || (elapsed > 0 && repeatEveryDays !== null && elapsed % repeatEveryDays === 0)
   )
 }
-export function assertSendable(type: 'invoice' | 'estimate', status: string) {
-  if (!(type === 'invoice' ? ['issued', 'sent'] : ['issued', 'sent', 'accepted']).includes(status))
+export function assertSendable(type: DocumentType, status: string) {
+  if (
+    !(
+      type === 'delivery_note'
+        ? ['prepared', 'delivered', 'acknowledged']
+        : type === 'invoice'
+          ? ['issued', 'sent']
+          : ['issued', 'sent', 'accepted']
+    ).includes(status)
+  )
     throw new AppError(
       409,
       'DOCUMENT_NOT_SENDABLE',
@@ -83,13 +93,14 @@ export function createSalesNotificationService(
       if (retry) await options.reportOwner.assertRetryable(tx, id, actor)
       return
     }
-    await repo.authorize(tx, actor, `${type}s.read`)
-    if (retry) await repo.authorize(tx, actor, `${type}s.update`)
+    const resource = type === 'delivery_note' ? 'delivery_notes' : `${type}s`
+    await repo.authorize(tx, actor, `${resource}.read`)
+    if (retry) await repo.authorize(tx, actor, `${resource}.update`)
     await repo.owner(type, id, tx)
   }
   async function eligibility(
     tx: Transaction,
-    type: 'invoice' | 'estimate',
+    type: DocumentType,
     id: string,
     event: string,
     recipient?: string,
@@ -133,9 +144,9 @@ export function createSalesNotificationService(
     }
   }
   async function validatePreparation(tx: Transaction, p: PreparationPayload, actor: string | null) {
-    if (!actor)
+    if (!actor && !p.automatic)
       throw new AppError(403, 'FORBIDDEN', 'An authorized initiating operator is required.')
-    await owner(tx, p.sourceType, p.sourceId, actor, true)
+    if (!p.automatic && actor) await owner(tx, p.sourceType, p.sourceId, actor, true)
     const value = await eligibility(tx, p.sourceType, p.sourceId, p.eventKey, p.recipient, p.cc)
     if (value.row.contentVersion !== p.sourceVersion)
       throw new AppError(409, 'SOURCE_CHANGED', 'Printable document content changed.')
@@ -309,7 +320,10 @@ export function createSalesNotificationService(
         let leaseError: unknown
         try {
           const p = job.payload as PreparationPayload
-          if (job.payloadVersion !== 1 || !['invoice', 'estimate'].includes(p.sourceType))
+          if (
+            job.payloadVersion !== 1 ||
+            !['invoice', 'estimate', 'delivery_note'].includes(p.sourceType)
+          )
             throw new AppError(400, 'INVALID_JOB_PAYLOAD', 'Unsupported notification preparation.')
           await repo.transaction((tx) => validatePreparation(tx, p, job.initiatedByUserId))
           heartbeat = setInterval(() => {
@@ -360,7 +374,7 @@ export function createSalesNotificationService(
                 sourceId: p.sourceId,
                 eventKey: p.eventKey,
                 occurrenceKey: occurrence,
-                logicalOccurrenceKey: occurrence,
+                logicalOccurrenceKey: p.automatic ? 'first-finalized' : occurrence,
                 messageId: message.id,
                 createdByUserId: job.initiatedByUserId,
               },
@@ -385,6 +399,41 @@ export function createSalesNotificationService(
         }
         return true
       },
+    },
+    async documentFinalized(tx: Transaction, type: DocumentType, id: string) {
+      const eventKey = type === 'delivery_note' ? 'delivery_prepared' : `${type}_sent`
+      const key = `automatic_notification:${type}:${id}:first-finalized`
+      if (await repo.keyJob(key, tx)) return
+      const row = await repo.owner(type, id, tx, true)
+      const defaultRule = (await policies.rules(tx)).find((rule) => rule.eventKey === eventKey)
+      if (!defaultRule)
+        throw new AppError(409, 'NOTIFICATION_RULE_NOT_FOUND', 'Notification rule not found.')
+      const client = await clients.effective(row.clientId, defaultRule, tx)
+      if (!client.enabled || !client.recipient) return
+      const rule = await policies.rule(eventKey, tx)
+      const content = policies.compose(rule, {
+        clientName: printableClientName(row.clientSnapshot, client.clientName),
+        documentNumber: row.number ?? '',
+        issueDate: row.issueDate,
+        deliveryDate: row.issueDate,
+        total: row.total,
+        currency: row.currency,
+        validUntil: 'validUntil' in row ? (row.validUntil ?? '') : '',
+      })
+      const p: PreparationPayload = {
+        sourceType: type,
+        sourceId: id,
+        sourceVersion: row.contentVersion,
+        automatic: true,
+        requestId: 'first-finalized',
+        expectedVersion: row.version,
+        eventKey,
+        recipient: client.recipient,
+        cc: client.cc,
+        rule,
+        content,
+      }
+      await jobs.enqueueNotification(tx, p, key, null)
     },
     async paymentConfirmed(tx: Transaction, id: string) {
       const payment = await repo.payment(id, tx)
@@ -441,8 +490,8 @@ export function createSalesNotificationService(
           ['invoice', invoiceRows, 'invoice_due_reminder'],
           ['estimate', estimateRows, 'estimate_expiry_reminder'],
         ] as const) {
-          const rule = await policies.rule(event, tx)
-          if (!rule.enabled) continue
+          const rule = (await policies.rules(tx)).find((item) => item.eventKey === event)
+          if (!rule) continue
           for (const row of rows) {
             const basis = 'dueDate' in row ? row.dueDate : row.validUntil
             if (!basis || !reminderOccurs(basis, date, rule.offsetDays, rule.repeatEveryDays))
@@ -457,7 +506,7 @@ export function createSalesNotificationService(
             const { client } = eligible
             const logical = `${basis}:${date}:${recipientKey(client.recipient!)}`
             if (await repo.occurrenceExists(type, row.id, event, logical, tx)) continue
-            const content = policies.compose(rule, {
+            const content = policies.compose(eligible.rule, {
               clientName: printableClientName(row.clientSnapshot, client.clientName),
               documentNumber: row.number ?? '',
               dueDate: basis,
@@ -471,7 +520,7 @@ export function createSalesNotificationService(
               {
                 idempotencyKey: `reminder:${type}:${row.id}:${logical}`,
                 actor: null,
-                from: { email: rule.senderEmail, name: rule.senderName },
+                from: { email: eligible.rule.senderEmail, name: eligible.rule.senderName },
                 to: client.recipient!,
                 cc: client.cc,
                 ...content,

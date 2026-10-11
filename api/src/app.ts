@@ -252,6 +252,7 @@ export async function buildApp(options: AppOptions = {}) {
       await salesNotifications.invalidate(tx)
     },
     paymentConfirmed: (tx, paymentId) => salesNotifications.paymentConfirmed(tx, paymentId),
+    documentFinalized: (tx, type, id) => salesNotifications.documentFinalized(tx, type, id),
   })
   const cleanupArtifacts = createArtifactCleanup(() => app.database(), storage)
   const jobMetrics = createJobSupport(() => app.database())

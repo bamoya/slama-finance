@@ -23,6 +23,7 @@ export const eventVariables: Record<string, string[]> = {
   invoice_sent: ['clientName', 'documentNumber', 'issueDate', 'total', 'currency'],
   estimate_sent: ['clientName', 'documentNumber', 'issueDate', 'validUntil', 'total', 'currency'],
   payment_received: ['clientName', 'documentNumber', 'paymentNumber', 'amount', 'currency'],
+  delivery_prepared: ['clientName', 'documentNumber', 'deliveryDate'],
   invoice_due_reminder: ['clientName', 'documentNumber', 'dueDate', 'outstanding', 'currency'],
   estimate_expiry_reminder: ['clientName', 'documentNumber', 'validUntil', 'total', 'currency'],
 }
@@ -124,8 +125,7 @@ export function createNotificationRuleService(
   return {
     publicApi: {
       rule: async (event: string, tx?: Transaction) => resolved(await repo.event(event, tx), tx),
-      rules: async (tx?: Transaction) =>
-        Promise.all((await repo.list(tx)).map((row) => resolved(row, tx))),
+      rules: async (tx?: Transaction) => (await repo.list(tx)).map(output),
       compose: composeNotification,
     },
     async list() {

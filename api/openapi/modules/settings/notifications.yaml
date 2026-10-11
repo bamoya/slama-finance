@@ -221,6 +221,7 @@ components:
                 invoice_sent,
                 estimate_sent,
                 payment_received,
+                delivery_prepared,
                 invoice_due_reminder,
                 estimate_expiry_reminder,
               ],
