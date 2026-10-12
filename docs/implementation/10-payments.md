@@ -48,8 +48,8 @@ Pending payments reserve available balance but do not reduce outstanding balance
 Available = invoice total − confirmed − pending; outstanding = total − confirmed.
 Cancellation and deletion release the corresponding amount. Restoration reserves
 or collects it again according to the payment's state before cancellation.
-Require cheque
-number/bank or transfer reference as appropriate; prohibit cheque fields on cash.
+Require a cheque number and bank for cheques; bank-transfer references are optional.
+Prohibit cheque fields on cash and bank transfers.
 `collected_on` is actual cash receipt, bank credit or clearance date, not data-entry
 time. Allow audited backdating, reject future actual collection dates; preserve
 system timestamps. Pending entries have no collection timestamp; cancelled

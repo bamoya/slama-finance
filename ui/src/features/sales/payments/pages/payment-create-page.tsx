@@ -102,7 +102,6 @@ export function PaymentCreatePage() {
     }
     const parsed = PaymentInputSchema.safeParse(payload)
     if (!parsed.success) return setValidation(t('requiredField'))
-    if (method === 'bank_transfer' && !reference.trim()) return setValidation(t('requiredField'))
     if (method === 'cheque' && (!chequeBank.trim() || !chequeNumber.trim()))
       return setValidation(t('requiredField'))
     if (parsed.data.collectedOn && parsed.data.collectedOn > companyToday())

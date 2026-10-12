@@ -123,6 +123,18 @@ describe('Payments lifecycle', () => {
     ...overrides,
   })
 
+  it.each([null, undefined, '   '])(
+    'allows a bank transfer without a reference (%s)',
+    async (reference) => {
+      const response = await post(
+        '/v1/payments',
+        payment({ method: 'bank_transfer', reference, chequeBank: null, chequeNumber: null }),
+      )
+      expect(response.statusCode, response.body).toBe(201)
+      expect(response.json().reference).toBeNull()
+    },
+  )
+
   it('captures installment balances once and issues on-demand receipts that prevent deletion', async () => {
     const first = await post(
       '/v1/payments',
@@ -467,7 +479,12 @@ describe('Payments lifecycle', () => {
     expect(invalidDate.statusCode).toBe(400)
     const invalidMethod = await post(
       '/v1/payments',
-      payment({ method: 'bank_transfer', reference: null, chequeBank: null, chequeNumber: null }),
+      payment({
+        method: 'bank_transfer',
+        reference: null,
+        chequeBank: 'Invalid cheque bank',
+        chequeNumber: null,
+      }),
     )
     expect(invalidMethod.statusCode).toBe(400)
     const wrongCurrency = await post('/v1/payments', payment({ currency: 'EUR' }))

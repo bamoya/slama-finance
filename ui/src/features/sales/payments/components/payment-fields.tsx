@@ -5,7 +5,7 @@ import type { PaymentInput } from '../../../../api/generated/schemas/sales/payme
 import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { Select, SelectOption } from '../../../../components/ui/select'
-import { useUiLanguage } from '../../../../lib/i18n'
+import { translate, useUiLanguage } from '../../../../lib/i18n'
 
 export type PaymentMethod = PaymentInput['method']
 export type PaymentState = PaymentInput['status']
@@ -174,11 +174,10 @@ export function PaymentFields({
         {method === 'bank_transfer' && (
           <>
             <label className="grid gap-2 text-sm font-medium">
-              {t('reference')}
+              {t('reference')} ({translate('Optional')})
               <Input
                 value={reference}
                 onChange={(event) => onReference(event.target.value)}
-                required
                 maxLength={200}
               />
             </label>

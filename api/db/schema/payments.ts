@@ -69,7 +69,7 @@ export const payments = pgTable(
       'payments_method_fields',
       sql`(
       (${t.method} = 'cash' and ${t.status} <> 'pending' and ${t.bankAccountId} is null and ${t.reference} is null and ${t.chequeBank} is null and ${t.chequeNumber} is null)
-      or (${t.method} = 'bank_transfer' and ${t.reference} is not null and length(trim(${t.reference})) > 0 and ${t.chequeBank} is null and ${t.chequeNumber} is null)
+      or (${t.method} = 'bank_transfer' and ${t.chequeBank} is null and ${t.chequeNumber} is null)
       or (${t.method} = 'cheque' and ${t.chequeBank} is not null and length(trim(${t.chequeBank})) > 0 and ${t.chequeNumber} is not null and length(trim(${t.chequeNumber})) > 0 and ${t.reference} is null)
     )`,
     ),

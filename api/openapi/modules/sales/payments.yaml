@@ -238,7 +238,6 @@ components:
           paymentDate,
           collectedOn,
           bankAccountId,
-          reference,
           chequeBank,
           chequeNumber,
         ]
@@ -253,7 +252,7 @@ components:
         paymentDate: { type: string, format: date }
         collectedOn: { type: [string, 'null'], format: date }
         bankAccountId: { type: [string, 'null'], format: uuid }
-        reference: { type: [string, 'null'], maxLength: 200 }
+        reference: { type: [string, 'null'], maxLength: 200, description: Optional bank-transfer reference. Omitted or blank values are stored as null. }
         chequeBank: { type: [string, 'null'], maxLength: 200 }
         chequeNumber: { type: [string, 'null'], maxLength: 100 }
     PaymentConfirmation:

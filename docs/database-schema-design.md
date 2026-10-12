@@ -1282,8 +1282,8 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   February 2 appears in live January analysis, while a January report captured
   before that entry remains unchanged. Cheques handed over in January and
   cleared in February contribute to February collections only.
-- Require a cheque number and issuing bank for cheques; require a transfer
-  reference for bank transfers. Non-cheque records cannot hold cheque fields.
+- Require a cheque number and issuing bank for cheques. Bank-transfer references
+  are optional. Non-cheque records cannot hold cheque fields.
 - Payments must reference issued/sent invoices and match invoice currency;
   selected bank-account currency must match too. Lock the invoice row when
   recording or clearing a payment, recalculate its balance and reject overpayment.

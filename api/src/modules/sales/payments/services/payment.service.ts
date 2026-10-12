@@ -27,7 +27,6 @@ function validateCollectionDate(date: string | null, timezone: string) {
 }
 
 function validateMethod(input: PaymentInput, timezone: string) {
-  const hasReference = Boolean(input.reference?.trim())
   const hasChequeBank = Boolean(input.chequeBank?.trim())
   const hasChequeNumber = Boolean(input.chequeNumber?.trim())
   if (input.method === 'cash') {
@@ -45,11 +44,11 @@ function validateMethod(input: PaymentInput, timezone: string) {
         'Cash must be collected immediately without bank or cheque details.',
       )
   } else if (input.method === 'bank_transfer') {
-    if (!hasReference || input.chequeBank || input.chequeNumber)
+    if (input.chequeBank || input.chequeNumber)
       throw new AppError(
         400,
         'INVALID_PAYMENT_METHOD',
-        'A bank transfer needs a reference and no cheque details.',
+        'A bank transfer cannot contain cheque details.',
       )
   } else if (input.method === 'cheque') {
     if (input.status !== 'pending' || !hasChequeBank || !hasChequeNumber || input.reference)
