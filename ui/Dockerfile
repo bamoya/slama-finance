@@ -9,11 +9,11 @@ COPY ui ./ui
 COPY api/openapi ./api/openapi
 COPY api/scripts ./api/scripts
 WORKDIR /workspace/ui
-ARG VITE_API_BASE_URL=""
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN pnpm build
 
 FROM nginx:1.27-alpine
+RUN apk add --no-cache jq
 COPY ui/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/ui/dist /usr/share/nginx/html
+COPY --chmod=755 ui/docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 EXPOSE 8080

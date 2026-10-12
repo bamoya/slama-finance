@@ -2,3 +2,14 @@
 export function resolveApiBaseUrl(configured: string | undefined, production: boolean) {
   return (configured ?? (production ? '' : 'http://localhost:3000')).trim().replace(/\/$/, '')
 }
+declare global {
+  interface Window {
+    __SLAMA_CONFIG__?: { apiBaseUrl?: string }
+  }
+}
+
+export function configuredApiBaseUrl(buildValue: string | undefined) {
+  return (
+    (typeof window !== 'undefined' ? window.__SLAMA_CONFIG__?.apiBaseUrl : undefined) ?? buildValue
+  )
+}

@@ -5,12 +5,14 @@ Configure HTTPS in Dokploy Domains for `slama-finance.bamoya.com` → `ui:8080`
 and `api-slama-finance.bamoya.com` → `api:3000`. Point both DNS A records to
 the Hostinger server. Dokploy supplies Traefik routing; no host port mappings
 are required. Nginx serves React assets and SPA routes only.
-The image publishing workflow builds the UI with
-GitHub Actions variable `VITE_API_BASE_URL`, defaulting to
-`https://api-slama-finance.bamoya.com`. Configure it under repository Settings →
-Secrets and variables → Actions → Variables. Publish a new UI image
-and set `UI_IMAGE` to its digest. Setting this variable at container runtime
-does not modify a compiled Vite build. Keep `PUBLIC_ORIGIN` set to the UI origin;
+Set `API_BASE_URL` in Dokploy, defaulting to
+`https://api-slama-finance.bamoya.com`. Container startup generates a public,
+non-cached `/config.js` before Nginx starts. Changing the URL requires recreating
+the UI container, not rebuilding its image. Publish the runtime-config-capable UI
+image once and set `UI_IMAGE` to its digest. The GitHub Actions variable
+`VITE_API_BASE_URL` is no longer used for image builds; it remains available in
+local Vite development. Never put secrets in runtime browser configuration.
+Keep `PUBLIC_ORIGIN` set to the UI origin;
 it controls API CORS and reset links. Axios already enables credentials and the
 API uses secure, host-only session cookies. Verify the Traefik address before
 setting `TRUST_PROXY_IPS` for accurate client rate limits.

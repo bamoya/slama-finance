@@ -1,10 +1,13 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 
 import { ApiError, decodeApiError } from '../lib/api-error'
-import { resolveApiBaseUrl } from './base-url'
+import { configuredApiBaseUrl, resolveApiBaseUrl } from './base-url'
 import { validateResponse } from './generated/schemas/responses'
 
-const apiBaseUrl = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, import.meta.env.PROD)
+const apiBaseUrl = resolveApiBaseUrl(
+  configuredApiBaseUrl(import.meta.env.VITE_API_BASE_URL),
+  import.meta.env.PROD,
+)
 
 export const httpClient = axios.create({
   baseURL: apiBaseUrl,

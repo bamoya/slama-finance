@@ -9,11 +9,73 @@ permissions:
   contents: read
 
 concurrency:
-  group: check-publish-${{ github.event_name }}-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: check-publish-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.changes.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Detect image-relevant changes
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+        shell: bash
+        run: |
+          if [[ "$EVENT" != push || -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE^{commit}"; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE" HEAD | python3 -c 'import sys; paths = sys.stdin.read().splitlines(); sys.exit(0 if any(not (p.startswith("docs/") or p.endswith(".md")) for p in paths) else 1)'; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  quality-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm --dir api contracts:generate && pnpm --dir ui api:generate
+      - run: pnpm lint
+
+  ui-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir ui typecheck
+      - run: pnpm --dir ui test
+      - run: pnpm --dir ui build
+
+  api-check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -45,12 +107,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      - run: pnpm --dir api typecheck
+      - run: pnpm --dir api test
+      - run: pnpm --dir api build
       - run: pnpm test:integration
 
   publish:
-    needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [changes, quality-check, ui-check, api-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -80,10 +144,6 @@ jobs:
           COMPONENT: ${{ matrix.component }}
         run: |
           echo "name=ghcr.io/${REPOSITORY,,}-${COMPONENT}" >> "$GITHUB_OUTPUT"
-      - name: Set up ARM64 emulation
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
       - uses: docker/setup-buildx-action@v4
       # Authenticate public base-image pulls; application images publish to GHCR.
       - name: Authenticate Docker Hub pulls
@@ -105,12 +165,10 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
-          build-args: |
-            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || 'https://api-slama-finance.bamoya.com' }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           # No mutable latest tag, runtime credentials, or deployment webhook.
-          # UI requests use the public API origin baked into the Vite build.
+          # UI API origin is configured at container startup using API_BASE_URL.
           tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

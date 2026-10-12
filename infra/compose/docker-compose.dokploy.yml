@@ -88,6 +88,8 @@ services:
 
   ui:
     image: ${UI_IMAGE:-ghcr.io/bamoya/slama-finance-ui@sha256:a903ccf9d7f9c2bda20b81e71804420980e58f3e03feddfa50eb17a91d30cd84}
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-https://api-slama-finance.bamoya.com}
     restart: unless-stopped
     expose: ['8080']
     networks: [default, application]
