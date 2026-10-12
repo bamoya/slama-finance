@@ -83,6 +83,49 @@ describe('staff lifecycle and password recovery', () => {
     expect(changed.statusCode).toBe(200)
     return response.json().id as string
   }
+  it('permanently deletes an unused archived account and rejects self-deletion', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/staff',
+      headers,
+      cookies,
+      payload: {
+        email: 'unused@example.test',
+        firstName: 'Unused',
+        lastName: 'Staff',
+        roleIds: [],
+      },
+    })
+    expect(created.statusCode, created.body).toBe(201)
+    const id = created.json().id
+    expect(
+      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/archive`, headers, cookies }))
+        .statusCode,
+    ).toBe(204)
+    const deleted = await app.inject({ method: 'DELETE', url: `/v1/staff/${id}`, headers, cookies })
+    expect(deleted.statusCode, deleted.body).toBe(204)
+    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(404)
+    expect(
+      await fixture.client`select user_id from user_settings where user_id=${id}`,
+    ).toHaveLength(0)
+    const self = await app.inject({
+      method: 'DELETE',
+      url: `/v1/staff/${testUserId}`,
+      headers,
+      cookies,
+    })
+    expect(self.statusCode, self.body).toBe(409)
+  })
+
+  it('preserves an account required by audit history', async () => {
+    const id = await createStaff()
+    await fixture.client`insert into audit_events(actor_user_id,actor_kind,action,entity_table,entity_key) values(${id},'user','test','users','{}')`
+    const deleted = await app.inject({ method: 'DELETE', url: `/v1/staff/${id}`, headers, cookies })
+    expect(deleted.statusCode, deleted.body).toBe(409)
+    expect(deleted.json().code).toBe('STAFF_IN_USE')
+    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(200)
+  })
+
   it('lists, updates, disables/enables and archives without deleting references', async () => {
     const id = await createStaff()
     expect((await app.inject({ url: '/v1/staff', cookies })).json().items).toHaveLength(2)
@@ -134,7 +177,8 @@ describe('staff lifecycle and password recovery', () => {
       401,
     )
     expect(
-      (await app.inject({ method: 'DELETE', url: `/v1/staff/${id}`, headers, cookies })).statusCode,
+      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/archive`, headers, cookies }))
+        .statusCode,
     ).toBe(204)
     expect((await app.inject({ url: '/v1/staff', cookies })).json().total).toBe(1)
     expect(
@@ -163,8 +207,8 @@ describe('staff lifecycle and password recovery', () => {
   it('protects the last administrator and system grants', async () => {
     for (const action of ['disable', 'archive', 'roles']) {
       const response = await app.inject({
-        method: action === 'roles' ? 'PUT' : action === 'archive' ? 'DELETE' : 'POST',
-        url: `/v1/staff/${testUserId}${action === 'archive' ? '' : '/' + action}`,
+        method: action === 'roles' ? 'PUT' : 'POST',
+        url: `/v1/staff/${testUserId}/${action}`,
         headers,
         cookies,
         ...(action === 'roles' ? { payload: { roleIds: [] } } : {}),

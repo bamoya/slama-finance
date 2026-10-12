@@ -35,6 +35,7 @@ export function useStaffActions() {
   const disable = api.useDisableStaff(),
     enable = api.useEnableStaff(),
     archive = api.useArchiveStaff(),
+    remove = api.useDeleteStaff(),
     reissue = api.useReissueTemporaryPassword({ mutation: { gcTime: 0 } })
   return {
     create: (data: Parameters<typeof api.createStaff>[0]) =>
@@ -46,6 +47,7 @@ export function useStaffActions() {
     disable: (userId: string) => disable.mutateAsync({ userId }),
     enable: (userId: string) => enable.mutateAsync({ userId }),
     archive: (userId: string) => archive.mutateAsync({ userId }),
+    delete: (userId: string) => remove.mutateAsync({ userId }),
     reissue: (userId: string) =>
       privateMutation(() => reissue.mutateAsync({ userId }), reissue.reset),
   }

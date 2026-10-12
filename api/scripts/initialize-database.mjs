@@ -4,8 +4,6 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
 
-import { seedCatalog } from './seed-catalog.mjs'
-
 export function configuration(env) {
   if (!env.DATABASE_URL || !env.MIGRATION_DATABASE_URL)
     throw new Error('Both runtime and migration database URLs are required')
@@ -159,12 +157,6 @@ export async function initializeDatabase(env = process.env) {
           SELECT ${role.id}, id FROM public.permissions ON CONFLICT DO NOTHING`
       })
     }
-    // Business seed is deliberately opt-in, and journaled separately from schema migrations.
-    if (env.SEED_CATALOG === 'true') await seedCatalog(connection)
-    if (env.SEED_DEMO === 'true') {
-      const { seedDemo } = await import('./seed-demo.mjs')
-      await seedDemo(connection)
-    }
   } finally {
     if (connection) {
       await connection`SELECT pg_advisory_unlock(1936482669, 1)`.catch(() => {})
@@ -177,10 +169,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   initializeDatabase()
     .then(() => {
       console.log('Database migrations and runtime access initialized successfully.')
-      console.log('Seed configuration:', {
-        catalog: process.env.SEED_CATALOG === 'true',
-        demo: process.env.SEED_DEMO === 'true',
-      })
     })
     .catch((error) => {
       // Never log SQL/URLs/passwords from driver errors, especially CREATE ROLE queries.

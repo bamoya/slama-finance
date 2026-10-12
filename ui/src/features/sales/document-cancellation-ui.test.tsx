@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
-import { DeliveryAcknowledgmentDialog } from './delivery-notes/components/delivery-acknowledgment-dialog'
+import { DeliveryConfirmationDialog } from './delivery-notes/components/delivery-confirmation-dialog'
 import { DeliveryNoteDetailPage } from './delivery-notes/pages/delivery-note-detail-page'
 import { EstimateDetailPage } from './estimates/pages/estimate-detail-page'
 import { InvoiceDetailPage } from './invoices/pages/invoice-detail-page'
@@ -60,7 +60,7 @@ vi.mock('./delivery-notes/queries', () => ({
   useDeliveryNote: () => ({
     data: {
       ...common,
-      status: 'prepared',
+      status: 'delivered',
       deliveryDate: '2026-10-01',
       deliveryAddress: 'Casablanca',
       invoices: [],
@@ -139,13 +139,26 @@ describe('sales document cancellation dialogs', () => {
     const confirm = vi.fn()
     setup(
       `/delivery-notes/${id}`,
-      <DeliveryAcknowledgmentDialog expectedVersion={4} onConfirm={confirm} />,
+      <DeliveryConfirmationDialog expectedVersion={4} onConfirm={confirm} />,
     )
-    const trigger = screen.getByRole('button', { name: 'Acknowledge delivery' })
+    const trigger = screen.getByRole('button', { name: 'Mark delivered' })
     fireEvent.click(trigger)
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(trigger).toHaveFocus())
     expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it.each(['deliver'] as const)('allows %s without a receiver name', async () => {
+    const confirm = vi.fn().mockResolvedValue(undefined)
+    setup(
+      `/delivery-notes/${id}`,
+      <DeliveryConfirmationDialog expectedVersion={4} onConfirm={confirm} />,
+    )
+    const name = 'Mark delivered'
+    fireEvent.click(screen.getByRole('button', { name }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name }))
+    await waitFor(() => expect(confirm).toHaveBeenCalledWith(''))
   })
 })

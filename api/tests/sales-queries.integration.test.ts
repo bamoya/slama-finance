@@ -96,6 +96,108 @@ describe('Sales search and client overview', () => {
     await fixture?.cleanup()
   })
 
+  it('creates a linked delivery draft with full invoice quantities and prevents duplicates', async () => {
+    const invoice = (await get(`/v1/invoices/${invoiceId}`)).json()
+    const response = await post(`/v1/invoices/${invoiceId}/delivery-note`, {})
+    expect(response.statusCode, response.body).toBe(201)
+    const draft = response.json()
+    expect(draft).toMatchObject({
+      status: 'draft',
+      invoiceId,
+      clientId: atlasId,
+      deliveryDate: today,
+      number: null,
+    })
+    expect(draft.lines).toHaveLength(invoice.lines.length)
+    expect(draft.lines[0]).toMatchObject({
+      sourceInvoiceLineId: invoice.lines[0].id,
+      productName: 'Wheat',
+      quantity: invoice.lines[0].quantity,
+    })
+    const linked = (await get(`/v1/invoices/${invoiceId}`)).json()
+    expect(linked.deliveryNoteIds).toContain(draft.id)
+    expect(linked.version).toBe(invoice.version)
+    const duplicate = await post(`/v1/invoices/${invoiceId}/delivery-note`, {})
+    expect(duplicate.statusCode, duplicate.body).toBe(409)
+  })
+
+  it('copies multiple lines with their full quantities only after invoice issuance', async () => {
+    const created = await post('/v1/invoices', {
+      clientId: atlasId,
+      templateId: null,
+      issueDate: today,
+      dueDate: shift(today, 30),
+      notes: null,
+      paymentTerms: null,
+      lines: [
+        {
+          productVariantId: null,
+          productName: 'Wheat 100g',
+          quantity: 12,
+          unitPrice: '20.00',
+          vatRate: null,
+        },
+        {
+          productVariantId: null,
+          productName: 'Wheat 500g',
+          quantity: 25,
+          unitPrice: '60.00',
+          vatRate: null,
+        },
+      ],
+    })
+    expect(created.statusCode, created.body).toBe(201)
+    const id = created.json().id
+    expect((await post(`/v1/invoices/${id}/delivery-note`, {})).statusCode).toBe(409)
+    expect((await post(`/v1/invoices/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(200)
+    const results = await Promise.all([
+      post(`/v1/invoices/${id}/delivery-note`, {}),
+      post(`/v1/invoices/${id}/delivery-note`, {}),
+    ])
+    expect(results.map((result) => result.statusCode).sort()).toEqual([201, 409])
+    expect(results.find((result) => result.statusCode === 201)!.json().lines).toMatchObject([
+      { productName: 'Wheat 100g', quantity: 12 },
+      { productName: 'Wheat 500g', quantity: 25 },
+    ])
+  })
+
+  it('delivers a draft directly with an optional receiver, freezes it and prevents repeated delivery', async () => {
+    const draft = (await post(`/v1/invoices/${invoiceId}/delivery-note`, {})).json()
+    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+      expectedVersion: draft.version,
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    expect(delivered.json()).toMatchObject({ status: 'delivered', receivedByName: null })
+    expect(delivered.json().number).toMatch(/^BL-\d{4}-\d{10}$/)
+    const [stored] =
+      await fixture.client`select delivered_at from delivery_notes where id=${draft.id}`
+    expect(stored!.delivered_at).toBeTruthy()
+    expect(
+      (
+        await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+          expectedVersion: delivered.json().version,
+        })
+      ).statusCode,
+    ).toBe(409)
+    const acknowledged = await post(`/v1/delivery-notes/${draft.id}/acknowledge`, {
+      expectedVersion: delivered.json().version,
+    })
+    expect(acknowledged.statusCode, acknowledged.body).toBe(404)
+    expect(
+      (await post(`/v1/delivery-notes/${draft.id}/prepare`, { expectedVersion: 1 })).statusCode,
+    ).toBe(404)
+  })
+
+  it('stores an optional receiver when delivering a draft', async () => {
+    const draft = (await post(`/v1/invoices/${invoiceId}/delivery-note`, {})).json()
+    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+      expectedVersion: draft.version,
+      receivedByName: '  Yassine  ',
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    expect(delivered.json().receivedByName).toBe('Yassine')
+  })
+
   const cheque = () => ({
     operationId: randomUUID(),
     invoiceId,
@@ -174,7 +276,7 @@ describe('Sales search and client overview', () => {
       expect((await snapshot()).legalName).toBe('Name at draft save')
       await fixture.client`update clients set legal_name='Name at finalization', email='current@example.test' where id=${atlasId}`
       const finalized = await post(
-        `/v1/${resource}/${id}/${resource === 'delivery-notes' ? 'prepare' : 'issue'}`,
+        `/v1/${resource}/${id}/${resource === 'delivery-notes' ? 'deliver' : 'issue'}`,
         { expectedVersion: saved.json().version },
       )
       expect(finalized.statusCode, finalized.body).toBe(200)

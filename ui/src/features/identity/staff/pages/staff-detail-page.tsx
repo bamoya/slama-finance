@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, Ban, Check, KeyRound, Pencil, RotateCcw, Save } from 'lucide-react'
+import { Archive, Ban, Check, KeyRound, Pencil, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'wouter'
+import { Link, useLocation, useParams } from 'wouter'
 
 import type {
   StaffDetail,
@@ -46,6 +46,7 @@ function StaffAccount({ person }: { person: StaffDetail }) {
   const { can: hasAccess } = useAuthorization()
 
   const staffApi = useStaffActions()
+  const [, navigate] = useLocation()
 
   const cache = useQueryClient()
   const session = useSession()
@@ -79,74 +80,93 @@ function StaffAccount({ person }: { person: StaffDetail }) {
         description={person.email}
         actions={
           <>
-            {!person.archivedAt && (
-              <MoreActions>
-                {person.disabledAt ? (
+            <MoreActions>
+              {!person.archivedAt && (
+                <>
+                  {person.disabledAt ? (
+                    <Can permission="staff.update">
+                      <ConfirmAction
+                        label={translate('Enable account')}
+                        icon={<Check size={16} />}
+                        description={translate(
+                          'Allow this account to sign in again? Its assigned roles will remain unchanged.',
+                        )}
+                        onConfirm={() => updateStatus('enable')}
+                      />
+                    </Can>
+                  ) : (
+                    <Can permission="staff.update">
+                      <ConfirmAction
+                        label={translate('Disable account')}
+                        variant="outline"
+                        icon={<Ban size={16} />}
+                        description={
+                          self
+                            ? translate(
+                                'Disable your own account and end your current session? Another administrator will need to restore your access.',
+                              )
+                            : translate(
+                                'Block this account from signing in and revoke all of its sessions?',
+                              )
+                        }
+                        onConfirm={() => updateStatus('disable')}
+                      />
+                    </Can>
+                  )}
                   <Can permission="staff.update">
                     <ConfirmAction
-                      label={translate('Enable account')}
-                      icon={<Check size={16} />}
-                      description={translate(
-                        'Allow this account to sign in again? Its assigned roles will remain unchanged.',
-                      )}
-                      onConfirm={() => updateStatus('enable')}
-                    />
-                  </Can>
-                ) : (
-                  <Can permission="staff.update">
-                    <ConfirmAction
-                      label={translate('Disable account')}
-                      variant="outline"
-                      icon={<Ban size={16} />}
+                      label={translate('Archive account')}
+                      variant="destructive"
+                      icon={<Archive size={16} />}
                       description={
                         self
                           ? translate(
-                              'Disable your own account and end your current session? Another administrator will need to restore your access.',
+                              'Archive your own account and end your current session? This cannot be undone through the dashboard.',
                             )
                           : translate(
-                              'Block this account from signing in and revoke all of its sessions?',
+                              'Archive this account? It will no longer be editable or able to sign in. Historical records are preserved. This cannot be undone through the dashboard.',
                             )
                       }
-                      onConfirm={() => updateStatus('disable')}
+                      onConfirm={() => updateStatus('archive')}
                     />
                   </Can>
-                )}
-                <Can permission="staff.update">
+                  <Can permission="staff.update">
+                    {!self && (
+                      <ConfirmAction
+                        label={translate('Reissue temporary password')}
+                        variant="outline"
+                        icon={<KeyRound size={16} />}
+                        description={translate(
+                          "Replace this person's password and revoke all sessions and reset links? A new one-use password will be displayed once. Share it securely; no email is sent.",
+                        )}
+                        onConfirm={async () => {
+                          const result = await staffApi.reissue(person.id)
+                          setCredential(result)
+                          setNotice('A new temporary password was issued.')
+                        }}
+                      />
+                    )}
+                  </Can>
+                </>
+              )}
+              {!self && (
+                <Can permission="staff.delete">
                   <ConfirmAction
-                    label={translate('Archive account')}
+                    label={translate('Delete account')}
                     variant="destructive"
-                    icon={<Archive size={16} />}
-                    description={
-                      self
-                        ? translate(
-                            'Archive your own account and end your current session? This cannot be undone through the dashboard.',
-                          )
-                        : translate(
-                            'Archive this account? It will no longer be editable or able to sign in. Historical records are preserved. This cannot be undone through the dashboard.',
-                          )
-                    }
-                    onConfirm={() => updateStatus('archive')}
+                    icon={<Trash2 size={16} />}
+                    description={translate(
+                      'Permanently delete this account? This cannot be undone. Accounts required by audit or report history must be archived instead.',
+                    )}
+                    onConfirm={async () => {
+                      await staffApi.delete(person.id)
+                      navigate('/settings/staff')
+                      await refreshIdentity(cache)
+                    }}
                   />
                 </Can>
-                <Can permission="staff.update">
-                  {!self && (
-                    <ConfirmAction
-                      label={translate('Reissue temporary password')}
-                      variant="outline"
-                      icon={<KeyRound size={16} />}
-                      description={translate(
-                        "Replace this person's password and revoke all sessions and reset links? A new one-use password will be displayed once. Share it securely; no email is sent.",
-                      )}
-                      onConfirm={async () => {
-                        const result = await staffApi.reissue(person.id)
-                        setCredential(result)
-                        setNotice('A new temporary password was issued.')
-                      }}
-                    />
-                  )}
-                </Can>
-              </MoreActions>
-            )}
+              )}
+            </MoreActions>
             <Can permission="staff.update">
               {!person.archivedAt && (
                 <Link href={`/settings/staff/${person.id}/edit`} className={buttonVariants({})}>

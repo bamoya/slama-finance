@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { DeliveryNoteAcknowledgmentSchema } from '../../../../api/generated/schemas/sales/delivery-notes.schemas'
+import { DeliveryNoteDeliverySchema } from '../../../../api/generated/schemas/sales/delivery-notes.schemas'
 import { FormError } from '../../../../components/management/form-error'
 import { Button } from '../../../../components/ui/button'
 import {
@@ -13,9 +13,9 @@ import {
 } from '../../../../components/ui/dialog'
 import { Field, FieldError, FieldGroup, FieldLabel } from '../../../../components/ui/field'
 import { Input } from '../../../../components/ui/input'
-import { useUiLanguage } from '../../../../lib/i18n'
+import { translate, useUiLanguage } from '../../../../lib/i18n'
 
-export function DeliveryAcknowledgmentDialog({
+export function DeliveryConfirmationDialog({
   expectedVersion,
   onConfirm,
   disabled = false,
@@ -27,6 +27,8 @@ export function DeliveryAcknowledgmentDialog({
   useUiLanguage()
 
   const { t } = useTranslation('sales')
+  const label = t('markDelivered')
+  const schema = DeliveryNoteDeliverySchema
   const id = useId()
   const [open, setOpen] = useState(false)
   const [receiver, setReceiver] = useState('')
@@ -45,7 +47,7 @@ export function DeliveryAcknowledgmentDialog({
             setError(undefined)
           }}
         >
-          {t('acknowledgeDelivery')}
+          {label}
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -58,7 +60,7 @@ export function DeliveryAcknowledgmentDialog({
             if (pending) return
             const trimmed = receiver.trim()
             if (
-              !DeliveryNoteAcknowledgmentSchema.safeParse({
+              !schema.safeParse({
                 expectedVersion,
                 receivedByName: trimmed,
               }).success
@@ -79,12 +81,14 @@ export function DeliveryAcknowledgmentDialog({
           }}
         >
           <div className="grid gap-2">
-            <DialogTitle className="text-xl font-bold">{t('acknowledgeDelivery')}</DialogTitle>
-            <DialogDescription>{t('acknowledgeDeliveryWarning')}</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{label}</DialogTitle>
+            <DialogDescription>{translate('Receiver name is optional.')}</DialogDescription>
           </div>
           <FieldGroup>
             <Field data-invalid={invalid} data-disabled={pending}>
-              <FieldLabel htmlFor={id}>{t('receiverName')}</FieldLabel>
+              <FieldLabel htmlFor={id}>
+                {t('receiverName')} ({translate('Optional')})
+              </FieldLabel>
               <Input
                 id={id}
                 value={receiver}
@@ -111,7 +115,7 @@ export function DeliveryAcknowledgmentDialog({
               {t('cancel')}
             </Button>
             <Button type="submit" disabled={pending}>
-              {t('acknowledgeDelivery')}
+              {label}
             </Button>
           </div>
         </form>

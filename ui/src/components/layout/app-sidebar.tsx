@@ -36,14 +36,21 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
     <Sidebar collapsible="icon" className={`finance-navigation ${isDark ? 'is-dark' : ''}`}>
       <SidebarHeader className="p-3">
         <div className="flex h-12 items-center gap-3 overflow-hidden px-1">
-          <img
-            src="/slama-logo.png"
-            alt={translate('Slama')}
-            className="h-8 w-8 shrink-0 object-contain"
-          />
-          <span className="whitespace-nowrap font-semibold group-data-[collapsible=icon]:hidden">
-            {translate('Slama Finance')}
-          </span>
+          <Link
+            href="/dashboard"
+            onClick={closeMobile}
+            aria-label={translate('Slama Finance')}
+            className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <img
+              src="/slama-logo.png"
+              alt={translate('Slama')}
+              className="h-8 w-8 shrink-0 object-contain"
+            />
+            <span className="whitespace-nowrap font-semibold group-data-[collapsible=icon]:hidden">
+              {translate('Slama Finance')}
+            </span>
+          </Link>
           <SidebarTrigger className="ml-auto shrink-0 md:hidden" />
         </div>
       </SidebarHeader>

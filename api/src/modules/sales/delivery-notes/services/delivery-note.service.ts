@@ -10,7 +10,7 @@ import {
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { resolveLocale } from '../../../../lib/language.js'
-import { assertVersion } from '../../../../lib/validation.js'
+import { assertVersion, companyDate } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
 import { clientSnapshot } from '../../shared/services/client-snapshot.js'
@@ -50,7 +50,7 @@ export function createDeliveryNoteService(
             ...line,
             billedQuantity,
             remainingBillableQuantity:
-              row.invoiceId || !['delivered', 'acknowledged'].includes(row.status)
+              row.invoiceId || !['delivered'].includes(row.status)
                 ? 0
                 : line.quantity - billedQuantity,
           })
@@ -136,6 +136,21 @@ export function createDeliveryNoteService(
       lines,
     }
   }
+  async function createDraft(input: DeliveryNoteInput, actor: string, tx: Transaction) {
+    const prepared = await prepareInput(input, actor, tx, null)
+    const row = await repo.insert(
+      { ...prepared.header, createdByUserId: actor, updatedByUserId: actor },
+      tx,
+    )
+    await repo.replaceLines(
+      row.id,
+      prepared.lines.map((line) => ({ ...line, deliveryNoteId: row.id })),
+      tx,
+    )
+    const result = await output(row, tx)
+    await repo.audit(tx, actor, 'create', row.id, null, result)
+    return result
+  }
   return {
     async list(filters: Parameters<Repository['list']>[0]) {
       if (filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo)
@@ -154,19 +169,59 @@ export function createDeliveryNoteService(
     create(input: DeliveryNoteInput, actor: string) {
       return repo.transaction(async (tx) => {
         await repo.authorize(tx, actor, 'delivery_notes.create')
-        const prepared = await prepareInput(input, actor, tx, null)
-        const row = await repo.insert(
-          { ...prepared.header, createdByUserId: actor, updatedByUserId: actor },
+        return createDraft(input, actor, tx)
+      })
+    },
+    createFromInvoice(id: string, actor: string) {
+      return repo.transaction(async (tx) => {
+        await repo.authorize(tx, actor, 'delivery_notes.create')
+        await repo.authorize(tx, actor, 'invoices.read')
+        const invoice = await repo.invoice(id, tx)
+        if (await repo.hasDeliveryNote(id, tx))
+          throw new AppError(
+            409,
+            'DELIVERY_NOTE_EXISTS',
+            'This invoice already has an active delivery note. Open its linked delivery note instead.',
+          )
+        const client = await repo.client(invoice.clientId, tx)
+        const lines = await repo.invoiceLines(id, tx)
+        const address = client.deliveryAddressLine1
+          ? [
+              client.deliveryAddressLine1,
+              client.deliveryAddressLine2,
+              client.deliveryPostalCode,
+              client.deliveryCity,
+              client.deliveryCountryCode,
+            ]
+          : [
+              client.addressLine1,
+              client.addressLine2,
+              client.postalCode,
+              client.city,
+              client.countryCode,
+            ]
+        return createDraft(
+          {
+            clientId: invoice.clientId,
+            invoiceId: invoice.id,
+            deliveryDate: companyDate(new Date()),
+            deliveryAddress: address.filter(Boolean).join(', '),
+            instructions: null,
+            includeReceptionSignature: true,
+            localeOverride:
+              invoice.localeOverride === 'fr-MA' || invoice.localeOverride === 'en-GB'
+                ? invoice.localeOverride
+                : null,
+            lines: lines.map((line) => ({
+              sourceInvoiceLineId: line.id,
+              productVariantId: line.productVariantId,
+              productName: line.productName,
+              quantity: line.quantity,
+            })),
+          },
+          actor,
           tx,
         )
-        await repo.replaceLines(
-          row.id,
-          prepared.lines.map((line) => ({ ...line, deliveryNoteId: row.id })),
-          tx,
-        )
-        const result = await output(row, tx)
-        await repo.audit(tx, actor, 'create', row.id, null, result)
-        return result
       })
     },
     update(id: string, input: DeliveryNoteUpdate, actor: string) {
@@ -200,15 +255,15 @@ export function createDeliveryNoteService(
         await repo.audit(tx, actor, 'delete', id, before, before)
       })
     },
-    prepare(id: string, expectedVersion: number, actor: string) {
+    deliver(id: string, expectedVersion: number, actor: string, receivedByName?: string | null) {
       return repo.transaction(async (tx) => {
         await repo.authorize(tx, actor, 'delivery_notes.update')
         const before = await repo.one(id, tx, true)
         assertVersion(before.version, expectedVersion)
         if (before.status !== 'draft')
-          throw new AppError(409, 'INVALID_STATUS', 'Delivery note is already prepared.')
+          throw new AppError(409, 'INVALID_STATUS', 'Only draft delivery notes can be delivered.')
         if (!(await repo.lines(id, tx)).length)
-          throw new AppError(400, 'EMPTY_DELIVERY', 'Add at least one product before preparing.')
+          throw new AppError(400, 'EMPTY_DELIVERY', 'Add at least one product before delivery.')
         const currentClientSnapshot = clientSnapshot(await repo.client(before.clientId, tx))
         const issuer = before.issuerSnapshot as Record<string, unknown>
         const locale = resolveLocale(
@@ -227,7 +282,9 @@ export function createDeliveryNoteService(
               repo.update(
                 id,
                 {
-                  status: 'prepared',
+                  status: 'delivered',
+                  deliveredAt: new Date(),
+                  receivedByName: receivedByName?.trim() || null,
                   issuerSnapshot: { ...issuer, locale },
                   number,
                   updatedByUserId: actor,
@@ -249,47 +306,8 @@ export function createDeliveryNoteService(
           { documentType: 'delivery_note', documentId: id, sourceVersion: row.contentVersion },
           actor,
         )
-        await repo.audit(tx, actor, 'prepare', id, before, row)
-        await onPrepared?.(tx, id)
-        return output(row, tx)
-      })
-    },
-    deliver(id: string, expectedVersion: number, actor: string) {
-      return repo.transaction(async (tx) => {
-        await repo.authorize(tx, actor, 'delivery_notes.update')
-        const before = await repo.one(id, tx, true)
-        assertVersion(before.version, expectedVersion)
-        if (before.status !== 'prepared')
-          throw new AppError(409, 'INVALID_STATUS', 'Prepare the note before delivery.')
-        const row = await repo.update(
-          id,
-          { status: 'delivered', deliveredAt: new Date(), updatedByUserId: actor },
-          tx,
-        )
         await repo.audit(tx, actor, 'deliver', id, before, row)
-        return output(row, tx)
-      })
-    },
-    acknowledge(id: string, expectedVersion: number, receivedByName: string, actor: string) {
-      return repo.transaction(async (tx) => {
-        await repo.authorize(tx, actor, 'delivery_notes.update')
-        const before = await repo.one(id, tx, true)
-        assertVersion(before.version, expectedVersion)
-        if (before.status !== 'delivered')
-          throw new AppError(409, 'INVALID_STATUS', 'Deliver the note before acknowledgment.')
-        if (!receivedByName.trim())
-          throw new AppError(400, 'RECEIVER_REQUIRED', 'Enter the receiver name.')
-        const row = await repo.update(
-          id,
-          {
-            status: 'acknowledged',
-            acknowledgedAt: new Date(),
-            receivedByName: receivedByName.trim(),
-            updatedByUserId: actor,
-          },
-          tx,
-        )
-        await repo.audit(tx, actor, 'acknowledge', id, before, row)
+        await onPrepared?.(tx, id)
         return output(row, tx)
       })
     },
@@ -298,7 +316,7 @@ export function createDeliveryNoteService(
         await repo.authorize(tx, actor, 'delivery_notes.update')
         const before = await repo.one(id, tx, true)
         assertVersion(before.version, expectedVersion)
-        if (!['prepared', 'delivered'].includes(before.status))
+        if (before.status !== 'delivered')
           throw new AppError(409, 'INVALID_STATUS', 'This note cannot be cancelled.')
         if (!reason.trim())
           throw new AppError(400, 'CANCELLATION_REASON_REQUIRED', 'Enter a cancellation reason.')
@@ -319,7 +337,7 @@ export function createDeliveryNoteService(
         return repo.one(id, tx)
       })
       if (row.status === 'draft')
-        throw new AppError(409, 'DRAFT_NOT_PRINTABLE', 'Prepare the note first.')
+        throw new AppError(409, 'DRAFT_NOT_PRINTABLE', 'Deliver the note first.')
       const job = await jobs.enqueuePdf(
         { documentType: 'delivery_note', documentId: id, sourceVersion: row.contentVersion },
         actor,

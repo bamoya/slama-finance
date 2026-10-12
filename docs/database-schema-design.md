@@ -683,10 +683,10 @@ erDiagram
     }
     delivery_notes {
         uuid id PK
-        text number UK "nullable until prepared"
+        text number UK "nullable until delivered"
         uuid client_id FK
         uuid invoice_id FK "nullable"
-        text status "draft prepared delivered acknowledged cancelled"
+        text status "draft delivered cancelled"
         text locale_override "nullable; null inherits company language at preparation"
         date delivery_date
         jsonb issuer_snapshot
@@ -1318,10 +1318,10 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   Lock source lines when saving
   allocations to make this safe under concurrent deliveries.
 - Acknowledgment requires delivery first and captures receiver name and time.
-  Preserve prepared/delivered snapshots; correct through cancellation and a new
+  Preserve delivered snapshots; correct through cancellation and a new
   note. No inventory stock movements or pricing fields are added here.
 
-- Delivery-first workflow: a delivered/acknowledged note without a source
+- Delivery-first workflow: a delivered note without a source
   invoice may be invoiced later. Keep its existing `invoice_id` and
   `source_invoice_line_id` NULL; these fields describe invoice-first fulfillment
   only. Use `delivery_invoice_allocations` for the opposite workflow instead
@@ -1417,7 +1417,7 @@ Example schedule selection:
 - Estimate event counts may overlap: an estimate can be issued and accepted
   in the same period. Conversion uses invoice creation/issue history and
   `source_estimate_id`. For delivery reports, pending notes show planned weight
-  separately; only delivered/acknowledged notes contribute delivered weight.
+  separately; only delivered notes contribute delivered weight.
 - Normalize product/category weights to kilograms when aggregating grams and
   kilograms. Group amounts by currency; never add different currencies together.
   Category grouping uses the product's current category in this MVP, with an

@@ -61,7 +61,7 @@ export function assertSendable(type: DocumentType, status: string) {
   if (
     !(
       type === 'delivery_note'
-        ? ['prepared', 'delivered', 'acknowledged']
+        ? ['delivered']
         : type === 'invoice'
           ? ['issued', 'sent']
           : ['issued', 'sent', 'accepted']

@@ -120,7 +120,7 @@ describe('Live and frozen reporting', () => {
       await fixture.client`insert into payments(number,operation_id,creation_request,invoice_id,amount,currency,method,status,payment_date,collected_on,confirmed_at,cancelled_at,cancellation_reason,reference,cheque_bank,cheque_number) values(${`PAY-REPORT-${index}`},${randomUUID()},'{}',${id},${amount},'MAD',${method},${status},'2026-09-01',${collected}::date,${status === 'confirmed' ? '2026-10-01T12:00:00Z' : null}::timestamptz,${status === 'cancelled' ? '2026-10-01T12:00:00Z' : null}::timestamptz,${status === 'cancelled' ? 'Cancelled' : null},${method === 'bank_transfer' ? 'BANK-REPORT' : null},${method === 'cheque' ? 'BANK' : null},${method === 'cheque' ? 'CHEQUE-REPORT' : null})`
     }
     for (const [number, status, quantity] of [
-      ['DEL-REPORT-P', 'prepared', 2],
+      ['DEL-REPORT-P', 'delivered', 2],
       ['DEL-REPORT-D', 'delivered', 4],
     ] as const) {
       const [delivery] =
@@ -367,12 +367,8 @@ describe('Live and frozen reporting', () => {
     expect(section('deliveries').metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          key: 'planned_weight_kg',
-          value: expect.stringMatching(/^1\.0/),
-        }),
-        expect.objectContaining({
           key: 'delivered_weight_kg',
-          value: expect.stringMatching(/^2\.0/),
+          value: expect.stringMatching(/^3\.0/),
         }),
       ]),
     )

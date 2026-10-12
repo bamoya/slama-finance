@@ -141,7 +141,7 @@ export function createInvoiceRepository(database: () => Database) {
         .innerJoin(deliveryNotes, eq(deliveryNoteLines.deliveryNoteId, deliveryNotes.id))
         .where(eq(deliveryNoteLines.id, id))
         .for('update')
-      if (!row || !['delivered', 'acknowledged'].includes(row.note.status) || row.note.invoiceId)
+      if (!row || !['delivered'].includes(row.note.status) || row.note.invoiceId)
         throw new AppError(409, 'DELIVERY_NOT_BILLABLE', 'Select a delivered independent note.')
       return row
     },

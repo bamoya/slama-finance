@@ -15,7 +15,7 @@ event. Missing/invalid client email and archived clients remain ineligible.
 | Invoice issued (`invoice_sent`)   | First issue of this invoice                          | Invoice PDF                                            |
 | Estimate issued (`estimate_sent`) | First issue of this estimate/revision                | Estimate PDF                                           |
 | Payment confirmation              | First confirmation                                   | Existing text/HTML notification, no receipt attachment |
-| Delivery note prepared            | First preparation                                    | Delivery-note PDF                                      |
+| Delivery note delivered           | First delivery confirmation                          | Delivery-note PDF                                      |
 | Invoice due reminder              | Configured due-date offset/repetition, while unpaid  | No attachment                                          |
 | Estimate expiry reminder          | Configured validity offset/repetition, while current | No attachment                                          |
 

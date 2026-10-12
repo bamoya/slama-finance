@@ -16,6 +16,10 @@ import type { createStaffService } from '../services/staff.service.js'
 
 export function createStaffController(service: ReturnType<typeof createStaffService>) {
   return {
+    async delete(request: FastifyRequest, reply: FastifyReply) {
+      await service.delete(staffParams.parse(request.params).userId, request.actor!.userId)
+      return reply.code(204).send()
+    },
     async list(request: FastifyRequest): Promise<StaffPage> {
       const result = await service.list(staffQuery.parse(request.query))
       return { ...result, items: result.items.map(toStaff) }

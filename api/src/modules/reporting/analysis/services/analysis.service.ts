@@ -97,7 +97,7 @@ export function normalizeCriteria(
         'outcome:superseded',
         'outcome:cancelled',
       ],
-      deliveries: ['prepared', 'delivered', 'acknowledged', 'billing:linked', 'billing:unlinked'],
+      deliveries: ['delivered', 'billing:linked', 'billing:unlinked'],
     }
     const section = input.detailSection
     const valid =

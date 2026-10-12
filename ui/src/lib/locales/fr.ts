@@ -8,7 +8,7 @@ export const french: Record<string, string> = {
   'Client preferences override company defaults. Queued work may be cancelled by preference changes; accepted mail cannot be recalled.':
     'Les préférences client remplacent les réglages de l’entreprise. Les changements peuvent annuler les envois en attente ; les e-mails acceptés ne peuvent pas être rappelés.',
   'Company default disabled': 'Désactivé par défaut dans l’entreprise',
-  'Delivery note prepared': 'Bon de livraison préparé',
+  'Delivery note delivered': 'Bon de livraison livré',
   'Invoice issued': 'Facture émise',
   'Estimate issued': 'Devis émis',
   'System language': 'Langue du système',
@@ -1469,6 +1469,15 @@ export const french: Record<string, string> = {
   'Create category': 'Créer une catégorie',
   'Create client': 'Créer un client',
   'Create delivery note': 'Créer un bon de livraison',
+  'Delete account': 'Supprimer le compte',
+  'Permanently delete this account? This cannot be undone. Accounts required by audit or report history must be archived instead.':
+    'Supprimer définitivement ce compte ? Cette action est irréversible. Les comptes liés à l’historique d’audit ou des rapports doivent être archivés.',
+  'This account is required by audit or report history. Archive it instead.':
+    'Ce compte est lié à l’historique d’audit ou des rapports. Archivez-le plutôt que de le supprimer.',
+  'You cannot delete your own account.': 'Vous ne pouvez pas supprimer votre propre compte.',
+  'Receiver name is optional.': 'Le nom du réceptionnaire est facultatif.',
+  'This invoice already has an active delivery note. Open its linked delivery note instead.':
+    'Cette facture possède déjà un bon de livraison actif. Ouvrez le bon de livraison associé.',
   'Create drafts, issue quotations, and track customer decisions.':
     'Créez des brouillons, émettez des devis et suivez les décisions des clients.',
   'Create estimate': 'Créer un devis',

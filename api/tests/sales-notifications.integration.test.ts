@@ -276,7 +276,7 @@ describe('consent-aware sales notifications', () => {
     })
     expect(draft.statusCode, draft.body).toBe(201)
     expect(
-      (await post(`/v1/delivery-notes/${draft.json().id}/prepare`, { expectedVersion: 1 }))
+      (await post(`/v1/delivery-notes/${draft.json().id}/deliver`, { expectedVersion: 1 }))
         .statusCode,
     ).toBe(200)
     const w = workers()

@@ -75,7 +75,7 @@ export function SalesBulkActions({
         resource === 'payments'
           ? row.status !== 'cancelled'
           : resource === 'delivery_notes'
-            ? ['prepared', 'delivered'].includes(row.status)
+            ? row.status === 'delivered'
             : resource === 'invoices'
               ? ['issued', 'sent'].includes(row.status)
               : !['draft', 'cancelled', 'superseded'].includes(row.status),
@@ -126,7 +126,7 @@ export function SalesBulkActions({
     actions.push({
       key: 'deliver',
       label: t('deliver'),
-      eligible: (row) => row.status === 'prepared',
+      eligible: (row) => row.status === 'draft',
       run: (row) => deliveries.deliver(row.id, row.version),
     })
   if (resource !== 'payments' && can(`${resource}.update`))

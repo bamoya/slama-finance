@@ -31,8 +31,9 @@ export function registerStaffRoutes(
     { preHandler: requirePermission('staff.update') },
     controller.status('enable'),
   )
-  app.delete(
-    '/:userId',
+  app.delete('/:userId', { preHandler: requirePermission('staff.delete') }, controller.delete)
+  app.post(
+    '/:userId/archive',
     { preHandler: requirePermission('staff.update') },
     controller.status('archive'),
   )

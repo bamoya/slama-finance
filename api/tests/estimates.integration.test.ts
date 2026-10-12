@@ -535,7 +535,7 @@ describe('Estimates lifecycle', () => {
       ],
     })
     expect(independent.statusCode, JSON.stringify(independent.json())).toBe(201)
-    const prepared = await post(`/v1/delivery-notes/${independent.json().id}/prepare`, {
+    const prepared = await post(`/v1/delivery-notes/${independent.json().id}/deliver`, {
       expectedVersion: 1,
     })
     expect(prepared.statusCode, JSON.stringify(prepared.json())).toBe(200)
@@ -556,15 +556,7 @@ describe('Estimates lifecycle', () => {
       cookies,
     })
     expect(download.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
-    const delivered = await post(`/v1/delivery-notes/${independent.json().id}/deliver`, {
-      expectedVersion: 2,
-    })
-    expect(delivered.json().status).toBe('delivered')
-    const acknowledged = await post(`/v1/delivery-notes/${independent.json().id}/acknowledge`, {
-      expectedVersion: 3,
-      receivedByName: 'Receiver',
-    })
-    expect(acknowledged.json().status).toBe('acknowledged')
+    expect(prepared.json().status).toBe('delivered')
     const deliveryPdf = await post(
       `/v1/documents/delivery_note/${independent.json().id}/regenerate-pdf`,
       { design: 'saved' },
@@ -572,8 +564,8 @@ describe('Estimates lifecycle', () => {
     expect(deliveryPdf.statusCode, deliveryPdf.body).toBe(200)
     expect(
       (await app.inject({ url: `/v1/delivery-notes/${independent.json().id}`, cookies })).json(),
-    ).toEqual(acknowledged.json())
-    const deliveryLineId = acknowledged.json().lines[0].id
+    ).toEqual(prepared.json())
+    const deliveryLineId = prepared.json().lines[0].id
     const conversion = (quantity: number, operationId = randomUUID()) => ({
       operationId,
       templateId: null,
@@ -598,7 +590,7 @@ describe('Estimates lifecycle', () => {
     expect(
       (
         await post(`/v1/delivery-notes/${independent.json().id}/cancel`, {
-          expectedVersion: 4,
+          expectedVersion: prepared.json().version,
           reason: 'Test',
         })
       ).statusCode,

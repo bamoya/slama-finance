@@ -32,6 +32,15 @@ export function StaffBulkActions({ selected, clear }: { selected: Row[]; clear: 
         run: (row) => api[key](row.id),
       })
   }
+  if (can('staff.delete'))
+    actions.push({
+      key: 'delete',
+      label: t('delete'),
+      destructive: true,
+      warning: t('staffWarning'),
+      eligible: (row) => row.id !== session.data?.user.id,
+      run: (row) => api.delete(row.id),
+    })
   return (
     <BulkActions
       selected={selected}

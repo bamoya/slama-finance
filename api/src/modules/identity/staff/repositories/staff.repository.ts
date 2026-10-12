@@ -130,6 +130,9 @@ export function createStaffRepository(database: () => Database) {
         .set({ consumedAt: new Date() })
         .where(eq(passwordResetTokens.userId, id))
     },
+    async delete(id: string, tx: Transaction) {
+      await tx.delete(users).where(eq(users.id, id))
+    },
     async create(
       input: Omit<CreateStaff, 'roleIds'> & {
         passwordHash: string

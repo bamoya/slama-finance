@@ -55,10 +55,16 @@ export function createStaffService(
     }
     return selected
   }
-  async function mutable(id: string, actorId: string, tx: Transaction, permission: string) {
+  async function mutable(
+    id: string,
+    actorId: string,
+    tx: Transaction,
+    permission: string,
+    allowArchived = false,
+  ) {
     const authority = await actor(actorId, tx, permission)
     const user = await find(id, tx)
-    if (user.archivedAt)
+    if (user.archivedAt && !allowArchived)
       throw new AppError(409, 'STAFF_ARCHIVED', 'Archived accounts cannot be changed')
     const isAdmin = (await repository.rolesFor(id, tx)).some((role) => role.key === 'admin')
     if (
@@ -80,6 +86,28 @@ export function createStaffService(
       throw new AppError(409, 'LAST_ADMIN', 'At least one active administrator must remain')
   }
   return {
+    async delete(id: string, actorId: string) {
+      try {
+        await database().transaction(async (tx) => {
+          await repository.lock(tx)
+          await mutable(id, actorId, tx, 'staff.delete', true)
+          if (id === actorId)
+            throw new AppError(409, 'SELF_DELETE', 'You cannot delete your own account.')
+          await preserveAdmin(id, tx)
+          await repository.revokeSessions(id, tx)
+          await onAuthorizationChange?.(tx, [id])
+          await repository.delete(id, tx)
+        })
+      } catch (error) {
+        if ((error as { code?: string }).code === '23503')
+          throw new AppError(
+            409,
+            'STAFF_IN_USE',
+            'This account is required by audit or report history. Archive it instead.',
+          )
+        throw error
+      }
+    },
     list: (query: StaffQuery) => repository.list(query),
     async detail(id: string) {
       return {

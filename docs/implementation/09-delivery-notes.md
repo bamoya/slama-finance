@@ -16,6 +16,16 @@ notifications, and final statutory PDF review remain later phases.
 
 ## Models
 
+October 2026 lifecycle update: `draft → delivered`. The Prepared and
+Received/Acknowledged states and their `/prepare` and `/acknowledge` routes are removed. Delivering
+a draft assigns its BL number, freezes its current client snapshot, queues the PDF
+and triggers the existing delivery notification policy in one transaction.
+Receiver name is optional on delivery. Existing Prepared and Acknowledged BLs
+are migrated to Delivered, retaining their number and document content; their
+previous update timestamp supplies the delivery timestamp where absent.
+Invoice details can create a linked draft with all invoice lines and quantities
+using `POST /v1/invoices/:id/delivery-note`.
+
 Create `delivery_notes`, `delivery_note_lines`, `delivery_invoice_allocations`.
 Invoice-first notes use optional invoice/header and source invoice-line FKs;
 delivery-first notes leave these NULL and use the billing-allocation junction
@@ -32,9 +42,7 @@ checks and both document versions. Keep no prices/totals on delivery notes.
 | `POST /v1/delivery-notes`                                                 | Independent or invoice-first draft; `delivery_notes.create`                                               |
 | `PATCH /v1/delivery-notes/:id`                                            | Draft changes/reservations with expectedVersion; `delivery_notes.update`                                  |
 | `DELETE /v1/delivery-notes/:id`                                           | Draft only, release reservations; `delivery_notes.delete`                                                 |
-| `POST /v1/delivery-notes/:id/prepare`                                     | Validate lines/address, number/freeze; `delivery_notes.prepare`                                           |
-| `POST /v1/delivery-notes/:id/deliver`                                     | Set actual delivery timestamp; `delivery_notes.deliver`                                                   |
-| `POST /v1/delivery-notes/:id/acknowledge`                                 | Delivered only, receiver/time; `delivery_notes.acknowledge`                                               |
+| `POST /v1/delivery-notes/:id/deliver`                                     | Draft → delivered, number/freeze, timestamp, optional receiver, PDF/notification; `delivery_notes.update` |
 | `POST /v1/delivery-notes/:id/cancel`                                      | Dependency checks/reason; `delivery_notes.cancel`                                                         |
 | `POST /v1/delivery-notes/:id/pdf`, `GET /v1/delivery-notes/:id/artifacts` | Prepared document artifact, `delivery_notes.read`                                                         |
 | `POST /v1/invoices/from-deliveries`                                       | Eligible lines/quantities/prices → invoice draft + allocations; `delivery_notes.read` + `invoices.create` |
@@ -48,10 +56,9 @@ responses expose billed and remaining billable package quantities separately.
 
 Lock source lines in stable ID order and validate package quantities exactly. Invoice-first
 notes require matching source invoice, client ID and source lines. The new note
-captures current client identity on draft save and preparation, independently of
+captures current client identity on draft save and delivery, independently of
 the source invoice's frozen identity; non-cancelled drafts
-reserve fulfillment quantities. Delivery-first billing is only for delivered/
-acknowledged independent notes. Active draft/issued invoice allocations cannot
+reserve fulfillment quantities. Delivery-first billing is only for delivered independent notes. Active draft/issued invoice allocations cannot
 exceed delivered quantities and must fully cover delivery-derived invoice lines.
 Never record the same relationship using both mapping mechanisms.
 

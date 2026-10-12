@@ -34,7 +34,7 @@ export function visualProjection(
     return sql`select ${point('cohort', sql`milestone`, sql`count(*)`, 'count')} as item from (${cohort}) cohort cross join lateral(values ('issued',true),('accepted',accepted_at is not null),('invoiced',invoiced)) milestones(milestone,included) where included group by currency,milestone union all select ${point('outcome', sql`status`, sql`count(*)`, 'count')} as item from (${cohort}) cohort group by currency,status`
   }
   if (key === 'deliveries')
-    return sql`select ${point('delivery_status', sql`status`, sql`count(*)`, 'count')} as item from source group by currency,status union all select ${point('delivery_billing', sql`case when d.invoice_id is null then 'unlinked' else 'linked' end`, sql`count(*)`, 'count')} as item from source s join delivery_notes d on d.id=s.id::uuid where d.status in ('delivered','acknowledged') group by currency,case when d.invoice_id is null then 'unlinked' else 'linked' end`
+    return sql`select ${point('delivery_status', sql`status`, sql`count(*)`, 'count')} as item from source group by currency,status union all select ${point('delivery_billing', sql`case when d.invoice_id is null then 'unlinked' else 'linked' end`, sql`count(*)`, 'count')} as item from source s join delivery_notes d on d.id=s.id::uuid where d.status in ('delivered') group by currency,case when d.invoice_id is null then 'unlinked' else 'linked' end`
   return sql`select null::jsonb as item where false`
 }
 
@@ -83,7 +83,7 @@ export function supportingSource(
   if (key === 'sales_by_client')
     return sql`select i.id::text as id,i.number as label,i.currency,i.issue_date::text as date,i.status,i.subtotal::text as net,i.tax_total::text as vat,i.total::text as gross,i.total::text as amount,null::text as quantity,null::text as "weightKg",0::int as "unknownWeightCount",'invoices'::text as resource from invoices i where i.status in ('issued','sent') and i.client_id=${f.segment}::uuid and i.issue_date>=${f.from}::date and i.issue_date<=${f.to}::date ${f.currency ? sql`and i.currency=${f.currency}` : sql``} ${f.clientId ? sql`and i.client_id=${f.clientId}::uuid` : sql``}`
   if (key === 'deliveries' && f.segment?.startsWith('billing:'))
-    return sql`select source.* from source join delivery_notes d on d.id=source.id::uuid where d.status in ('delivered','acknowledged') and ${f.segment === 'billing:linked' ? sql`d.invoice_id is not null` : sql`d.invoice_id is null`}`
+    return sql`select source.* from source join delivery_notes d on d.id=source.id::uuid where d.status in ('delivered') and ${f.segment === 'billing:linked' ? sql`d.invoice_id is not null` : sql`d.invoice_id is null`}`
   return undefined
 }
 

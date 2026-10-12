@@ -37,7 +37,7 @@ export function DeliveryConvertPage() {
         <RequestState query={note} />
       </div>
     )
-  if (note.data.invoiceId || !['delivered', 'acknowledged'].includes(note.data.status))
+  if (note.data.invoiceId || !['delivered'].includes(note.data.status))
     return (
       <div className="mx-auto max-w-[1500px] p-page">
         <PageHeader
@@ -66,7 +66,7 @@ function Editor({ note }: { note: NonNullable<ReturnType<typeof useDeliveryNote>
     offset: 0,
   })
   const sourceNotes = eligibleNotes.data?.items.filter(
-    (item) => !item.invoiceId && ['delivered', 'acknowledged'].includes(item.status),
+    (item) => !item.invoiceId && ['delivered'].includes(item.status),
   ) ?? [note]
   const sourceLines = sourceNotes.flatMap((item) =>
     item.lines.map((line) => ({ ...line, noteNumber: item.number })),

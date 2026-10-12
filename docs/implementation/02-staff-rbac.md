@@ -7,7 +7,7 @@
 Current implementation now owns staff endpoints at `/v1/staff` (legacy RBAC
 staff URLs removed). Listing/detail use `staff.read`; mutations use explicit action
 permissions. See [the permission standard](permission-standard.md). Profiles can
-be patched; roles replaced; accounts disabled/enabled or archived with DELETE.
+be patched; roles replaced; accounts disabled/enabled or archived through POST actions.
 Permissions remain inherited from roles, with no individual overrides. Archive
 preserves the account and references, invalidates sessions/reset tokens, and
 excludes the account from default lists. `status=archived|all` supports review.
@@ -28,6 +28,15 @@ legacy grants with the explicit mapping in migration `0002_action_permissions.sq
 Each later sequence adds its keys without resetting customized role assignments.
 
 ## API and permissions
+
+Permanent staff deletion uses `DELETE /v1/staff/:userId` and the separate
+`staff.delete` permission. It is available on staff details and through bulk
+actions, including for archived accounts. Self-deletion and deleting the last
+active administrator are blocked. Audit/report foreign-key restrictions preserve
+historical records: referenced accounts must be archived instead. Archive remains
+`POST /v1/staff/:userId/archive` with `staff.update`. Deletion removes credentials,
+sessions, preferences and role assignments through existing cascading constraints;
+document creator references use the existing `ON DELETE SET NULL` behavior.
 
 Role permission replacement accepts stable permission slugs using the existing
 registry `key`: `PUT /v1/rbac/roles/:roleId/permissions` with

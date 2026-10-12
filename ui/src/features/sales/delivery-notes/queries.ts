@@ -17,25 +17,21 @@ export const refreshDeliveries = (client: QueryClient) => refreshSales(client)
 
 export function useDeliveryActions() {
   const create = api.useCreateDeliveryNote()
+  const fromInvoice = api.useCreateDeliveryNoteFromInvoice()
   const update = api.useUpdateDeliveryNote()
   const remove = api.useDeleteDeliveryNote()
-  const prepare = api.usePrepareDeliveryNote()
   const deliver = api.useDeliverDeliveryNote()
-  const acknowledge = api.useAcknowledgeDeliveryNote()
   const cancel = api.useCancelDeliveryNote()
   const pdf = api.usePrepareDeliveryNotePdf()
   return {
+    createFromInvoice: (id: string) => fromInvoice.mutateAsync({ id }),
     create: (data: Parameters<typeof api.createDeliveryNote>[0]) => create.mutateAsync({ data }),
     update: (id: string, data: Parameters<typeof api.updateDeliveryNote>[1]) =>
       update.mutateAsync({ id, data }),
     delete: (id: string, expectedVersion: number) =>
       remove.mutateAsync({ id, data: { expectedVersion } }),
-    prepare: (id: string, expectedVersion: number) =>
-      prepare.mutateAsync({ id, data: { expectedVersion } }),
-    deliver: (id: string, expectedVersion: number) =>
-      deliver.mutateAsync({ id, data: { expectedVersion } }),
-    acknowledge: (id: string, expectedVersion: number, receivedByName: string) =>
-      acknowledge.mutateAsync({ id, data: { expectedVersion, receivedByName } }),
+    deliver: (id: string, expectedVersion: number, receivedByName?: string | null) =>
+      deliver.mutateAsync({ id, data: { expectedVersion, receivedByName } }),
     cancel: (id: string, expectedVersion: number, reason: string) =>
       cancel.mutateAsync({ id, data: { expectedVersion, reason } }),
     preparePdf: (id: string) => pdf.mutateAsync({ id }),

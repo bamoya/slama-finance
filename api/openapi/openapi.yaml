@@ -88,14 +88,12 @@ paths:
     $ref: ./modules/sales/payments.yaml#/paths/~1v1~1payments~1{id}~1restore
   /v1/delivery-notes:
     $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes
+  /v1/invoices/{id}/delivery-note:
+    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1invoices~1{id}~1delivery-note
   /v1/delivery-notes/{id}:
     $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}
-  /v1/delivery-notes/{id}/prepare:
-    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1prepare
   /v1/delivery-notes/{id}/deliver:
     $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1deliver
-  /v1/delivery-notes/{id}/acknowledge:
-    $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1acknowledge
   /v1/delivery-notes/{id}/cancel:
     $ref: ./modules/sales/delivery-notes.yaml#/paths/~1v1~1delivery-notes~1{id}~1cancel
   /v1/delivery-notes/{id}/pdf:
@@ -224,6 +222,8 @@ paths:
     $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}
   /v1/staff/{userId}/disable:
     $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1disable
+  /v1/staff/{userId}/archive:
+    $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1archive
   /v1/staff/{userId}/enable:
     $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1enable
   /v1/auth/password-reset/request:
@@ -360,8 +360,8 @@ components:
       $ref: ./modules/clients/clients.yaml#/components/schemas/ClientOverview
     DeliveryNoteVersion:
       $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteVersion
-    DeliveryNoteAcknowledgment:
-      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteAcknowledgment
+    DeliveryNoteDelivery:
+      $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteDelivery
     DeliveryNoteCancellation:
       $ref: ./modules/sales/delivery-notes.yaml#/components/schemas/DeliveryNoteCancellation
     DeliveryNoteLineInput:

@@ -25,6 +25,26 @@ beforeEach(() => {
   vi.mocked(apiRequest).mockReset().mockResolvedValue({})
 })
 describe('Staff bulk access changes', () => {
+  it('permanently deletes archived accounts but never self', async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <StaffBulkActions
+          clear={vi.fn()}
+          selected={[
+            { ...person, archivedAt: '2026-10-02T10:00:00Z' },
+            { ...person, id: 'self' },
+          ]}
+        />
+      </QueryClientProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+    await screen.findByText('1 succeeded · 1 skipped · 0 failed')
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/v1/staff/other', method: 'DELETE' }),
+      undefined,
+    )
+  })
   it('excludes self and archived accounts from disable requests', async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>

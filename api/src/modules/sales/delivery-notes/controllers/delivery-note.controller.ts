@@ -1,8 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
-  DeliveryNoteAcknowledgmentSchema,
+  createDeliveryNoteFromInvoiceParamsSchema,
   DeliveryNoteCancellationSchema,
+  DeliveryNoteDeliverySchema,
   DeliveryNoteInputSchema,
   DeliveryNoteUpdateSchema,
   DeliveryNoteVersionSchema,
@@ -32,6 +33,16 @@ export function createDeliveryNoteController(
           await service.create(DeliveryNoteInputSchema.parse(request.body), request.actor!.userId),
         )
     },
+    async createFromInvoice(request: FastifyRequest, reply: FastifyReply) {
+      return reply
+        .code(201)
+        .send(
+          await service.createFromInvoice(
+            createDeliveryNoteFromInvoiceParamsSchema.parse(request.params).id,
+            request.actor!.userId,
+          ),
+        )
+    },
     update(request: FastifyRequest) {
       return service.update(
         id(request),
@@ -47,27 +58,13 @@ export function createDeliveryNoteController(
       )
       return reply.code(204).send()
     },
-    prepare(request: FastifyRequest) {
-      return service.prepare(
-        id(request),
-        DeliveryNoteVersionSchema.parse(request.body).expectedVersion,
-        request.actor!.userId,
-      )
-    },
     deliver(request: FastifyRequest) {
+      const input = DeliveryNoteDeliverySchema.parse(request.body)
       return service.deliver(
         id(request),
-        DeliveryNoteVersionSchema.parse(request.body).expectedVersion,
-        request.actor!.userId,
-      )
-    },
-    acknowledge(request: FastifyRequest) {
-      const input = DeliveryNoteAcknowledgmentSchema.parse(request.body)
-      return service.acknowledge(
-        id(request),
         input.expectedVersion,
-        input.receivedByName,
         request.actor!.userId,
+        input.receivedByName,
       )
     },
     cancel(request: FastifyRequest) {

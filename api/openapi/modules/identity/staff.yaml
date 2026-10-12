@@ -154,13 +154,23 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/UpdateStaff
     delete:
-      operationId: archiveStaff
-      x-permissions: [staff.update]
+      operationId: deleteStaff
+      x-permissions: [staff.delete]
+      description: Permanently delete a staff account, including archived accounts. Self-deletion and deleting the last active administrator are forbidden. Accounts referenced by audit or report history must be archived instead.
       parameters:
         - *a2
       responses:
         "204": &a3
           description: Completed without response body
+        default: *a1
+  /v1/staff/{userId}/archive:
+    post:
+      operationId: archiveStaff
+      x-permissions: [staff.update]
+      parameters:
+        - *a2
+      responses:
+        "204": *a3
         default: *a1
   /v1/staff/{userId}/disable:
     post:

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Pencil, Plus, Send, Trash2, Truck } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'wouter'
@@ -17,6 +17,7 @@ import { uiLocale } from '../../../../lib/i18n'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
+import { useDeliveryActions } from '../../delivery-notes/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
 import { InvoiceBalance } from '../../payments/components/invoice-balance'
@@ -37,6 +38,7 @@ export function InvoiceDetailPage() {
     Boolean(invoice.data && invoice.data.status !== 'draft'),
   )
   const actions = useInvoiceActions()
+  const deliveryActions = useDeliveryActions()
   const [error, setError] = useState<unknown>()
   const [busy, setBusy] = useState(false)
   if (invoice.isPending || invoice.isError)
@@ -116,6 +118,23 @@ export function InvoiceDetailPage() {
                 >
                   <Plus size={16} /> {t('recordPayment')}
                 </Link>
+              </Can>
+            )}
+            {['issued', 'sent'].includes(row.status) && (
+              <Can permission={['delivery_notes.create', 'delivery_notes.read', 'invoices.read']}>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const draft = await deliveryActions.createFromInvoice(row.id)
+                      await refreshInvoices(cache)
+                      navigate(`/delivery-notes/${draft.id}`)
+                    })
+                  }
+                >
+                  <Truck size={16} /> {translate('Create delivery note')}
+                </Button>
               </Can>
             )}
             {row.status !== 'draft' && (

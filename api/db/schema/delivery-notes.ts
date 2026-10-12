@@ -55,10 +55,7 @@ export const deliveryNotes = pgTable(
   (t) => [
     index('delivery_notes_client_status_idx').on(t.clientId, t.status),
     index('delivery_notes_invoice_idx').on(t.invoiceId),
-    check(
-      'delivery_notes_status',
-      sql`${t.status} in ('draft','prepared','delivered','acknowledged','cancelled')`,
-    ),
+    check('delivery_notes_status', sql`${t.status} in ('draft','delivered','cancelled')`),
     check('delivery_notes_versions', sql`${t.version} > 0 and ${t.contentVersion} > 0`),
     check(
       'delivery_notes_locale_override',

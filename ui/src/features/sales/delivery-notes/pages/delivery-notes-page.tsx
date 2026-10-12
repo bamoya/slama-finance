@@ -21,7 +21,7 @@ import { SalesBulkActions } from '../../components/sales-bulk-actions'
 import { useDocumentFilters } from '../../components/use-document-filters'
 import { useDeliveryNotes } from '../queries'
 
-const statusValues = ['draft', 'prepared', 'delivered', 'acknowledged', 'cancelled'] as const
+const statusValues = ['draft', 'delivered', 'cancelled'] as const
 const sortValues = ['createdAt', 'deliveryDate', 'number', 'clientName'] as const
 const billingValues = ['billed', 'unbilled'] as const
 const allowed = {

@@ -58,7 +58,7 @@ function sample(sections: ReportSectionKey[]): ReportAnalysis {
             : group === 'cohort'
               ? ['issued', 'accepted', 'invoiced']
               : group === 'delivery_status'
-                ? ['prepared', 'delivered', 'acknowledged']
+                ? ['delivered']
                 : [translate('Sample A'), translate('Sample B'), translate('Sample C')]
       return {
         key,

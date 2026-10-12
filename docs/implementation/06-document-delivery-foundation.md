@@ -27,7 +27,7 @@ after checking no active code still depends on them.
   New documents derived from an older invoice/estimate use current client identity;
   the source document stays unchanged. Delivery addresses explicitly entered on a
   note, product lines, prices and payment data are not refreshed by this capture.
-  Draft PDF generation remains unavailable; issue/prepare the document first.
+  Draft PDF generation remains unavailable; issue the invoice/estimate or deliver the delivery note first.
 - Issued/finalized invoices, estimates and delivery notes remain immutable in their
   business information. The API rejects updates; direct UI edit routes return to details.
 - Details offer **Regenerate PDF**, with confirmation and original/latest design choices.

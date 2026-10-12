@@ -132,6 +132,34 @@ export function createDeliveryNoteRepository(database: () => Database) {
       if (!row) throw new AppError(400, 'INVALID_INVOICE_LINE', 'Invoice line not found.')
       return row
     },
+    invoiceLines(id: string, tx: Transaction) {
+      return tx
+        .select()
+        .from(invoiceLines)
+        .where(eq(invoiceLines.invoiceId, id))
+        .orderBy(invoiceLines.position)
+    },
+    async hasDeliveryNote(id: string, tx: Transaction) {
+      const [row] = await tx
+        .select({ id: deliveryNotes.id })
+        .from(deliveryNotes)
+        .where(
+          and(
+            ne(deliveryNotes.status, 'cancelled'),
+            or(
+              eq(deliveryNotes.invoiceId, id),
+              sql`exists (
+          select 1 from ${deliveryInvoiceAllocations}
+          inner join ${invoiceLines} on ${invoiceLines.id} = ${deliveryInvoiceAllocations.invoiceLineId}
+          inner join ${deliveryNoteLines} on ${deliveryNoteLines.id} = ${deliveryInvoiceAllocations.deliveryNoteLineId}
+          where ${invoiceLines.invoiceId} = ${id} and ${deliveryNoteLines.deliveryNoteId} = ${deliveryNotes.id}
+        )`,
+            ),
+          ),
+        )
+        .limit(1)
+      return Boolean(row)
+    },
     async reserved(invoiceLineId: string, exceptNoteId: string | null, tx: Transaction) {
       const [row] = await tx
         .select({ total: sql<number>`coalesce(sum(${deliveryNoteLines.quantity}),0)::int` })

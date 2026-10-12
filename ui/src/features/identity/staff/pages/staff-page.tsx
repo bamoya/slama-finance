@@ -1,4 +1,5 @@
-import { Eye, Plus, Search } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'wouter'
 
@@ -7,6 +8,7 @@ import {
   listStaffQuerySchema,
 } from '../../../../api/generated/schemas/identity/staff.schemas'
 import { ActionLink } from '../../../../components/management/action-link'
+import { ConfirmAction } from '../../../../components/management/confirm-action'
 import { DataTablePagination } from '../../../../components/management/data-table-pagination'
 import { DataTableToolbar } from '../../../../components/management/data-table-toolbar'
 import { PageHeader } from '../../../../components/management/page-header'
@@ -22,12 +24,16 @@ import { Select, SelectOption } from '../../../../components/ui/select'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../auth/components/can'
 import { useAuthorization } from '../../auth/hooks/use-authorization'
-import { useRoles, useStaffList } from '../../shared/queries'
+import { useSession } from '../../auth/hooks/use-session'
+import { refreshIdentity, useRoles, useStaffActions, useStaffList } from '../../shared/queries'
 import { StaffBulkActions } from '../components/staff-bulk-actions'
 export function StaffPage() {
   useUiLanguage()
 
   const { can: hasAccess } = useAuthorization()
+  const cache = useQueryClient()
+  const actions = useStaffActions()
+  const session = useSession()
 
   const canReadRoles = hasAccess('roles.read') ?? false
   const roles = useRoles(canReadRoles)
@@ -35,7 +41,7 @@ export function StaffPage() {
   const [search, setSearch] = useState('')
   const staff = useStaffList(query)
   const selection = useTableSelection(staff.data?.items ?? [], JSON.stringify(query))
-  const canBulk = hasAccess('staff.update')
+  const canBulk = hasAccess('staff.update') || hasAccess('staff.delete')
   const selectClass =
     'h-control rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm'
   return (
@@ -221,12 +227,41 @@ export function StaffPage() {
                       />
                     </td>
                     <td className="p-5">
-                      <ActionLink
-                        href={`/settings/staff/${person.id}`}
-                        label={translate('View {{value0}}', { value0: person.email })}
-                      >
-                        <Eye size={16} aria-hidden="true" />
-                      </ActionLink>
+                      <div className="flex items-center justify-end gap-2">
+                        <ActionLink
+                          href={`/settings/staff/${person.id}`}
+                          label={translate('View {{value0}}', { value0: person.email })}
+                        >
+                          <Eye size={16} aria-hidden="true" />
+                        </ActionLink>
+                        {!person.archivedAt && (
+                          <Can permission="staff.update">
+                            <ActionLink
+                              href={`/settings/staff/${person.id}/edit`}
+                              label={translate('Edit profile')}
+                            >
+                              <Pencil size={16} aria-hidden="true" />
+                            </ActionLink>
+                          </Can>
+                        )}
+                        {person.id !== session.data?.user.id && (
+                          <Can permission="staff.delete">
+                            <ConfirmAction
+                              label={translate('Delete account')}
+                              description={translate(
+                                'Permanently delete this account? This cannot be undone. Accounts required by audit or report history must be archived instead.',
+                              )}
+                              variant="destructive"
+                              icon={<Trash2 size={16} />}
+                              iconOnly
+                              onConfirm={async () => {
+                                await actions.delete(person.id)
+                                await refreshIdentity(cache)
+                              }}
+                            />
+                          </Can>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

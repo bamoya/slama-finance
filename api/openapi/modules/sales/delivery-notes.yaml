@@ -1,4 +1,18 @@
 paths:
+  /v1/invoices/{id}/delivery-note:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: createDeliveryNoteFromInvoice
+      x-permissions: [delivery_notes.create, invoices.read]
+      description: Creates a linked draft with every source invoice line and its full quantity. Requires an issued or sent invoice without an active linked delivery note. Uses the current client delivery address, falling back to billing. Does not prepare a PDF or send notifications.
+      responses:
+        '201':
+          description: Saved draft delivery note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryNote' }
+        '409':
+          description: Invoice is not active and issued, or already has an active delivery note.
   /v1/delivery-notes:
     get:
       operationId: listDeliveryNotes
@@ -10,7 +24,7 @@ paths:
             schema:
               {
                 type: string,
-                enum: [all, draft, prepared, delivered, acknowledged, cancelled],
+                enum: [all, draft, delivered, cancelled],
                 default: all,
               },
           }
@@ -105,61 +119,22 @@ paths:
         }
       responses:
         '204': { description: Deleted draft }
-  /v1/delivery-notes/{id}/prepare:
-    post:
-      operationId: prepareDeliveryNote
-      x-permissions: [delivery_notes.update]
-      description: Finalize a draft using current client identity and contact details, even when linked to an older invoice. Freeze this snapshot for subsequent PDFs. Preserve the delivery address entered on the note and its product quantities.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
-      requestBody:
-        {
-          required: true,
-          content:
-            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteVersion' } } },
-        }
-      responses:
-        '200':
-          {
-            description: Prepared delivery note,
-            content:
-              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
-          }
   /v1/delivery-notes/{id}/deliver:
     post:
       operationId: deliverDeliveryNote
       x-permissions: [delivery_notes.update]
+      description: Deliver a draft directly, assigning its number, freezing current client details and scheduling its PDF and notifications. Receiver name is optional.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         {
           required: true,
           content:
-            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteVersion' } } },
+            { application/json: { schema: { $ref: '#/components/schemas/DeliveryNoteDelivery' } } },
         }
       responses:
         '200':
           {
             description: Delivered note,
-            content:
-              { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
-          }
-  /v1/delivery-notes/{id}/acknowledge:
-    post:
-      operationId: acknowledgeDeliveryNote
-      x-permissions: [delivery_notes.update]
-      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
-      requestBody:
-        {
-          required: true,
-          content:
-            {
-              application/json:
-                { schema: { $ref: '#/components/schemas/DeliveryNoteAcknowledgment' } },
-            },
-        }
-      responses:
-        '200':
-          {
-            description: Acknowledged note,
             content:
               { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
           }
@@ -221,15 +196,13 @@ components:
       additionalProperties: false
       required: [expectedVersion]
       properties: { expectedVersion: { type: integer, minimum: 1 } }
-    DeliveryNoteAcknowledgment:
+    DeliveryNoteDelivery:
       type: object
       additionalProperties: false
-      required: [expectedVersion, receivedByName]
+      required: [expectedVersion]
       properties:
-        {
-          expectedVersion: { type: integer, minimum: 1 },
-          receivedByName: { type: string, minLength: 1, maxLength: 200 },
-        }
+        expectedVersion: { type: integer, minimum: 1 }
+        receivedByName: { type: [string, 'null'], maxLength: 200 }
     DeliveryNoteCancellation:
       type: object
       additionalProperties: false
@@ -360,7 +333,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         number: { type: [string, 'null'] }
-        status: { type: string, enum: [draft, prepared, delivered, acknowledged, cancelled] }
+        status: { type: string, enum: [draft, delivered, cancelled] }
         clientId: { type: string, format: uuid }
         clientDisplayName: { type: string }
         invoiceId: { type: [string, 'null'], format: uuid }

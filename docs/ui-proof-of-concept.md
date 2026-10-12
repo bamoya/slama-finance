@@ -305,7 +305,7 @@ Delivery notes (bons de livraison) can be created independently or linked to an
 invoice. They contain the client, delivery date and address, product names,
 delivered quantities, units, delivery instructions, and an optional reception
 signature. Their printable PDF does not display product prices or invoice
-totals. Supported states are draft, prepared, delivered, and acknowledged.
+totals. Supported states are draft and delivered.
 
 Supported actions:
 

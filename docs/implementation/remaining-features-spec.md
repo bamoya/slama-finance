@@ -339,7 +339,7 @@ validation error; never silently truncate financial results.
 | `sales_by_product`  | Invoice line sales, item quantities and normalized package weight; manual lines a distinct group                                                    |
 | `sales_by_category` | Same line basis, classified by the product's current category; explicit uncategorized/manual groups                                                 |
 | `estimates`         | Issued/accepted/rejected events in period from lifecycle timestamps; expiry from recorded expiry transition; conversion from linked issued invoices |
-| `deliveries`        | Delivery-date activity and status at capture; prepared planned weight separate from delivered/acknowledged weight                                   |
+| `deliveries`        | Delivery-date activity and status at capture; delivered weight                                                                                      |
 
 Additional rules:
 

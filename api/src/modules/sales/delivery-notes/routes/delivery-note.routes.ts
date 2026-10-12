@@ -10,22 +10,17 @@ export function registerDeliveryNoteRoutes(
   app.get('/delivery-notes', { preHandler: permission('delivery_notes.read') }, c.list)
   app.get('/delivery-notes/:id', { preHandler: permission('delivery_notes.read') }, c.get)
   app.post('/delivery-notes', { preHandler: permission('delivery_notes.create') }, c.create)
+  app.post(
+    '/invoices/:id/delivery-note',
+    { preHandler: permission('delivery_notes.create') },
+    c.createFromInvoice,
+  )
   app.patch('/delivery-notes/:id', { preHandler: permission('delivery_notes.update') }, c.update)
   app.delete('/delivery-notes/:id', { preHandler: permission('delivery_notes.delete') }, c.delete)
-  app.post(
-    '/delivery-notes/:id/prepare',
-    { preHandler: permission('delivery_notes.update') },
-    c.prepare,
-  )
   app.post(
     '/delivery-notes/:id/deliver',
     { preHandler: permission('delivery_notes.update') },
     c.deliver,
-  )
-  app.post(
-    '/delivery-notes/:id/acknowledge',
-    { preHandler: permission('delivery_notes.update') },
-    c.acknowledge,
   )
   app.post(
     '/delivery-notes/:id/cancel',

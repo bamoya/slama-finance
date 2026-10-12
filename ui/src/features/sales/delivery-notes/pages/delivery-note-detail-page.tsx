@@ -17,7 +17,7 @@ import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
-import { DeliveryAcknowledgmentDialog } from '../components/delivery-acknowledgment-dialog'
+import { DeliveryConfirmationDialog } from '../components/delivery-confirmation-dialog'
 import {
   refreshDeliveries,
   useDeliveryActions,
@@ -96,38 +96,18 @@ export function DeliveryNoteDetailPage() {
             )}
             {row.status === 'draft' && (
               <Can permission="delivery_notes.update">
-                <Button
-                  disabled={busy}
-                  onClick={() => void act(() => actions.prepare(row.id, row.version))}
-                >
-                  {t('prepareDeliveryNote')}
-                </Button>
-              </Can>
-            )}
-            {row.status === 'prepared' && (
-              <Can permission="delivery_notes.update">
-                <Button
-                  disabled={busy}
-                  onClick={() => void act(() => actions.deliver(row.id, row.version))}
-                >
-                  {t('markDelivered')}
-                </Button>
-              </Can>
-            )}
-            {row.status === 'delivered' && (
-              <Can permission="delivery_notes.update">
-                <DeliveryAcknowledgmentDialog
+                <DeliveryConfirmationDialog
                   expectedVersion={row.version}
                   disabled={busy}
                   onConfirm={async (receiver) => {
-                    await actions.acknowledge(row.id, row.version, receiver)
+                    await actions.deliver(row.id, row.version, receiver)
                     await refreshDeliveries(cache)
                   }}
                 />
               </Can>
             )}
             {!row.invoiceId &&
-              ['delivered', 'acknowledged'].includes(row.status) &&
+              row.status === 'delivered' &&
               row.lines.some((line) => line.remainingBillableQuantity > 0) && (
                 <Can permission="invoices.create">
                   <Link href={`/delivery-notes/${row.id}/convert`} className={buttonVariants({})}>
@@ -163,7 +143,7 @@ export function DeliveryNoteDetailPage() {
                   />
                 </Can>
               )}
-              {['prepared', 'delivered'].includes(row.status) && (
+              {row.status === 'delivered' && (
                 <Can permission="delivery_notes.update">
                   <CancellationDialog
                     triggerLabel={t('cancelDeliveryNote')}

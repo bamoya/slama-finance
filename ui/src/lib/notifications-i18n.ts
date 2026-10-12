@@ -15,7 +15,7 @@ registerTranslations('notifications', {
   events: {
     invoice_sent: 'Invoice issued',
     estimate_sent: 'Estimate issued',
-    delivery_prepared: 'Delivery note prepared',
+    delivery_prepared: 'Delivery note delivered',
     payment_received: 'Payment confirmation',
     invoice_due_reminder: 'Invoice due reminder',
     estimate_expiry_reminder: 'Estimate expiry reminder',
