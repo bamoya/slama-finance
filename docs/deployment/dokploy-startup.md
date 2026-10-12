@@ -1,6 +1,9 @@
 # Dokploy database startup
 
 Use `infra/compose/docker-compose.dokploy.yml` as a single raw Compose file.
+The migration history is now a fresh-install baseline. Use an empty database/new
+`POSTGRES_VOLUME_NAME`; do not reuse a volume initialized with the old 34 migrations.
+See [migration baseline](../../api/db/migrations/README.md). No existing data is reset automatically.
 Configure HTTPS in Dokploy Domains for `slama-finance.bamoya.com` → `ui:8080`
 and `api-slama-finance.bamoya.com` → `api:3000`. Point both DNS A records to
 the Hostinger server. Dokploy supplies Traefik routing; no host port mappings

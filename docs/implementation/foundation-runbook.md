@@ -72,6 +72,10 @@ role restrictions and real readiness; they do not migrate your app database.
 
 ## Migration inventory and privilege boundary
 
+Current deployment uses the fresh-install baseline documented in
+[migration README](../../api/db/migrations/README.md). The historical inventory
+below describes early development only and must not be used for current deployment.
+
 Update: the local database is now initialized and the baseline journal/snapshot
 have been reconciled. See [Local development setup](local-development.md).
 The following inventory records the earlier sequence-00 state, not current setup.

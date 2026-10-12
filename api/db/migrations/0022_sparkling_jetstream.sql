@@ -1,2 +1,0 @@
-ALTER TABLE "report_schedules" ADD COLUMN "language" text DEFAULT 'fr' NOT NULL;--> statement-breakpoint
-ALTER TABLE "report_schedules" ADD CONSTRAINT "report_schedules_language" CHECK ("report_schedules"."language" in ('fr', 'en'));

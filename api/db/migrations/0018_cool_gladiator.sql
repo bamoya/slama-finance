@@ -1,1 +1,0 @@
-ALTER TABLE "estimates" ADD COLUMN "expired_at" timestamp with time zone;

@@ -28,14 +28,19 @@ export const refreshDocumentNotifications = (
   })
 export function useSendDocumentActions() {
   const invoice = api.useSendInvoice(),
-    estimate = api.useSendEstimate()
+    estimate = api.useSendEstimate(),
+    deliveryNote = api.useSendDeliveryNote()
   return {
     send: (
-      type: 'invoice' | 'estimate',
+      type: 'invoice' | 'estimate' | 'delivery_note',
       id: string,
       data: Parameters<typeof api.sendInvoice>[1],
     ) =>
-      type === 'invoice' ? invoice.mutateAsync({ id, data }) : estimate.mutateAsync({ id, data }),
+      type === 'invoice'
+        ? invoice.mutateAsync({ id, data })
+        : type === 'estimate'
+          ? estimate.mutateAsync({ id, data })
+          : deliveryNote.mutateAsync({ id, data }),
     retry: api.retryDocumentNotification,
     cancel: api.cancelDocumentNotification,
     retryPreparation: api.retryNotificationPreparation,

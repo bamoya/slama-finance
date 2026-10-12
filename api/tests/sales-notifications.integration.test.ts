@@ -289,6 +289,45 @@ describe('consent-aware sales notifications', () => {
     expect(history.statusCode, history.body).toBe(200)
     expect(history.json().items).toHaveLength(2)
   })
+  it('manually sends delivered BLs idempotently with PDFs, rejecting drafts and stale versions', async () => {
+    await rule('delivery_prepared', true)
+    await fixture.client`update clients set email=null where id=${clientId}`
+    const draft = await post('/v1/delivery-notes', {
+      clientId,
+      invoiceId: null,
+      deliveryDate: companyDate(new Date()),
+      deliveryAddress: 'Rue Hassan, Rabat',
+      instructions: null,
+      includeReceptionSignature: false,
+      lines: [
+        { productVariantId: null, productName: 'Wheat', quantity: 2, sourceInvoiceLineId: null },
+      ],
+    })
+    expect(draft.statusCode, draft.body).toBe(201)
+    const url = `/v1/delivery-notes/${draft.json().id}/send`
+    expect((await post(url, { expectedVersion: 1, requestId: randomUUID() })).statusCode).toBe(409)
+    const delivered = await post(`/v1/delivery-notes/${draft.json().id}/deliver`, {
+      expectedVersion: 1,
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    await fixture.client`update clients set email='client@example.test' where id=${clientId}`
+    const input = { expectedVersion: delivered.json().version, requestId: randomUUID() }
+    expect((await post(url, { ...input, expectedVersion: 1 })).statusCode).toBe(409)
+    const first = await post(url, input)
+    expect(first.statusCode, first.body).toBe(202)
+    expect((await post(url, input)).json().jobId).toBe(first.json().jobId)
+    const w = workers()
+    expect(await w.producer.worker.runOne()).toBe(true)
+    expect(await w.transport.worker.runOne()).toBe(true)
+    expect(w.provider.messages).toHaveLength(1)
+    expect(w.provider.messages[0]!.attachments).toHaveLength(1)
+    expect(w.provider.messages[0]!.subject).toContain('Bon de livraison')
+    expect((await get(`/v1/delivery-notes/${draft.json().id}`)).json().status).toBe('delivered')
+    const history = await get(`/v1/documents/delivery_note/${draft.json().id}/notifications`)
+    expect(history.json().items).toHaveLength(2)
+    await rule('delivery_prepared', false)
+    expect((await post(url, { ...input, requestId: randomUUID() })).statusCode).toBe(409)
+  })
   it('sends reminders for client opt-ins even when company defaults are off', async () => {
     const r = await rule('invoice_due_reminder', false)
     const pref = await app.inject({

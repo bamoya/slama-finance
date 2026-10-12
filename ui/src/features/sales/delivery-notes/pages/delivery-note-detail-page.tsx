@@ -17,6 +17,7 @@ import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
+import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
 import { DeliveryConfirmationDialog } from '../components/delivery-confirmation-dialog'
 import {
   refreshDeliveries,
@@ -124,6 +125,16 @@ export function DeliveryNoteDetailPage() {
             {row.status !== 'draft' && (
               <Can permission="delivery_notes.update">
                 <RegeneratePdfDialog documentType="delivery_note" id={row.id} disabled={busy} />
+              </Can>
+            )}
+            {row.status === 'delivered' && (
+              <Can permission={['delivery_notes.read', 'delivery_notes.update']}>
+                <SendDocumentDialog
+                  documentType="delivery_note"
+                  id={row.id}
+                  clientId={row.clientId}
+                  version={row.version}
+                />
               </Can>
             )}
             <MoreActions>

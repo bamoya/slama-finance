@@ -1,4 +1,33 @@
 paths:
+  /v1/delivery-notes/{id}/send:
+    post:
+      operationId: sendDeliveryNote
+      tags: [sales]
+      description: Requires delivery_notes.read and delivery_notes.update. Sends delivered notes only, respecting client notification preferences. Queues durable PDF attachment preparation with requestId idempotency. Does not change delivery status.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendDocumentInput' }
+      responses:
+        '202':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/202'
+        '400':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/400'
+        '401':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/401'
+        '403':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/403'
+        '404':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/404'
+        '409':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/409'
+        '429':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/429'
+        '503':
+          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/503'
   /v1/invoices/{id}/send:
     post:
       operationId: sendInvoice

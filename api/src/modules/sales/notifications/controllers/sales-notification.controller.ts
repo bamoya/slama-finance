@@ -7,6 +7,7 @@ import {
   listDocumentNotificationsQuerySchema,
   retryDocumentNotificationParamsSchema,
   retryNotificationPreparationParamsSchema,
+  sendDeliveryNoteParamsSchema,
   SendDocumentInputSchema,
   sendEstimateParamsSchema,
   sendInvoiceParamsSchema,
@@ -17,6 +18,17 @@ export function createSalesNotificationController(
   service: ReturnType<typeof createSalesNotificationService>,
 ) {
   return {
+    sendDeliveryNote: async (r: FastifyRequest, reply: FastifyReply) =>
+      reply
+        .code(202)
+        .send(
+          await service.send(
+            'delivery_note',
+            sendDeliveryNoteParamsSchema.parse(r.params).id,
+            SendDocumentInputSchema.parse(r.body),
+            r.actor!.userId,
+          ),
+        ),
     sendInvoice: async (r: FastifyRequest, reply: FastifyReply) =>
       reply
         .code(202)

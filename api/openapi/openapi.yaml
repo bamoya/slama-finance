@@ -8,6 +8,8 @@ info:
 security:
   - sessionCookie: []
 paths:
+  /v1/delivery-notes/{id}/send:
+    $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1delivery-notes~1{id}~1send
   /v1/invoices/{id}/send:
     $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1invoices~1{id}~1send
   /v1/estimates/{id}/send:

@@ -16,47 +16,19 @@ PostgreSQL and Redis published ports are bound to localhost only.
 
 ## Database state
 
-The local Finance database was confirmed empty before initialization. The single
-`0000_auth_foundation.sql` baseline now has matching Drizzle snapshot and journal
-metadata and has been applied. It creates eight identity tables, the admin role
-and four current permissions. Future changes must use forward migrations; do not
-rewrite this now-applied baseline.
+Fresh installations use `0000_fresh_baseline.sql` (all 35 final tables and integrity
+triggers) and `0001_required_defaults.sql` (current permissions/admin role, company
+singleton and disabled bilingual email rules). No demo business data is inserted.
 
-`api/.env` is Git-ignored and owner-readable only. `DATABASE_URL` uses the
-non-owner `slama_app` login. `MIGRATION_DATABASE_URL` uses the local database owner
-for schema changes and bootstrap. The API role has DML permissions on the existing
-identity tables, but cannot create tables, databases or roles. Future migrations
-must explicitly grant access to new tables as needed; no blanket future grants
-were installed. Production privilege provisioning remains a separate task.
+Use an empty database or a new Compose volume. The consolidated history is not an
+upgrade for a local/deployed database that used the previous development migrations.
+This change does not reset or migrate any existing local database automatically.
 
-The catalog migration (`0004_catalog_variants.sql`) has been applied locally.
-The local `slama_app` role was granted `SELECT, INSERT, UPDATE, DELETE` on
-`product_categories`, `products`, and `product_variants`. A fresh deployment
-using a separate runtime role must grant equivalent DML permissions after
-running migrations as the schema owner.
-
-The Clients migration (`0005_tiresome_sunset_bain.sql`) has also been applied
-locally. `slama_app` was granted `SELECT, INSERT, UPDATE, DELETE` on `clients`; fresh
-deployments with a separate runtime role need the same grants.
-
-After applying the sales migrations (`0006`–`0010`), grant the separate API role
-access to their nine new tables with `pnpm --dir api db:grant-sales-runtime`.
-The script checks that the runtime and migration URLs target the same database,
-then grants only the DML operations used by sales, artifacts, and PDF jobs. Run
-it again safely after restoring a database; it does not grant schema ownership.
-
-## Commands
-
-```sh
-docker compose -f infra/compose/docker-compose.yml up -d --wait postgres redis mailpit
-pnpm --filter ./api db:migrate
-pnpm --dir api db:grant-sales-runtime
-pnpm dev
-```
-
-Drizzle commands load `api/.env`. The table-source list in `drizzle.config.ts`
-must be extended when new schema files are added. `db:generate` currently reports
-no schema drift and rerunning `db:migrate` is a no-op.
+`api/.env` remains Git-ignored. `MIGRATION_DATABASE_URL` uses the schema owner;
+`DATABASE_URL` uses a distinct restricted runtime role. The deployment initializer
+applies migrations, creates that role, grants required table privileges and bootstraps
+the first administrator. Repeated successful startups do not reapply migrations.
+Future schema changes must use new forward migrations.
 
 ## Initial administrator
 

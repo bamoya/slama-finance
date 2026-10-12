@@ -12,16 +12,16 @@ must still have no invoice/client/report/policy dependencies.
 
 ## API routes
 
-| Route                                                                       | Behavior / permission                                                                      |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `GET /v1/notification-rules`                                                | Registry/configuration, `notifications.view`                                               |
-| `PATCH /v1/notification-rules/:id`                                          | Enable, timing and validated template/settings, `notifications.manage`                     |
-| `POST /v1/notification-rules/:id/test`                                      | Safe sample to current authorized operator only, `notifications.manage`; rate-limited      |
-| `GET /v1/clients/:id/notification-preferences`                              | Effective and explicit values, `clients.view` + `notifications.view`                       |
-| `PUT /v1/clients/:id/notification-preferences/:ruleId`                      | Explicit override/CCs, `clients.update` + `notifications.manage`                           |
-| `DELETE /v1/clients/:id/notification-preferences/:ruleId`                   | Remove override → inherit, same guards                                                     |
-| `POST /v1/invoices/:id/send`, `POST /v1/estimates/:id/send`                 | Validate issued state/recipient, schedule preparation, `invoices.send` or `estimates.send` |
-| `GET /v1/invoices/:id/notifications`, `GET /v1/estimates/:id/notifications` | Business dispatch + safe transport status, corresponding view permission                   |
+| Route                                                                                           | Behavior / permission                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/notification-rules`                                                                    | Registry/configuration, `notifications.view`                                                                                                                                                             |
+| `PATCH /v1/notification-rules/:id`                                                              | Enable, timing and validated template/settings, `notifications.manage`                                                                                                                                   |
+| `POST /v1/notification-rules/:id/test`                                                          | Safe sample to current authorized operator only, `notifications.manage`; rate-limited                                                                                                                    |
+| `GET /v1/clients/:id/notification-preferences`                                                  | Effective and explicit values, `clients.view` + `notifications.view`                                                                                                                                     |
+| `PUT /v1/clients/:id/notification-preferences/:ruleId`                                          | Explicit override/CCs, `clients.update` + `notifications.manage`                                                                                                                                         |
+| `DELETE /v1/clients/:id/notification-preferences/:ruleId`                                       | Remove override → inherit, same guards                                                                                                                                                                   |
+| `POST /v1/invoices/:id/send`, `POST /v1/estimates/:id/send`, `POST /v1/delivery-notes/:id/send` | Validate eligible finalized state, version and recipient policy; schedule idempotent PDF preparation. Requires resource `.read` and `.update`. BL must be delivered; sending does not change its status. |
+| `GET /v1/invoices/:id/notifications`, `GET /v1/estimates/:id/notifications`                     | Business dispatch + safe transport status, corresponding view permission                                                                                                                                 |
 
 Payment-received notifications are internal producers; reports already compose
 their messages in 11. Rules are a fixed event registry, not an arbitrary SQL or
@@ -72,19 +72,18 @@ permissions gate controls; no notification business state copied into global con
 
 ## HTML email customization — implemented 2026-10-04
 
-Migration `0026_branded_notification_defaults` installs the five French Slama
-examples from `docs/notification-email-examples` as database defaults. It upgrades
-only the exact original French placeholder subject/body in text mode; customized
-subjects, bodies and non-French rules are preserved. Existing sender identities,
-enabled states and timing stay unchanged, with a version increment on upgraded
-rows. Fresh installations still start with all rules disabled. Re-running the
-data migration does not overwrite the HTML templates or increment their versions.
+`0001_required_defaults.sql` inserts six bilingual Slama HTML email rules, including
+the BL rule. French examples live in `docs/notification-email-examples`.
+Rules inherit company language and start disabled. Required-default inserts are
+idempotent: reapplying them does not overwrite customized templates, sender settings,
+timing, language or versions. There is no legacy placeholder-upgrade pass on fresh databases.
 
 - `/settings/notifications` keeps the existing fixed events, eligibility, sender
   restrictions, concurrency/version checks and `notification_rules.read/update`
   permissions. No new permissions or business-aware transport are introduced.
-- `notification_rules.body_format` is `text` or `html`; migration 0025 defaults all
-  existing rules to `text`. Existing text is escaped, never reinterpreted as HTML.
+- `notification_rules.body_format` is `text` or `html`; the schema defaults new
+  rules to `text`, while installation defaults explicitly use `html`.
+  Existing text is escaped, never reinterpreted as HTML.
   `body_template` stores the content (up to 50,000 characters), not another copy.
 - The shared Tiptap editor supports headings, emphasis, alignment, text color,
   lists, links, buttons, HTTPS images, tables and allowed event variables.

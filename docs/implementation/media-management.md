@@ -10,7 +10,7 @@ sidebar page or anonymous download endpoint.
 ```text
 api/
   db/schema/media.ts
-  db/migrations/0003_media_management.sql
+  db/migrations/0000_fresh_baseline.sql
   openapi/modules/media/media.yaml
   src/modules/media/
     index.ts                         public API + composition

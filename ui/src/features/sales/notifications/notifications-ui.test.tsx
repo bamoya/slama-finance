@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   listClientNotificationPreferences: vi.fn(),
   listDocumentNotifications: vi.fn(),
   sendInvoice: vi.fn(),
+  sendDeliveryNote: vi.fn(),
   retryNotificationPreparation: vi.fn(),
 }))
 vi.mock('../../identity/auth/hooks/use-session', () => ({
@@ -23,6 +24,7 @@ vi.mock('../../../api/http', async () => {
       listClientNotificationPreferences: state.listClientNotificationPreferences,
       listDocumentNotifications: state.listDocumentNotifications,
       sendInvoice: state.sendInvoice,
+      sendDeliveryNote: state.sendDeliveryNote,
       retryNotificationPreparation: state.retryNotificationPreparation,
     }),
   }
@@ -100,6 +102,34 @@ beforeEach(() => {
   state.retryNotificationPreparation.mockResolvedValue(undefined)
 })
 describe('document notification actions', () => {
+  it('uses the delivery rule and generated BL send endpoint', async () => {
+    state.listClientNotificationPreferences.mockResolvedValue({
+      items: [
+        {
+          ruleId: id,
+          eventKey: 'delivery_prepared',
+          effectiveEnabled: true,
+          recipient: 'client@example.test',
+          cc: [],
+        },
+      ],
+    })
+    state.sendDeliveryNote.mockResolvedValue({
+      jobId: id,
+      status: 'queued',
+      recipient: 'client@example.test',
+      sourceVersion: 1,
+    })
+    setup(<SendDocumentDialog documentType="delivery_note" id={id} clientId={id} version={2} />)
+    const dialog = await openSend()
+    fireEvent.click(dialog.getByRole('button', { name: 'Send email' }))
+    await dialog.findByRole('button', { name: 'Start a new send' })
+    expect(state.sendDeliveryNote).toHaveBeenCalledWith(
+      id,
+      expect.objectContaining({ expectedVersion: 2 }),
+    )
+    expect(state.sendInvoice).not.toHaveBeenCalled()
+  })
   it('preserves the request key after an ambiguous network failure', async () => {
     state.sendInvoice.mockRejectedValueOnce(
       new ApiError(0, 'NETWORK_ERROR', 'Connection interrupted.'),

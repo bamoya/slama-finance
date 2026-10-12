@@ -33,7 +33,7 @@ The lifecycle additions are POST `/v1/bank-accounts/:id/restore` and DELETE
 
 ## Database and invariants
 
-Migration `0001_company_settings.sql` creates `company_settings`, `bank_accounts`, `document_templates`, and persistent `audit_events`. It seeds the `id=1` company singleton with MAD, fr-MA, Africa/Casablanca and 15-day due/validity defaults. Legal identity, banking details and the default template remain empty; no fabricated company data is seeded. Existing users and roles are retained. The admin role receives the six new permissions.
+The fresh baseline creates `company_settings`, `bank_accounts`, `document_templates`, and persistent `audit_events`. Required defaults insert the `id=1` company singleton with MAD, fr-MA, Africa/Casablanca and 15-day due/validity defaults. Legal identity, banking details and the default template remain empty; no fabricated company data is seeded. The system admin receives the current permission registry. This consolidated history is for empty databases only.
 
 Company settings store the agreed Moroccan fields: legal/trade name, legal form, nullable capital in MAD, billing address, ICE, IF, RC number/city, professional tax number, email, phone, logo and document defaults. ICE requires 15 digits; supplied IF/RC/Patente values accept 1–20 digits without inventing one shared fixed length. RC number and city must be supplied together. Moroccan postal codes use five digits. Identifiers remain strings to retain leading zeros. Phone numbers accept Moroccan national format or valid international numbers and are normalized to E.164. These checks are application format rules, not legal certification; required issuance fields belong to the sales module.
 

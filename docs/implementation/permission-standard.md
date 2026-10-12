@@ -63,17 +63,11 @@ email preferences and underlying document permissions still apply. See [reportin
 
 ## Migration and deployment
 
-`0021_crud_permissions.sql` copies assignments from retired narrow action keys to
-corresponding Edit grants, then removes old keys. Signature reading maps to templates View;
-staff role assignment maps to both staff Edit and roles Edit. Narrow permissions therefore
-intentionally become broader resource Edit access. **No new permanent Delete grants are
-assigned.** Review delegated roles after deployment. Read-only roles stay read-only.
-Business records and audit history are untouched.
-
-`0020_single_report_permission.sql` previously consolidated reporting access.
-`0002_action_permissions.sql` remains historical; its granular vocabulary is superseded.
-Never rewrite applied migrations. This standard supersedes granular permission examples
-in earlier implementation sequences.
+Fresh installations use `0000_fresh_baseline.sql` and `0001_required_defaults.sql`.
+Only the current CRUD permission registry is inserted; no legacy permission conversions
+are needed. The system admin receives all registered permissions. New delegated roles
+receive only explicitly assigned capabilities. Reports retain the single `reports.read`
+exception. This baseline is not an upgrade for databases using the old migration history.
 
 Deploy contracts, API, UI and migration together. Refresh the UI to reload session grants;
 the API resolves current grants from the database. Back up before production migration.

@@ -1,6 +1,6 @@
 # 04 — Clients
 
-Status: implemented in the API and UI. The local migration is `0005_tiresome_sunset_bain.sql`.
+Status: implemented in the API and UI. The final clients schema is included in `0000_fresh_baseline.sql`.
 
 [Index](README.md) · Depends on 02/03 · Next: [Catalog](05-catalog.md)
 

@@ -8,6 +8,14 @@ export function registerSalesNotificationRoutes(
   permission: (key: string) => preHandlerHookHandler,
 ) {
   app.post(
+    '/delivery-notes/:id/send',
+    {
+      preHandler: [permission('delivery_notes.read'), permission('delivery_notes.update')],
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    },
+    c.sendDeliveryNote,
+  )
+  app.post(
     '/invoices/:id/send',
     {
       preHandler: [permission('invoices.read'), permission('invoices.update')],

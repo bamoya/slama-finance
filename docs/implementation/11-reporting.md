@@ -20,8 +20,7 @@ completion of this refinement.
 
 Implementation notes:
 
-- Migration `0024_numerous_drax.sql` adds the PDF-default schedule output and XLSX
-  artifact support; applied locally. Historical run configurations are not rewritten.
+- The fresh baseline includes PDF-default schedule output and XLSX artifact support.
 - A shared section-table model feeds PDF and Excel. Payment-method rows group by
   method/currency; product export rows break down product/variant package weights.
   Client collections/balances refer to the period's invoice cohort, at capture time.
@@ -203,7 +202,7 @@ the approved refinement above governs the next implementation.
   frozen snapshots, PDF/CSV artifacts and notification delivery pipeline are reused.
 - `report_runs.trigger` distinguishes `scheduled` from `test`; tests retain the
   requesting staff ID and audit event. Scheduled occurrence uniqueness is preserved
-  by a partial unique index. Migration `0023_damp_angel.sql` marks existing runs scheduled.
+  by a partial unique index. The baseline defaults new runs to scheduled.
 - Duplicate clicks within 60 seconds reuse the same run (also while production is
   pending). The endpoint is limited to three requests per minute. Tests appear in
   run history and have `[TEST]` email subjects. The status page polls production
@@ -216,8 +215,8 @@ the approved refinement above governs the next implementation.
 
 ### Language and output
 
-- Every schedule (daily, weekly or monthly) has `language: fr | en`, default `fr`.
-  Migration `0022_sparkling_jetstream.sql` defaults existing schedules to French.
+- Every schedule (daily, weekly or monthly) has `language: company | fr | en`,
+  default `company`, which resolves to French unless the company language is changed.
   Create/edit and detail screens expose the email/PDF language independently of
   the operator's UI language. OpenAPI remains the source for generated contracts.
 - Materialization freezes the language in `configurationSnapshot`; production

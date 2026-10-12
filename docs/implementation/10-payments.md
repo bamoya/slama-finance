@@ -63,7 +63,7 @@ deletion and replacement before receipt issuance; otherwise cancel and replace.
 
 ## Payment receipts (implemented)
 
-Migration `0014_payment_receipts.sql` adds nullable `receipt_snapshot` and
+The fresh baseline includes nullable `receipt_snapshot` and
 `receipt_issued_at` to payments and `payment_receipt` to artifact owner types.
 New payments freeze invoice/customer/company/design data and confirmed totals
 inside the recording transaction. Balance is **at recording**, not backdated to
@@ -122,7 +122,7 @@ the client-list response. Client financial summaries/filters require both
 `invoices.read` and `payments.read`; activity filtering requires all four document/
 payment read permissions. Individual activity categories respect their read grants.
 
-Migration `0011_furry_paladin.sql` creates payments and grants the original four
-payment permissions to the existing admin role. Migration `0012_payment_management.sql`
-adds restore/delete permissions. After migrating, run
-`pnpm --dir api db:grant-sales-runtime` when using a distinct runtime database role.
+The fresh baseline creates the final payments table, including optional transfer
+references and receipt fields. Required defaults grant the current payment permissions
+to the system admin. The startup initializer provisions the restricted runtime role
+and its table privileges.

@@ -186,7 +186,7 @@ export function createSalesNotificationService(
   }
   return {
     invalidate,
-    async send(type: 'invoice' | 'estimate', id: string, input: SendDocumentInput, actor: string) {
+    async send(type: DocumentType, id: string, input: SendDocumentInput, actor: string) {
       return repo.transaction(async (tx) => {
         await owner(tx, type, id, actor, true)
         const key = `prepare_notification:${actor}:${type}:${id}:${input.requestId}`
@@ -202,13 +202,14 @@ export function createSalesNotificationService(
             sourceVersion: p.sourceVersion,
           }
         }
-        const eventKey = `${type}_sent`
+        const eventKey = type === 'delivery_note' ? 'delivery_prepared' : `${type}_sent`
         const { row, rule, client } = await eligibility(tx, type, id, eventKey)
         assertVersion(row.version, input.expectedVersion)
         const content = policies.compose(rule, {
           clientName: printableClientName(row.clientSnapshot, client.clientName),
           documentNumber: row.number ?? '',
           issueDate: row.issueDate,
+          deliveryDate: row.issueDate,
           total: row.total,
           currency: row.currency,
           validUntil: 'validUntil' in row ? (row.validUntil ?? '') : '',

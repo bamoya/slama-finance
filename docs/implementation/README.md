@@ -134,10 +134,9 @@ in localStorage. Shell/sidebar stay global with consistent page width and dark m
 
 ## Migration strategy
 
-The repository has `0000_auth_foundation.sql`; this plan does not assume it was
-applied. Verify the actual database and migration journal first. If the database
-is still disposable/unapplied as previously stated, consolidate the approved
-initial schema instead of producing corrective migrations for each discussion.
+The repository uses `0000_fresh_baseline.sql` plus `0001_required_defaults.sql` for
+empty databases. The old development history has been consolidated; existing databases
+that used it cannot be upgraded by this baseline. Use a new database/volume for fresh deployment.
 Sequence files describe logical model batches, not mandatory separate SQL files.
 Once any shared/deployed database has applied a baseline, use forward migrations
 and never rewrite applied history. Never reset data without explicit approval.

@@ -31,7 +31,7 @@ export function SendDocumentDialog({
   clientId,
   version,
 }: {
-  documentType: 'invoice' | 'estimate'
+  documentType: 'invoice' | 'estimate' | 'delivery_note'
   id: string
   clientId: string
   version: number
@@ -49,7 +49,8 @@ export function SendDocumentDialog({
   const request = useRef<SendDocumentInput>()
   const canPreview = can('clients.read') && can('client_notification_preferences.read')
   const query = useClientNotificationPreferences(clientId, open && canPreview)
-  const preference = query.data?.items.find((row) => row.eventKey === `${documentType}_sent`)
+  const eventKey = documentType === 'delivery_note' ? 'delivery_prepared' : `${documentType}_sent`
+  const preference = query.data?.items.find((row) => row.eventKey === eventKey)
   const send = async () => {
     if (busy || query.isFetching || !canPreview || !preference?.effectiveEnabled) return
     setBusy(true)
