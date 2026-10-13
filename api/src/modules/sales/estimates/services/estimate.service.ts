@@ -57,6 +57,9 @@ export function createEstimateService(
       localeOverride: row.localeOverride,
       notes: row.notes,
       paymentTerms: row.paymentTerms,
+      bankAccountId: row.bankAccountId,
+      agreedPaymentMethod: row.agreedPaymentMethod,
+      bankDetailsSnapshot: row.bankDetailsSnapshot,
       subtotal: row.subtotal,
       taxTotal: row.taxTotal,
       total: row.total,
@@ -86,6 +89,9 @@ export function createEstimateService(
       throw new AppError(400, 'INVALID_DATE', 'Valid-until date must not precede the issue date.')
     const client = await repo.client(input.clientId, tx)
     const company = await repo.company(tx)
+    const bankAccountId =
+      input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
+    const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
     const template = await repo.template(input.templateId, tx)
     const preparedLines = []
     let subtotal = new FinancialDecimal(0)
@@ -161,7 +167,7 @@ export function createEstimateService(
       accentColor: template?.accentColor ?? '#ad7d1d',
       logoAssetId: template?.logoAssetId ?? company.logoAssetId,
       signatureAssetId: template?.signatureAssetId ?? null,
-      showBankDetails: template?.showBankDetails ?? false,
+      showBankDetails: template?.showBankDetails ?? true,
       showSignature: template?.showSignature ?? false,
       showPaymentTerms: template?.showPaymentTerms ?? true,
       footerText: template?.footerText ?? null,
@@ -178,7 +184,9 @@ export function createEstimateService(
         issuerSnapshot,
         clientSnapshot,
         appearanceSnapshot,
-        bankDetailsSnapshot: null,
+        bankDetailsSnapshot,
+        bankAccountId,
+        agreedPaymentMethod: input.agreedPaymentMethod ?? null,
         notes: input.notes?.trim() || null,
         paymentTerms: input.paymentTerms?.trim() || null,
         subtotal: money(subtotal),
@@ -281,6 +289,8 @@ export function createEstimateService(
             clientSnapshot: snapshotClient(await repo.client(source.clientId, tx)),
             appearanceSnapshot: source.appearanceSnapshot,
             bankDetailsSnapshot: source.bankDetailsSnapshot,
+            bankAccountId: source.bankAccountId,
+            agreedPaymentMethod: source.agreedPaymentMethod,
             notes: source.notes,
             paymentTerms: source.paymentTerms,
             subtotal: source.subtotal,
@@ -395,7 +405,7 @@ export function createEstimateService(
         for (let attempt = 0; attempt < 5; attempt++) {
           const number = `DEV-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
           try {
-            row = await tx.transaction((savepoint) =>
+            row = await tx.transaction(async (savepoint) =>
               repo.update(
                 id,
                 {
@@ -409,6 +419,7 @@ export function createEstimateService(
                   issuedAt: new Date(),
                   updatedByUserId: actor,
                   clientSnapshot: currentClientSnapshot,
+                  bankDetailsSnapshot: await repo.bankSnapshot(savepoint, before.bankAccountId),
                 },
                 savepoint,
                 true,

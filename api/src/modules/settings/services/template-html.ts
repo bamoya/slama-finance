@@ -63,13 +63,17 @@ export async function renderTemplatePreview(
         : {}),
     }))
     if (!delivery) {
+      model.sections!.push({
+        title: 'Agreed payment method',
+        text: locale === 'en-GB' ? 'Bank transfer' : 'Virement bancaire',
+      })
       model.totals = [['Total', many ? '4500.00 MAD' : '700.00 MAD']]
       if (data.showPaymentTerms && data.paymentTerms)
         model.sections!.push({ title: 'Payment terms', text: data.paymentTerms })
       if (data.showBankDetails)
         model.sections!.push({
           title: 'Bank details',
-          text: 'Bank details from the selected account',
+          text: 'Crédit Agricole · Slama Agricole · RIB : 225091032701984651012213',
         })
     }
     model.receptionSignature = delivery

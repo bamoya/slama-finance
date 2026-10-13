@@ -19,6 +19,7 @@ const french: Record<string, string> = {
   Subtotal: 'Sous-total',
   'Payment terms': 'Conditions de paiement',
   'Bank details': 'Coordonnées bancaires',
+  'Agreed payment method': 'Mode de règlement prévu',
   Method: 'Mode de paiement',
   Cash: 'Espèces',
   Cheque: 'Chèque',

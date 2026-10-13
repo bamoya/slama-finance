@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { uiLocale } from '../../../../lib/i18n'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
+import { DocumentPaymentSummary } from '../../components/document-payment-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { useEstimateInvoices } from '../../invoices/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
@@ -323,6 +324,7 @@ export function EstimateDetailPage() {
           ) : null}
         </div>
         <div className="grid content-start gap-section">
+          <DocumentPaymentSummary document={row} />
           <section className="grid gap-3 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
             <h2 className="text-lg font-bold">{translate('Details')}</h2>
             <p className="text-sm">

@@ -314,6 +314,8 @@ CREATE TABLE IF NOT EXISTS "estimates" (
 	"client_snapshot" jsonb NOT NULL,
 	"appearance_snapshot" jsonb NOT NULL,
 	"bank_details_snapshot" jsonb,
+	"bank_account_id" uuid,
+	"agreed_payment_method" text,
 	"notes" text,
 	"payment_terms" text,
 	"subtotal" numeric(18, 2) DEFAULT '0' NOT NULL,
@@ -336,6 +338,7 @@ CREATE TABLE IF NOT EXISTS "estimates" (
 	CONSTRAINT "estimates_revision_not_self" CHECK ("estimates"."revision_of_id" is null or "estimates"."revision_of_id" <> "estimates"."id"),
 	CONSTRAINT "estimates_status" CHECK ("estimates"."status" in ('draft','issued','sent','accepted','rejected','expired','cancelled','superseded')),
 	CONSTRAINT "estimates_currency" CHECK ("estimates"."currency" ~ '^[A-Z]{3}$'),
+	CONSTRAINT "estimates_agreed_payment_method" CHECK ("estimates"."agreed_payment_method" is null or "estimates"."agreed_payment_method" in ('cash','bank_transfer','cheque')),
 	CONSTRAINT "estimates_locale" CHECK ("estimates"."locale" in ('fr-MA','en-GB')),
 	CONSTRAINT "estimates_locale_override" CHECK ("estimates"."locale_override" is null or "estimates"."locale_override" in ('fr-MA','en-GB')),
 	CONSTRAINT "estimates_versions" CHECK ("estimates"."version" > 0 and "estimates"."content_version" > 0),
@@ -390,6 +393,8 @@ CREATE TABLE IF NOT EXISTS "invoices" (
 	"client_snapshot" jsonb NOT NULL,
 	"appearance_snapshot" jsonb NOT NULL,
 	"bank_details_snapshot" jsonb,
+	"bank_account_id" uuid,
+	"agreed_payment_method" text,
 	"notes" text,
 	"payment_terms" text,
 	"subtotal" numeric(18, 2) DEFAULT '0' NOT NULL,
@@ -409,6 +414,7 @@ CREATE TABLE IF NOT EXISTS "invoices" (
 	CONSTRAINT "invoices_conversion_operation_id_unique" UNIQUE("conversion_operation_id"),
 	CONSTRAINT "invoices_status" CHECK ("invoices"."status" in ('draft','issued','sent','cancelled')),
 	CONSTRAINT "invoices_currency" CHECK ("invoices"."currency" ~ '^[A-Z]{3}$'),
+	CONSTRAINT "invoices_agreed_payment_method" CHECK ("invoices"."agreed_payment_method" is null or "invoices"."agreed_payment_method" in ('cash','bank_transfer','cheque')),
 	CONSTRAINT "invoices_locale" CHECK ("invoices"."locale" in ('fr-MA','en-GB')),
 	CONSTRAINT "invoices_locale_override" CHECK ("invoices"."locale_override" is null or "invoices"."locale_override" in ('fr-MA','en-GB')),
 	CONSTRAINT "invoices_versions" CHECK ("invoices"."version" > 0 and "invoices"."content_version" > 0),
@@ -741,6 +747,7 @@ CREATE TABLE IF NOT EXISTS "company_settings" (
 	"timezone" text DEFAULT 'Africa/Casablanca' NOT NULL,
 	"payment_due_days" integer DEFAULT 15 NOT NULL,
 	"estimate_valid_days" integer DEFAULT 15 NOT NULL,
+	"default_bank_account_id" uuid,
 	"default_template_id" uuid,
 	"version" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -1393,4 +1400,22 @@ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION assert_product_has_a
 --> statement-breakpoint
 CREATE CONSTRAINT TRIGGER product_requires_variant_after_change AFTER INSERT OR UPDATE OR DELETE ON product_variants
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION assert_product_has_active_variant();
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "estimates" ADD CONSTRAINT "estimates_bank_account_id_bank_accounts_id_fk" FOREIGN KEY ("bank_account_id") REFERENCES "public"."bank_accounts"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "invoices" ADD CONSTRAINT "invoices_bank_account_id_bank_accounts_id_fk" FOREIGN KEY ("bank_account_id") REFERENCES "public"."bank_accounts"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "company_settings" ADD CONSTRAINT "company_settings_default_bank_account_id_bank_accounts_id_fk" FOREIGN KEY ("default_bank_account_id") REFERENCES "public"."bank_accounts"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
 --> statement-breakpoint

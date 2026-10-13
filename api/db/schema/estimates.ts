@@ -17,7 +17,7 @@ import {
 import { users } from './auth.js'
 import { products, productVariants } from './catalog.js'
 import { clients } from './clients.js'
-import { documentTemplates } from './settings.js'
+import { bankAccounts, documentTemplates } from './settings.js'
 
 export const estimates = pgTable(
   'estimates',
@@ -43,6 +43,12 @@ export const estimates = pgTable(
     clientSnapshot: jsonb('client_snapshot').notNull(),
     appearanceSnapshot: jsonb('appearance_snapshot').notNull(),
     bankDetailsSnapshot: jsonb('bank_details_snapshot'),
+    bankAccountId: uuid('bank_account_id').references(() => bankAccounts.id, {
+      onDelete: 'restrict',
+    }),
+    agreedPaymentMethod: text('agreed_payment_method', {
+      enum: ['cash', 'bank_transfer', 'cheque'],
+    }),
     notes: text('notes'),
     paymentTerms: text('payment_terms'),
     subtotal: numeric('subtotal', { precision: 18, scale: 2 }).notNull().default('0'),
@@ -79,6 +85,10 @@ export const estimates = pgTable(
       sql`${t.status} in ('draft','issued','sent','accepted','rejected','expired','cancelled','superseded')`,
     ),
     check('estimates_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
+    check(
+      'estimates_agreed_payment_method',
+      sql`${t.agreedPaymentMethod} is null or ${t.agreedPaymentMethod} in ('cash','bank_transfer','cheque')`,
+    ),
     check('estimates_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
     check(
       'estimates_locale_override',

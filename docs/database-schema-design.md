@@ -390,6 +390,7 @@ erDiagram
         int payment_due_days "default 15"
         int estimate_valid_days "default 15"
         uuid default_template_id FK "nullable"
+        uuid default_bank_account_id FK "nullable; active company default"
     }
     document_templates {
         uuid id PK
@@ -543,6 +544,8 @@ erDiagram
         jsonb client_snapshot
         jsonb appearance_snapshot
         jsonb bank_details_snapshot "nullable"
+        uuid bank_account_id FK "nullable; selected company bank"
+        text agreed_payment_method "nullable; cash / bank_transfer / cheque; not an actual payment"
         text notes "nullable"
         text payment_terms "nullable"
         numeric subtotal
@@ -586,6 +589,8 @@ erDiagram
         jsonb client_snapshot
         jsonb appearance_snapshot
         jsonb bank_details_snapshot "nullable"
+        uuid bank_account_id FK "nullable; selected company bank"
+        text agreed_payment_method "nullable; cash / bank_transfer / cheque; not an actual payment"
         text notes "nullable"
         text payment_terms "nullable"
         numeric subtotal

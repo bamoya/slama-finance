@@ -20,6 +20,7 @@ import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { companyDate } from '../../../../lib/validation.js'
 import { paymentBalancesForInvoices } from '../../payments/repositories/payment.repository.js'
+import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
 
 export type InvoiceRow = typeof invoices.$inferSelect
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect
@@ -30,6 +31,7 @@ const clientNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', 
 
 export function createInvoiceRepository(database: () => Database) {
   return {
+    bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async authorize(tx: Transaction, actor: string, permission: string) {
       await tx.execute(sql`select pg_advisory_xact_lock(73619001)`)

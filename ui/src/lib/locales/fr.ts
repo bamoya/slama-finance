@@ -1,5 +1,10 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Agreed payment method': 'Mode de règlement prévu',
+  'Not specified': 'Non précisé',
+  'Default bank account': 'Compte bancaire par défaut',
+  'Hide bank details': 'Masquer les coordonnées bancaires',
+  'Selected bank account': 'Compte bancaire sélectionné',
   'Document notifications': 'Notifications des documents',
   'Due-date & expiry reminders': 'Rappels d’échéance et d’expiration',
   'Configure company email defaults. Initially disabled; each client can inherit, enable or disable notifications independently.':

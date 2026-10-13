@@ -86,6 +86,9 @@ export const companySettings = pgTable(
     timezone: text('timezone').notNull().default('Africa/Casablanca'),
     paymentDueDays: integer('payment_due_days').notNull().default(15),
     estimateValidDays: integer('estimate_valid_days').notNull().default(15),
+    defaultBankAccountId: uuid('default_bank_account_id').references(() => bankAccounts.id, {
+      onDelete: 'restrict',
+    }),
     defaultTemplateId: uuid('default_template_id').references(() => documentTemplates.id, {
       onDelete: 'restrict',
     }),

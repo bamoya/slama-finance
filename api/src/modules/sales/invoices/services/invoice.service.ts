@@ -69,6 +69,9 @@ export function createInvoiceService(
       throw new AppError(400, 'INVALID_DATE', 'Due date must not precede the issue date.')
     const client = await repo.client(input.clientId, tx)
     const company = await repo.company(tx)
+    const bankAccountId =
+      input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
+    const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
     const template = await repo.template(input.templateId, tx)
     let subtotal = new FinancialDecimal(0)
     let taxTotal = new FinancialDecimal(0)
@@ -151,12 +154,14 @@ export function createInvoiceService(
           accentColor: template?.accentColor ?? '#ad7d1d',
           logoAssetId: template?.logoAssetId ?? company.logoAssetId,
           signatureAssetId: template?.signatureAssetId ?? null,
-          showBankDetails: template?.showBankDetails ?? false,
+          showBankDetails: template?.showBankDetails ?? true,
           showSignature: template?.showSignature ?? false,
           showPaymentTerms: template?.showPaymentTerms ?? true,
           footerText: template?.footerText ?? null,
         },
-        bankDetailsSnapshot: null,
+        bankDetailsSnapshot,
+        bankAccountId,
+        agreedPaymentMethod: input.agreedPaymentMethod ?? null,
         notes: input.notes?.trim() || null,
         paymentTerms: input.paymentTerms?.trim() || null,
         subtotal: money(subtotal),
@@ -236,6 +241,8 @@ export function createInvoiceService(
             dueDate: input.dueDate,
             notes: input.notes,
             paymentTerms: input.paymentTerms,
+            bankAccountId: input.bankAccountId,
+            agreedPaymentMethod: input.agreedPaymentMethod,
             lines: input.lines.map((line) => ({
               productVariantId: null,
               productName: sources.get(line.deliveryNoteLineId)!.line.productName,
@@ -368,7 +375,7 @@ export function createInvoiceService(
         for (let attempt = 0; attempt < 5; attempt++) {
           const number = `FAC-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
           try {
-            row = await tx.transaction((savepoint) =>
+            row = await tx.transaction(async (savepoint) =>
               repo.update(
                 id,
                 {
@@ -382,6 +389,7 @@ export function createInvoiceService(
                   issuedAt: new Date(),
                   updatedByUserId: actor,
                   clientSnapshot: currentClientSnapshot,
+                  bankDetailsSnapshot: await repo.bankSnapshot(savepoint, before.bankAccountId),
                 },
                 savepoint,
                 true,
@@ -520,6 +528,8 @@ export function createInvoiceService(
             clientSnapshot: clientSnapshot(await repo.client(estimate.clientId, tx)),
             appearanceSnapshot: estimate.appearanceSnapshot,
             bankDetailsSnapshot: estimate.bankDetailsSnapshot,
+            bankAccountId: estimate.bankAccountId,
+            agreedPaymentMethod: estimate.agreedPaymentMethod,
             notes: estimate.notes,
             paymentTerms: estimate.paymentTerms,
             subtotal: estimate.subtotal,

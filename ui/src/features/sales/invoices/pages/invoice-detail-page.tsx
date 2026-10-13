@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { uiLocale } from '../../../../lib/i18n'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
+import { DocumentPaymentSummary } from '../../components/document-payment-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { useDeliveryActions } from '../../delivery-notes/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
@@ -265,6 +266,7 @@ export function InvoiceDetailPage() {
         </div>
         <div className="grid content-start gap-section">
           <InvoiceBalance invoice={row} />
+          <DocumentPaymentSummary document={row} />
           <InvoiceRelationships invoice={row} clientName={row.clientDisplayName} />
         </div>
       </div>

@@ -45,15 +45,35 @@ export async function renderSalesPdf(
         ['Total', `${row.total} ${row.currency}`],
       ],
       sections: [
+        ...(row.agreedPaymentMethod
+          ? [
+              {
+                title: 'Agreed payment method',
+                text:
+                  row.locale === 'fr-MA'
+                    ? { cash: 'Espèces', bank_transfer: 'Virement bancaire', cheque: 'Chèque' }[
+                        row.agreedPaymentMethod
+                      ]
+                    : { cash: 'Cash', bank_transfer: 'Bank transfer', cheque: 'Cheque' }[
+                        row.agreedPaymentMethod
+                      ],
+              },
+            ]
+          : []),
         ...(appearance.showPaymentTerms !== false && row.paymentTerms
           ? [{ title: 'Payment terms', text: row.paymentTerms }]
           : []),
         ...(row.notes ? [{ title: 'Notes', text: row.notes }] : []),
-        ...(appearance.showBankDetails === true
+        ...(appearance.showBankDetails === true && Object.keys(bank).length > 0
           ? [
               {
                 title: 'Bank details',
-                text: [bank.bankName, bank.accountHolder, bank.rib, bank.iban]
+                text: [
+                  bank.bankName,
+                  bank.accountHolder,
+                  bank.rib ? `RIB : ${text(bank.rib)}` : '',
+                  bank.iban ? `IBAN : ${text(bank.iban)}` : '',
+                ]
                   .map(text)
                   .filter(Boolean)
                   .join(' · '),

@@ -2642,6 +2642,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agreed_payment_method": {
+          "name": "agreed_payment_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "notes": {
           "name": "notes",
           "type": "text",
@@ -2851,6 +2863,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
+        "estimates_bank_account_id_bank_accounts_id_fk": {
+          "name": "estimates_bank_account_id_bank_accounts_id_fk",
+          "tableFrom": "estimates",
+          "tableTo": "bank_accounts",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
         "estimates_created_by_user_id_users_id_fk": {
           "name": "estimates_created_by_user_id_users_id_fk",
           "tableFrom": "estimates",
@@ -2901,6 +2926,10 @@
         "estimates_currency": {
           "name": "estimates_currency",
           "value": "\"estimates\".\"currency\" ~ '^[A-Z]{3}$'"
+        },
+        "estimates_agreed_payment_method": {
+          "name": "estimates_agreed_payment_method",
+          "value": "\"estimates\".\"agreed_payment_method\" is null or \"estimates\".\"agreed_payment_method\" in ('cash','bank_transfer','cheque')"
         },
         "estimates_locale": {
           "name": "estimates_locale",
@@ -3295,6 +3324,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "bank_account_id": {
+          "name": "bank_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "agreed_payment_method": {
+          "name": "agreed_payment_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "notes": {
           "name": "notes",
           "type": "text",
@@ -3471,6 +3512,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
+        "invoices_bank_account_id_bank_accounts_id_fk": {
+          "name": "invoices_bank_account_id_bank_accounts_id_fk",
+          "tableFrom": "invoices",
+          "tableTo": "bank_accounts",
+          "columnsFrom": [
+            "bank_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
         "invoices_created_by_user_id_users_id_fk": {
           "name": "invoices_created_by_user_id_users_id_fk",
           "tableFrom": "invoices",
@@ -3524,6 +3578,10 @@
         "invoices_currency": {
           "name": "invoices_currency",
           "value": "\"invoices\".\"currency\" ~ '^[A-Z]{3}$'"
+        },
+        "invoices_agreed_payment_method": {
+          "name": "invoices_agreed_payment_method",
+          "value": "\"invoices\".\"agreed_payment_method\" is null or \"invoices\".\"agreed_payment_method\" in ('cash','bank_transfer','cheque')"
         },
         "invoices_locale": {
           "name": "invoices_locale",
@@ -6124,6 +6182,12 @@
           "notNull": true,
           "default": 15
         },
+        "default_bank_account_id": {
+          "name": "default_bank_account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "default_template_id": {
           "name": "default_template_id",
           "type": "uuid",
@@ -6172,6 +6236,19 @@
           "tableTo": "media_assets",
           "columnsFrom": [
             "logo_asset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "company_settings_default_bank_account_id_bank_accounts_id_fk": {
+          "name": "company_settings_default_bank_account_id_bank_accounts_id_fk",
+          "tableFrom": "company_settings",
+          "tableTo": "bank_accounts",
+          "columnsFrom": [
+            "default_bank_account_id"
           ],
           "columnsTo": [
             "id"

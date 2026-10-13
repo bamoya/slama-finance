@@ -94,6 +94,7 @@ export function createSettingsService(
         if (data.logoAssetId !== before.logoAssetId)
           await media.assertAttach(tx, data.logoAssetId, 'company_logo', actor)
         if (data.defaultTemplateId) active(await repo.template(data.defaultTemplateId, tx))
+        if (data.defaultBankAccountId) active(await repo.bank(data.defaultBankAccountId, tx))
         const after = await repo.updateCompany(data, actor, tx)
         await media.release(tx, [before.logoAssetId])
         await repo.audit(tx, actor, 'company_settings', 1, 'update', before, after)
@@ -130,6 +131,12 @@ export function createSettingsService(
         const before = await repo.bank(id, tx)
         active(before)
         assertVersion(before.version, expectedVersion)
+        if ((await repo.company(tx)).defaultBankAccountId === id)
+          throw new AppError(
+            409,
+            'RECORD_IN_USE',
+            'Change the default bank account before archiving it.',
+          )
         const after = await repo.updateBank(id, { archivedAt: new Date() }, actor, tx)
         await repo.audit(tx, actor, 'bank_accounts', id, 'archive', before, after)
         return bankDto(after)

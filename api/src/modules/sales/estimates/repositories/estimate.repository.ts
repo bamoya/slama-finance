@@ -12,6 +12,7 @@ import {
 import type { ListEstimatesQuery } from '../../../../contracts/generated/sales/estimates.schemas.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
 
 export type EstimateRow = typeof estimates.$inferSelect
 export type EstimateLineRow = typeof estimateLines.$inferSelect
@@ -20,6 +21,7 @@ const clientNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', 
 
 export function createEstimateRepository(database: () => Database) {
   return {
+    bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async authorize(tx: Transaction, actor: string, permission: string) {
       await tx.execute(sql`select pg_advisory_xact_lock(73619001)`)

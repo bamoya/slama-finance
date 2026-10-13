@@ -100,7 +100,11 @@ describe('canonical document preview', () => {
           'many',
         )
         expect(result.pageCount).toBeGreaterThan(1)
-        expect(result.html.match(/>Nom du produit<\/text>/g)).toHaveLength(result.pageCount)
+        const pages = result.html.match(/<svg\b[\s\S]*?<\/svg>/g) ?? []
+        expect(pages).toHaveLength(result.pageCount)
+        // Bank/payment sections can occupy a final page without product rows.
+        for (const page of pages.filter((page) => /Item \d+</.test(page)))
+          expect(page.match(/>Nom du produit<\/text>/g)).toHaveLength(1)
         for (let index = 1; index <= 45; index++) expect(result.html).toContain(`Item ${index}<`)
         expect(result.html).toContain('4500.00 MAD')
       })

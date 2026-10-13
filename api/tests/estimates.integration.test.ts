@@ -92,6 +92,113 @@ describe('Estimates lifecycle', () => {
       },
     ],
   })
+  it('defaults bank details, freezes them on issue and copies the agreement into invoice drafts', async () => {
+    const [bank] =
+      await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Main','Credit Agricole','Slama','225091032701984651012213') returning id`
+    const company = (await app.inject({ url: '/v1/company-settings', cookies })).json()
+    const configured = await app.inject({
+      method: 'PATCH',
+      url: '/v1/company-settings',
+      headers,
+      cookies,
+      payload: {
+        ...Object.fromEntries(
+          Object.entries(company).filter(
+            ([key]) =>
+              ![
+                'id',
+                'version',
+                'createdAt',
+                'updatedAt',
+                'createdByUserId',
+                'updatedByUserId',
+              ].includes(key),
+          ),
+        ),
+        defaultBankAccountId: bank!.id,
+        expectedVersion: company.version,
+      },
+    })
+    expect(configured.statusCode, configured.body).toBe(200)
+    const draftResponse = await post('/v1/estimates', {
+      ...revisionInput(),
+      agreedPaymentMethod: 'bank_transfer',
+    })
+    expect(draftResponse.statusCode, draftResponse.body).toBe(201)
+    const draft = draftResponse.json()
+    expect(draft.bankAccountId).toBe(bank!.id)
+    expect(draft.bankDetailsSnapshot.bankName).toBe('Credit Agricole')
+    await fixture.client`update bank_accounts set bank_name='Updated before issue' where id=${bank!.id}`
+    const issuedResponse = await post(`/v1/estimates/${draft.id}/issue`, {
+      expectedVersion: draft.version,
+    })
+    expect(issuedResponse.statusCode, issuedResponse.body).toBe(200)
+    const issued = issuedResponse.json()
+    expect(issued.bankDetailsSnapshot.bankName).toBe('Updated before issue')
+    await fixture.client`update bank_accounts set bank_name='Changed after issue' where id=${bank!.id}`
+    expect(
+      (await app.inject({ url: `/v1/estimates/${draft.id}`, cookies })).json().bankDetailsSnapshot,
+    ).toEqual(issued.bankDetailsSnapshot)
+    expect(
+      (await post(`/v1/estimates/${draft.id}/accept`, { expectedVersion: issued.version }))
+        .statusCode,
+    ).toBe(200)
+    const conversion = await post(`/v1/estimates/${draft.id}/invoices`, {
+      operationId: randomUUID(),
+      dueDate: null,
+    })
+    expect(conversion.statusCode, conversion.body).toBe(201)
+    expect(conversion.json()).toMatchObject({
+      bankAccountId: bank!.id,
+      agreedPaymentMethod: 'bank_transfer',
+      bankDetailsSnapshot: issued.bankDetailsSnapshot,
+    })
+    const invoice = conversion.json()
+    const finalized = await post(`/v1/invoices/${invoice.id}/issue`, {
+      expectedVersion: invoice.version,
+    })
+    expect(finalized.statusCode, finalized.body).toBe(200)
+    expect(finalized.json().bankDetailsSnapshot.bankName).toBe('Changed after issue')
+    await fixture.client`update bank_accounts set bank_name='Later change' where id=${bank!.id}`
+    expect(
+      (await app.inject({ url: `/v1/invoices/${invoice.id}`, cookies })).json().bankDetailsSnapshot
+        .bankName,
+    ).toBe('Changed after issue')
+    expect((await fixture.client`select count(*) from payments`)[0]!.count).toBe('0')
+  })
+  it('supports an explicit alternative bank, hiding details and rejects archived banks', async () => {
+    const [bank] =
+      await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Other','Other Bank','Slama','225091032701984651012213') returning id`
+    await fixture.client`update company_settings set default_bank_account_id=${bank!.id} where id=1`
+    for (const path of ['/v1/estimates', '/v1/invoices']) {
+      const fields = path.endsWith('invoices')
+        ? { ...revisionInput(), validUntil: undefined, dueDate: null }
+        : revisionInput()
+      const hidden = await post(path, { ...fields, bankAccountId: null, agreedPaymentMethod: null })
+      expect(hidden.statusCode, hidden.body).toBe(201)
+      expect(hidden.json()).toMatchObject({
+        bankAccountId: null,
+        bankDetailsSnapshot: null,
+        agreedPaymentMethod: null,
+      })
+      expect((await post(path, { ...fields, bankAccountId: randomUUID() })).statusCode).toBe(400)
+      expect(
+        (
+          await post(path, { ...fields, bankAccountId: bank!.id, agreedPaymentMethod: 'cheque' })
+        ).json().bankAccountId,
+      ).toBe(bank!.id)
+    }
+    expect(
+      (await post(`/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
+    ).toBe(409)
+    await fixture.client`update company_settings set default_bank_account_id=null where id=1`
+    expect(
+      (await post(`/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
+    ).toBe(200)
+    expect(
+      (await post('/v1/estimates', { ...revisionInput(), bankAccountId: bank!.id })).statusCode,
+    ).toBe(400)
+  })
   it('resolves draft company defaults at issue time and freezes the chosen document language', async () => {
     const draft = (await post('/v1/estimates', revisionInput())).json()
     expect(draft.locale).toBe('fr-MA')

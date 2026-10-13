@@ -24,6 +24,7 @@ import { type SettingsField, SettingsForm } from '../../shared/components/settin
 import {
   getGetCompanySettingsQueryOptions,
   refreshSettings,
+  useBankAccounts,
   useCompanySettings,
   useDocumentTemplates,
   useSettingsActions,
@@ -76,6 +77,7 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
   const [, navigate] = useLocation()
   const [snapshot, setSnapshot] = useState(record)
   const templates = useDocumentTemplates(hasAccess('templates.read'))
+  const banks = useBankAccounts(hasAccess('bank_accounts.read'))
   const cache = useQueryClient()
   const templateOptions = (templates.data ?? [])
     .filter((item) => !item.archivedAt)
@@ -126,6 +128,19 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
     },
     { name: 'paymentDueDays', label: translate('Invoice payment due (days)'), type: 'number' },
     { name: 'estimateValidDays', label: translate('Estimate validity (days)'), type: 'number' },
+    {
+      name: 'defaultBankAccountId',
+      label: translate('Default bank account'),
+      type: 'combobox',
+      nullable: true,
+      options: (banks.data ?? [])
+        .filter((bank) => !bank.archivedAt)
+        .map((bank) => ({ value: bank.id, label: bank.name })),
+      disabled: !hasAccess('bank_accounts.read'),
+      loading: banks.isPending,
+      error: banks.isError,
+      onRetry: () => void banks.refetch(),
+    },
     {
       name: 'defaultTemplateId',
       label: translate('Default document template'),

@@ -245,6 +245,8 @@ components:
         dueDate: { type: string, format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {
             type: array,
@@ -285,6 +287,8 @@ components:
         dueDate: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {
             type: array,
@@ -305,6 +309,8 @@ components:
         dueDate: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
+        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {
             type: array,
@@ -376,6 +382,15 @@ components:
         locale: { type: string }
         notes: { type: [string, 'null'] }
         paymentTerms: { type: [string, 'null'] }
+        bankAccountId: { type: [string, 'null'], format: uuid }
+        agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
+        bankDetailsSnapshot:
+          type: [object, 'null']
+          properties:
+            bankName: { type: string }
+            accountHolder: { type: string }
+            rib: { type: [string, 'null'] }
+            iban: { type: [string, 'null'] }
         subtotal: { type: string }
         taxTotal: { type: string }
         total: { type: string }

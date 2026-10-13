@@ -21,6 +21,10 @@ import { Input } from '../../../../components/ui/input'
 import { validationMessage } from '../../../../lib/error-messages'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { ClientPicker } from '../../components/client-picker'
+import {
+  AgreedPaymentMethodSelect,
+  DocumentBankPicker,
+} from '../../components/document-payment-fields'
 import { TemplatePicker } from '../../components/template-picker'
 import { EstimateLinesEditor } from '../../estimates/components/estimate-lines-editor'
 import { refreshInvoices, useInvoice, useInvoiceActions } from '../queries'
@@ -43,6 +47,8 @@ const fromInvoice = (invoice: Invoice): InvoiceInput => ({
   dueDate: invoice.dueDate,
   notes: invoice.notes,
   paymentTerms: invoice.paymentTerms,
+  bankAccountId: invoice.bankAccountId ?? null,
+  agreedPaymentMethod: invoice.agreedPaymentMethod ?? null,
   lines: invoice.lines.map((line) => ({
     productVariantId: line.productVariantId,
     productName: line.productName,
@@ -222,6 +228,19 @@ function InvoiceEditor({ invoice }: { invoice: Invoice | null }) {
                     {translate('PDF template')}
                     <TemplatePicker value={field.state.value} onValueChange={field.handleChange} />
                   </label>
+                )}
+              </form.Field>
+              <form.Field name="agreedPaymentMethod">
+                {(field) => (
+                  <AgreedPaymentMethodSelect
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
+              </form.Field>
+              <form.Field name="bankAccountId">
+                {(field) => (
+                  <DocumentBankPicker value={field.state.value} onChange={field.handleChange} />
                 )}
               </form.Field>
               <form.Field name="paymentTerms">
