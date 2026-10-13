@@ -422,13 +422,23 @@ describe('notification policies, preferences and sends', () => {
       secondId,
     ])
   })
-  it('blocks a manual send when the current policy is disabled', async () => {
+  it('requires confirmation before manually sending despite disabled company preferences', async () => {
     setup(<SendDocumentDialog documentType="invoice" id={id} clientId={id} version={7} />)
     fireEvent.click(screen.getByRole('button', { name: 'Send email' }))
     const dialog = await screen.findByRole('dialog')
-    await within(dialog).findByText('Company default disabled')
+    const confirmation = await within(dialog).findByRole('checkbox', {
+      name: 'Send this email anyway',
+    })
     expect(within(dialog).getByRole('button', { name: 'Send email' })).toBeDisabled()
     expect(state.sendInvoice).not.toHaveBeenCalled()
+    fireEvent.click(confirmation)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Send email' }))
+    await waitFor(() =>
+      expect(state.sendInvoice).toHaveBeenCalledWith(
+        id,
+        expect.objectContaining({ expectedVersion: 7, overridePreferences: true }),
+      ),
+    )
   })
   it('retains the exact request identity and version across an ambiguous network retry', async () => {
     state.listClientNotificationPreferences.mockResolvedValue({
