@@ -162,6 +162,7 @@ export const notificationDispatches = pgTable(
     eventKey: text('event_key').notNull(),
     occurrenceKey: text('occurrence_key').notNull(),
     logicalOccurrenceKey: text('logical_occurrence_key').notNull(),
+    isManual: boolean('is_manual').notNull().default(false),
     messageId: uuid('message_id')
       .notNull()
       .unique()

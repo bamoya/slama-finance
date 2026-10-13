@@ -92,6 +92,61 @@ describe('Estimates lifecycle', () => {
       },
     ],
   })
+  it('resolves company template/date defaults and preserves explicit choices and issued snapshots', async () => {
+    const [template] =
+      await fixture.client`insert into document_templates(name,layout,accent_color,footer_text) values('Company default','atelier','#176c51','Company footer') returning id`
+    const [other] =
+      await fixture.client`insert into document_templates(name,layout) values('Explicit','essential') returning id`
+    await fixture.client`update company_settings set default_template_id=${template!.id}, estimate_valid_days=23, payment_due_days=7 where id=1`
+    for (const type of ['estimate', 'invoice'] as const) {
+      await fixture.client`update document_templates set footer_text='Company footer' where id=${template!.id}`
+      const path = `/v1/${type}s`
+      const dateField = type === 'estimate' ? 'validUntil' : 'dueDate'
+      const fields =
+        type === 'estimate'
+          ? { ...revisionInput(), validUntil: null }
+          : { ...revisionInput(), validUntil: undefined, dueDate: null }
+      const created = await post(path, fields)
+      expect(created.statusCode, created.body).toBe(201)
+      const draft = created.json()
+      expect(draft.templateId).toBe(template!.id)
+      expect(draft[dateField]).toBe(type === 'estimate' ? '2026-10-25' : '2026-10-09')
+      const [row] = await fixture.client.unsafe(
+        `select appearance_snapshot from ${type}s where id=$1`,
+        [draft.id],
+      )
+      expect(row!.appearance_snapshot).toMatchObject({
+        layout: 'atelier',
+        accentColor: '#176c51',
+        footerText: 'Company footer',
+      })
+      const explicit = await post(path, {
+        ...fields,
+        templateId: other!.id,
+        [dateField]: '2026-12-31',
+      })
+      expect(explicit.json()).toMatchObject({ templateId: other!.id, [dateField]: '2026-12-31' })
+      // Older drafts with missing values resolve defaults on issue without a backfill.
+      await fixture.client.unsafe(
+        `update ${type}s set template_id=null,${type === 'estimate' ? 'valid_until' : 'due_date'}=null where id=$1`,
+        [draft.id],
+      )
+      const issued = await post(`${path}/${draft.id}/issue`, { expectedVersion: draft.version })
+      expect(issued.statusCode, issued.body).toBe(200)
+      expect(issued.json()).toMatchObject({
+        templateId: template!.id,
+        [dateField]: draft[dateField],
+      })
+      await fixture.client`update document_templates set footer_text='Later change' where id=${template!.id}`
+      const [frozen] = await fixture.client.unsafe(
+        `select appearance_snapshot from ${type}s where id=$1`,
+        [draft.id],
+      )
+      expect(frozen!.appearance_snapshot.footerText).toBe('Company footer')
+    }
+    const invalid = await post('/v1/estimates', { ...revisionInput(), validUntil: '2026-10-01' })
+    expect(invalid.statusCode).toBe(400)
+  })
   it('defaults bank details, freezes them on issue and copies the agreement into invoice drafts', async () => {
     const [bank] =
       await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Main','Credit Agricole','Slama','225091032701984651012213') returning id`

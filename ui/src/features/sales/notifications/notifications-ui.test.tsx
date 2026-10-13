@@ -102,6 +102,32 @@ beforeEach(() => {
   state.retryNotificationPreparation.mockResolvedValue(undefined)
 })
 describe('document notification actions', () => {
+  it('requires confirmation when automatic preferences disable an email', async () => {
+    state.listClientNotificationPreferences.mockResolvedValue({
+      items: [
+        {
+          ruleId: id,
+          eventKey: 'invoice_sent',
+          effectiveEnabled: false,
+          reason: 'RULE_DISABLED',
+          recipient: 'client@example.test',
+          cc: [],
+        },
+      ],
+    })
+    setup()
+    fireEvent.click(screen.getByRole('button', { name: 'Send email' }))
+    const dialog = within(screen.getByRole('dialog'))
+    const confirmation = await dialog.findByRole('checkbox', { name: 'Send this email anyway' })
+    expect(dialog.getByRole('button', { name: 'Send email' })).toBeDisabled()
+    fireEvent.click(confirmation)
+    fireEvent.click(dialog.getByRole('button', { name: 'Send email' }))
+    await dialog.findByRole('button', { name: 'Start a new send' })
+    expect(state.sendInvoice).toHaveBeenCalledWith(
+      id,
+      expect.objectContaining({ overridePreferences: true }),
+    )
+  })
   it('uses the delivery rule and generated BL send endpoint', async () => {
     state.listClientNotificationPreferences.mockResolvedValue({
       items: [

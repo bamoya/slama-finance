@@ -860,6 +860,7 @@ erDiagram
         uuid source_id "application-validated business owner; not FK"
         text event_key "allowlisted business notification event"
         text occurrence_key "stable occurrence and recipient identity"
+        boolean is_manual "default false; manual sends ignore automatic preference toggles"
         uuid message_id FK, UK
     }
     outbound_messages ||--o{ outbound_message_attachments : attaches

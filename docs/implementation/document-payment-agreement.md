@@ -14,6 +14,12 @@ be permanently deleted. The bank selector uses `bank_accounts.read`.
 
 ## Drafts and finalization
 
+A null `templateId` resolves the company's default template when saving a draft.
+An explicit template wins. Null estimate expiry/invoice due dates resolve to the
+issue date plus `estimateValidDays`/`paymentDueDays` respectively (calendar days).
+Explicit dates are preserved and must not precede the issue date. Older drafts
+with missing values resolve these defaults at issuance; issued documents remain frozen.
+
 Invoice/estimate create and update contracts accept:
 
 - `bankAccountId`: omitted selects the company default; explicit null hides bank details;

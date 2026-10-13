@@ -17,6 +17,7 @@ import { assertVersion, companyDate, FinancialDecimal } from '../../../../lib/va
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
 import { clientSnapshot } from '../../shared/services/client-snapshot.js'
+import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
 import type { createInvoiceRepository, InvoiceRow } from '../repositories/invoice.repository.js'
 
 type Repository = ReturnType<typeof createInvoiceRepository>
@@ -72,7 +73,7 @@ export function createInvoiceService(
     const bankAccountId =
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
     const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
-    const template = await repo.template(input.templateId, tx)
+    const template = await repo.template(input.templateId ?? company.defaultTemplateId, tx)
     let subtotal = new FinancialDecimal(0)
     let taxTotal = new FinancialDecimal(0)
     const lines = []
@@ -106,7 +107,7 @@ export function createInvoiceService(
         clientId: client.id,
         templateId: template?.id ?? null,
         issueDate: input.issueDate,
-        dueDate: input.dueDate,
+        dueDate: input.dueDate ?? documentDefaultDate(input.issueDate, company.paymentDueDays),
         currency: company.currency,
         locale: resolveLocale(input.localeOverride, company.locale),
         localeOverride: input.localeOverride ?? null,
@@ -148,17 +149,7 @@ export function createInvoiceService(
           email: client.email,
           phone: client.phone,
         },
-        appearanceSnapshot: {
-          layout: template?.layout ?? 'classic',
-          density: template?.density ?? 'standard',
-          accentColor: template?.accentColor ?? '#ad7d1d',
-          logoAssetId: template?.logoAssetId ?? company.logoAssetId,
-          signatureAssetId: template?.signatureAssetId ?? null,
-          showBankDetails: template?.showBankDetails ?? true,
-          showSignature: template?.showSignature ?? false,
-          showPaymentTerms: template?.showPaymentTerms ?? true,
-          footerText: template?.footerText ?? null,
-        },
+        appearanceSnapshot: documentAppearance(template, company),
         bankDetailsSnapshot,
         bankAccountId,
         agreedPaymentMethod: input.agreedPaymentMethod ?? null,
@@ -361,7 +352,13 @@ export function createInvoiceService(
         assertVersion(before.version, expectedVersion)
         if (before.status !== 'draft')
           throw new AppError(409, 'INVALID_STATUS', 'Invoice is already issued.')
-        if (!before.dueDate || before.dueDate < before.issueDate)
+        const company = await repo.company(tx)
+        const finalDate =
+          before.dueDate ?? documentDefaultDate(before.issueDate, company.paymentDueDays)
+        const defaultTemplate = !before.templateId
+          ? await repo.template(company.defaultTemplateId, tx)
+          : null
+        if (finalDate < before.issueDate)
           throw new AppError(400, 'INVALID_DATE', 'A due date is required before issuing.')
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_INVOICE', 'Add at least one product before issuing.')
@@ -380,6 +377,13 @@ export function createInvoiceService(
                 id,
                 {
                   status: 'issued',
+                  dueDate: finalDate,
+                  ...(!before.templateId && defaultTemplate
+                    ? {
+                        templateId: defaultTemplate.id,
+                        appearanceSnapshot: documentAppearance(defaultTemplate, company),
+                      }
+                    : {}),
                   locale: issuedLocale,
                   issuerSnapshot: {
                     ...(before.issuerSnapshot as Record<string, unknown>),

@@ -25,12 +25,12 @@ export function createClientNotificationService(
   policies: NotificationPolicyPublicApi,
   onChange?: (tx: Transaction, clientId: string) => Promise<void>,
 ) {
-  async function effective(id: string, rule: NotificationRule, tx?: Transaction) {
+  async function effective(id: string, rule: NotificationRule, tx?: Transaction, manual = false) {
     const client = await repo.client(id, tx)
     const override = await repo.preference(id, rule.id, tx)
     const reason = clientNotificationEligibility(
-      rule.enabled,
-      override?.enabled ?? null,
+      manual ? true : rule.enabled,
+      manual ? true : (override?.enabled ?? null),
       client.email,
       !!client.archivedAt,
     )

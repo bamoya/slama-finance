@@ -14,5 +14,6 @@ export interface ClientNotificationsPublicApi {
     clientId: string,
     rule: NotificationRule,
     tx?: Transaction,
+    manual?: boolean,
   ): Promise<EffectiveClientNotification>
 }

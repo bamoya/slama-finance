@@ -72,6 +72,22 @@ permissions gate controls; no notification business state copied into global con
 
 ## HTML email customization — implemented 2026-10-04
 
+### Manual sending versus automatic preferences
+
+Automatic notifications and reminders continue to use client overrides, falling back
+to company defaults. An explicit client enable works even when the company default is off.
+Manual invoice, estimate and BL sends are independent of those automatic preferences.
+If effective preferences disable sending, the UI shows a compact banner and requires
+the operator to confirm “Send this email anyway”. The API requires
+`overridePreferences: true` for that one request and audits the confirmation.
+Neither company nor client settings are modified.
+
+Manual intent persists in preparation payloads and `notification_dispatches.is_manual`.
+Preference disabling does not cancel a manual message or block its retry. Current
+document state, permissions, active client, valid recipient/CC and printable content
+are still checked, so confirmation does not bypass security or recipient changes.
+The pre-production baseline defines the flag directly; no additional migration is added.
+
 `0001_required_defaults.sql` inserts six bilingual Slama HTML email rules, including
 the BL rule. French examples live in `docs/notification-email-examples`.
 Rules inherit company language and start disabled. Required-default inserts are

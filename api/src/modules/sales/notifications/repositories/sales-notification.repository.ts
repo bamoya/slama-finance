@@ -162,8 +162,9 @@ export function createSalesNotificationRepository(database: () => Database) {
         recipient: string
         cc: string[]
         actor: string | null
+        is_manual: boolean
       }>(sql`
-        select d.id,d.message_id,d.source_type,d.source_id,d.event_key,m.to_address as recipient,m.cc,d.created_by_user_id as actor
+        select d.id,d.message_id,d.source_type,d.source_id,d.event_key,d.is_manual,m.to_address as recipient,m.cc,d.created_by_user_id as actor
         from notification_dispatches d join outbound_messages m on m.id=d.message_id
         left join invoices i on d.source_type='invoice' and i.id=d.source_id
         left join estimates e on d.source_type='estimate' and e.id=d.source_id

@@ -327,6 +327,15 @@ describe('consent-aware sales notifications', () => {
     expect(history.json().items).toHaveLength(2)
     await rule('delivery_prepared', false)
     expect((await post(url, { ...input, requestId: randomUUID() })).statusCode).toBe(409)
+    const override = await post(url, {
+      ...input,
+      requestId: randomUUID(),
+      overridePreferences: true,
+    })
+    expect(override.statusCode, override.body).toBe(202)
+    expect(await w.producer.worker.runOne()).toBe(true)
+    expect(await w.transport.worker.runOne()).toBe(true)
+    expect(w.provider.messages).toHaveLength(2)
   })
   it('sends reminders for client opt-ins even when company defaults are off', async () => {
     const r = await rule('invoice_due_reminder', false)
@@ -464,7 +473,7 @@ describe('consent-aware sales notifications', () => {
         .sort(),
     ).toEqual(['dispatch', 'preparation'])
   })
-  it('disabled policy cancels ready work transactionally and owner substitution is denied', async () => {
+  it('manual work survives disabled automatic preferences and owner substitution is denied', async () => {
     await rule('invoice_sent')
     const doc = await document('invoice')
     const request = await post(`/v1/invoices/${doc.id}/send`, {
@@ -481,10 +490,61 @@ describe('consent-aware sales notifications', () => {
     const bad = await post(`/v1/documents/invoice/${other.id}/notifications/${d!.id}/cancel`, {})
     expect(bad.statusCode, bad.body).toBe(404)
     await rule('invoice_sent', false)
-    expect(await w.transport.status(d!.message_id)).toMatchObject({ status: 'cancelled' })
-    expect(await w.transport.worker.runOne()).toBe(false)
-    expect(w.provider.messages).toHaveLength(0)
+    expect(await w.transport.status(d!.message_id)).toMatchObject({ status: 'queued' })
+    expect(await w.transport.worker.runOne()).toBe(true)
+    expect(w.provider.messages).toHaveLength(1)
   })
+  it.each([
+    ['invoice', false],
+    ['invoice', true],
+    ['estimate', false],
+    ['estimate', true],
+  ] as const)(
+    'requires explicit confirmation to manually send %s with disabled preferences (client override: %s)',
+    async (type, customized) => {
+      const r = await rule(`${type}_sent`, false)
+      const doc = await document(type)
+      if (customized)
+        await app.inject({
+          method: 'PUT',
+          url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+          headers,
+          cookies,
+          payload: { expectedVersion: 0, enabled: false, cc: [] },
+        })
+      const url = `/v1/${type}s/${doc.id}/send`
+      const input = { expectedVersion: doc.version, requestId: randomUUID() }
+      const rejected = await post(url, input)
+      expect(rejected.statusCode).toBe(409)
+      expect(rejected.json().code).toBe('NOTIFICATION_OVERRIDE_REQUIRED')
+      const confirmed = await post(url, { ...input, overridePreferences: true })
+      expect(confirmed.statusCode, confirmed.body).toBe(202)
+      expect((await post(url, { ...input, overridePreferences: true })).json().jobId).toBe(
+        confirmed.json().jobId,
+      )
+      expect((await post(url, input)).statusCode).toBe(409)
+      const w = workers()
+      expect(await w.producer.worker.runOne()).toBe(true)
+      await w.producer.sweep()
+      expect(await w.transport.worker.runOne()).toBe(true)
+      expect(w.provider.messages).toHaveLength(1)
+      expect(
+        (
+          await fixture.client`select is_manual from notification_dispatches where source_id=${doc.id}`
+        )[0]!.is_manual,
+      ).toBe(true)
+      await fixture.client`update clients set email=null where id=${clientId}`
+      expect(
+        (await post(url, { ...input, requestId: randomUUID(), overridePreferences: true })).json()
+          .code,
+      ).toBe('MISSING_EMAIL')
+      await fixture.client`update clients set email='client@example.test',archived_at=now() where id=${clientId}`
+      expect(
+        (await post(url, { ...input, requestId: randomUUID(), overridePreferences: true })).json()
+          .code,
+      ).toBe('CLIENT_ARCHIVED')
+    },
+  )
   it('expiry only transitions issued/sent estimates once and preserves printable content and accepted state', async () => {
     const issued = await document('estimate', '2026-01-01')
     const accepted = await document('estimate', '2026-01-01')

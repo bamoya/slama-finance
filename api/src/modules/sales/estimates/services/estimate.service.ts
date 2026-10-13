@@ -13,6 +13,7 @@ import { assertVersion, FinancialDecimal } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
 import { clientSnapshot as snapshotClient } from '../../shared/services/client-snapshot.js'
+import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
 import type { createEstimateRepository, EstimateRow } from '../repositories/estimate.repository.js'
 
 type Repository = ReturnType<typeof createEstimateRepository>
@@ -92,7 +93,7 @@ export function createEstimateService(
     const bankAccountId =
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
     const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
-    const template = await repo.template(input.templateId, tx)
+    const template = await repo.template(input.templateId ?? company.defaultTemplateId, tx)
     const preparedLines = []
     let subtotal = new FinancialDecimal(0)
     let taxTotal = new FinancialDecimal(0)
@@ -161,23 +162,14 @@ export function createEstimateService(
       email: client.email,
       phone: client.phone,
     }
-    const appearanceSnapshot = {
-      layout: template?.layout ?? 'classic',
-      density: template?.density ?? 'standard',
-      accentColor: template?.accentColor ?? '#ad7d1d',
-      logoAssetId: template?.logoAssetId ?? company.logoAssetId,
-      signatureAssetId: template?.signatureAssetId ?? null,
-      showBankDetails: template?.showBankDetails ?? true,
-      showSignature: template?.showSignature ?? false,
-      showPaymentTerms: template?.showPaymentTerms ?? true,
-      footerText: template?.footerText ?? null,
-    }
+    const appearanceSnapshot = documentAppearance(template, company)
     return {
       header: {
         clientId: client.id,
         templateId: template?.id ?? null,
         issueDate: input.issueDate,
-        validUntil: input.validUntil,
+        validUntil:
+          input.validUntil ?? documentDefaultDate(input.issueDate, company.estimateValidDays),
         currency: company.currency,
         locale: resolveLocale(input.localeOverride, company.locale),
         localeOverride: input.localeOverride ?? null,
@@ -391,7 +383,13 @@ export function createEstimateService(
             'REVISION_SOURCE_CHANGED',
             'The original estimate is no longer current. Delete this draft revision.',
           )
-        if (!before.validUntil || before.validUntil < before.issueDate)
+        const company = await repo.company(tx)
+        const finalDate =
+          before.validUntil ?? documentDefaultDate(before.issueDate, company.estimateValidDays)
+        const defaultTemplate = !before.templateId
+          ? await repo.template(company.defaultTemplateId, tx)
+          : null
+        if (finalDate < before.issueDate)
           throw new AppError(400, 'INVALID_DATE', 'A valid-until date is required before issuing.')
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_ESTIMATE', 'Add at least one product before issuing.')
@@ -410,6 +408,13 @@ export function createEstimateService(
                 id,
                 {
                   status: 'issued',
+                  validUntil: finalDate,
+                  ...(!before.templateId && defaultTemplate
+                    ? {
+                        templateId: defaultTemplate.id,
+                        appearanceSnapshot: documentAppearance(defaultTemplate, company),
+                      }
+                    : {}),
                   locale: issuedLocale,
                   issuerSnapshot: {
                     ...(before.issuerSnapshot as Record<string, unknown>),

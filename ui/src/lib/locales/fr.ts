@@ -1,5 +1,8 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Automatic emails are disabled for this client or company. You can still send this one email manually.':
+    'Les e-mails automatiques sont désactivés pour ce client ou cette entreprise. Vous pouvez néanmoins envoyer cet e-mail manuellement.',
+  'Send this email anyway': 'Envoyer cet e-mail malgré tout',
   'Agreed payment method': 'Mode de règlement prévu',
   'Not specified': 'Non précisé',
   'Default bank account': 'Compte bancaire par défaut',

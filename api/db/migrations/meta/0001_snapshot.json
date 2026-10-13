@@ -4138,6 +4138,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_manual": {
+          "name": "is_manual",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "message_id": {
           "name": "message_id",
           "type": "uuid",

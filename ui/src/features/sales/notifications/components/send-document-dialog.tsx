@@ -12,6 +12,7 @@ import {
 import { FormError } from '../../../../components/management/form-error'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button } from '../../../../components/ui/button'
+import { Checkbox } from '../../../../components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../../../../components/ui/dialog'
-import { useUiLanguage } from '../../../../lib/i18n'
+import { ApiError } from '../../../../lib/api-error'
+import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { useClientNotificationPreferences } from '../../../clients'
 import { useAuthorization } from '../../../identity'
 import { refreshSales } from '../../refresh'
@@ -46,16 +48,25 @@ export function SendDocumentDialog({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(),
     [queued, setQueued] = useState('')
+  const [confirmedOverride, setConfirmedOverride] = useState(false)
   const request = useRef<SendDocumentInput>()
   const canPreview = can('clients.read') && can('client_notification_preferences.read')
   const query = useClientNotificationPreferences(clientId, open && canPreview)
   const eventKey = documentType === 'delivery_note' ? 'delivery_prepared' : `${documentType}_sent`
   const preference = query.data?.items.find((row) => row.eventKey === eventKey)
+  const needsOverride =
+    preference?.reason === 'RULE_DISABLED' || preference?.reason === 'CLIENT_OPT_OUT'
+  const eligible =
+    !!preference?.recipient && (preference.effectiveEnabled || (needsOverride && confirmedOverride))
   const send = async () => {
-    if (busy || query.isFetching || !canPreview || !preference?.effectiveEnabled) return
+    if (busy || query.isFetching || !canPreview || !eligible) return
     setBusy(true)
     setError(undefined)
-    request.current ??= { expectedVersion: version, requestId: crypto.randomUUID() }
+    request.current ??= {
+      expectedVersion: version,
+      requestId: crypto.randomUUID(),
+      ...(needsOverride ? { overridePreferences: true } : {}),
+    }
     try {
       const data = SendDocumentInputSchema.parse(request.current)
       const result = await actions.send(documentType, id, data)
@@ -65,6 +76,11 @@ export function SendDocumentDialog({
         refreshDocumentNotifications(cache, documentType, id),
       ])
     } catch (cause) {
+      if (cause instanceof ApiError && cause.code === 'NOTIFICATION_OVERRIDE_REQUIRED') {
+        request.current = undefined
+        setConfirmedOverride(false)
+        void query.refetch()
+      }
       setError(cause)
     } finally {
       setBusy(false)
@@ -74,7 +90,10 @@ export function SendDocumentDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!busy) setOpen(next)
+        if (!busy) {
+          if (next && !request.current) setConfirmedOverride(false)
+          setOpen(next)
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -105,10 +124,28 @@ export function SendDocumentDialog({
                   {t('cc')}: {preference.cc.join(', ')}
                 </p>
               )}
-              {preference.reason && (
-                <p role="status" className="text-sm text-[var(--error-text)]">
-                  {t(`reasons.${preference.reason}`)}
-                </p>
+              {needsOverride ? (
+                <div className="grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--accent-soft)] p-3 text-sm">
+                  <p>
+                    {translate(
+                      'Automatic emails are disabled for this client or company. You can still send this one email manually.',
+                    )}
+                  </p>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={confirmedOverride}
+                      onCheckedChange={(checked) => setConfirmedOverride(checked === true)}
+                      disabled={busy || !!request.current}
+                    />
+                    {translate('Send this email anyway')}
+                  </label>
+                </div>
+              ) : (
+                preference.reason && (
+                  <p role="status" className="text-sm text-[var(--error-text)]">
+                    {t(`reasons.${preference.reason}`)}
+                  </p>
+                )
               )}
             </>
           ) : (
@@ -127,6 +164,7 @@ export function SendDocumentDialog({
                 onClick={() => {
                   if (!canPreview) return
                   request.current = undefined
+                  setConfirmedOverride(false)
                   setQueued('')
                   setError(undefined)
                   void query.refetch()
@@ -147,7 +185,7 @@ export function SendDocumentDialog({
                 !canPreview ||
                 !!queued ||
                 (canPreview && (query.isFetching || query.isPending || query.isError)) ||
-                !preference?.effectiveEnabled
+                !eligible
               }
               onClick={() => void send()}
             >

@@ -491,6 +491,7 @@ CREATE TABLE IF NOT EXISTS "notification_dispatches" (
 	"event_key" text NOT NULL,
 	"occurrence_key" text NOT NULL,
 	"logical_occurrence_key" text NOT NULL,
+	"is_manual" boolean DEFAULT false NOT NULL,
 	"message_id" uuid NOT NULL,
 	"reconciled_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

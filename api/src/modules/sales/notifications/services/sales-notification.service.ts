@@ -21,6 +21,8 @@ type Type = DocumentType | 'report_run'
 interface PreparationPayload {
   sourceType: DocumentType
   automatic?: boolean
+  manual?: boolean
+  overridePreferences?: boolean
   sourceId: string
   sourceVersion: number
   requestId: string
@@ -105,6 +107,7 @@ export function createSalesNotificationService(
     event: string,
     recipient?: string,
     cc?: string[],
+    manual = false,
   ) {
     const row = await repo.owner(type, id, tx, true)
     assertSendable(type, row.status)
@@ -116,7 +119,7 @@ export function createSalesNotificationService(
     )
       throw new AppError(409, 'SOURCE_SETTLED', 'Invoice no longer has an outstanding balance.')
     const rule = await policies.rule(event, tx)
-    const client = await clients.effective(row.clientId, rule, tx)
+    const client = await clients.effective(row.clientId, rule, tx, manual)
     if (!client.enabled || !client.recipient)
       throw new AppError(
         409,
@@ -147,7 +150,15 @@ export function createSalesNotificationService(
     if (!actor && !p.automatic)
       throw new AppError(403, 'FORBIDDEN', 'An authorized initiating operator is required.')
     if (!p.automatic && actor) await owner(tx, p.sourceType, p.sourceId, actor, true)
-    const value = await eligibility(tx, p.sourceType, p.sourceId, p.eventKey, p.recipient, p.cc)
+    const value = await eligibility(
+      tx,
+      p.sourceType,
+      p.sourceId,
+      p.eventKey,
+      p.recipient,
+      p.cc,
+      p.manual === true && !p.automatic,
+    )
     if (value.row.contentVersion !== p.sourceVersion)
       throw new AppError(409, 'SOURCE_CHANGED', 'Printable document content changed.')
     return value
@@ -164,7 +175,16 @@ export function createSalesNotificationService(
           if (payment.status !== 'confirmed')
             throw new AppError(409, 'SOURCE_INELIGIBLE', 'Payment is no longer confirmed.')
           await eligibility(tx, 'invoice', payment.invoiceId, d.event_key, d.recipient, d.cc)
-        } else await eligibility(tx, d.source_type, d.source_id, d.event_key, d.recipient, d.cc)
+        } else
+          await eligibility(
+            tx,
+            d.source_type,
+            d.source_id,
+            d.event_key,
+            d.recipient,
+            d.cc,
+            d.is_manual,
+          )
       } catch (error) {
         if (!(error instanceof AppError) || ![403, 404, 409].includes(error.statusCode)) throw error
         await notifications.cancel(d.message_id, tx)
@@ -193,7 +213,11 @@ export function createSalesNotificationService(
         const existing = await repo.keyJob(key, tx)
         if (existing) {
           const p = existing.payload as PreparationPayload
-          if (p.expectedVersion !== input.expectedVersion || p.requestId !== input.requestId)
+          if (
+            p.expectedVersion !== input.expectedVersion ||
+            p.requestId !== input.requestId ||
+            !!p.overridePreferences !== !!input.overridePreferences
+          )
             throw new AppError(409, 'JOB_CONFLICT', 'This request identity has different inputs.')
           return {
             jobId: existing.id,
@@ -203,7 +227,22 @@ export function createSalesNotificationService(
           }
         }
         const eventKey = type === 'delivery_note' ? 'delivery_prepared' : `${type}_sent`
-        const { row, rule, client } = await eligibility(tx, type, id, eventKey)
+        const { row, rule, client } = await eligibility(
+          tx,
+          type,
+          id,
+          eventKey,
+          undefined,
+          undefined,
+          true,
+        )
+        const preference = await clients.effective(row.clientId, rule, tx)
+        if (!preference.enabled && !input.overridePreferences)
+          throw new AppError(
+            409,
+            'NOTIFICATION_OVERRIDE_REQUIRED',
+            'Confirm sending this email despite disabled notification preferences.',
+          )
         assertVersion(row.version, input.expectedVersion)
         const content = policies.compose(rule, {
           clientName: printableClientName(row.clientSnapshot, client.clientName),
@@ -215,6 +254,8 @@ export function createSalesNotificationService(
           validUntil: 'validUntil' in row ? (row.validUntil ?? '') : '',
         })
         const p: PreparationPayload = {
+          manual: true,
+          overridePreferences: input.overridePreferences ?? false,
           sourceType: type,
           sourceId: id,
           sourceVersion: row.contentVersion,
@@ -230,6 +271,8 @@ export function createSalesNotificationService(
         await repo.audit(tx, actor, 'send_requested', id, null, {
           jobId: job.id,
           requestId: input.requestId,
+          manual: true,
+          overridePreferences: input.overridePreferences ?? false,
         })
         return {
           jobId: job.id,
@@ -261,7 +304,15 @@ export function createSalesNotificationService(
           await options.reportOwner!.assertRetryable(tx, id, actor, dispatch.messageId)
         const before = await notifications.status(dispatch.messageId, tx)
         if (action === 'retry' && type !== 'report_run')
-          await eligibility(tx, type, id, dispatch.eventKey, before.to, before.cc)
+          await eligibility(
+            tx,
+            type,
+            id,
+            dispatch.eventKey,
+            before.to,
+            before.cc,
+            dispatch.isManual,
+          )
         const message = await notifications[action](dispatch.messageId, tx)
         await repo.audit(tx, actor, `notification_${action}`, id, null, {
           dispatchId,
@@ -376,6 +427,7 @@ export function createSalesNotificationService(
                 eventKey: p.eventKey,
                 occurrenceKey: occurrence,
                 logicalOccurrenceKey: p.automatic ? 'first-finalized' : occurrence,
+                isManual: p.manual === true && !p.automatic,
                 messageId: message.id,
                 createdByUserId: job.initiatedByUserId,
               },
