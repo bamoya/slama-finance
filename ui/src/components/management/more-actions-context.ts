@@ -5,6 +5,7 @@ export type MoreActionOptions = {
   icon?: ReactNode
   disabled?: boolean
   destructive?: boolean
+  order?: number
   href?: string
   onSelect?: () => void
 }

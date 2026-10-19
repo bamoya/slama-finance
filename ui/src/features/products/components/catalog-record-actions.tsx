@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, RotateCcw, Trash2 } from 'lucide-react'
+import { Archive, RotateCcw } from 'lucide-react'
 
 import { ConfirmAction } from '../../../components/management/confirm-action'
 import { translate, useUiLanguage } from '../../../lib/i18n'
 import { Can } from '../../identity'
 import { refreshCatalog, useCatalogActions } from '../queries'
+import { CatalogDeletionDialog } from './catalog-deletion-dialog'
 
 export function CatalogRecordActions({
   resource,
@@ -68,22 +69,12 @@ export function CatalogRecordActions({
         </Can>
       )}
       <Can permission={`${resource}.delete`}>
-        <ConfirmAction
-          label={translate('Delete')}
-          icon={<Trash2 size={16} />}
-          iconOnly={compact}
-          variant="destructive"
-          description={translate(
-            'Permanently delete {{value0}}? Only unreferenced records can be deleted. This cannot be undone.',
-            { value0: record.name },
-          )}
-          onConfirm={async () => {
-            try {
-              if (product) await api.deleteProduct(record.id, record.version)
-              else await api.deleteCategory(record.id, record.version)
-            } finally {
-              await refreshCatalog(cache)
-            }
+        <CatalogDeletionDialog
+          resource={resource}
+          selected={[record]}
+          compact={compact}
+          onComplete={async () => {
+            await refreshCatalog(cache)
             onDeleted?.()
           }}
         />

@@ -83,25 +83,27 @@ export function MoreActions({
             }}
           >
             <DropdownMenuGroup>
-              {[...entries].map(([id, getOptions]) => {
-                const option = getOptions()
-                return (
-                  <DropdownMenuItem
-                    key={id}
-                    disabled={option.disabled}
-                    variant={option.destructive ? 'destructive' : 'default'}
-                    onSelect={() => {
-                      const current = getOptions()
-                      if (current.disabled) return
-                      if (current.href) navigate(current.href)
-                      current.onSelect?.()
-                    }}
-                  >
-                    {option.icon && <span aria-hidden="true">{option.icon}</span>}
-                    {option.label}
-                  </DropdownMenuItem>
-                )
-              })}
+              {[...entries]
+                .sort(([, first], [, second]) => (first().order ?? 0) - (second().order ?? 0))
+                .map(([id, getOptions]) => {
+                  const option = getOptions()
+                  return (
+                    <DropdownMenuItem
+                      key={id}
+                      disabled={option.disabled}
+                      variant={option.destructive ? 'destructive' : 'default'}
+                      onSelect={() => {
+                        const current = getOptions()
+                        if (current.disabled) return
+                        if (current.href) navigate(current.href)
+                        current.onSelect?.()
+                      }}
+                    >
+                      {option.icon && <span aria-hidden="true">{option.icon}</span>}
+                      {option.label}
+                    </DropdownMenuItem>
+                  )
+                })}
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>

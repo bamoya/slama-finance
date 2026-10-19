@@ -8,6 +8,7 @@ import { StatusBadge } from '../../../../components/management/status-badge'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { useBankAccounts } from '../../../settings'
+import { DocumentClientLink } from '../../components/document-client-link'
 import { useInvoice } from '../../invoices/queries'
 import { InvoiceBalance } from '../components/invoice-balance'
 import { PaymentActions } from '../components/payment-actions'
@@ -77,12 +78,12 @@ export function PaymentDetailPage() {
                 <dt className="text-[var(--muted)]">{t('client')}</dt>
                 <dd>
                   <Can permission="clients.read" fallback={<span>{row.clientName}</span>}>
-                    <Link
-                      href={`/clients/${row.clientId}`}
+                    <DocumentClientLink
+                      clientId={row.clientId}
                       className="font-semibold text-[var(--accent)]"
                     >
                       {row.clientName}
-                    </Link>
+                    </DocumentClientLink>
                   </Can>
                 </dd>
               </div>
@@ -111,10 +112,14 @@ export function PaymentDetailPage() {
                 <dt className="text-[var(--muted)]">{t('method')}</dt>
                 <dd>{t(row.method)}</dd>
               </div>
-              {row.bankAccountId && can('bank_accounts.read') && (
+              {(row.bankAccountId || row.bankAccountSnapshot) && can('bank_accounts.read') && (
                 <div>
                   <dt className="text-[var(--muted)]">{t('bankAccount')}</dt>
-                  <dd>{banks.data?.find((bank) => bank.id === row.bankAccountId)?.name ?? '—'}</dd>
+                  <dd>
+                    {banks.data?.find((bank) => bank.id === row.bankAccountId)?.name ??
+                      row.bankAccountSnapshot?.bankName ??
+                      '—'}
+                  </dd>
                 </div>
               )}
               {row.reference && (

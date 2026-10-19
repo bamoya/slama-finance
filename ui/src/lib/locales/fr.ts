@@ -1,5 +1,64 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Company defaults and live references will be cleared. Documents, payment history and saved designs remain unchanged. Images needed by existing documents are retained.':
+    'Les choix par défaut de l’entreprise et les références actives seront retirés. Les documents, l’historique des paiements et les présentations enregistrées restent inchangés. Les images nécessaires aux documents existants sont conservées.',
+  'Only the listed records will be cancelled. Related invoices, estimates, delivery notes and payments remain unchanged. No real transfer or physical delivery is reversed.':
+    'Seuls les éléments indiqués seront annulés. Les factures, devis, bons de livraison et paiements associés restent inchangés. Aucun virement réel ni livraison physique n’est annulé.',
+  'Records to cancel': 'Éléments à annuler',
+  'Account access and personal details will be removed. Audit and business history remain attributed to “Deleted user”. Owned schedules stop. You cannot delete yourself or the last active administrator.':
+    'Les accès et informations personnelles du compte seront supprimés. L’historique métier et d’audit restera attribué à « Utilisateur supprimé ». Les programmations de ce compte seront arrêtées. Vous ne pouvez pas supprimer votre propre compte ni le dernier administrateur actif.',
+  'Deletion is permanent. Historical document names, weights, prices and quantities are preserved. Shared images are retained.':
+    'La suppression est définitive. Les noms, poids, prix et quantités des documents historiques sont conservés. Les images partagées restent disponibles.',
+  'Also delete products and variants in these categories':
+    'Supprimer aussi les produits et variantes de ces catégories',
+  'Documents are preserved with their saved client identity unless you explicitly choose to delete them. Pending client emails are removed. Deletion cannot be undone.':
+    'Les documents et leur identité client enregistrée sont conservés, sauf si vous choisissez explicitement de les supprimer. Les e-mails en attente sont supprimés. Cette action est irréversible.',
+  'Also delete all related estimates, invoices, delivery notes and payments':
+    'Supprimer aussi tous les devis, factures, bons de livraison et paiements associés',
+  'Images released if unreferenced: {{count}}': 'Images libérées si inutilisées : {{count}}',
+  'Files released: {{count}}': 'Fichiers libérés : {{count}}',
+  'Files preserved: {{count}}': 'Fichiers conservés : {{count}}',
+  'Pending jobs stopped: {{count}}': 'Tâches en attente arrêtées : {{count}}',
+  'Email records removed: {{count}}': 'Enregistrements d’e-mails supprimés : {{count}}',
+  EMAIL_DELIVERY_IN_PROGRESS:
+    'Un e-mail est en cours d’envoi. Attendez la fin de l’envoi, puis vérifiez à nouveau.',
+  'Delete permanently': 'Supprimer définitivement',
+  'Deleting…': 'Suppression…',
+  'Permanent deletion cannot be undone. Review all affected records before confirming. Sent emails and real banking operations cannot be reversed.':
+    'La suppression est définitive. Vérifiez tous les éléments concernés avant de confirmer. Les e-mails envoyés et les opérations bancaires réelles ne peuvent pas être annulés.',
+  'Also delete linked invoices, payments, receipts and delivery notes':
+    'Supprimer aussi les factures liées, leurs paiements, reçus et bons de livraison',
+  'Will delete': 'Éléments à supprimer',
+  'Will preserve and detach': 'Éléments conservés et détachés',
+  'Files released for cleanup: {{count}}': 'Fichiers à nettoyer : {{count}}',
+  'Shared files retained: {{count}}': 'Fichiers partagés conservés : {{count}}',
+  'Pending or running preparation jobs stopped: {{count}}':
+    'Préparations en attente ou en cours arrêtées : {{count}}',
+  'Pending emails stopped: {{count}}': 'E-mails en attente arrêtés : {{count}}',
+  'An email is being sent. Wait for delivery to finish, then review again.':
+    'Un e-mail est en cours d’envoi. Attendez la fin de l’envoi, puis vérifiez à nouveau les conséquences.',
+  'Invoice cascade is available only for estimates.':
+    'La suppression des factures liées est disponible uniquement pour les devis.',
+  'Select each record only once.': 'Sélectionnez chaque élément une seule fois.',
+  'A selected record no longer exists.': 'Un élément sélectionné n’existe plus.',
+  'The impact changed or expired. Review it again.':
+    'Les conséquences ont changé ou la confirmation a expiré. Vérifiez-les à nouveau.',
+  'Every selected invoice must be issued.':
+    'Toutes les factures sélectionnées doivent être émises.',
+  'Select each invoice only once.': 'Sélectionnez chaque facture une seule fois.',
+  'Loading impact…': 'Chargement des conséquences…',
+  'Review impact again': 'Vérifier à nouveau les conséquences',
+  'Cancel invoices': 'Annuler les factures',
+  'All listed records will be cancelled together. No records will be deleted. This does not reverse bank transfers or physical deliveries.':
+    'Tous les éléments indiqués seront annulés ensemble, sans suppression. Les virements bancaires et les livraisons physiques ne sont pas annulés.',
+  'Invoices to cancel': 'Factures à annuler',
+  'Payments to cancel': 'Paiements à annuler',
+  'Delivery notes to cancel': 'Bons de livraison à annuler',
+  'Issued receipts invalidated: {{count}}': 'Reçus émis invalidés : {{count}}',
+  'Already cancelled records preserved: {{count}}': 'Éléments déjà annulés conservés : {{count}}',
+  'Pending related emails will be stopped. Historical records are retained.':
+    'Les e-mails associés en attente seront arrêtés. L’historique est conservé.',
+  'Unnumbered draft': 'Brouillon sans numéro',
   'Automatic emails are disabled for this client or company. You can still send this one email manually.':
     'Les e-mails automatiques sont désactivés pour ce client ou cette entreprise. Vous pouvez néanmoins envoyer cet e-mail manuellement.',
   'Send this email anyway': 'Envoyer cet e-mail malgré tout',

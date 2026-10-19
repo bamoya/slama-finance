@@ -15,7 +15,7 @@ export function ClientPicker({
   selectedLabel,
   id,
 }: {
-  value: string
+  value: string | null
   onValueChange: (value: string) => void
   activeOnly?: boolean
   enabled?: boolean
@@ -31,12 +31,12 @@ export function ClientPicker({
     { q: search || undefined, status: activeOnly ? 'active' : undefined, limit: 100 },
     enabled,
   )
-  const selected = useClient(value, enabled && z.string().uuid().safeParse(value).success)
+  const selected = useClient(value ?? '', enabled && z.string().uuid().safeParse(value).success)
   return (
     <Combobox
       id={id}
       aria-label={t('client')}
-      value={value}
+      value={value ?? ''}
       onValueChange={onValueChange}
       options={
         clients.data?.items.map((client) => ({
@@ -44,7 +44,7 @@ export function ClientPicker({
           label: client.displayName,
         })) ?? []
       }
-      placeholder={t('selectClient')}
+      placeholder={value === null && selectedLabel ? selectedLabel : t('selectClient')}
       clearLabel={clearLabel}
       selectedLabel={selected.data?.displayName ?? selectedLabel}
       search={search}

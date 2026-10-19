@@ -10,6 +10,7 @@ import {
   users,
   userSettings,
 } from '../../../../../db/schema/auth.js'
+import { auditEvents } from '../../../../../db/schema/settings.js'
 import type {
   CreateStaff,
   ListStaffQuery as StaffQuery,
@@ -23,11 +24,15 @@ export function createStaffRepository(database: () => Database) {
       await tx.execute(sql`select pg_advisory_xact_lock(73619001)`)
     },
     async find(id: string, tx: Database | Transaction = database()) {
-      const [user] = await tx.select().from(users).where(eq(users.id, id))
+      const [user] = await tx
+        .select()
+        .from(users)
+        .where(and(eq(users.id, id), isNull(users.deletedAt)))
       return user
     },
     async list(query: StaffQuery) {
       const filter = and(
+        isNull(users.deletedAt),
         query.roleId
           ? inArray(
               users.id,
@@ -132,6 +137,66 @@ export function createStaffRepository(database: () => Database) {
     },
     async delete(id: string, tx: Transaction) {
       await tx.delete(users).where(eq(users.id, id))
+    },
+    async deletionState(ids: string[], tx: Transaction) {
+      return {
+        users: await tx
+          .select()
+          .from(users)
+          .where(and(inArray(users.id, ids), isNull(users.deletedAt)))
+          .orderBy(asc(users.id))
+          .for('update'),
+        assignments: await tx
+          .select()
+          .from(userRoles)
+          .where(inArray(userRoles.userId, ids))
+          .orderBy(asc(userRoles.userId), asc(userRoles.roleId)),
+        sessions: await tx
+          .select({ id: sessions.id, userId: sessions.userId, revokedAt: sessions.revokedAt })
+          .from(sessions)
+          .where(inArray(sessions.userId, ids))
+          .orderBy(asc(sessions.id)),
+        resets: await tx
+          .select({ id: passwordResetTokens.id, consumedAt: passwordResetTokens.consumedAt })
+          .from(passwordResetTokens)
+          .where(inArray(passwordResetTokens.userId, ids))
+          .orderBy(asc(passwordResetTokens.id)),
+      }
+    },
+    async anonymize(id: string, actor: string, tx: Transaction) {
+      await tx.delete(userRoles).where(eq(userRoles.userId, id))
+      await tx.delete(sessions).where(eq(sessions.userId, id))
+      await tx.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id))
+      await tx.delete(userSettings).where(eq(userSettings.userId, id))
+      const now = new Date()
+      await tx
+        .update(users)
+        .set({
+          email: `deleted-${id}@example.invalid`,
+          firstName: 'Deleted user',
+          lastName: null,
+          passwordHash: '!deleted',
+          avatarUrl: null,
+          emailVerifiedAt: null,
+          disabledAt: now,
+          archivedAt: now,
+          deletedAt: now,
+          updatedAt: now,
+          mustChangePassword: true,
+          temporaryPasswordExpiresAt: null,
+          temporaryPasswordConsumedAt: null,
+          passwordChangedAt: null,
+        })
+        .where(eq(users.id, id))
+      await tx.insert(auditEvents).values({
+        actorUserId: actor,
+        actorKind: 'user',
+        action: 'delete',
+        entityTable: 'users',
+        entityKey: { id },
+        beforeValues: { id },
+        afterValues: { attribution: 'Deleted user', accessRemoved: true },
+      })
     },
     async create(
       input: Omit<CreateStaff, 'roleIds'> & {

@@ -133,7 +133,7 @@ export function createSettingsRepository(database: () => Database) {
       actor: string,
       entityTable: 'company_settings' | 'bank_accounts' | 'document_templates',
       id: string | number,
-      action: 'create' | 'update' | 'archive' | 'restore' | 'delete',
+      action: 'create' | 'update' | 'archive' | 'restore' | 'delete' | 'clear_default',
       before: unknown,
       after: unknown,
     ) {

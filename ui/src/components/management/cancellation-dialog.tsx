@@ -1,5 +1,5 @@
 import { Ban } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { registerTranslations, useUiLanguage } from '../../lib/i18n'
@@ -18,6 +18,8 @@ registerTranslations('cancellation', {
   back: 'Go back',
   confirm: 'Confirm cancellation',
   saving: 'Cancelling…',
+  loadingImpact: 'Loading impact…',
+  reloadImpact: 'Review impact again',
 })
 
 export function CancellationDialog({
@@ -28,14 +30,20 @@ export function CancellationDialog({
   validateReason,
   maxLength = 1000,
   disabled = false,
+  preview,
+  initiallyOpen = false,
+  onDismiss,
 }: {
   triggerLabel: string
   title: string
   description?: string
-  onConfirm: (reason: string) => Promise<void>
+  onConfirm: (reason: string, token?: string) => Promise<void>
   validateReason: (reason: string) => boolean
   maxLength?: number
   disabled?: boolean
+  preview?: () => Promise<{ token: string; content: ReactNode }>
+  initiallyOpen?: boolean
+  onDismiss?: () => void
 }) {
   useUiLanguage()
 
@@ -43,29 +51,66 @@ export function CancellationDialog({
   const id = useId()
   const menu = useMoreActionsContext()
   const submitting = useRef(false)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initiallyOpen)
   const [reason, setReason] = useState('')
   const [invalid, setInvalid] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  const [impact, setImpact] = useState<{ token: string; content: ReactNode } | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [reload, setReload] = useState(0)
+  const previewRef = useRef(preview)
+  previewRef.current = preview
+  useEffect(() => {
+    if (!open || !previewRef.current) return
+    let active = true
+    setImpact(null)
+    setError(null)
+    setLoading(true)
+    void previewRef.current().then(
+      (result) => {
+        if (active) {
+          setImpact(result)
+          setLoading(false)
+        }
+      },
+      (failure: unknown) => {
+        if (active) {
+          setError(failure)
+          setLoading(false)
+        }
+      },
+    )
+    return () => {
+      active = false
+    }
+  }, [open, reload])
+  function close() {
+    setOpen(false)
+    setImpact(null)
+    onDismiss?.()
+  }
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         if (submitting.current) return
         setOpen(next)
+        setImpact(null)
+        if (!next) onDismiss?.()
         setReason('')
         setInvalid(false)
         setError(null)
       }}
     >
-      {menu ? (
+      {initiallyOpen ? null : menu ? (
         <MoreAction
           label={triggerLabel}
           icon={<Ban />}
           destructive
           disabled={disabled}
           onSelect={() => {
+            setImpact(null)
             setReason('')
             setInvalid(false)
             setError(null)
@@ -89,15 +134,14 @@ export function CancellationDialog({
               }
             : undefined
         }
-        className={
-          document.documentElement.classList.contains('theme-dark') ? 'is-dark' : undefined
-        }
+        className={`max-h-[calc(100dvh-2rem)] overflow-y-auto ${document.documentElement.classList.contains('theme-dark') ? 'is-dark' : ''}`}
       >
         <form
           className="flex flex-col gap-content"
           onSubmit={async (event) => {
             event.preventDefault()
             if (submitting.current) return
+            if (preview && (!impact || loading)) return
             const trimmed = reason.trim()
             if (!validateReason(trimmed)) {
               setInvalid(true)
@@ -107,11 +151,13 @@ export function CancellationDialog({
             setPending(true)
             setError(null)
             try {
-              await onConfirm(trimmed)
-              setOpen(false)
+              if (preview) await onConfirm(trimmed, impact!.token)
+              else await onConfirm(trimmed)
+              close()
               setReason('')
             } catch (failure) {
               setError(failure)
+              if (preview) setImpact(null)
             } finally {
               submitting.current = false
               setPending(false)
@@ -124,6 +170,24 @@ export function CancellationDialog({
               {description ?? t('description')}
             </DialogDescription>
           </div>
+          {preview && (
+            <div aria-live="polite">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">{t('loadingImpact')}</p>
+              ) : (
+                impact?.content
+              )}
+              {!loading && !impact && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setReload((value) => value + 1)}
+                >
+                  {t('reloadImpact')}
+                </Button>
+              )}
+            </div>
+          )}
           <FieldGroup>
             <Field data-invalid={invalid} data-disabled={pending}>
               <FieldLabel htmlFor={id}>{t('reason')}</FieldLabel>
@@ -144,15 +208,18 @@ export function CancellationDialog({
           </FieldGroup>
           <FormError error={error} />
           <div className="flex flex-wrap justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="outline" disabled={pending} onClick={close}>
               {t('back')}
             </Button>
-            <Button type="submit" variant="destructive" disabled={pending || disabled}>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={
+                pending ||
+                disabled ||
+                (!!preview && (!impact || loading || !validateReason(reason.trim())))
+              }
+            >
               {pending ? t('saving') : t('confirm')}
             </Button>
           </div>

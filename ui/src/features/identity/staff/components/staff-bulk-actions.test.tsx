@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { apiRequest } from '../../../../api/http'
@@ -25,9 +25,12 @@ beforeEach(() => {
   vi.mocked(apiRequest).mockReset().mockResolvedValue({})
 })
 describe('Staff bulk access changes', () => {
-  it('permanently deletes archived accounts but never self', async () => {
+  it('blocks the whole deletion selection when the server rejects self instead of silently skipping it', async () => {
+    vi.mocked(apiRequest).mockRejectedValue(new Error('You cannot delete your own account.'))
     render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}
+      >
         <StaffBulkActions
           clear={vi.fn()}
           selected={[
@@ -38,12 +41,19 @@ describe('Staff bulk access changes', () => {
       </QueryClientProvider>,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    await screen.findByText('1 succeeded · 1 skipped · 0 failed')
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Review impact again' })).toBeEnabled(),
+    )
+    expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeDisabled()
     expect(apiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ url: '/v1/staff/other', method: 'DELETE' }),
+      expect.objectContaining({
+        url: '/v1/staff/deletion/preview',
+        method: 'POST',
+        data: { ids: ['other', 'self'] },
+      }),
       undefined,
     )
+    expect(apiRequest).toHaveBeenCalledTimes(1)
   })
   it('excludes self and archived accounts from disable requests', async () => {
     render(

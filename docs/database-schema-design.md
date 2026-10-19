@@ -11,12 +11,14 @@ Older OAuth and multi-organization proposals in `mvp-route-plan.md` are not used
 here. Government e-invoicing integration, inventory, accounting journals and
 payment gateways are outside this design.
 
-Settings lifecycle update: bank accounts can be restored after archival. Bank accounts
-and templates may be permanently deleted only when unreferenced; preserve audit and
-asset history. All future `payments.bank_account_id`, `invoices.template_id` and
-`estimates.template_id` references must use `ON DELETE RESTRICT` or `NO ACTION`,
-never cascading deletion or `SET NULL`. Company default-template references also
-block deletion. See [the action permission standard](implementation/permission-standard.md).
+Settings lifecycle update: bank accounts can be restored after archival. Impact-confirmed
+bank/template deletion explicitly detaches references and clears company defaults
+in the same transaction, preserving financial records, saved bank/design snapshots
+and required assets. Database foreign keys remain `ON DELETE RESTRICT` or `NO ACTION`
+so bypassing the confirmed service cannot silently cascade or detach records.
+Payment bank details remain in `bank_account_snapshot` after detachment. See
+[the destructive-action agreement](implementation/destructive-actions.md) and
+[the action permission standard](implementation/permission-standard.md).
 
 Click a section title to expand or collapse it. Schema levels start collapsed;
 the reading guide starts expanded. L2 domains and integrity-rule groups can
@@ -106,12 +108,12 @@ erDiagram
     product_categories o|--o{ products : "0..1 to 0..N"
     products ||--|{ product_variants : "1 to 1..N active"
     media_assets o|--o{ products : images
-    clients ||--o{ invoices : "1 to 0..N"
+    clients o|--o{ invoices : "1 to 0..N"
     document_templates o|--o{ invoices : "0..1 to 0..N"
     invoices ||--o{ invoice_lines : "1 to 0..N"
     products o|--o{ invoice_lines : "0..1 to 0..N"
     product_variants o|--o{ invoice_lines : selected_package
-    clients ||--o{ estimates : "1 to 0..N"
+    clients o|--o{ estimates : "1 to 0..N"
     document_templates o|--o{ estimates : "0..1 to 0..N"
     estimates ||--o{ estimate_lines : "1 to 0..N"
     products o|--o{ estimate_lines : "0..1 to 0..N"
@@ -119,7 +121,7 @@ erDiagram
     estimates o|--o{ invoices : "estimate to converted invoices"
     invoices ||--o{ payments : "invoice to installments"
     bank_accounts o|--o{ payments : "0..1 to 0..N"
-    clients ||--o{ delivery_notes : "1 to 0..N"
+    clients o|--o{ delivery_notes : "1 to 0..N"
     invoices o|--o{ delivery_notes : "invoice to deliveries"
     delivery_notes ||--o{ delivery_note_lines : "1 to 0..N"
     products o|--o{ delivery_note_lines : "0..1 to 0..N"
@@ -231,10 +233,10 @@ erDiagram
         uuid delivery_note_line_id PK, FK }
     product_categories o|--o{ products : groups
     products ||--|{ product_variants : packages
-    clients ||--o{ invoices : billed_to
+    clients o|--o{ invoices : billed_to
     document_templates o|--o{ invoices : appearance
     estimates o|--o{ invoices : converted_from
-    clients ||--o{ estimates : offered_to
+    clients o|--o{ estimates : offered_to
     document_templates o|--o{ estimates : appearance
     estimates ||--o{ estimate_lines : contains
     products o|--o{ estimate_lines : selected_from
@@ -244,7 +246,7 @@ erDiagram
     product_variants o|--o{ invoice_lines : selected_package
     invoices ||--o{ payments : receives
     bank_accounts o|--o{ payments : deposited_to
-    clients ||--o{ delivery_notes : delivered_to
+    clients o|--o{ delivery_notes : delivered_to
     invoices o|--o{ delivery_notes : fulfills
     delivery_notes ||--o{ delivery_note_lines : contains
     products o|--o{ delivery_note_lines : selected_from
@@ -307,6 +309,7 @@ erDiagram
         uuid id PK
         varchar email UK "320 chars; normalized lowercase"
         text password_hash "never returned to UI"
+        timestamptz deleted_at "hidden anonymized attribution tombstone"
         boolean must_change_password "default true for administrator-created staff"
         timestamptz temporary_password_expires_at "nullable; required while temporary"
         timestamptz temporary_password_consumed_at "nullable"
@@ -517,10 +520,10 @@ enables tax on a document line.
 
 ```mermaid
 erDiagram
-    clients ||--o{ invoices : customer
+    clients o|--o{ invoices : customer
     document_templates o|--o{ invoices : design
     estimates o|--o{ invoices : source_estimate
-    clients ||--o{ estimates : customer
+    clients o|--o{ estimates : customer
     document_templates o|--o{ estimates : design
     estimates ||--o{ estimate_lines : lines
     products o|--o{ estimate_lines : catalog_reference
@@ -535,6 +538,7 @@ erDiagram
         uuid client_id FK
         uuid template_id FK "nullable"
         uuid source_estimate_id FK "nullable; multiple invoices per estimate"
+        text source_estimate_number_snapshot "retained if source estimate is deleted"
         date issue_date
         date due_date "nullable in draft; required on issue"
         char currency "3 chars; default MAD"
@@ -655,7 +659,7 @@ not contain credentials or arbitrary application state.
 erDiagram
     invoices ||--o{ payments : invoice_installments
     bank_accounts o|--o{ payments : destination
-    clients ||--o{ delivery_notes : customer
+    clients o|--o{ delivery_notes : customer
     invoices o|--o{ delivery_notes : related_invoice
     delivery_notes ||--o{ delivery_note_lines : quantities
     invoice_lines o|--o{ delivery_note_lines : source_line
@@ -666,6 +670,7 @@ erDiagram
         text number UK
         uuid invoice_id FK
         uuid bank_account_id FK "nullable"
+        jsonb bank_account_snapshot "nullable; historical bank identity"
         numeric amount
         char currency "must match invoice"
         date payment_date "cash received, transfer credited or cheque handed over"
@@ -1242,6 +1247,10 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   estimates have validity dates and acceptance/rejection timestamps. Validate
   allowed state transitions separately for each table.
 - `invoices.source_estimate_id` is a nullable, indexed, non-unique FK to `estimates.id`.
+  `source_estimate_number_snapshot` preserves the source public number when an
+  estimate is explicitly deleted without cascading its invoices. Detachment does
+  not change issued invoice content. See the approved
+  [destructive-action rules](implementation/destructive-actions.md).
   Conversion requires an accepted estimate with the same client and currency,
   and copies `estimate_lines` into `invoice_lines` in a transaction. The source
   estimate remains preserved. One estimate may produce multiple invoices;
@@ -1323,16 +1332,18 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   weights, normalized to kilograms, cannot exceed the invoiced weight.
   Lock source lines when saving
   allocations to make this safe under concurrent deliveries.
-- Acknowledgment requires delivery first and captures receiver name and time.
+- Draft notes move directly to delivered; receiver name is optional.
   Preserve delivered snapshots; correct through cancellation and a new
   note. No inventory stock movements or pricing fields are added here.
 
-- Delivery-first workflow: a delivered note without a source
-  invoice may be invoiced later. Keep its existing `invoice_id` and
-  `source_invoice_line_id` NULL; these fields describe invoice-first fulfillment
-  only. Use `delivery_invoice_allocations` for the opposite workflow instead
-  of rewriting the delivery document. Never represent the same fulfillment in
-  both mechanisms. For invoice-first notes, require source invoice lines.
+- Delivery-first workflow: a delivered independent note may be invoiced later.
+  Set `invoice_id` to the single owning invoice in the conversion transaction;
+  keep original delivered business snapshots frozen. `source_invoice_line_id`
+  remains NULL for delivery-first lines. `delivery_invoice_allocations` retains
+  their line/quantity traceability within that same invoice only. Deferred
+  integrity triggers reject cross-invoice allocation or inconsistent link changes.
+  Each BL has at most one invoice; one invoice may own several BLs.
+  Invoice-first notes still require their original source invoice lines.
 - An invoice may combine eligible notes for the same client. Copy product name,
   reference and delivered weight into invoice lines; staff confirms prices and
   explicitly selects VAT, which remains absent by default. Delivery notes have
@@ -1581,3 +1592,12 @@ must disable accounts instead of physically removing them.
    analysis reflects late entries, but previously generated reports stay frozen.
 
 </details>
+
+### Deleted client and staff references
+
+Impact-confirmed client-only deletion sets estimate/invoice/delivery-note `client_id`
+to null while retaining printable client snapshots. Drafts can retain the captured
+identity or select a replacement; issued identities never refresh. Explicit client
+cascade removes owned documents instead. Staff deletion keeps a hidden, disabled,
+anonymized `users.deleted_at` attribution row (`Deleted user`) so immutable audit
+and report history is not rewritten. Sessions, roles and recovery data are removed.

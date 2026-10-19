@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, Ban, Check, KeyRound, Pencil, RotateCcw, Save, Trash2 } from 'lucide-react'
+import { Archive, Ban, Check, KeyRound, Pencil, RotateCcw, Save } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'wouter'
 
@@ -20,6 +20,7 @@ import { useAuthorization } from '../../auth/hooks/use-authorization'
 import { useSession } from '../../auth/hooks/use-session'
 import { refreshIdentity, useRoles, useStaff, useStaffActions } from '../../shared/queries'
 import { RolePicker } from '../components/role-picker'
+import { StaffDeletionDialog } from '../components/staff-deletion-dialog'
 import { TemporaryCredential } from '../components/temporary-credential'
 
 export function StaffDetailPage() {
@@ -151,15 +152,9 @@ function StaffAccount({ person }: { person: StaffDetail }) {
               )}
               {!self && (
                 <Can permission="staff.delete">
-                  <ConfirmAction
-                    label={translate('Delete account')}
-                    variant="destructive"
-                    icon={<Trash2 size={16} />}
-                    description={translate(
-                      'Permanently delete this account? This cannot be undone. Accounts required by audit or report history must be archived instead.',
-                    )}
-                    onConfirm={async () => {
-                      await staffApi.delete(person.id)
+                  <StaffDeletionDialog
+                    selected={[person]}
+                    onComplete={async () => {
                       navigate('/settings/staff')
                       await refreshIdentity(cache)
                     }}

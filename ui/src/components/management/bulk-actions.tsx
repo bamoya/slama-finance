@@ -22,6 +22,7 @@ export type BulkAction<T> = {
   onDismiss?: () => void
   content?: ReactNode
   disabled?: boolean
+  renderConfirmation?: (rows: T[], complete: () => Promise<void>, dismiss: () => void) => ReactNode
 }
 export type Outcome = { name: string; status: 'success' | 'skipped' | 'failed'; reason?: string }
 
@@ -156,43 +157,62 @@ export function BulkActions<T extends { id: string }>({
           </Button>
         </div>
       )}
-      <Dialog
-        open={!!confirmation && !!action}
-        onOpenChange={(open) => {
-          if (!open && !pending) setConfirmation(null)
-        }}
-      >
-        <DialogContent
-          className={cn(
-            'flex flex-col gap-4',
-            localStorage.getItem('slama-theme') === 'dark' && 'is-dark',
-          )}
+      {action?.renderConfirmation && confirmation ? (
+        action.renderConfirmation(
+          confirmation.rows,
+          async () => {
+            setResults(confirmation.rows.map((row) => ({ name: name(row), status: 'success' })))
+            setCompletedAction(action.key)
+            setRefreshFailed(false)
+            clear()
+            setConfirmation(null)
+            try {
+              await refresh()
+            } catch {
+              setRefreshFailed(true)
+            }
+          },
+          () => setConfirmation(null),
+        )
+      ) : (
+        <Dialog
+          open={!!confirmation && !!action}
+          onOpenChange={(open) => {
+            if (!open && !pending) setConfirmation(null)
+          }}
         >
-          <DialogTitle>{action?.label}</DialogTitle>
-          <DialogDescription>
-            {t('confirmation', { action: action?.label, count: confirmation?.rows.length })}{' '}
-            {action?.warning ?? (action?.key === 'delete' ? t('deleteWarning') : '')}
-          </DialogDescription>
-          <ul className="max-h-40 overflow-auto break-words text-sm">
-            {confirmation?.rows.map((row) => (
-              <li key={row.id}>{name(row)}</li>
-            ))}
-          </ul>
-          <fieldset disabled={pending}>{action?.content}</fieldset>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" disabled={pending} onClick={() => setConfirmation(null)}>
-              {t('cancel')}
-            </Button>
-            <Button
-              variant={action?.destructive ? 'destructive' : 'default'}
-              disabled={pending || action?.disabled}
-              onClick={() => void execute()}
-            >
-              {pending ? t('working', { done, total: confirmation?.rows.length }) : t('confirm')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          <DialogContent
+            className={cn(
+              'flex flex-col gap-4',
+              localStorage.getItem('slama-theme') === 'dark' && 'is-dark',
+            )}
+          >
+            <DialogTitle>{action?.label}</DialogTitle>
+            <DialogDescription>
+              {t('confirmation', { action: action?.label, count: confirmation?.rows.length })}{' '}
+              {action?.warning ?? (action?.key === 'delete' ? t('deleteWarning') : '')}
+            </DialogDescription>
+            <ul className="max-h-40 overflow-auto break-words text-sm">
+              {confirmation?.rows.map((row) => (
+                <li key={row.id}>{name(row)}</li>
+              ))}
+            </ul>
+            <fieldset disabled={pending}>{action?.content}</fieldset>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" disabled={pending} onClick={() => setConfirmation(null)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                variant={action?.destructive ? 'destructive' : 'default'}
+                disabled={pending || action?.disabled}
+                onClick={() => void execute()}
+              >
+                {pending ? t('working', { done, total: confirmation?.rows.length }) : t('confirm')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

@@ -2,6 +2,7 @@ paths:
   /v1/invoices/from-deliveries:
     post:
       operationId: createInvoiceFromDeliveries
+      description: Create one draft invoice from delivered independent notes belonging to one client. Each selected BL is linked exclusively to this invoice; no second invoice can claim it. The same operationId retries idempotently. Line allocations trace quantities only within the owning invoice.
       x-permissions: [invoices.create, delivery_notes.read]
       requestBody:
         {
@@ -148,6 +149,8 @@ paths:
           }
   /v1/invoices/{id}/cancel:
     post:
+      deprecated: true
+      description: Legacy non-cascading cancellation, restricted when related records exist. New clients must use the impact-confirmed cancellation endpoints for both single and bulk actions.
       operationId: cancelInvoice
       x-permissions: [invoices.update]
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
@@ -280,7 +283,7 @@ components:
       additionalProperties: false
       required: [clientId, templateId, issueDate, dueDate, notes, paymentTerms, lines]
       properties:
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         templateId: { type: [string, 'null'], format: uuid }
         localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         issueDate: { type: string, format: date }
@@ -302,7 +305,7 @@ components:
         [expectedVersion, clientId, templateId, issueDate, dueDate, notes, paymentTerms, lines]
       properties:
         expectedVersion: { type: integer, minimum: 1 }
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         templateId: { type: [string, 'null'], format: uuid }
         localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
         issueDate: { type: string, format: date }
@@ -357,7 +360,7 @@ components:
         id: { type: string, format: uuid }
         number: { type: [string, 'null'] }
         status: { type: string, enum: [draft, issued, sent, cancelled] }
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         clientDisplayName: { type: string }
         templateId: { type: [string, 'null'], format: uuid }
         localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }

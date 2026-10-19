@@ -8,6 +8,34 @@ info:
 security:
   - sessionCookie: []
 paths:
+  /v1/sales/cancellation/preview:
+    $ref: ./modules/sales/cancellation.yaml#/paths/~1v1~1sales~1cancellation~1preview
+  /v1/sales/cancellation:
+    $ref: ./modules/sales/cancellation.yaml#/paths/~1v1~1sales~1cancellation
+  /v1/settings/deletion/preview:
+    $ref: ./modules/settings/deletion.yaml#/paths/~1v1~1settings~1deletion~1preview
+  /v1/settings/deletion:
+    $ref: ./modules/settings/deletion.yaml#/paths/~1v1~1settings~1deletion
+  /v1/clients/deletion/preview:
+    $ref: ./modules/clients/deletion.yaml#/paths/~1v1~1clients~1deletion~1preview
+  /v1/clients/deletion:
+    $ref: ./modules/clients/deletion.yaml#/paths/~1v1~1clients~1deletion
+  /v1/staff/deletion/preview:
+    $ref: ./modules/identity/deletion.yaml#/paths/~1v1~1staff~1deletion~1preview
+  /v1/staff/deletion:
+    $ref: ./modules/identity/deletion.yaml#/paths/~1v1~1staff~1deletion
+  /v1/catalog/deletion/preview:
+    $ref: ./modules/catalog/deletion.yaml#/paths/~1v1~1catalog~1deletion~1preview
+  /v1/catalog/deletion:
+    $ref: ./modules/catalog/deletion.yaml#/paths/~1v1~1catalog~1deletion
+  /v1/sales/deletion/preview:
+    $ref: ./modules/sales/actions.yaml#/paths/~1v1~1sales~1deletion~1preview
+  /v1/sales/deletion:
+    $ref: ./modules/sales/actions.yaml#/paths/~1v1~1sales~1deletion
+  /v1/invoices/cancellation/preview:
+    $ref: ./modules/sales/actions.yaml#/paths/~1v1~1invoices~1cancellation~1preview
+  /v1/invoices/cancellation:
+    $ref: ./modules/sales/actions.yaml#/paths/~1v1~1invoices~1cancellation
   /v1/delivery-notes/{id}/send:
     $ref: ./modules/sales/notifications.yaml#/paths/~1v1~1delivery-notes~1{id}~1send
   /v1/invoices/{id}/send:
@@ -254,6 +282,32 @@ components:
       in: cookie
       name: slama_session
   schemas:
+    SalesCancellationSelection:
+      $ref: ./modules/sales/cancellation.yaml#/components/schemas/SalesCancellationSelection
+    ConfirmSalesCancellation:
+      $ref: ./modules/sales/cancellation.yaml#/components/schemas/ConfirmSalesCancellation
+    SalesCancellationImpact:
+      $ref: ./modules/sales/cancellation.yaml#/components/schemas/SalesCancellationImpact
+    SettingsDeletionSelection:
+      $ref: ./modules/settings/deletion.yaml#/components/schemas/SettingsDeletionSelection
+    ConfirmSettingsDeletion:
+      $ref: ./modules/settings/deletion.yaml#/components/schemas/ConfirmSettingsDeletion
+    ClientDeletionSelection:
+      $ref: ./modules/clients/deletion.yaml#/components/schemas/ClientDeletionSelection
+    ConfirmClientDeletion:
+      $ref: ./modules/clients/deletion.yaml#/components/schemas/ConfirmClientDeletion
+    StaffDeletionSelection:
+      $ref: ./modules/identity/deletion.yaml#/components/schemas/StaffDeletionSelection
+    ConfirmStaffDeletion:
+      $ref: ./modules/identity/deletion.yaml#/components/schemas/ConfirmStaffDeletion
+    DeletionRecord:
+      $ref: ./shared/impact.yaml#/components/schemas/DeletionRecord
+    EntityDeletionImpact:
+      $ref: ./shared/impact.yaml#/components/schemas/EntityDeletionImpact
+    CatalogDeletionSelection:
+      $ref: ./modules/catalog/deletion.yaml#/components/schemas/CatalogDeletionSelection
+    ConfirmCatalogDeletion:
+      $ref: ./modules/catalog/deletion.yaml#/components/schemas/ConfirmCatalogDeletion
     ReportRunCleanupInput:
       $ref: ./modules/reporting/run-management.yaml#/components/schemas/ReportRunCleanupInput
     ReportRunCleanupResult:
@@ -386,6 +440,20 @@ components:
       $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceVersion
     InvoiceCancellation:
       $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceCancellation
+    InvoiceCancellationSelection:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/InvoiceCancellationSelection
+    SalesDeletionSelection:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/SalesDeletionSelection
+    SalesDeletionImpact:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/SalesDeletionImpact
+    ConfirmSalesDeletion:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/ConfirmSalesDeletion
+    CancellationImpactRecord:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/CancellationImpactRecord
+    InvoiceCancellationImpact:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/InvoiceCancellationImpact
+    ConfirmInvoiceCancellation:
+      $ref: ./modules/sales/actions.yaml#/components/schemas/ConfirmInvoiceCancellation
     InvoiceConversion:
       $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceConversion
     DeliveryInvoiceConversionLine:

@@ -38,6 +38,7 @@ export const payments = pgTable(
     bankAccountId: uuid('bank_account_id').references(() => bankAccounts.id, {
       onDelete: 'restrict',
     }),
+    bankAccountSnapshot: jsonb('bank_account_snapshot'),
     reference: text('reference'),
     chequeBank: text('cheque_bank'),
     chequeNumber: text('cheque_number'),

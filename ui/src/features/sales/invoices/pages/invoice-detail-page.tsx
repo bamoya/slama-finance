@@ -1,12 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Plus, Send, Trash2, Truck } from 'lucide-react'
+import { ArrowLeft, Download, Pencil, Plus, Send, Truck } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'wouter'
 
-import { InvoiceCancellationSchema } from '../../../../api/generated/schemas/sales/invoices.schemas'
-import { CancellationDialog } from '../../../../components/management/cancellation-dialog'
-import { ConfirmAction } from '../../../../components/management/confirm-action'
 import { FormError } from '../../../../components/management/form-error'
 import { MoreActions } from '../../../../components/management/more-actions'
 import { PageHeader } from '../../../../components/management/page-header'
@@ -18,10 +15,12 @@ import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
+import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
 import { useDeliveryActions } from '../../delivery-notes/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
 import { InvoiceBalance } from '../../payments/components/invoice-balance'
+import { InvoiceCancellationDialog } from '../components/invoice-cancellation-dialog'
 import { InvoicePaymentHistory } from '../components/invoice-payment-history'
 import { InvoiceRelationships } from '../components/invoice-relationships'
 import { refreshInvoices, useInvoice, useInvoiceActions, useInvoiceArtifacts } from '../queries'
@@ -114,14 +113,14 @@ export function InvoiceDetailPage() {
             {['issued', 'sent'].includes(row.status) && Number(row.availableBalance) > 0 && (
               <Can permission={['payments.create', 'invoices.read']}>
                 <Link
-                  href={`/payments/new?invoiceId=${row.id}&clientId=${row.clientId}`}
+                  href={`/payments/new?invoiceId=${row.id}${row.clientId ? `&clientId=${row.clientId}` : ''}`}
                   className={buttonVariants({})}
                 >
                   <Plus size={16} /> {t('recordPayment')}
                 </Link>
               </Can>
             )}
-            {['issued', 'sent'].includes(row.status) && (
+            {row.clientId && ['issued', 'sent'].includes(row.status) && (
               <Can permission={['delivery_notes.create', 'delivery_notes.read', 'invoices.read']}>
                 <Button
                   variant="outline"
@@ -160,35 +159,24 @@ export function InvoiceDetailPage() {
               </Can>
             )}
             <MoreActions>
-              {row.status === 'draft' && (
-                <Can permission="invoices.delete">
-                  <ConfirmAction
-                    label={t('deleteDraft')}
-                    description={t('deleteDraftWarning')}
-                    icon={<Trash2 size={16} />}
-                    variant="destructive"
-                    disabled={busy}
-                    onConfirm={async () => {
-                      await actions.delete(row.id, row.version)
-                      await refreshInvoices(cache)
-                      navigate('/invoices')
-                    }}
-                  />
-                </Can>
-              )}
+              <Can permission="invoices.delete">
+                <SalesDeletionDialog
+                  resource="invoices"
+                  selected={[row]}
+                  disabled={busy}
+                  onComplete={async () => {
+                    await refreshInvoices(cache)
+                    navigate('/invoices')
+                  }}
+                />
+              </Can>
               {['issued', 'sent'].includes(row.status) && (
                 <Can permission="invoices.update">
-                  <CancellationDialog
+                  <InvoiceCancellationDialog
                     triggerLabel={t('cancelInvoice')}
-                    title={t('cancelInvoice')}
-                    description={t('cancelInvoiceWarning')}
+                    selected={[row]}
                     disabled={busy}
-                    maxLength={1000}
-                    validateReason={(reason) =>
-                      InvoiceCancellationSchema.shape.reason.safeParse(reason).success
-                    }
-                    onConfirm={async (reason) => {
-                      await actions.cancel(row.id, row.version, reason)
+                    onComplete={async () => {
                       await refreshInvoices(cache)
                     }}
                   />

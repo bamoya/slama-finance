@@ -180,7 +180,7 @@ export function createPaymentService(
         for (let attempt = 0; attempt < 5; attempt++) {
           const number = `PAY-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
           try {
-            row = await tx.transaction((savepoint) =>
+            row = await tx.transaction(async (savepoint) =>
               repo.insert(
                 {
                   number,
@@ -195,6 +195,7 @@ export function createPaymentService(
                   paymentDate: input.paymentDate,
                   collectedOn: input.collectedOn,
                   bankAccountId: input.bankAccountId,
+                  bankAccountSnapshot: await repo.bankSnapshot(savepoint, input.bankAccountId),
                   reference: input.reference?.trim() || null,
                   chequeBank: input.chequeBank?.trim() || null,
                   chequeNumber: input.chequeNumber?.trim() || null,

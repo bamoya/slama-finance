@@ -35,7 +35,7 @@ export function SendDocumentDialog({
 }: {
   documentType: 'invoice' | 'estimate' | 'delivery_note'
   id: string
-  clientId: string
+  clientId: string | null
   version: number
 }) {
   useUiLanguage()
@@ -51,7 +51,7 @@ export function SendDocumentDialog({
   const [confirmedOverride, setConfirmedOverride] = useState(false)
   const request = useRef<SendDocumentInput>()
   const canPreview = can('clients.read') && can('client_notification_preferences.read')
-  const query = useClientNotificationPreferences(clientId, open && canPreview)
+  const query = useClientNotificationPreferences(clientId ?? '', open && canPreview && !!clientId)
   const eventKey = documentType === 'delivery_note' ? 'delivery_prepared' : `${documentType}_sent`
   const preference = query.data?.items.find((row) => row.eventKey === eventKey)
   const needsOverride =
@@ -86,6 +86,7 @@ export function SendDocumentDialog({
       setBusy(false)
     }
   }
+  if (!clientId) return null
   return (
     <Dialog
       open={open}

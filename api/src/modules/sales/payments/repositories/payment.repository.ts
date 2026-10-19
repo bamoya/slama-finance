@@ -9,6 +9,8 @@ import type { ListPaymentsQuery } from '../../../../contracts/generated/sales/pa
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { companyDate, FinancialDecimal } from '../../../../lib/validation.js'
+import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
+import { documentClientNameSql } from '../../shared/repositories/document-client.js'
 
 export type PaymentRow = typeof payments.$inferSelect
 type Db = Database | Transaction
@@ -78,12 +80,13 @@ export function createPaymentRepository(database: () => Database) {
         payment: payments,
         invoiceNumber: invoices.number,
         clientId: clients.id,
-        clientName: sql<string>`case when ${clients.type} = 'company' then coalesce(${clients.tradeName}, ${clients.legalName}) else concat_ws(' ', ${clients.firstName}, ${clients.lastName}) end`,
+        clientName: documentClientNameSql(invoices.clientSnapshot),
       })
       .from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
-      .innerJoin(clients, eq(invoices.clientId, clients.id))
+      .leftJoin(clients, eq(invoices.clientId, clients.id))
   return {
+    bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async authorize(tx: Transaction, actor: string, permission: string) {
       await tx.execute(sql`select pg_advisory_xact_lock(73619001)`)
@@ -227,7 +230,7 @@ export function createPaymentRepository(database: () => Database) {
           .select({ total: sql<number>`count(*)::int` })
           .from(payments)
           .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
-          .innerJoin(clients, eq(invoices.clientId, clients.id))
+          .leftJoin(clients, eq(invoices.clientId, clients.id))
           .where(where),
       ])
       return { items, total: count[0]?.total ?? 0 }

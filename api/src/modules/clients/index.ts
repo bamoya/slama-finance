@@ -2,26 +2,35 @@ import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
 import type { Database } from '../../lib/db.js'
 import type { Transaction } from '../../lib/db.js'
+import type { SalesClientDeletionApi } from '../sales/index.js'
 import type { NotificationPolicyPublicApi } from '../settings/index.js'
 import { createClientController } from './controllers/client.controller.js'
+import { createClientDeletionController } from './controllers/client-deletion.controller.js'
 import { createClientNotificationController } from './controllers/client-notification.controller.js'
 import { createClientRepository } from './repositories/client.repository.js'
 import { createClientNotificationRepository } from './repositories/client-notification.repository.js'
 import { registerClientRoutes } from './routes/client.routes.js'
+import { registerClientDeletionRoutes } from './routes/client-deletion.routes.js'
 import { registerClientNotificationRoutes } from './routes/client-notification.routes.js'
 import { createClientService } from './services/client.service.js'
+import { createClientDeletionService } from './services/client-deletion.service.js'
 import { createClientNotificationService } from './services/client-notification.service.js'
 
 export function createClientModule(
   database: () => Database,
-  onNotificationChange?: (tx: Transaction, id: string) => Promise<void>,
+  onNotificationChange: ((tx: Transaction, id: string) => Promise<void>) | undefined,
+  sales: SalesClientDeletionApi,
 ) {
   const service = createClientService(createClientRepository(database), onNotificationChange)
+  const deletion = createClientDeletionService(createClientRepository(database), sales)
   return {
     publicApi: { getClient: service.get },
     async registerRoutes(app: FastifyInstance, permission: (key: string) => preHandlerHookHandler) {
       await app.register(
-        async (scope) => registerClientRoutes(scope, createClientController(service), permission),
+        async (scope) => {
+          registerClientRoutes(scope, createClientController(service), permission)
+          registerClientDeletionRoutes(scope, createClientDeletionController(deletion), permission)
+        },
         { prefix: '/v1' },
       )
     },

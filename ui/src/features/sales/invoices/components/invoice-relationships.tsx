@@ -4,6 +4,7 @@ import { Link } from 'wouter'
 import type { Invoice } from '../../../../api/generated/models'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
+import { DocumentClientLink } from '../../components/document-client-link'
 
 export function InvoiceRelationships({
   invoice,
@@ -22,9 +23,9 @@ export function InvoiceRelationships({
         <span className="text-[var(--muted)]">{t('client')}</span>
         <br />
         <Can permission="clients.read" fallback={<span>{clientName}</span>}>
-          <Link href={`/clients/${invoice.clientId}`} className="text-[var(--accent)]">
+          <DocumentClientLink clientId={invoice.clientId} className="text-[var(--accent)]">
             {clientName}
-          </Link>
+          </DocumentClientLink>
         </Can>
       </div>
       <div className="text-sm">
@@ -37,13 +38,20 @@ export function InvoiceRelationships({
         <br />
         {invoice.dueDate ?? t('notSet')}
       </div>
-      {invoice.sourceEstimateId && (
+      {(invoice.sourceEstimateId || invoice.sourceEstimateNumber) && (
         <Can permission="estimates.read">
           <div className="grid gap-1 text-sm">
             <span className="text-[var(--muted)]">{t('sourceEstimate')}</span>
-            <Link href={`/estimates/${invoice.sourceEstimateId}`} className="text-[var(--accent)]">
-              {invoice.sourceEstimateNumber ?? t('estimate')}
-            </Link>
+            {invoice.sourceEstimateId ? (
+              <Link
+                href={`/estimates/${invoice.sourceEstimateId}`}
+                className="text-[var(--accent)]"
+              >
+                {invoice.sourceEstimateNumber ?? t('estimate')}
+              </Link>
+            ) : (
+              <span>{invoice.sourceEstimateNumber}</span>
+            )}
           </div>
         </Can>
       )}

@@ -16,7 +16,7 @@ import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion, companyDate, FinancialDecimal } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
-import { clientSnapshot } from '../../shared/services/client-snapshot.js'
+import { documentClient } from '../../shared/services/document-client.js'
 import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
 import type { createInvoiceRepository, InvoiceRow } from '../repositories/invoice.repository.js'
 
@@ -44,7 +44,7 @@ export function createInvoiceService(
         repo.lines(row.id, tx),
         repo.relatedDeliveryNotes(row.id, tx),
         prefetchedBalances ?? repo.balances([row.id], tx),
-        repo.clientDisplayName(row.clientId, tx),
+        repo.clientDisplayName(row.clientId, tx, row.clientSnapshot),
         repo.sourceEstimateNumber(row.sourceEstimateId, tx),
       ])
     return dto(InvoiceSchema.strip(), {
@@ -58,17 +58,17 @@ export function createInvoiceService(
             )
           : row.locale,
       clientDisplayName,
-      sourceEstimateNumber,
+      sourceEstimateNumber: sourceEstimateNumber ?? row.sourceEstimateNumberSnapshot,
       deliveryNoteIds: deliveryNotes.map((note) => note.id),
       deliveryNotes,
       ...balances.get(row.id),
       lines: lines.map((line) => dto(EstimateLineSchema.strip(), line)),
     })
   }
-  async function prepare(input: InvoiceInput, actor: string, tx: Transaction) {
+  async function prepare(input: InvoiceInput, actor: string, tx: Transaction, retained?: unknown) {
     if (input.dueDate && input.dueDate < input.issueDate)
       throw new AppError(400, 'INVALID_DATE', 'Due date must not precede the issue date.')
-    const client = await repo.client(input.clientId, tx)
+    const client = await documentClient(input.clientId, tx, repo.client, retained)
     const company = await repo.company(tx)
     const bankAccountId =
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
@@ -130,25 +130,7 @@ export function createInvoiceService(
           email: company.email,
           phone: company.phone,
         },
-        clientSnapshot: {
-          type: client.type,
-          firstName: client.firstName,
-          lastName: client.lastName,
-          legalName: client.legalName,
-          tradeName: client.tradeName,
-          addressLine1: client.addressLine1,
-          addressLine2: client.addressLine2,
-          city: client.city,
-          postalCode: client.postalCode,
-          countryCode: client.countryCode,
-          ice: client.ice,
-          taxIdentifier: client.taxIdentifier,
-          registrationNumber: client.registrationNumber,
-          registrationCity: client.registrationCity,
-          professionalTaxNumber: client.professionalTaxNumber,
-          email: client.email,
-          phone: client.phone,
-        },
+        clientSnapshot: client.snapshot,
         appearanceSnapshot: documentAppearance(template, company),
         bankDetailsSnapshot,
         bankAccountId,
@@ -203,6 +185,12 @@ export function createInvoiceService(
           return output(existing, tx)
         }
         const ids = input.lines.map((line) => line.deliveryNoteLineId)
+        if (await repo.wasDeletedOperation(input.operationId, tx))
+          throw new AppError(
+            409,
+            'OPERATION_DELETED',
+            'This invoice operation was deleted. Start a new operation instead of retrying it.',
+          )
         if (new Set(ids).size !== ids.length)
           throw new AppError(400, 'DUPLICATE_DELIVERY_LINE', 'Select each delivery line only once.')
         const sources = new Map<string, Awaited<ReturnType<typeof repo.deliveryLine>>>()
@@ -271,6 +259,8 @@ export function createInvoiceService(
           tx,
         )
         const savedLines = await repo.lines(row.id, tx)
+        const noteIds = [...new Set([...sources.values()].map(({ note }) => note.id))].sort()
+        for (const noteId of noteIds) await repo.attachDelivery(noteId, row.id, actor, tx)
         for (const [position, line] of input.lines.entries())
           await repo.allocate(savedLines[position]!.id, line.deliveryNoteLineId, line.quantity, tx)
         const result = await output(row, tx)
@@ -309,14 +299,19 @@ export function createInvoiceService(
             'DELIVERY_ALLOCATED',
             'Delivery-derived invoices cannot be edited after allocation.',
           )
-        if (before.sourceEstimateId && before.clientId !== input.clientId)
+        if (before.sourceEstimateId && before.clientId && before.clientId !== input.clientId)
           throw new AppError(
             409,
             'SOURCE_CLIENT_MISMATCH',
             'Converted invoice must keep the estimate client.',
           )
         const previous = await output(before, tx)
-        const prepared = await prepare(input, actor, tx)
+        const prepared = await prepare(
+          input,
+          actor,
+          tx,
+          before.clientId === null ? before.clientSnapshot : undefined,
+        )
         if (before.sourceEstimateId && prepared.header.currency !== before.currency)
           throw new AppError(
             409,
@@ -363,7 +358,9 @@ export function createInvoiceService(
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_INVOICE', 'Add at least one product before issuing.')
         const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
-        const currentClientSnapshot = clientSnapshot(await repo.client(before.clientId, tx))
+        const currentClientSnapshot = (
+          await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
+        ).snapshot
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
           timeZone: 'Africa/Casablanca',
@@ -510,6 +507,12 @@ export function createInvoiceService(
           )
         const lines = await repo.estimateLines(id, tx)
         const company = await repo.company(tx)
+        if (await repo.wasDeletedOperation(input.operationId, tx))
+          throw new AppError(
+            409,
+            'OPERATION_DELETED',
+            'This invoice operation was deleted. Start a new operation instead of retrying it.',
+          )
         const issueDate = companyDate(new Date(), company.timezone)
         const fallbackDueDate = new Date(`${issueDate}T12:00:00Z`)
         fallbackDueDate.setUTCDate(fallbackDueDate.getUTCDate() + company.paymentDueDays)
@@ -521,6 +524,7 @@ export function createInvoiceService(
             clientId: estimate.clientId,
             templateId: estimate.templateId,
             sourceEstimateId: id,
+            sourceEstimateNumberSnapshot: estimate.number,
             conversionOperationId: input.operationId,
             conversionRequest: input,
             issueDate,
@@ -529,7 +533,9 @@ export function createInvoiceService(
             locale: estimate.locale,
             localeOverride: estimate.locale,
             issuerSnapshot: estimate.issuerSnapshot,
-            clientSnapshot: clientSnapshot(await repo.client(estimate.clientId, tx)),
+            clientSnapshot: (
+              await documentClient(estimate.clientId, tx, repo.client, estimate.clientSnapshot)
+            ).snapshot,
             appearanceSnapshot: estimate.appearanceSnapshot,
             bankDetailsSnapshot: estimate.bankDetailsSnapshot,
             bankAccountId: estimate.bankAccountId,

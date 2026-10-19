@@ -10,6 +10,18 @@ import type { MessageAttachment, NotificationPublicApi } from '../../support/not
 import type { ClientNotificationsPublicApi } from '../clients/index.js'
 import type { MediaPublicApi } from '../media/index.js'
 import type { NotificationPolicyPublicApi } from '../settings/index.js'
+import { createCancellationController } from './actions/controllers/cancellation.controller.js'
+import { createDeletionController } from './actions/controllers/deletion.controller.js'
+import { createSalesCancellationController } from './actions/controllers/sales-cancellation.controller.js'
+import { registerCancellationRoutes } from './actions/routes/cancellation.routes.js'
+import { registerDeletionRoutes } from './actions/routes/deletion.routes.js'
+import { registerSalesCancellationRoutes } from './actions/routes/sales-cancellation.routes.js'
+import { createCatalogReferenceService } from './actions/services/catalog-reference.service.js'
+import { createSalesClientDeletionService } from './actions/services/client-deletion.service.js'
+import { createInvoiceCancellationService } from './actions/services/invoice-cancellation.service.js'
+import { createSalesCancellationService } from './actions/services/sales-cancellation.service.js'
+import { createSalesDeletionService } from './actions/services/sales-deletion.service.js'
+import { createSettingsReferenceService } from './actions/services/settings-reference.service.js'
 import { createArtifactController } from './artifacts/controllers/artifact.controller.js'
 import { registerArtifactRoutes } from './artifacts/routes/artifact.routes.js'
 import { createRegeneratePdfService } from './artifacts/services/regenerate-pdf.service.js'
@@ -56,6 +68,11 @@ import { renderDeliveryPdf } from './shared/services/delivery-pdf.service.js'
 import { createReportingReadService } from './shared/services/reporting-read.service.js'
 import { renderSalesPdf } from './shared/services/sales-pdf.service.js'
 export type { SalesReportingApi } from './sales.public.js'
+export type {
+  SalesCatalogDeletionApi,
+  SalesClientDeletionApi,
+  SalesSettingsDeletionApi,
+} from './sales.public.js'
 
 export function createSalesModule(
   database: () => Database,
@@ -79,6 +96,19 @@ export function createSalesModule(
       }
     | undefined
   const changed = (tx: Transaction) => notificationCallbacks?.invalidate(tx) ?? Promise.resolve()
+  const cancellations = createInvoiceCancellationService(
+    invoicesRepo,
+    paymentsRepo,
+    deliveryNotesRepo,
+    changed,
+  )
+  const otherCancellations = createSalesCancellationService(
+    invoicesRepo,
+    estimatesRepo,
+    deliveryNotesRepo,
+    paymentsRepo,
+    changed,
+  )
   const payments = createPaymentService(paymentsRepo, {
     invalidate: changed,
     paymentConfirmed: (tx, id) =>
@@ -115,6 +145,7 @@ export function createSalesModule(
     },
   }
   const artifacts = createArtifactSupport(database, storage, owners)
+  const deletions = createSalesDeletionService(invoicesRepo, artifacts.service)
   const jobs = createJobSupport(database)
   const receipts = createPaymentReceiptService(
     paymentsRepo,
@@ -146,6 +177,7 @@ export function createSalesModule(
     jobs,
     artifacts.service,
     finalized('delivery_note'),
+    changed,
   )
   const regenerate = createRegeneratePdfService(
     { invoice: invoicesRepo, estimate: estimatesRepo, delivery_note: deliveryNotesRepo },
@@ -251,7 +283,12 @@ export function createSalesModule(
         position: 0,
       }
     },
-    publicApi: { reporting: createReportingReadService(createReportingReadRepository(database)) },
+    publicApi: {
+      reporting: createReportingReadService(createReportingReadRepository(database)),
+      catalogDeletion: createCatalogReferenceService(invoicesRepo),
+      clientDeletion: createSalesClientDeletionService(invoicesRepo, artifacts.service),
+      settingsDeletion: createSettingsReferenceService(invoicesRepo),
+    },
     worker,
     async registerRoutes(
       app: FastifyInstance,
@@ -263,6 +300,13 @@ export function createSalesModule(
           registerEstimateRoutes(scope, createEstimateController(estimates), permission)
           registerPaymentRoutes(scope, createPaymentController(payments, receipts), permission)
           registerInvoiceRoutes(scope, createInvoiceController(invoices), permission)
+          registerCancellationRoutes(scope, createCancellationController(cancellations), permission)
+          registerSalesCancellationRoutes(
+            scope,
+            createSalesCancellationController(otherCancellations),
+            permission,
+          )
+          registerDeletionRoutes(scope, createDeletionController(deletions), authenticate)
           registerDeliveryNoteRoutes(scope, createDeliveryNoteController(deliveryNotes), permission)
           registerArtifactRoutes(
             scope,

@@ -21,16 +21,32 @@ import { AppError } from '../../../../lib/errors.js'
 import { companyDate } from '../../../../lib/validation.js'
 import { paymentBalancesForInvoices } from '../../payments/repositories/payment.repository.js'
 import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
+import { documentClientNameSql } from '../../shared/repositories/document-client.js'
+import { snapshotClientName } from '../../shared/repositories/document-client.js'
 
 export type InvoiceRow = typeof invoices.$inferSelect
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect
 type ListFilters = Omit<ListInvoicesQuery, 'page' | 'pageSize'>
 const paidSql = sql<number>`coalesce((select sum(p.amount) from payments p where p.invoice_id = ${invoices.id} and p.status = 'confirmed'), 0)`
 const outstandingSql = sql<number>`case when ${invoices.status} in ('issued','sent') then greatest(${invoices.total} - ${paidSql}, 0) else 0 end`
-const clientNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', ${clients.firstName}, ${clients.lastName}))`
+const clientNameSql = documentClientNameSql(invoices.clientSnapshot)
 
 export function createInvoiceRepository(database: () => Database) {
   return {
+    async wasDeletedOperation(operationId: string, tx: Transaction) {
+      const [row] = await tx
+        .select({ id: auditEvents.id })
+        .from(auditEvents)
+        .where(
+          and(
+            eq(auditEvents.entityTable, 'invoices'),
+            eq(auditEvents.action, 'delete'),
+            sql`${auditEvents.beforeValues}->>'conversionOperationId' = ${operationId}`,
+          ),
+        )
+        .limit(1)
+      return Boolean(row)
+    },
     bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async authorize(tx: Transaction, actor: string, permission: string) {
@@ -69,9 +85,14 @@ export function createInvoiceRepository(database: () => Database) {
     balances(ids: string[], tx: Database | Transaction = database()) {
       return paymentBalancesForInvoices(tx, ids)
     },
-    async clientDisplayName(id: string, tx: Database | Transaction = database()) {
-      const [row] = await tx.select({ name: clientNameSql }).from(clients).where(eq(clients.id, id))
-      return row?.name ?? ''
+    async clientDisplayName(
+      id: string | null,
+      tx: Database | Transaction = database(),
+      snapshot?: unknown,
+    ) {
+      if (!id) return snapshotClientName(snapshot)
+      const [row] = await tx.select().from(clients).where(eq(clients.id, id))
+      return snapshotClientName(row ?? snapshot)
     },
     async sourceEstimateNumber(id: string | null, tx: Database | Transaction = database()) {
       if (!id) return null
@@ -160,6 +181,38 @@ export function createInvoiceRepository(database: () => Database) {
       return tx
         .insert(deliveryInvoiceAllocations)
         .values({ invoiceLineId, deliveryNoteLineId, quantity })
+    },
+    async attachDelivery(noteId: string, invoiceId: string, actor: string, tx: Transaction) {
+      const [before] = await tx
+        .select()
+        .from(deliveryNotes)
+        .where(eq(deliveryNotes.id, noteId))
+        .for('update')
+      if (!before || before.invoiceId)
+        throw new AppError(
+          409,
+          'DELIVERY_NOT_BILLABLE',
+          'This delivery note already belongs to an invoice.',
+        )
+      const [after] = await tx
+        .update(deliveryNotes)
+        .set({
+          invoiceId,
+          version: sql`${deliveryNotes.version} + 1`,
+          updatedAt: new Date(),
+          updatedByUserId: actor,
+        })
+        .where(eq(deliveryNotes.id, noteId))
+        .returning()
+      await tx.insert(auditEvents).values({
+        actorUserId: actor,
+        actorKind: 'user',
+        action: 'attach_invoice',
+        entityTable: 'delivery_notes',
+        entityKey: { id: noteId },
+        beforeValues: before,
+        afterValues: after,
+      })
     },
     async sourceEstimate(id: string, tx: Transaction) {
       const [row] = await tx.select().from(estimates).where(eq(estimates.id, id)).for('update')
@@ -316,7 +369,7 @@ export function createInvoiceRepository(database: () => Database) {
         database()
           .select()
           .from(invoices)
-          .innerJoin(clients, eq(invoices.clientId, clients.id))
+          .leftJoin(clients, eq(invoices.clientId, clients.id))
           .where(where)
           .orderBy(direction(sort), direction(invoices.id))
           .limit(filters.limit)
@@ -325,7 +378,7 @@ export function createInvoiceRepository(database: () => Database) {
         database()
           .select({ total: sql<number>`count(*)::int` })
           .from(invoices)
-          .innerJoin(clients, eq(invoices.clientId, clients.id))
+          .leftJoin(clients, eq(invoices.clientId, clients.id))
           .where(where),
       ])
       return { items, total: count[0]?.total ?? 0 }

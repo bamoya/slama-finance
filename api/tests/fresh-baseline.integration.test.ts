@@ -46,6 +46,10 @@ it('installs the final schema and only required defaults on a fresh database', a
     const triggers =
       await fixture.client`select tgname from pg_trigger where tgrelid in (select oid from pg_class where relnamespace=(select oid from pg_namespace where nspname=current_schema())) and not tgisinternal order by tgname`
     expect(triggers.map((row) => row.tgname)).toEqual([
+      'delivery_invoice_owner_after_allocation',
+      'delivery_invoice_owner_after_delivery_line',
+      'delivery_invoice_owner_after_invoice_line',
+      'delivery_invoice_owner_after_note',
       'product_requires_variant_after_change',
       'product_requires_variant_after_create',
       'product_variant_parent_lock',

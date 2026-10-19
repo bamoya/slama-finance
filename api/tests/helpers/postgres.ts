@@ -7,7 +7,7 @@ import postgres from 'postgres'
 import * as tables from '../../db/schema/index.js'
 
 export const testUserId = '11111111-1111-4111-8111-111111111111'
-export async function isolatedDatabase() {
+export async function isolatedDatabase(options: { migrationCount?: number } = {}) {
   const value = process.env.TEST_DATABASE_URL
   if (!value)
     throw new Error(
@@ -49,7 +49,8 @@ export async function isolatedDatabase() {
     const migrationDir = new URL('../../db/migrations/', import.meta.url)
     for (const name of (await readdir(migrationDir))
       .filter((name) => name.endsWith('.sql'))
-      .sort()) {
+      .sort()
+      .slice(0, options.migrationCount)) {
       const baseline = await readFile(new URL(name, migrationDir), 'utf8')
       // gen_random_uuid is native in supported PostgreSQL; do not mutate cluster extensions.
       await client.unsafe(

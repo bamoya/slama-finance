@@ -21,6 +21,7 @@ const row: PaymentRow = {
   paymentDate: '2026-10-02',
   collectedOn: null,
   bankAccountId: null,
+  bankAccountSnapshot: null,
   reference: null,
   chequeBank: 'Attijariwafa Bank',
   chequeNumber: 'CHQ-10292026',

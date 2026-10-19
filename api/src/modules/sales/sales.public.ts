@@ -3,6 +3,11 @@ import type {
   ReportSection,
 } from '../../contracts/generated/reporting/reporting.schemas.js'
 import type { Transaction } from '../../lib/db.js'
+export type {
+  SalesCatalogDeletionApi,
+  SalesClientDeletionApi,
+  SalesSettingsDeletionApi,
+} from './actions/types/deletion.types.js'
 export interface SalesReportingApi {
   capture(
     filters: ReportFilters,

@@ -92,6 +92,184 @@ describe('Estimates lifecycle', () => {
       },
     ],
   })
+  async function cancellableInvoice() {
+    const { validUntil: _, ...input } = revisionInput()
+    const created = await post('/v1/invoices', { ...input, dueDate: null })
+    expect(created.statusCode, created.body).toBe(201)
+    const issued = await post(`/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
+    expect(issued.statusCode, issued.body).toBe(200)
+    return issued.json()
+  }
+  async function cancellationPayment(invoiceId: string) {
+    const result = await post('/v1/payments', {
+      operationId: randomUUID(),
+      invoiceId,
+      amount: '10.00',
+      currency: 'MAD',
+      method: 'cash',
+      status: 'confirmed',
+      paymentDate: '2026-10-02',
+      collectedOn: '2026-10-02',
+      bankAccountId: null,
+      reference: null,
+      chequeBank: null,
+      chequeNumber: null,
+    })
+    expect(result.statusCode, result.body).toBe(201)
+    return result.json()
+  }
+  it('previews and atomically cancels invoice chains, preserving already cancelled records', async () => {
+    const invoice = await cancellableInvoice()
+    await fixture.client`update clients set email='client@example.test' where id=${clientId}`
+    await fixture.client`update notification_rules set sender_email='sender@example.test' where event_key='invoice_sent'`
+    const email = await post(`/v1/invoices/${invoice.id}/send`, {
+      requestId: randomUUID(),
+      expectedVersion: invoice.version,
+      overridePreferences: true,
+    })
+    expect(email.statusCode, email.body).toBe(202)
+    const payment = await cancellationPayment(invoice.id)
+    const preserved = await cancellationPayment(invoice.id)
+    expect(
+      (
+        await post(`/v1/payments/${preserved.id}/cancel`, {
+          expectedVersion: preserved.version,
+          reason: 'Original reason',
+        })
+      ).statusCode,
+    ).toBe(200)
+    const [note] =
+      await fixture.client`insert into delivery_notes(client_id,invoice_id,delivery_date,issuer_snapshot,client_snapshot,delivery_address) values(${clientId},${invoice.id},'2026-10-02','{}','{}','Rabat') returning id`
+    await fixture.client`update payments set receipt_issued_at=now() where id=${payment.id}`
+    const selection = { invoices: [{ id: invoice.id, expectedVersion: invoice.version }] }
+    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    expect(preview.statusCode, preview.body).toBe(200)
+    expect(preview.json()).toMatchObject({
+      invoices: [{ id: invoice.id }],
+      payments: [{ id: payment.id }],
+      deliveryNotes: [{ id: note!.id, name: null }],
+      receipts: 1,
+      alreadyCancelled: 1,
+    })
+    expect(
+      (await fixture.client`select status from invoices where id=${invoice.id}`)[0]!.status,
+    ).toBe('issued')
+    const input = { ...selection, token: preview.json().token, reason: 'Client cancelled order' }
+    expect((await post('/v1/invoices/cancellation', input)).statusCode).toBe(204)
+    expect(
+      (await fixture.client`select status from background_jobs where id=${email.json().jobId}`)[0]!
+        .status,
+    ).toBe('cancelled')
+    expect(
+      (await fixture.client`select status,version from invoices where id=${invoice.id}`)[0],
+    ).toMatchObject({ status: 'cancelled', version: invoice.version + 1 })
+    expect(
+      (await fixture.client`select status,version from payments where id=${payment.id}`)[0],
+    ).toMatchObject({ status: 'cancelled', version: payment.version + 1 })
+    expect(
+      (await fixture.client`select status,number from delivery_notes where id=${note!.id}`)[0],
+    ).toMatchObject({ status: 'cancelled', number: null })
+    expect(
+      (await fixture.client`select cancellation_reason from payments where id=${preserved.id}`)[0]!
+        .cancellation_reason,
+    ).toBe('Original reason')
+    expect((await post('/v1/invoices/cancellation', input)).statusCode).toBe(409)
+    expect(
+      (
+        await fixture.client`select count(*) from audit_events where action='cancel' and entity_key->>'id'=${invoice.id}`
+      )[0]!.count,
+    ).toBe('1')
+  })
+  it('rolls back children, roots and audit events if any cancellation in the batch fails', async () => {
+    const first = await cancellableInvoice()
+    const second = await cancellableInvoice()
+    const payment = await cancellationPayment(first.id)
+    await fixture.client`update invoices set notes='force rollback' where id=${second.id}`
+    await fixture.client
+      .unsafe(`create function reject_test_cancellation() returns trigger language plpgsql as $$
+      begin
+        if new.status='cancelled' and old.notes='force rollback' then raise exception 'test rollback'; end if;
+        return new;
+      end $$;
+      create trigger reject_test_cancellation before update on invoices for each row execute function reject_test_cancellation();`)
+    const selection = {
+      invoices: [first, second].map((row) => ({ id: row.id, expectedVersion: row.version })),
+    }
+    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    expect(preview.statusCode, preview.body).toBe(200)
+    const result = await post('/v1/invoices/cancellation', {
+      ...selection,
+      token: preview.json().token,
+      reason: 'Cancel all',
+    })
+    expect(result.statusCode).toBe(500)
+    expect(
+      (
+        await fixture.client`select status from invoices where id in (${first.id},${second.id})`
+      ).every((row) => row.status === 'issued'),
+    ).toBe(true)
+    expect(
+      (await fixture.client`select status,version from payments where id=${payment.id}`)[0],
+    ).toMatchObject({ status: 'confirmed', version: payment.version })
+    expect(
+      (await fixture.client`select count(*) from audit_events where action='cancel'`)[0]!.count,
+    ).toBe('0')
+  })
+  it('blocks a whole bulk cancellation for changed impact, missing permissions or invalid selections', async () => {
+    const first = await cancellableInvoice()
+    const second = await cancellableInvoice()
+    const selection = {
+      invoices: [first, second].map((row) => ({ id: row.id, expectedVersion: row.version })),
+    }
+    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    expect(preview.statusCode, preview.body).toBe(200)
+    const payment = await cancellationPayment(second.id)
+    const stale = await post('/v1/invoices/cancellation', {
+      ...selection,
+      token: preview.json().token,
+      reason: 'Cancel both',
+    })
+    expect(stale.statusCode, stale.body).toBe(409)
+    expect(stale.json().code).toBe('IMPACT_CHANGED')
+    await fixture.client`delete from role_permissions where role_id in (select id from roles where key='admin') and permission_id in (select id from permissions where key='payments.update')`
+    expect((await post('/v1/invoices/cancellation/preview', selection)).statusCode).toBe(403)
+    expect(
+      (
+        await fixture.client`select status from invoices where id in (${first.id},${second.id})`
+      ).every((row) => row.status === 'issued'),
+    ).toBe(true)
+    expect(
+      (await fixture.client`select status from payments where id=${payment.id}`)[0]!.status,
+    ).toBe('confirmed')
+    const invalid = await post('/v1/invoices/cancellation/preview', {
+      invoices: [
+        { id: first.id, expectedVersion: first.version },
+        { id: randomUUID(), expectedVersion: 1 },
+      ],
+    })
+    expect(invalid.statusCode).toBe(404)
+    expect(
+      (
+        await post('/v1/invoices/cancellation/preview', {
+          invoices: [selection.invoices[0], selection.invoices[0]],
+        })
+      ).statusCode,
+    ).toBe(400)
+    await fixture.client`insert into role_permissions(role_id,permission_id) select r.id,p.id from roles r, permissions p where r.key='admin' and p.key='payments.update'`
+    const fresh = await post('/v1/invoices/cancellation/preview', selection)
+    expect(fresh.statusCode, fresh.body).toBe(200)
+    const request = { ...selection, token: fresh.json().token, reason: 'Cancel both' }
+    const outcomes = await Promise.all([
+      post('/v1/invoices/cancellation', request),
+      post('/v1/invoices/cancellation', request),
+    ])
+    expect(outcomes.map((row) => row.statusCode).sort()).toEqual([204, 409])
+    expect(
+      (
+        await fixture.client`select status from invoices where id in (${first.id},${second.id})`
+      ).every((row) => row.status === 'cancelled'),
+    ).toBe(true)
+  })
   it('resolves company template/date defaults and preserves explicit choices and issued snapshots', async () => {
     const [template] =
       await fixture.client`insert into document_templates(name,layout,accent_color,footer_text) values('Company default','atelier','#176c51','Company footer') returning id`
@@ -679,6 +857,116 @@ describe('Estimates lifecycle', () => {
     })
     expect(download.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
   })
+  it('consolidates BLs into one invoice and rejects cross-invoice allocation through API and SQL', async () => {
+    const notes = []
+    for (let index = 0; index < 2; index++) {
+      const created = await post('/v1/delivery-notes', {
+        clientId,
+        invoiceId: null,
+        deliveryDate: '2026-10-01',
+        deliveryAddress: 'Rue Hassan',
+        instructions: null,
+        includeReceptionSignature: false,
+        lines: [
+          {
+            productVariantId: null,
+            sourceInvoiceLineId: null,
+            productName: `Wheat ${index}`,
+            quantity: 3,
+          },
+        ],
+      })
+      expect(created.statusCode, created.body).toBe(201)
+      const delivered = await post(`/v1/delivery-notes/${created.json().id}/deliver`, {
+        expectedVersion: 1,
+      })
+      expect(delivered.statusCode, delivered.body).toBe(200)
+      notes.push(delivered.json())
+    }
+    const input = {
+      operationId: randomUUID(),
+      templateId: null,
+      issueDate: '2026-10-01',
+      dueDate: '2026-10-16',
+      notes: null,
+      paymentTerms: null,
+      lines: notes.map((note) => ({
+        deliveryNoteLineId: note.lines[0].id,
+        quantity: 3,
+        unitPrice: '10.00',
+        vatRate: null,
+      })),
+    }
+    const combined = await post('/v1/invoices/from-deliveries', input)
+    expect(combined.statusCode, combined.body).toBe(201)
+    expect(combined.json().deliveryNoteIds.sort()).toEqual(notes.map((note) => note.id).sort())
+    expect((await post('/v1/invoices/from-deliveries', input)).json().id).toBe(combined.json().id)
+    for (const note of notes) {
+      const current = (await app.inject({ url: `/v1/delivery-notes/${note.id}`, cookies })).json()
+      expect(current.invoiceId).toBe(combined.json().id)
+      expect(current.version).toBe(note.version + 1)
+    }
+    const competing = await post('/v1/invoices', {
+      ...revisionInput(),
+      validUntil: undefined,
+      dueDate: null,
+    })
+    expect(competing.statusCode, competing.body).toBe(201)
+    const other = competing.json()
+    await expect(
+      fixture.client`insert into delivery_invoice_allocations(invoice_line_id,delivery_note_line_id,quantity) values(${other.lines[0].id},${notes[0].lines[0].id},1)`,
+    ).rejects.toMatchObject({ code: '23514' })
+    await expect(
+      fixture.client`update delivery_notes set invoice_id=${other.id} where id=${notes[0].id}`,
+    ).rejects.toMatchObject({ code: '23514' })
+    await expect(
+      fixture.client`update invoice_lines set invoice_id=${other.id},position=99 where id=${combined.json().lines[0].id}`,
+    ).rejects.toMatchObject({ code: '23514' })
+    const attempts = await Promise.all([
+      post('/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
+      post('/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
+    ])
+    expect(attempts.map((result) => result.statusCode)).toEqual([409, 409])
+    expect(
+      (await fixture.client`select count(*) from delivery_invoice_allocations`)[0]!.count,
+    ).toBe('2')
+    const fresh = await post('/v1/delivery-notes', {
+      clientId,
+      invoiceId: null,
+      deliveryDate: '2026-10-01',
+      deliveryAddress: 'Rue Hassan',
+      instructions: null,
+      includeReceptionSignature: false,
+      lines: [
+        { productVariantId: null, sourceInvoiceLineId: null, productName: 'Race', quantity: 1 },
+      ],
+    })
+    expect(fresh.statusCode, fresh.body).toBe(201)
+    const ready = await post(`/v1/delivery-notes/${fresh.json().id}/deliver`, {
+      expectedVersion: 1,
+    })
+    expect(ready.statusCode, ready.body).toBe(200)
+    const claim = () =>
+      post('/v1/invoices/from-deliveries', {
+        ...input,
+        operationId: randomUUID(),
+        lines: [
+          {
+            deliveryNoteLineId: ready.json().lines[0].id,
+            quantity: 1,
+            unitPrice: '10.00',
+            vatRate: null,
+          },
+        ],
+      })
+    const race = await Promise.all([claim(), claim()])
+    expect(race.map((result) => result.statusCode).sort()).toEqual([201, 409])
+    const winning = race.find((result) => result.statusCode === 201)!.json()
+    expect(
+      (await app.inject({ url: `/v1/delivery-notes/${fresh.json().id}`, cookies })).json()
+        .invoiceId,
+    ).toBe(winning.id)
+  })
   it('prepares an independent delivery note and prevents over-delivery against an invoice', async () => {
     const independent = await post('/v1/delivery-notes', {
       clientId,
@@ -758,18 +1046,16 @@ describe('Estimates lifecycle', () => {
       ).statusCode,
     ).toBe(409)
     const secondDeliveryInvoice = await post('/v1/invoices/from-deliveries', conversion(1))
-    expect(secondDeliveryInvoice.statusCode).toBe(201)
+    expect(secondDeliveryInvoice.statusCode).toBe(409)
     const independentDetail = await app.inject({
       url: `/v1/delivery-notes/${independent.json().id}`,
       cookies,
     })
     expect(independentDetail.statusCode, JSON.stringify(independentDetail.json())).toBe(200)
-    expect(independentDetail.json().invoices).toEqual(
-      [
-        { id: deliveryInvoice.json().id, number: null, status: 'draft' },
-        { id: secondDeliveryInvoice.json().id, number: null, status: 'draft' },
-      ].sort((a, b) => a.id.localeCompare(b.id)),
-    )
+    expect(independentDetail.json().invoiceId).toBe(deliveryInvoice.json().id)
+    expect(independentDetail.json().invoices).toEqual([
+      { id: deliveryInvoice.json().id, number: null, status: 'draft' },
+    ])
 
     const draft = await post('/v1/invoices', {
       clientId,
@@ -827,5 +1113,24 @@ describe('Estimates lifecycle', () => {
         })
       ).statusCode,
     ).toBe(409)
+    const convertedIssued = await post(`/v1/invoices/${deliveryInvoice.json().id}/issue`, {
+      expectedVersion: deliveryInvoice.json().version,
+    })
+    expect(convertedIssued.statusCode, convertedIssued.body).toBe(200)
+    for (const root of [convertedIssued.json(), invoice.json()]) {
+      const selection = { invoices: [{ id: root.id, expectedVersion: root.version }] }
+      const impact = await post('/v1/invoices/cancellation/preview', selection)
+      expect(impact.statusCode, impact.body).toBe(200)
+      expect(impact.json().deliveryNotes.length).toBe(root.id === invoice.json().id ? 2 : 1)
+      const result = await post('/v1/invoices/cancellation', {
+        ...selection,
+        token: impact.json().token,
+        reason: 'Order cancelled with its deliveries',
+      })
+      expect(result.statusCode, result.body).toBe(204)
+      const notes =
+        await fixture.client`select status from delivery_notes where invoice_id=${root.id}`
+      expect(notes.every((note) => note.status === 'cancelled')).toBe(true)
+    }
   })
 })

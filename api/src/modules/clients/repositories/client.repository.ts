@@ -285,7 +285,7 @@ export function createClientRepository(database: () => Database) {
       id: string,
       action: string,
       before: { type: string; version: number; archivedAt: Date | null } | null,
-      after: { type: string; version: number; archivedAt: Date | null },
+      after: { type: string; version: number; archivedAt: Date | null } | null,
     ) {
       return tx.insert(auditEvents).values({
         actorUserId: actor,
@@ -296,7 +296,9 @@ export function createClientRepository(database: () => Database) {
         beforeValues: before
           ? { type: before.type, version: before.version, archived: !!before.archivedAt }
           : null,
-        afterValues: { type: after.type, version: after.version, archived: !!after.archivedAt },
+        afterValues: after
+          ? { type: after.type, version: after.version, archived: !!after.archivedAt }
+          : null,
       })
     },
   }

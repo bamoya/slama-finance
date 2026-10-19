@@ -1,0 +1,194 @@
+openapi: 3.1.0
+info: { title: Sales actions, version: 0.1.0 }
+paths:
+  /v1/sales/deletion/preview:
+    post:
+      operationId: previewSalesDeletion
+      tags: [sales]
+      description: Compute single or bulk permanent deletion impact. Requires Read/Delete on every removed resource and Read/Update on detached resources. No partial skipping.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesDeletionSelection' }
+      responses:
+        '200':
+          description: Current deletion and detachment impact; sending email is a blocker.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDeletionImpact' }
+        default:
+          description: Invalid selection or permission denial.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/sales/deletion:
+    post:
+      operationId: confirmSalesDeletion
+      tags: [sales]
+      description: Revalidate the signed preview under ownership locks, then delete the whole graph atomically. File removal is attempted after commit with durable orphan-maintenance fallback. Never recalls sent emails or reverses real transfers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmSalesDeletion' }
+      responses:
+        '204': { description: Entire selection deleted; unreferenced files released for cleanup. }
+        default:
+          description: Nothing changed; reload the impact before retrying.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/invoices/cancellation/preview:
+    post:
+      operationId: previewInvoiceCancellation
+      tags: [sales]
+      x-permissions: [invoices.update]
+      description: Read-only impact preview. Checks all selected invoice versions and permissions for every affected resource. No partial skipping.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvoiceCancellationSelection' }
+      responses:
+        '200':
+          description: Five-minute confirmation bound to the actor, selection and current related records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceCancellationImpact' }
+        default:
+          description: Invalid selection, insufficient permissions or stale versions.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/invoices/cancellation:
+    post:
+      operationId: confirmInvoiceCancellation
+      tags: [sales]
+      x-permissions: [invoices.update]
+      description: Atomically cancel the entire selection and its active payments and linked BLs. Revalidates the impact under locks. Already cancelled descendants retain their reason and history. Never reverses real banking operations or physical deliveries.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmInvoiceCancellation' }
+      responses:
+        '204': { description: Entire selection cancelled. }
+        default:
+          description: Nothing changed; review the impact and permissions again.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+components:
+  schemas:
+    SalesDeletionSelection:
+      type: object
+      additionalProperties: false
+      required: [resource, records]
+      properties:
+        resource: { type: string, enum: [estimates, invoices, delivery_notes, payments] }
+        cascadeInvoices: { type: boolean, default: false, description: Estimates only. Explicitly delete their invoice chains instead of detaching invoices. }
+        records:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, expectedVersion]
+            properties:
+              id: { type: string, format: uuid }
+              expectedVersion: { type: integer, minimum: 1 }
+    SalesDeletionImpact:
+      type: object
+      additionalProperties: false
+      required: [token, expiresAt, groups, files, retainedFiles, jobs, emails, blockers, requiredPermissions]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        groups:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [resource, operation, records]
+            properties:
+              resource: { type: string, enum: [estimates, invoices, delivery_notes, payments] }
+              operation: { type: string, enum: [delete, detach] }
+              records:
+                type: array
+                items: { $ref: '#/components/schemas/CancellationImpactRecord' }
+        files: { type: integer, minimum: 0 }
+        retainedFiles: { type: integer, minimum: 0 }
+        jobs: { type: integer, minimum: 0 }
+        emails: { type: integer, minimum: 0 }
+        requiredPermissions:
+          type: array
+          items: { type: string }
+        blockers:
+          type: array
+          items: { type: string, enum: [EMAIL_DELIVERY_IN_PROGRESS] }
+    ConfirmSalesDeletion:
+      type: object
+      additionalProperties: false
+      required: [resource, records, token]
+      properties:
+        resource: { $ref: '#/components/schemas/SalesDeletionSelection/properties/resource' }
+        records: { $ref: '#/components/schemas/SalesDeletionSelection/properties/records' }
+        cascadeInvoices: { type: boolean, default: false }
+        token: { type: string, minLength: 1, maxLength: 256 }
+    InvoiceCancellationSelection:
+      type: object
+      additionalProperties: false
+      required: [invoices]
+      properties:
+        invoices:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, expectedVersion]
+            properties:
+              id: { type: string, format: uuid }
+              expectedVersion: { type: integer, minimum: 1 }
+    CancellationImpactRecord:
+      type: object
+      additionalProperties: false
+      required: [id, name, status, version]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [string, 'null'] }
+        status: { type: string }
+        version: { type: integer, minimum: 1 }
+    InvoiceCancellationImpact:
+      type: object
+      additionalProperties: false
+      required: [token, expiresAt, invoices, payments, deliveryNotes, receipts, alreadyCancelled]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        invoices:
+          type: array
+          items: { $ref: '#/components/schemas/CancellationImpactRecord' }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/CancellationImpactRecord' }
+        deliveryNotes:
+          type: array
+          items: { $ref: '#/components/schemas/CancellationImpactRecord' }
+        receipts: { type: integer, minimum: 0 }
+        alreadyCancelled: { type: integer, minimum: 0 }
+    ConfirmInvoiceCancellation:
+      type: object
+      additionalProperties: false
+      required: [invoices, token, reason]
+      properties:
+        invoices:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/InvoiceCancellationSelection/properties/invoices/items' }
+        token: { type: string, minLength: 1, maxLength: 256 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }

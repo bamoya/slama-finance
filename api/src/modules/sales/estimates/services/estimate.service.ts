@@ -12,7 +12,7 @@ import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion, FinancialDecimal } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
-import { clientSnapshot as snapshotClient } from '../../shared/services/client-snapshot.js'
+import { documentClient } from '../../shared/services/document-client.js'
 import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
 import type { createEstimateRepository, EstimateRow } from '../repositories/estimate.repository.js'
 
@@ -33,7 +33,7 @@ export function createEstimateService(
   async function output(row: EstimateRow, tx?: Transaction) {
     const [lines, clientDisplayName] = await Promise.all([
       repo.lines(row.id, tx),
-      repo.clientDisplayName(row.clientId, tx),
+      repo.clientDisplayName(row.clientId, tx, row.clientSnapshot),
     ])
     return dto(EstimateSchema, {
       id: row.id,
@@ -85,10 +85,10 @@ export function createEstimateService(
       })),
     })
   }
-  async function prepare(input: EstimateInput, actor: string, tx: Transaction) {
+  async function prepare(input: EstimateInput, actor: string, tx: Transaction, retained?: unknown) {
     if (input.validUntil && input.validUntil < input.issueDate)
       throw new AppError(400, 'INVALID_DATE', 'Valid-until date must not precede the issue date.')
-    const client = await repo.client(input.clientId, tx)
+    const client = await documentClient(input.clientId, tx, repo.client, retained)
     const company = await repo.company(tx)
     const bankAccountId =
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
@@ -143,25 +143,7 @@ export function createEstimateService(
       email: company.email,
       phone: company.phone,
     }
-    const clientSnapshot = {
-      type: client.type,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      legalName: client.legalName,
-      tradeName: client.tradeName,
-      addressLine1: client.addressLine1,
-      addressLine2: client.addressLine2,
-      city: client.city,
-      postalCode: client.postalCode,
-      countryCode: client.countryCode,
-      ice: client.ice,
-      taxIdentifier: client.taxIdentifier,
-      registrationNumber: client.registrationNumber,
-      registrationCity: client.registrationCity,
-      professionalTaxNumber: client.professionalTaxNumber,
-      email: client.email,
-      phone: client.phone,
-    }
+    const clientSnapshot = client.snapshot
     const appearanceSnapshot = documentAppearance(template, company)
     return {
       header: {
@@ -278,7 +260,9 @@ export function createEstimateService(
             locale: source.locale,
             localeOverride: source.locale,
             issuerSnapshot: source.issuerSnapshot,
-            clientSnapshot: snapshotClient(await repo.client(source.clientId, tx)),
+            clientSnapshot: (
+              await documentClient(source.clientId, tx, repo.client, source.clientSnapshot)
+            ).snapshot,
             appearanceSnapshot: source.appearanceSnapshot,
             bankDetailsSnapshot: source.bankDetailsSnapshot,
             bankAccountId: source.bankAccountId,
@@ -334,14 +318,19 @@ export function createEstimateService(
         assertVersion(before.version, input.expectedVersion)
         if (before.status !== 'draft')
           throw new AppError(409, 'INVALID_STATUS', 'Only drafts can be edited.')
-        if (before.revisionOfId && input.clientId !== before.clientId)
+        if (before.revisionOfId && before.clientId && input.clientId !== before.clientId)
           throw new AppError(
             409,
             'REVISION_CLIENT_MISMATCH',
             'A revision must keep the original client.',
           )
         const previous = await output(before, tx)
-        const prepared = await prepare(input, actor, tx)
+        const prepared = await prepare(
+          input,
+          actor,
+          tx,
+          before.clientId === null ? before.clientSnapshot : undefined,
+        )
         const row = await repo.update(id, { ...prepared.header, updatedByUserId: actor }, tx, true)
         await repo.replaceLines(
           id,
@@ -394,7 +383,9 @@ export function createEstimateService(
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_ESTIMATE', 'Add at least one product before issuing.')
         const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
-        const currentClientSnapshot = snapshotClient(await repo.client(before.clientId, tx))
+        const currentClientSnapshot = (
+          await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
+        ).snapshot
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
           timeZone: 'Africa/Casablanca',

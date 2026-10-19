@@ -2,7 +2,7 @@ import type { NotificationRule } from '../../contracts/generated/settings/notifi
 import type { Transaction } from '../../lib/db.js'
 
 export interface EffectiveClientNotification {
-  clientId: string
+  clientId: string | null
   recipient: string | null
   cc: string[]
   clientName: string
@@ -11,7 +11,7 @@ export interface EffectiveClientNotification {
 }
 export interface ClientNotificationsPublicApi {
   effective(
-    clientId: string,
+    clientId: string | null,
     rule: NotificationRule,
     tx?: Transaction,
     manual?: boolean,

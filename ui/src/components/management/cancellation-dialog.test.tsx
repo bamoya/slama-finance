@@ -17,6 +17,43 @@ function setup(onConfirm = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe('cancellation dialog', () => {
+  it('requires a loaded impact and forces a fresh review after execution fails', async () => {
+    let resolve!: (value: { token: string; content: string }) => void
+    const preview = vi.fn().mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    preview.mockResolvedValue({ token: 'fresh', content: 'Two payments' })
+    const confirm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Impact changed'))
+      .mockResolvedValue(undefined)
+    render(
+      <CancellationDialog
+        triggerLabel="Cancel invoice"
+        title="Cancel invoice"
+        validateReason={() => true}
+        preview={preview}
+        onConfirm={confirm}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel invoice' }))
+    expect(screen.getByRole('button', { name: 'Confirm cancellation' })).toBeDisabled()
+    resolve({ token: 'first', content: 'One payment' })
+    await screen.findByText('One payment')
+    fireEvent.change(screen.getByLabelText('Cancellation reason'), { target: { value: 'Reason' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
+    await screen.findByRole('button', { name: 'Review impact again' })
+    expect(confirm).toHaveBeenCalledWith('Reason', 'first')
+    expect(screen.getByRole('button', { name: 'Confirm cancellation' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Review impact again' }))
+    await screen.findByText('Two payments')
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(confirm).toHaveBeenLastCalledWith('Reason', 'fresh')
+  })
   it('keeps reason off the page until opened, validates, trims, and confirms', async () => {
     const confirm = setup()
     expect(screen.queryByLabelText('Cancellation reason')).not.toBeInTheDocument()

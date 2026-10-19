@@ -12,6 +12,7 @@ import { useTableSelection } from '../../../../components/management/use-table-s
 import { buttonVariants } from '../../../../components/ui/button'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
+import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentFilters } from '../../components/document-filters'
 import { type DocumentColumn, DocumentTable } from '../../components/document-table'
 import { SalesBulkActions } from '../../components/sales-bulk-actions'
@@ -79,9 +80,9 @@ export function EstimatesPage() {
       title: t('client'),
       render: (row) => (
         <Can permission="clients.read" fallback={<span>{row.clientDisplayName}</span>}>
-          <Link href={`/clients/${row.clientId}`} className="hover:text-[var(--accent)]">
+          <DocumentClientLink clientId={row.clientId} className="hover:text-[var(--accent)]">
             {row.clientDisplayName}
-          </Link>
+          </DocumentClientLink>
         </Can>
       ),
     },

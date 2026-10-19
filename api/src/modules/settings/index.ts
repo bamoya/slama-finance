@@ -4,18 +4,27 @@ import type { Database } from '../../lib/db.js'
 import type { Transaction } from '../../lib/db.js'
 import type { NotificationPublicApi } from '../../support/notifications/index.js'
 import type { MediaPublicApi } from '../media/index.js'
+import type { SalesSettingsDeletionApi } from '../sales/index.js'
 import { createSettingsController } from './controllers/settings.controller.js'
+import { createSettingsDeletionController } from './controllers/settings-deletion.controller.js'
 import { createNotificationRuleController } from './notifications/controllers/notification-rule.controller.js'
 import { createNotificationRuleRepository } from './notifications/repositories/notification-rule.repository.js'
 import { registerNotificationRuleRoutes } from './notifications/routes/notification-rule.routes.js'
 import { createNotificationRuleService } from './notifications/services/notification-rule.service.js'
 import { createSettingsRepository } from './repositories/settings.repository.js'
 import { registerSettingsRoutes } from './routes/settings.routes.js'
+import { registerSettingsDeletionRoutes } from './routes/settings-deletion.routes.js'
 import { createPreviewService } from './services/preview.service.js'
 import { createSettingsService } from './services/settings.service.js'
+import { createSettingsDeletionService } from './services/settings-deletion.service.js'
 
-export function createSettingsModule(database: () => Database, media: MediaPublicApi) {
+export function createSettingsModule(
+  database: () => Database,
+  media: MediaPublicApi,
+  sales: SalesSettingsDeletionApi,
+) {
   const service = createSettingsService(createSettingsRepository(database), media)
+  const deletion = createSettingsDeletionService(createSettingsRepository(database), sales, media)
   return {
     publicApi: {
       getCompany: service.getCompany,
@@ -24,7 +33,12 @@ export function createSettingsModule(database: () => Database, media: MediaPubli
     },
     async registerRoutes(app: FastifyInstance, permission: (key: string) => preHandlerHookHandler) {
       await app.register(
-        async (scope) =>
+        async (scope) => {
+          registerSettingsDeletionRoutes(
+            scope,
+            createSettingsDeletionController(deletion),
+            permission,
+          )
           registerSettingsRoutes(
             scope,
             createSettingsController(
@@ -32,7 +46,8 @@ export function createSettingsModule(database: () => Database, media: MediaPubli
               createPreviewService(media, async () => (await service.getCompany()).locale),
             ),
             permission,
-          ),
+          )
+        },
         { prefix: '/v1' },
       )
     },

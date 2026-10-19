@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
+import type * as SalesApi from '../../api/generated/sales/sales'
 import { DeliveryConfirmationDialog } from './delivery-notes/components/delivery-confirmation-dialog'
 import { DeliveryNoteDetailPage } from './delivery-notes/pages/delivery-note-detail-page'
 import { EstimateDetailPage } from './estimates/pages/estimate-detail-page'
@@ -14,8 +15,19 @@ import { InvoiceDetailPage } from './invoices/pages/invoice-detail-page'
 
 const mocks = vi.hoisted(() => ({
   cancelInvoice: vi.fn(),
+  previewInvoice: vi.fn(),
+  confirmInvoice: vi.fn(),
   cancelEstimate: vi.fn(),
   cancelDelivery: vi.fn(),
+  previewSales: vi.fn(),
+  confirmSales: vi.fn(),
+}))
+vi.mock('../../api/generated/sales/sales', async (original) => ({
+  ...(await original<typeof SalesApi>()),
+  usePreviewInvoiceCancellation: () => ({ mutateAsync: mocks.previewInvoice }),
+  useConfirmInvoiceCancellation: () => ({ mutateAsync: mocks.confirmInvoice }),
+  usePreviewSalesCancellation: () => ({ mutateAsync: mocks.previewSales }),
+  useConfirmSalesCancellation: () => ({ mutateAsync: mocks.confirmSales }),
 }))
 
 const id = '11111111-1111-4111-8111-111111111111'
@@ -110,8 +122,23 @@ beforeEach(() => {
   })
   vi.clearAllMocks()
   mocks.cancelInvoice.mockResolvedValue(undefined)
+  mocks.previewInvoice.mockResolvedValue({
+    token: 'preview-token',
+    invoices: [{ id, name: common.number, status: 'issued', version: 4 }],
+    payments: [],
+    deliveryNotes: [],
+    receipts: 0,
+    alreadyCancelled: 0,
+  })
+  mocks.confirmInvoice.mockResolvedValue(undefined)
   mocks.cancelEstimate.mockResolvedValue(undefined)
   mocks.cancelDelivery.mockResolvedValue(undefined)
+  mocks.previewSales.mockResolvedValue({
+    token: 'sales-preview',
+    records: [{ id, name: common.number, version: 4 }],
+    receipts: 0,
+  })
+  mocks.confirmSales.mockResolvedValue(undefined)
 })
 
 describe('sales document cancellation dialogs', () => {
@@ -129,10 +156,32 @@ describe('sales document cancellation dialogs', () => {
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Cancellation reason' }), {
       target: { value: 'Customer requested cancellation' },
     })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm cancellation' }))
     await waitFor(() =>
-      expect(cancel).toHaveBeenCalledWith(id, 4, 'Customer requested cancellation'),
+      expect(within(dialog).getByRole('button', { name: 'Confirm cancellation' })).toBeEnabled(),
     )
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm cancellation' }))
+    if (name === 'invoice') {
+      await waitFor(() =>
+        expect(mocks.confirmInvoice).toHaveBeenCalledWith({
+          data: {
+            invoices: [{ id, expectedVersion: 4 }],
+            token: 'preview-token',
+            reason: 'Customer requested cancellation',
+          },
+        }),
+      )
+      expect(mocks.cancelInvoice).not.toHaveBeenCalled()
+    } else
+      await waitFor(() =>
+        expect(mocks.confirmSales).toHaveBeenCalledWith({
+          data: {
+            resource: name === 'estimate' ? 'estimates' : 'delivery_notes',
+            records: [{ id, expectedVersion: 4 }],
+            token: 'sales-preview',
+            reason: 'Customer requested cancellation',
+          },
+        }),
+      )
   })
 
   it('returns focus to the delivery acknowledgment trigger when dismissed', async () => {

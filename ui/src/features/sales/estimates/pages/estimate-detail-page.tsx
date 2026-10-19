@@ -1,11 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Pencil, Send } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'wouter'
 
-import { EstimateCancellationSchema } from '../../../../api/generated/schemas/sales/estimates.schemas'
-import { CancellationDialog } from '../../../../components/management/cancellation-dialog'
 import { ConfirmAction } from '../../../../components/management/confirm-action'
 import { FormError } from '../../../../components/management/form-error'
 import { MoreAction, MoreActions } from '../../../../components/management/more-actions'
@@ -16,8 +14,11 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { uiLocale } from '../../../../lib/i18n'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
+import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
+import { SalesCancellationDialog } from '../../components/sales-cancellation-dialog'
+import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
 import { useEstimateInvoices } from '../../invoices/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
@@ -166,22 +167,17 @@ export function EstimateDetailPage() {
               </Can>
             )}
             <MoreActions>
-              {row.status === 'draft' && (
-                <Can permission="estimates.delete">
-                  <ConfirmAction
-                    label={t('deleteDraft')}
-                    description={t('deleteDraftWarning')}
-                    icon={<Trash2 size={16} />}
-                    variant="destructive"
-                    disabled={busy}
-                    onConfirm={async () => {
-                      await actions.delete(row.id, row.version)
-                      await refreshEstimates(cache)
-                      navigate('/estimates')
-                    }}
-                  />
-                </Can>
-              )}
+              <Can permission="estimates.delete">
+                <SalesDeletionDialog
+                  resource="estimates"
+                  selected={[row]}
+                  disabled={busy}
+                  onComplete={async () => {
+                    await refreshEstimates(cache)
+                    navigate('/estimates')
+                  }}
+                />
+              </Can>
               {['issued', 'sent'].includes(row.status) && (
                 <Can permission="estimates.update">
                   <MoreAction
@@ -193,17 +189,12 @@ export function EstimateDetailPage() {
               )}
               {!['draft', 'cancelled', 'superseded'].includes(row.status) && (
                 <Can permission="estimates.update">
-                  <CancellationDialog
+                  <SalesCancellationDialog
+                    resource="estimates"
+                    selected={[row]}
                     triggerLabel={t('cancelEstimate')}
-                    title={t('cancelEstimate')}
-                    description={t('cancelEstimateWarning')}
                     disabled={busy}
-                    maxLength={1000}
-                    validateReason={(reason) =>
-                      EstimateCancellationSchema.shape.reason.safeParse(reason).success
-                    }
-                    onConfirm={async (reason) => {
-                      await actions.cancel(row.id, row.version, reason)
+                    onComplete={async () => {
                       await refreshEstimates(cache)
                     }}
                   />
@@ -331,9 +322,9 @@ export function EstimateDetailPage() {
               <span className="text-[var(--muted)]">{translate('Client')}</span>
               <br />
               <Can permission="clients.read" fallback={<span>{row.clientDisplayName}</span>}>
-                <Link href={`/clients/${row.clientId}`} className="text-[var(--accent)]">
+                <DocumentClientLink clientId={row.clientId} className="text-[var(--accent)]">
                   {row.clientDisplayName}
-                </Link>
+                </DocumentClientLink>
               </Can>
             </p>
             <p className="text-sm">

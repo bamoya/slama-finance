@@ -24,9 +24,7 @@ export const deliveryNotes = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     number: text('number').unique(),
-    clientId: uuid('client_id')
-      .notNull()
-      .references(() => clients.id, { onDelete: 'restrict' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'restrict' }),
     status: text('status').notNull().default('draft'),
     deliveryDate: date('delivery_date').notNull(),
@@ -64,7 +62,7 @@ export const deliveryNotes = pgTable(
     check('delivery_notes_address', sql`length(trim(${t.deliveryAddress})) > 0`),
     check(
       'delivery_notes_prepared_data',
-      sql`(${t.status} = 'draft' and ${t.number} is null) or (${t.status} <> 'draft' and ${t.number} is not null)`,
+      sql`(${t.status} = 'draft' and ${t.number} is null) or (${t.status} = 'delivered' and ${t.number} is not null) or ${t.status} = 'cancelled'`,
     ),
   ],
 )

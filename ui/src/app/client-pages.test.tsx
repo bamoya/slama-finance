@@ -64,6 +64,8 @@ const api = {
   archiveClient: vi.fn<typeof GeneratedApi.archiveClient>(),
   restoreClient: vi.fn<typeof GeneratedApi.restoreClient>(),
   deleteClient: vi.fn<typeof GeneratedApi.deleteClient>(),
+  previewClientDeletion: vi.fn<typeof GeneratedApi.previewClientDeletion>(),
+  confirmClientDeletion: vi.fn<typeof GeneratedApi.confirmClientDeletion>(),
 }
 const caches: QueryClient[] = []
 function visit(path: string) {
@@ -325,19 +327,37 @@ describe('API-integrated client pages', () => {
     expect(screen.queryByText('Recent documents')).not.toBeInTheDocument()
   })
   it('confirms a client deletion before calling the generated API', async () => {
-    api.deleteClient.mockResolvedValue(undefined)
+    api.previewClientDeletion.mockResolvedValue({
+      token: 'confirmed-impact',
+      expiresAt: stamp,
+      groups: [
+        { resource: 'clients', operation: 'delete', records: [{ id, name: client.displayName }] },
+      ],
+      media: 0,
+      blockers: [],
+      requiredPermissions: ['clients.delete'],
+    })
+    api.confirmClientDeletion.mockResolvedValue(undefined)
     const location = visit(`/clients/${id}`)
     await screen.findByText('Billing identity')
     fireEvent.pointerDown(await screen.findByRole('button', { name: 'More' }), {
       button: 0,
       ctrlKey: false,
     })
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete permanently' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/only unreferenced clients/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/documents are preserved/i)).toBeInTheDocument()
+    expect(within(dialog).getByRole('checkbox')).not.toBeChecked()
+    await within(dialog).findByText(client.displayName)
     expect(api.deleteClient).not.toHaveBeenCalled()
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }))
-    await waitFor(() => expect(api.deleteClient).toHaveBeenCalledWith(id, { expectedVersion: 1 }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
+    await waitFor(() =>
+      expect(api.confirmClientDeletion).toHaveBeenCalledWith({
+        records: [{ id, expectedVersion: 1 }],
+        cascadeDocuments: false,
+        token: 'confirmed-impact',
+      }),
+    )
     await waitFor(() => expect(location.history.at(-1)).toBe('/clients'))
   })
 })

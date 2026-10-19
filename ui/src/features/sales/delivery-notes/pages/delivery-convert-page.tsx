@@ -37,7 +37,7 @@ export function DeliveryConvertPage() {
         <RequestState query={note} />
       </div>
     )
-  if (note.data.invoiceId || !['delivered'].includes(note.data.status))
+  if (!note.data.clientId || note.data.invoiceId || !['delivered'].includes(note.data.status))
     return (
       <div className="mx-auto max-w-[1500px] p-page">
         <PageHeader
@@ -61,7 +61,7 @@ function Editor({ note }: { note: NonNullable<ReturnType<typeof useDeliveryNote>
   const cache = useQueryClient()
   const eligibleNotes = useDeliveryNotes({
     status: 'all',
-    clientId: note.clientId,
+    clientId: note.clientId ?? undefined,
     limit: 100,
     offset: 0,
   })

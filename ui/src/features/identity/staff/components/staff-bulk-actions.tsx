@@ -7,6 +7,7 @@ import { useUiLanguage } from '../../../../lib/i18n'
 import { useAuthorization } from '../../auth/hooks/use-authorization'
 import { useSession } from '../../auth/hooks/use-session'
 import { refreshIdentity, useStaffActions } from '../../shared/queries'
+import { StaffDeletionDialog } from './staff-deletion-dialog'
 
 type Row = StaffPage['items'][number]
 export function StaffBulkActions({ selected, clear }: { selected: Row[]; clear: () => void }) {
@@ -38,8 +39,14 @@ export function StaffBulkActions({ selected, clear }: { selected: Row[]; clear: 
       label: t('delete'),
       destructive: true,
       warning: t('staffWarning'),
-      eligible: (row) => row.id !== session.data?.user.id,
-      run: (row) => api.delete(row.id),
+      renderConfirmation: (rows, complete, dismiss) => (
+        <StaffDeletionDialog
+          selected={rows}
+          initiallyOpen
+          onComplete={complete}
+          onDismiss={dismiss}
+        />
+      ),
     })
   return (
     <BulkActions

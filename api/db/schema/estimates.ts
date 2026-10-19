@@ -28,9 +28,7 @@ export const estimates = pgTable(
     revisionOfId: uuid('revision_of_id').references((): AnyPgColumn => estimates.id, {
       onDelete: 'restrict',
     }),
-    clientId: uuid('client_id')
-      .notNull()
-      .references(() => clients.id, { onDelete: 'restrict' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     templateId: uuid('template_id').references(() => documentTemplates.id, {
       onDelete: 'restrict',
     }),

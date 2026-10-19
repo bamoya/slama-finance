@@ -31,6 +31,8 @@ const api = {
   archiveBankAccount: vi.fn<typeof GeneratedApi.archiveBankAccount>(),
   restoreBankAccount: vi.fn<typeof GeneratedApi.restoreBankAccount>(),
   deleteBankAccount: vi.fn<typeof GeneratedApi.deleteBankAccount>(),
+  previewSettingsDeletion: vi.fn<typeof GeneratedApi.previewSettingsDeletion>(),
+  confirmSettingsDeletion: vi.fn<typeof GeneratedApi.confirmSettingsDeletion>(),
   listDocumentTemplates: vi.fn<typeof GeneratedApi.listDocumentTemplates>(),
   getDocumentTemplate: vi.fn<typeof GeneratedApi.getDocumentTemplate>(),
   createDocumentTemplate: vi.fn<typeof GeneratedApi.createDocumentTemplate>(),
@@ -684,22 +686,40 @@ describe('API-integrated company settings pages', () => {
   it.each(['bank', 'template'] as const)(
     'deletes an unreferenced %s only after confirmation',
     async (resource) => {
-      vi.mocked(api.deleteBankAccount).mockResolvedValue(undefined)
-      vi.mocked(api.deleteDocumentTemplate).mockResolvedValue(undefined)
+      api.previewSettingsDeletion.mockResolvedValue({
+        token: 'settings-impact',
+        expiresAt: stamp,
+        groups: [],
+        blockers: [],
+        requiredPermissions: [],
+        media: 0,
+      })
+      api.confirmSettingsDeletion.mockResolvedValue(undefined)
       const base = resource === 'bank' ? '/settings/bank-accounts' : '/settings/invoice-appearance'
       visit(`${base}/${id}`)
       fireEvent.pointerDown(await screen.findByRole('button', { name: 'More' }), {
         button: 0,
         ctrlKey: false,
       })
-      fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
-      const operation = resource === 'bank' ? api.deleteBankAccount : api.deleteDocumentTemplate
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete permanently' }))
+      const operation = api.confirmSettingsDeletion
       expect(operation).not.toHaveBeenCalled()
-      expect(screen.getByRole('dialog')).toHaveTextContent('only if no records reference it')
+      expect(screen.getByRole('dialog')).toHaveTextContent(
+        'Company defaults and live references will be cleared',
+      )
       vi.mocked(api.listBankAccounts).mockResolvedValue([])
       vi.mocked(api.listDocumentTemplates).mockResolvedValue([])
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-      await waitFor(() => expect(operation).toHaveBeenCalledWith(id, { expectedVersion: 1 }))
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeEnabled(),
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }))
+      await waitFor(() =>
+        expect(operation).toHaveBeenCalledWith({
+          resource: resource === 'bank' ? 'bank_accounts' : 'templates',
+          records: [{ id, expectedVersion: 1 }],
+          token: 'settings-impact',
+        }),
+      )
       expect(
         await screen.findByRole('link', {
           name: resource === 'bank' ? 'Add bank account' : 'Create template',
@@ -708,17 +728,17 @@ describe('API-integrated company settings pages', () => {
     },
   )
   it('retains the record and displays the API reason when deletion is blocked', async () => {
-    vi.mocked(api.deleteDocumentTemplate).mockRejectedValue(
-      new ApiError(409, 'RECORD_IN_USE', 'This template is attached. Archive it instead.'),
+    vi.mocked(api.previewSettingsDeletion).mockRejectedValue(
+      new ApiError(409, 'IMPACT_CHANGED', 'The impact changed. Review it again.'),
     )
     visit(`/settings/invoice-appearance/${id}`)
     fireEvent.pointerDown(await screen.findByRole('button', { name: 'More' }), {
       button: 0,
       ctrlKey: false,
     })
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('This template is attached.')
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete permanently' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The impact changed.')
+    expect(api.confirmSettingsDeletion).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.getByRole('link', { name: 'Edit template' })).toBeInTheDocument()

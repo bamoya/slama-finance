@@ -13,11 +13,13 @@ import { auditEvents, companySettings } from '../../../../../db/schema/settings.
 import type { ListDeliveryNotesQuery } from '../../../../contracts/generated/sales/delivery-notes.schemas.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { documentClientNameSql } from '../../shared/repositories/document-client.js'
+import { snapshotClientName } from '../../shared/repositories/document-client.js'
 
 export type DeliveryNoteRow = typeof deliveryNotes.$inferSelect
 export type DeliveryLineRow = typeof deliveryNoteLines.$inferSelect
 type ListFilters = Omit<ListDeliveryNotesQuery, 'page' | 'pageSize'>
-const clientNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', ${clients.firstName}, ${clients.lastName}))`
+const clientNameSql = documentClientNameSql(deliveryNotes.clientSnapshot)
 
 export function createDeliveryNoteRepository(database: () => Database) {
   return {
@@ -55,9 +57,14 @@ export function createDeliveryNoteRepository(database: () => Database) {
         .where(eq(deliveryNoteLines.deliveryNoteId, id))
         .orderBy(deliveryNoteLines.position)
     },
-    async clientDisplayName(id: string, tx: Database | Transaction = database()) {
-      const [row] = await tx.select({ name: clientNameSql }).from(clients).where(eq(clients.id, id))
-      return row?.name ?? ''
+    async clientDisplayName(
+      id: string | null,
+      tx: Database | Transaction = database(),
+      snapshot?: unknown,
+    ) {
+      if (!id) return snapshotClientName(snapshot)
+      const [row] = await tx.select().from(clients).where(eq(clients.id, id))
+      return snapshotClientName(row ?? snapshot)
     },
     async invoiceNumber(id: string | null, tx: Database | Transaction = database()) {
       if (!id) return null
@@ -258,7 +265,7 @@ export function createDeliveryNoteRepository(database: () => Database) {
         database()
           .select()
           .from(deliveryNotes)
-          .innerJoin(clients, eq(deliveryNotes.clientId, clients.id))
+          .leftJoin(clients, eq(deliveryNotes.clientId, clients.id))
           .where(where)
           .orderBy(direction(sort), direction(deliveryNotes.id))
           .limit(filters.limit)
@@ -267,7 +274,7 @@ export function createDeliveryNoteRepository(database: () => Database) {
         database()
           .select({ total: sql<number>`count(*)::int` })
           .from(deliveryNotes)
-          .innerJoin(clients, eq(deliveryNotes.clientId, clients.id))
+          .leftJoin(clients, eq(deliveryNotes.clientId, clients.id))
           .where(where),
       ])
       return { items, total: count[0]?.total ?? 0 }

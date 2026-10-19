@@ -10,21 +10,17 @@ import type {
 } from '../../../api/generated/models'
 import { useRegenerateDocumentPdf } from '../../../api/generated/sales/sales'
 import { RegenerateDocumentPdfInputSchema } from '../../../api/generated/schemas/sales/artifacts.schemas'
-import { DeliveryNoteCancellationSchema } from '../../../api/generated/schemas/sales/delivery-notes.schemas'
-import { EstimateCancellationSchema } from '../../../api/generated/schemas/sales/estimates.schemas'
-import { InvoiceCancellationSchema } from '../../../api/generated/schemas/sales/invoices.schemas'
-import { PaymentCancellationSchema } from '../../../api/generated/schemas/sales/payments.schemas'
 import { type BulkAction, BulkActions } from '../../../components/management/bulk-actions'
 import { Field, FieldGroup, FieldLabel } from '../../../components/ui/field'
 import { Select, SelectGroup, SelectOption } from '../../../components/ui/select'
-import { Textarea } from '../../../components/ui/textarea'
 import { useUiLanguage } from '../../../lib/i18n'
 import { useAuthorization } from '../../identity'
 import { useDeliveryActions } from '../delivery-notes/queries'
-import { useEstimateActions } from '../estimates/queries'
-import { useInvoiceActions } from '../invoices/queries'
+import { InvoiceCancellationDialog } from '../invoices/components/invoice-cancellation-dialog'
 import { usePaymentActions } from '../payments/queries'
 import { refreshSales } from '../refresh'
+import { SalesCancellationDialog } from './sales-cancellation-dialog'
+import { SalesDeletionDialog } from './sales-deletion-dialog'
 import { useBulkPdfAction } from './use-bulk-pdf-action'
 
 export type SalesBulkResource = 'estimates' | 'invoices' | 'delivery_notes' | 'payments'
@@ -48,72 +44,58 @@ export function SalesBulkActions({
   const { can } = useAuthorization()
   const cache = useQueryClient()
   const id = useId()
-  const [reason, setReason] = useState('')
   const [design, setDesign] = useState('saved')
-  const estimates = useEstimateActions()
-  const invoices = useInvoiceActions()
   const deliveries = useDeliveryActions()
   const payments = usePaymentActions()
   const regenerate = useRegenerateDocumentPdf({ request: { timeout: 60_000 } })
-  const documents = { estimates, invoices, delivery_notes: deliveries }
-  const schema = {
-    estimates: EstimateCancellationSchema,
-    invoices: InvoiceCancellationSchema,
-    delivery_notes: DeliveryNoteCancellationSchema,
-    payments: PaymentCancellationSchema,
-  }[resource]
-  const validReason = schema.shape.reason.safeParse(reason.trim()).success
   const actions: BulkAction<Row>[] = []
   const pdfAction = useBulkPdfAction(resource)
   if (can(`${resource}.read`)) actions.push(pdfAction)
-  if (can(`${resource}.update`))
+  if (resource === 'invoices' && can('invoices.update'))
     actions.push({
       key: 'cancel',
       label: t('cancelRecords'),
       destructive: true,
-      eligible: (row) =>
-        resource === 'payments'
-          ? row.status !== 'cancelled'
-          : resource === 'delivery_notes'
-            ? row.status === 'delivered'
-            : resource === 'invoices'
-              ? ['issued', 'sent'].includes(row.status)
-              : !['draft', 'cancelled', 'superseded'].includes(row.status),
-      disabled: !validReason,
-      content: (
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor={id}>{t('reason')}</FieldLabel>
-            <Textarea
-              id={id}
-              value={reason}
-              maxLength={1000}
-              placeholder={t('reasonHint')}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </Field>
-        </FieldGroup>
+      renderConfirmation: (rows, complete, dismiss) => (
+        <InvoiceCancellationDialog
+          selected={rows}
+          triggerLabel={t('cancelRecords')}
+          initiallyOpen
+          onDismiss={dismiss}
+          onComplete={complete}
+        />
       ),
-      run: (row) => {
-        const data = schema.parse({ expectedVersion: row.version, reason: reason.trim() })
-        return resource === 'payments'
-          ? payments.cancel(row.id, data)
-          : documents[resource].cancel(row.id, data.expectedVersion, data.reason)
-      },
+    })
+  if (resource !== 'invoices' && can(`${resource}.update`))
+    actions.push({
+      key: 'cancel',
+      label: t('cancelRecords'),
+      destructive: true,
+      renderConfirmation: (rows, complete, dismiss) => (
+        <SalesCancellationDialog
+          resource={resource}
+          selected={rows}
+          triggerLabel={t('cancelRecords')}
+          initiallyOpen
+          onDismiss={dismiss}
+          onComplete={complete}
+        />
+      ),
     })
   if (can(`${resource}.delete`))
     actions.push({
       key: 'delete',
       label: t('delete'),
       destructive: true,
-      eligible: (row) =>
-        resource === 'payments'
-          ? 'receiptIssuedAt' in row && !row.receiptIssuedAt
-          : row.status === 'draft',
-      run: (row) =>
-        resource === 'payments'
-          ? payments.delete(row.id, { expectedVersion: row.version })
-          : documents[resource].delete(row.id, row.version),
+      renderConfirmation: (rows, complete, dismiss) => (
+        <SalesDeletionDialog
+          resource={resource}
+          selected={rows}
+          initiallyOpen
+          onDismiss={dismiss}
+          onComplete={complete}
+        />
+      ),
     })
   if (resource === 'payments' && can('payments.update'))
     actions.push({

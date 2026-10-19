@@ -35,6 +35,7 @@ export const users = pgTable(
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex('users_email_unique').on(table.email)],

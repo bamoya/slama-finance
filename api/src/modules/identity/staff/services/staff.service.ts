@@ -1,5 +1,9 @@
 import { randomBytes } from 'node:crypto'
 
+import type {
+  ConfirmStaffDeletion,
+  StaffDeletionSelection,
+} from '../../../../contracts/generated/identity/deletion.schemas.js'
 import {
   type CreateStaff,
   CreateStaffSchema,
@@ -9,6 +13,7 @@ import {
 } from '../../../../contracts/generated/identity/staff.schemas.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import { createImpactConfirmation } from '../../../../lib/impact-confirmation.js'
 import type { createPasswordService } from '../../auth/services/password.service.js'
 import type { createStaffRepository } from '../repositories/staff.repository.js'
 
@@ -18,6 +23,7 @@ export function createStaffService(
   passwords: ReturnType<typeof createPasswordService>,
   onAuthorizationChange?: (tx: Transaction, userIds: string[]) => Promise<void>,
 ) {
+  const deletionConfirmation = createImpactConfirmation()
   async function find(id: string, tx?: Transaction) {
     const user = await repository.find(id, tx)
     if (!user) throw new AppError(404, 'STAFF_NOT_FOUND', 'Staff account not found')
@@ -85,7 +91,56 @@ export function createStaffService(
     if (admins.length === 1 && admins[0]!.id === id)
       throw new AppError(409, 'LAST_ADMIN', 'At least one active administrator must remain')
   }
+  async function deletionGraph(input: StaffDeletionSelection, actorId: string, tx: Transaction) {
+    await repository.lock(tx)
+    await actor(actorId, tx, 'staff.read')
+    await actor(actorId, tx, 'staff.delete')
+    const ids = input.ids.map((id) => id.toLowerCase()).sort()
+    if (new Set(ids).size !== ids.length)
+      throw new AppError(400, 'DUPLICATE_SELECTION', 'Select each record only once.')
+    for (const id of ids) {
+      if (id === actorId)
+        throw new AppError(409, 'SELF_DELETE', 'You cannot delete your own account.')
+      await mutable(id, actorId, tx, 'staff.delete', true)
+      await preserveAdmin(id, tx)
+    }
+    return {
+      actor: actorId,
+      action: 'delete_staff',
+      state: await repository.deletionState(ids, tx),
+    }
+  }
   return {
+    previewDeletion(input: StaffDeletionSelection, actorId: string) {
+      return database().transaction(async (tx) => {
+        const impact = await deletionGraph(input, actorId, tx)
+        return {
+          ...deletionConfirmation.issue(impact),
+          groups: [
+            {
+              resource: 'staff',
+              operation: 'delete' as const,
+              records: impact.state.users.map((user) => ({
+                id: user.id,
+                name: `${[user.firstName, user.lastName].filter(Boolean).join(' ')} · ${user.email}`,
+              })),
+            },
+          ],
+          requiredPermissions: ['staff.read', 'staff.delete'],
+          blockers: [],
+          media: 0,
+        }
+      })
+    },
+    confirmDeletion(input: ConfirmStaffDeletion, actorId: string) {
+      return database().transaction(async (tx) => {
+        const impact = await deletionGraph(input, actorId, tx)
+        deletionConfirmation.assert(input.token, impact)
+        const ids = impact.state.users.map((user) => user.id)
+        for (const id of ids) await repository.anonymize(id, actorId, tx)
+        await onAuthorizationChange?.(tx, ids)
+      })
+    },
     async delete(id: string, actorId: string) {
       try {
         await database().transaction(async (tx) => {

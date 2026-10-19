@@ -235,7 +235,7 @@ components:
           lines,
         ]
       properties:
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         invoiceId: { type: [string, 'null'], format: uuid }
         deliveryDate: { type: string, format: date }
         deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
@@ -264,7 +264,7 @@ components:
         ]
       properties:
         expectedVersion: { type: integer, minimum: 1 }
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         invoiceId: { type: [string, 'null'], format: uuid }
         deliveryDate: { type: string, format: date }
         deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
@@ -334,7 +334,7 @@ components:
         id: { type: string, format: uuid }
         number: { type: [string, 'null'] }
         status: { type: string, enum: [draft, delivered, cancelled] }
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         clientDisplayName: { type: string }
         invoiceId: { type: [string, 'null'], format: uuid }
         invoiceNumber: { type: [string, 'null'] }

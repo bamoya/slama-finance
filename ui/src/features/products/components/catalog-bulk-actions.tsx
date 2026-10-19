@@ -9,6 +9,7 @@ import { ApiError } from '../../../lib/api-error'
 import { useUiLanguage } from '../../../lib/i18n'
 import { useAuthorization } from '../../identity'
 import { getProductForUpdate, refreshCatalog, useCatalogActions, useCategories } from '../queries'
+import { CatalogDeletionDialog } from './catalog-deletion-dialog'
 
 type Record = { id: string; name: string; version: number; archivedAt: string | null }
 export function CatalogBulkActions({
@@ -50,7 +51,15 @@ export function CatalogBulkActions({
       key: 'delete',
       label: t('delete'),
       destructive: true,
-      run: (row) => (product ? api.deleteProduct : api.deleteCategory)(row.id, row.version),
+      renderConfirmation: (rows, complete, dismiss) => (
+        <CatalogDeletionDialog
+          resource={resource}
+          selected={rows}
+          initiallyOpen
+          onComplete={complete}
+          onDismiss={dismiss}
+        />
+      ),
     },
   ]
   if (product && can('categories.read'))

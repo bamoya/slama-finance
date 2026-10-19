@@ -9,6 +9,7 @@ import { type BulkAction, BulkActions } from '../../../../components/management/
 import { useUiLanguage } from '../../../../lib/i18n'
 import { useAuthorization } from '../../../identity'
 import { refreshSettings, useSettingsActions } from '../queries'
+import { SettingsDeletionDialog } from './settings-deletion-dialog'
 
 export function SettingsBulkActions({
   resource,
@@ -48,8 +49,15 @@ export function SettingsBulkActions({
       key: 'delete',
       label: t('delete'),
       destructive: true,
-      run: (row) =>
-        bank ? api.deleteBank(row.id, row.version) : api.deleteTemplate(row.id, row.version),
+      renderConfirmation: (rows, complete, dismiss) => (
+        <SettingsDeletionDialog
+          resource={resource}
+          selected={rows}
+          initiallyOpen
+          onComplete={complete}
+          onDismiss={dismiss}
+        />
+      ),
     })
   return (
     <BulkActions

@@ -41,6 +41,9 @@ export const refreshCatalog = (client: QueryClient) =>
     predicate: ({ queryKey }) =>
       typeof queryKey[0] === 'string' &&
       (isLiveReportingPath(queryKey[0]) ||
+        ['/v1/invoices', '/v1/estimates', '/v1/delivery-notes'].some((prefix) =>
+          String(queryKey[0]).startsWith(prefix),
+        ) ||
         queryKey[0].startsWith(catalogKeys.products) ||
         queryKey[0].startsWith(catalogKeys.categories)),
   })

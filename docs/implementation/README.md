@@ -1,5 +1,8 @@
 # Implementation sequence
 
+Latest approved cross-module change: [flexible deletion and cancellation](destructive-actions.md).
+That spec records the agreed cascade/detachment rules, shared impact dialogs and staged implementation.
+
 Status: implementation plan, not completed work. This directory changes no API,
 UI or database code. Read the [approved database design](../database-schema-design.md)
 for the authoritative fields, constraints and scope; these files define delivery

@@ -1,6 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
+  ConfirmStaffDeletionSchema,
+  StaffDeletionSelectionSchema,
+} from '../../../../contracts/generated/identity/deletion.schemas.js'
+import {
   CreateStaffSchema as createStaffSchema,
   getStaffParamsSchema as staffParams,
   listStaffQuerySchema as staffQuery,
@@ -16,6 +20,19 @@ import type { createStaffService } from '../services/staff.service.js'
 
 export function createStaffController(service: ReturnType<typeof createStaffService>) {
   return {
+    previewDeletion(request: FastifyRequest) {
+      return service.previewDeletion(
+        StaffDeletionSelectionSchema.parse(request.body),
+        request.actor!.userId,
+      )
+    },
+    async confirmDeletion(request: FastifyRequest, reply: FastifyReply) {
+      await service.confirmDeletion(
+        ConfirmStaffDeletionSchema.parse(request.body),
+        request.actor!.userId,
+      )
+      return reply.code(204).send()
+    },
     async delete(request: FastifyRequest, reply: FastifyReply) {
       await service.delete(staffParams.parse(request.params).userId, request.actor!.userId)
       return reply.code(204).send()

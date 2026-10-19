@@ -304,8 +304,17 @@ components:
         receiptIssuedAt: { type: [string, 'null'], format: date-time }
         invoiceId: { type: string, format: uuid }
         invoiceNumber: { type: string }
-        clientId: { type: string, format: uuid }
+        clientId: { type: [string, 'null'], format: uuid }
         clientName: { type: string }
+        bankAccountSnapshot:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [bankName, accountHolder, rib, iban]
+          properties:
+            bankName: { type: string }
+            accountHolder: { type: string }
+            rib: { type: [string, 'null'] }
+            iban: { type: [string, 'null'] }
         amount: { type: string }
         currency: { type: string }
         method: { type: string, enum: [cash, bank_transfer, cheque] }

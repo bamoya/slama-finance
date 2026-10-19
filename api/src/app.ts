@@ -355,17 +355,20 @@ export async function buildApp(options: AppOptions = {}) {
     )
     cleanup.unref()
   })
-  await createSettingsModule(() => app.database(), media.publicApi).registerRoutes(
-    app,
-    createRequirePermission(identity.publicApi),
-  )
-  await createCatalogModule(() => app.database(), media.publicApi).registerRoutes(
-    app,
-    createRequirePermission(identity.publicApi),
-  )
+  await createSettingsModule(
+    () => app.database(),
+    media.publicApi,
+    sales.publicApi.settingsDeletion,
+  ).registerRoutes(app, createRequirePermission(identity.publicApi))
+  await createCatalogModule(
+    () => app.database(),
+    media.publicApi,
+    sales.publicApi.catalogDeletion,
+  ).registerRoutes(app, createRequirePermission(identity.publicApi))
   await createClientModule(
     () => app.database(),
     (tx, clientId) => salesNotifications.invalidate(tx, { clientId }).then(() => undefined),
+    sales.publicApi.clientDeletion,
   ).registerRoutes(app, createRequirePermission(identity.publicApi))
   await sales.registerRoutes(app, createRequirePermission(identity.publicApi), async (request) => {
     const user = await identity.publicApi.resolveSession(request.cookies.slama_session)

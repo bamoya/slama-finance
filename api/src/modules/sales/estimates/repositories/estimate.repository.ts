@@ -13,11 +13,13 @@ import type { ListEstimatesQuery } from '../../../../contracts/generated/sales/e
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
+import { documentClientNameSql } from '../../shared/repositories/document-client.js'
+import { snapshotClientName } from '../../shared/repositories/document-client.js'
 
 export type EstimateRow = typeof estimates.$inferSelect
 export type EstimateLineRow = typeof estimateLines.$inferSelect
 type ListFilters = Omit<ListEstimatesQuery, 'page' | 'pageSize'>
-const clientNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', ${clients.firstName}, ${clients.lastName}))`
+const clientNameSql = documentClientNameSql(estimates.clientSnapshot)
 
 export function createEstimateRepository(database: () => Database) {
   return {
@@ -60,9 +62,14 @@ export function createEstimateRepository(database: () => Database) {
       const [row] = await tx.select().from(estimates).where(eq(estimates.revisionOfId, id))
       return row ?? null
     },
-    async clientDisplayName(id: string, tx: Database | Transaction = database()) {
-      const [row] = await tx.select({ name: clientNameSql }).from(clients).where(eq(clients.id, id))
-      return row?.name ?? ''
+    async clientDisplayName(
+      id: string | null,
+      tx: Database | Transaction = database(),
+      snapshot?: unknown,
+    ) {
+      if (!id) return snapshotClientName(snapshot)
+      const [row] = await tx.select().from(clients).where(eq(clients.id, id))
+      return snapshotClientName(row ?? snapshot)
     },
     async client(id: string, tx: Transaction) {
       const [row] = await tx.select().from(clients).where(eq(clients.id, id))
@@ -163,7 +170,7 @@ export function createEstimateRepository(database: () => Database) {
         database()
           .select()
           .from(estimates)
-          .innerJoin(clients, eq(estimates.clientId, clients.id))
+          .leftJoin(clients, eq(estimates.clientId, clients.id))
           .where(where)
           .orderBy(direction(sort), direction(estimates.id))
           .limit(filters.limit)
@@ -172,7 +179,7 @@ export function createEstimateRepository(database: () => Database) {
         database()
           .select({ total: sql<number>`count(*)::int` })
           .from(estimates)
-          .innerJoin(clients, eq(estimates.clientId, clients.id))
+          .leftJoin(clients, eq(estimates.clientId, clients.id))
           .where(where),
       ])
       return { items, total: count[0]?.total ?? 0 }

@@ -6,6 +6,7 @@ import { type BulkAction, BulkActions } from '../../../components/management/bul
 import { useUiLanguage } from '../../../lib/i18n'
 import { useAuthorization } from '../../identity'
 import { refreshClients, useClientActions } from '../queries'
+import { ClientDeletionDialog } from './client-deletion-dialog'
 
 export function ClientBulkActions({ selected, clear }: { selected: Client[]; clear: () => void }) {
   useUiLanguage()
@@ -31,7 +32,14 @@ export function ClientBulkActions({ selected, clear }: { selected: Client[]; cle
       key: 'delete',
       label: t('delete'),
       destructive: true,
-      run: (row) => api.delete(row.id, row.version),
+      renderConfirmation: (rows, complete, dismiss) => (
+        <ClientDeletionDialog
+          selected={rows}
+          initiallyOpen
+          onComplete={complete}
+          onDismiss={dismiss}
+        />
+      ),
     },
   ]
   return (

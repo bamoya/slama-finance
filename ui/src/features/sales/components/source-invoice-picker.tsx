@@ -12,7 +12,7 @@ export function SourceInvoicePicker({
   onValueChange,
   selectedLabel,
 }: {
-  clientId: string
+  clientId: string | null
   value: string | null
   onValueChange: (value: string | null) => void
   selectedLabel?: string

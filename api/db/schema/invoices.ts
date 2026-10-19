@@ -25,15 +25,14 @@ export const invoices = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     number: text('number').unique(),
     status: text('status').notNull().default('draft'),
-    clientId: uuid('client_id')
-      .notNull()
-      .references(() => clients.id, { onDelete: 'restrict' }),
+    clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     templateId: uuid('template_id').references(() => documentTemplates.id, {
       onDelete: 'restrict',
     }),
     sourceEstimateId: uuid('source_estimate_id').references(() => estimates.id, {
       onDelete: 'restrict',
     }),
+    sourceEstimateNumberSnapshot: text('source_estimate_number_snapshot'),
     conversionOperationId: uuid('conversion_operation_id').unique(),
     conversionRequest: jsonb('conversion_request'),
     issueDate: date('issue_date').notNull(),

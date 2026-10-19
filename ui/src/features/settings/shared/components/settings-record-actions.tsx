@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, RotateCcw, Trash2 } from 'lucide-react'
+import { Archive, RotateCcw } from 'lucide-react'
 
 import type {
   BankAccount,
@@ -9,6 +9,7 @@ import { ConfirmAction } from '../../../../components/management/confirm-action'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { refreshSettings, settingsKeys, useSettingsActions } from '../queries'
+import { SettingsDeletionDialog } from './settings-deletion-dialog'
 
 export function SettingsRecordActions({
   resource,
@@ -78,23 +79,11 @@ export function SettingsRecordActions({
 
       <Can permission={`${bank ? 'bank_accounts' : 'templates'}.delete`}>
         {
-          <ConfirmAction
-            label={translate('Delete')}
-            iconOnly={compact}
-            variant="destructive"
-            icon={<Trash2 size={16} />}
-            description={translate(
-              'Permanently delete {{value0}}? This cannot be undone. Deletion is allowed only if no records reference it; otherwise archive it instead. Audit history{{value1}} will be retained.',
-              { value0: record.name, value1: bank ? '' : ' and stored images' },
-            )}
-            onConfirm={async () => {
-              try {
-                if (bank) await settingsApi.deleteBank(record.id, record.version)
-                else await settingsApi.deleteTemplate(record.id, record.version)
-              } catch (error) {
-                await refreshSettings(cache)
-                throw error
-              }
+          <SettingsDeletionDialog
+            resource={resource}
+            selected={[record]}
+            compact={compact}
+            onComplete={async () => {
               onDeleted?.()
               cache.removeQueries({ queryKey: settingsKeys.detail(resource, record.id) })
               await refreshSettings(cache)

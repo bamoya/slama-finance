@@ -1,0 +1,54 @@
+paths:
+  /v1/staff/deletion/preview:
+    post:
+      operationId: previewStaffDeletion
+      tags: [identity]
+      x-permissions: [staff.read, staff.delete]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffDeletionSelection' }
+      responses:
+        '200':
+          description: Current accounts to remove; historical attribution is anonymised, not deleted.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/impact.yaml#/components/schemas/EntityDeletionImpact' }
+        default:
+          description: Entire selection blocked.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+  /v1/staff/deletion:
+    post:
+      operationId: confirmStaffDeletion
+      tags: [identity]
+      x-permissions: [staff.read, staff.delete]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmStaffDeletion' }
+      responses:
+        '204': { description: Accounts removed and access revoked atomically. Audit/business history is preserved under anonymous attribution. }
+        default:
+          description: Nothing changed; refresh the preview.
+          content:
+            application/json:
+              schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
+components:
+  schemas:
+    StaffDeletionSelection:
+      type: object
+      additionalProperties: false
+      required: [ids]
+      properties:
+        ids: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } }
+    ConfirmStaffDeletion:
+      type: object
+      additionalProperties: false
+      required: [ids, token]
+      properties:
+        ids: { $ref: '#/components/schemas/StaffDeletionSelection/properties/ids' }
+        token: { type: string, minLength: 1, maxLength: 256 }

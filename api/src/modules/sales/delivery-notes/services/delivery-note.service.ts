@@ -13,7 +13,7 @@ import { resolveLocale } from '../../../../lib/language.js'
 import { assertVersion, companyDate } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
-import { clientSnapshot } from '../../shared/services/client-snapshot.js'
+import { documentClient } from '../../shared/services/document-client.js'
 import type {
   createDeliveryNoteRepository,
   DeliveryNoteRow,
@@ -30,11 +30,12 @@ export function createDeliveryNoteService(
   jobs: Jobs,
   artifacts: Artifacts,
   onPrepared?: (tx: Transaction, id: string) => Promise<void>,
+  onNotificationChange?: (tx: Transaction) => Promise<void>,
 ) {
   async function output(row: DeliveryNoteRow, tx?: Transaction) {
     const [lines, clientDisplayName, invoiceNumber, relatedInvoices] = await Promise.all([
       repo.lines(row.id, tx),
-      repo.clientDisplayName(row.clientId, tx),
+      repo.clientDisplayName(row.clientId, tx, row.clientSnapshot),
       repo.invoiceNumber(row.invoiceId, tx),
       repo.relatedInvoices(row.id, row.invoiceId, tx),
     ])
@@ -63,12 +64,13 @@ export function createDeliveryNoteService(
     actor: string,
     tx: Transaction,
     exceptNoteId: string | null,
+    retained?: unknown,
   ) {
     const company = await repo.company(tx)
     const invoice = input.invoiceId ? await repo.invoice(input.invoiceId, tx) : null
     if (invoice && invoice.clientId !== input.clientId)
       throw new AppError(400, 'CLIENT_MISMATCH', 'Delivery note client must match its invoice.')
-    const client = await repo.client(input.clientId, tx)
+    const client = await documentClient(input.clientId, tx, repo.client, retained)
     const sourceIds = [
       ...new Set(
         input.lines.map((line) => line.sourceInvoiceLineId).filter((id): id is string => !!id),
@@ -131,7 +133,7 @@ export function createDeliveryNoteService(
           countryCode: company.countryCode,
           ice: company.ice,
         },
-        clientSnapshot: clientSnapshot(client),
+        clientSnapshot: client.snapshot,
       },
       lines,
     }
@@ -183,6 +185,12 @@ export function createDeliveryNoteService(
             'DELIVERY_NOTE_EXISTS',
             'This invoice already has an active delivery note. Open its linked delivery note instead.',
           )
+        if (!invoice.clientId)
+          throw new AppError(
+            409,
+            'CLIENT_REQUIRED',
+            'Select an active client before creating another delivery note.',
+          )
         const client = await repo.client(invoice.clientId, tx)
         const lines = await repo.invoiceLines(id, tx)
         const address = client.deliveryAddressLine1
@@ -232,7 +240,13 @@ export function createDeliveryNoteService(
         if (before.status !== 'draft')
           throw new AppError(409, 'INVALID_STATUS', 'Only drafts can be edited.')
         const previous = await output(before, tx)
-        const prepared = await prepareInput(input, actor, tx, id)
+        const prepared = await prepareInput(
+          input,
+          actor,
+          tx,
+          id,
+          before.clientId === null ? before.clientSnapshot : undefined,
+        )
         const row = await repo.update(id, { ...prepared.header, updatedByUserId: actor }, tx, true)
         await repo.replaceLines(
           id,
@@ -264,7 +278,9 @@ export function createDeliveryNoteService(
           throw new AppError(409, 'INVALID_STATUS', 'Only draft delivery notes can be delivered.')
         if (!(await repo.lines(id, tx)).length)
           throw new AppError(400, 'EMPTY_DELIVERY', 'Add at least one product before delivery.')
-        const currentClientSnapshot = clientSnapshot(await repo.client(before.clientId, tx))
+        const currentClientSnapshot = (
+          await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
+        ).snapshot
         const issuer = before.issuerSnapshot as Record<string, unknown>
         const locale = resolveLocale(
           before.localeOverride,
@@ -320,14 +336,14 @@ export function createDeliveryNoteService(
           throw new AppError(409, 'INVALID_STATUS', 'This note cannot be cancelled.')
         if (!reason.trim())
           throw new AppError(400, 'CANCELLATION_REASON_REQUIRED', 'Enter a cancellation reason.')
-        if (await repo.hasBillingAllocations(id, tx))
-          throw new AppError(409, 'DELIVERY_BILLED', 'Resolve linked invoice allocations first.')
         const row = await repo.update(
           id,
           { status: 'cancelled', cancellationReason: reason.trim(), updatedByUserId: actor },
           tx,
+          true,
         )
         await repo.audit(tx, actor, 'cancel', id, before, row)
+        await onNotificationChange?.(tx)
         return output(row, tx)
       })
     },

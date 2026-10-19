@@ -8,6 +8,7 @@ import { Route, Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
 import type { Invoice, Payment } from '../../../api/generated/models'
+import type * as SalesApi from '../../../api/generated/sales/sales'
 import { EstimatesPage } from '../estimates/pages/estimates-page'
 import { PaymentActions } from './components/payment-actions'
 import { PaymentCreatePage } from './pages/payment-create-page'
@@ -25,6 +26,17 @@ const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   restore: vi.fn(),
   delete: vi.fn(),
+  previewDeletion: vi.fn(),
+  confirmDeletion: vi.fn(),
+  previewCancellation: vi.fn(),
+  confirmCancellation: vi.fn(),
+}))
+vi.mock('../../../api/generated/sales/sales', async (original) => ({
+  ...(await original<typeof SalesApi>()),
+  usePreviewSalesDeletion: () => ({ mutateAsync: mocks.previewDeletion }),
+  useConfirmSalesDeletion: () => ({ mutateAsync: mocks.confirmDeletion }),
+  usePreviewSalesCancellation: () => ({ mutateAsync: mocks.previewCancellation }),
+  useConfirmSalesCancellation: () => ({ mutateAsync: mocks.confirmCancellation }),
 }))
 
 vi.mock('../../../features/identity', () => ({
@@ -142,8 +154,25 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ id: paymentId })
   mocks.confirm.mockResolvedValue({ ...payment, status: 'confirmed' })
   mocks.cancel.mockResolvedValue({ ...payment, status: 'cancelled' })
+  mocks.previewCancellation.mockResolvedValue({
+    token: 'cancel-impact',
+    resource: 'payments',
+    records: [{ id: paymentId, name: 'PAY-1' }],
+    receipts: 0,
+  })
+  mocks.confirmCancellation.mockResolvedValue(undefined)
   mocks.restore.mockResolvedValue({ ...payment, status: 'pending' })
   mocks.delete.mockResolvedValue(undefined)
+  mocks.previewDeletion.mockResolvedValue({
+    token: 'delete-preview',
+    groups: [],
+    files: 1,
+    retainedFiles: 0,
+    jobs: 0,
+    emails: 0,
+    blockers: [],
+  })
+  mocks.confirmDeletion.mockResolvedValue(undefined)
 })
 
 describe('sales payment screens', () => {
@@ -208,17 +237,23 @@ describe('sales payment screens', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Cancel payment' }))
     expect(mocks.cancel).not.toHaveBeenCalled()
     const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm cancellation' }))
-    expect(mocks.cancel).not.toHaveBeenCalled()
-    expect(within(dialog).getByText('Enter a valid cancellation reason.')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.previewCancellation).toHaveBeenCalled())
+    expect(within(dialog).getByRole('button', { name: 'Confirm cancellation' })).toBeDisabled()
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Cancellation reason' }), {
       target: { value: 'Cheque returned' },
     })
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Confirm cancellation' })).toBeEnabled(),
+    )
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm cancellation' }))
     await waitFor(() =>
-      expect(mocks.cancel).toHaveBeenCalledWith(paymentId, {
-        expectedVersion: 3,
-        reason: 'Cheque returned',
+      expect(mocks.confirmCancellation).toHaveBeenCalledWith({
+        data: {
+          resource: 'payments',
+          records: [{ id: paymentId, expectedVersion: 3 }],
+          token: 'cancel-impact',
+          reason: 'Cheque returned',
+        },
       }),
     )
   })
@@ -256,13 +291,22 @@ describe('sales payment screens', () => {
     mocks.permissions.add('payments.delete')
     const { location } = setup(<PaymentActions payment={payment} />, `/payments/${paymentId}`)
     await openMore()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete payment' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete permanently' }))
     expect(mocks.delete).not.toHaveBeenCalled()
-    fireEvent.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Confirm' }),
-    )
+    const button = within(await screen.findByRole('dialog')).getByRole('button', {
+      name: 'Delete permanently',
+    })
+    await waitFor(() => expect(button).toBeEnabled())
+    fireEvent.click(button)
     await waitFor(() =>
-      expect(mocks.delete).toHaveBeenCalledWith(paymentId, { expectedVersion: 3 }),
+      expect(mocks.confirmDeletion).toHaveBeenCalledWith({
+        data: {
+          resource: 'payments',
+          cascadeInvoices: false,
+          records: [{ id: paymentId, expectedVersion: 3 }],
+          token: 'delete-preview',
+        },
+      }),
     )
     await waitFor(() => expect(location.history.at(-1)).toBe('/payments'))
   })

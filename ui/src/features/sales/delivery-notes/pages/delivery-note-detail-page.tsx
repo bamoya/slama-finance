@@ -1,12 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'wouter'
 
-import { DeliveryNoteCancellationSchema } from '../../../../api/generated/schemas/sales/delivery-notes.schemas'
-import { CancellationDialog } from '../../../../components/management/cancellation-dialog'
-import { ConfirmAction } from '../../../../components/management/confirm-action'
 import { FormError } from '../../../../components/management/form-error'
 import { MoreActions } from '../../../../components/management/more-actions'
 import { PageHeader } from '../../../../components/management/page-header'
@@ -15,7 +12,10 @@ import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
+import { DocumentClientLink } from '../../components/document-client-link'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
+import { SalesCancellationDialog } from '../../components/sales-cancellation-dialog'
+import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
 import { DeliveryConfirmationDialog } from '../components/delivery-confirmation-dialog'
@@ -107,7 +107,8 @@ export function DeliveryNoteDetailPage() {
                 />
               </Can>
             )}
-            {!row.invoiceId &&
+            {!!row.clientId &&
+              !row.invoiceId &&
               row.status === 'delivered' &&
               row.lines.some((line) => line.remainingBillableQuantity > 0) && (
                 <Can permission="invoices.create">
@@ -138,35 +139,25 @@ export function DeliveryNoteDetailPage() {
               </Can>
             )}
             <MoreActions>
-              {row.status === 'draft' && (
-                <Can permission="delivery_notes.delete">
-                  <ConfirmAction
-                    label={t('deleteDraft')}
-                    description={t('deleteDraftWarning')}
-                    icon={<Trash2 size={16} />}
-                    variant="destructive"
-                    disabled={busy}
-                    onConfirm={async () => {
-                      await actions.delete(row.id, row.version)
-                      await refreshDeliveries(cache)
-                      navigate('/delivery-notes')
-                    }}
-                  />
-                </Can>
-              )}
+              <Can permission="delivery_notes.delete">
+                <SalesDeletionDialog
+                  resource="delivery_notes"
+                  selected={[row]}
+                  disabled={busy}
+                  onComplete={async () => {
+                    await refreshDeliveries(cache)
+                    navigate('/delivery-notes')
+                  }}
+                />
+              </Can>
               {row.status === 'delivered' && (
                 <Can permission="delivery_notes.update">
-                  <CancellationDialog
+                  <SalesCancellationDialog
+                    resource="delivery_notes"
+                    selected={[row]}
                     triggerLabel={t('cancelDeliveryNote')}
-                    title={t('cancelDeliveryNote')}
-                    description={t('cancelDeliveryNoteWarning')}
                     disabled={busy}
-                    maxLength={1000}
-                    validateReason={(reason) =>
-                      DeliveryNoteCancellationSchema.shape.reason.safeParse(reason).success
-                    }
-                    onConfirm={async (reason) => {
-                      await actions.cancel(row.id, row.version, reason)
+                    onComplete={async () => {
                       await refreshDeliveries(cache)
                     }}
                   />
@@ -228,9 +219,9 @@ export function DeliveryNoteDetailPage() {
               <span className="text-[var(--muted)]">{t('client')}</span>
               <br />
               <Can permission="clients.read" fallback={<span>{row.clientDisplayName}</span>}>
-                <Link href={`/clients/${row.clientId}`} className="text-[var(--accent)]">
+                <DocumentClientLink clientId={row.clientId} className="text-[var(--accent)]">
                   {row.clientDisplayName}
-                </Link>
+                </DocumentClientLink>
               </Can>
             </p>
             <p className="text-sm">

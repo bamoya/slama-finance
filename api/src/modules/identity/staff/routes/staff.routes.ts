@@ -7,6 +7,16 @@ export function registerStaffRoutes(
   controller: ReturnType<typeof createStaffController>,
   requirePermission: (key: string) => preHandlerHookHandler,
 ) {
+  app.post(
+    '/deletion/preview',
+    { preHandler: requirePermission('staff.delete') },
+    controller.previewDeletion,
+  )
+  app.post(
+    '/deletion',
+    { preHandler: requirePermission('staff.delete') },
+    controller.confirmDeletion,
+  )
   app.get('/', { preHandler: requirePermission('staff.read') }, controller.list)
   app.get('/:userId', { preHandler: requirePermission('staff.read') }, controller.detail)
   app.post('/', { preHandler: requirePermission('staff.create') }, controller.create)

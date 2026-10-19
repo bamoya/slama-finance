@@ -58,7 +58,12 @@ export const refreshSettings = (client: QueryClient) =>
   client.invalidateQueries({
     predicate: ({ queryKey }) =>
       typeof queryKey[0] === 'string' &&
-      [settingsKeys.company[0], settingsKeys.banks[0], settingsKeys.templates[0]].some(
-        (path) => queryKey[0] === path || (queryKey[0] as string).startsWith(path + '/'),
-      ),
+      [
+        settingsKeys.company[0],
+        settingsKeys.banks[0],
+        settingsKeys.templates[0],
+        '/v1/invoices',
+        '/v1/estimates',
+        '/v1/payments',
+      ].some((path) => queryKey[0] === path || (queryKey[0] as string).startsWith(path + '/')),
   })
