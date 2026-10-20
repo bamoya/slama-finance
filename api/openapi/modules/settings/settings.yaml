@@ -527,7 +527,6 @@ components:
           type:
             - string
             - "null"
-          maxLength: 30
         logoAssetId:
           type:
             - string
@@ -697,7 +696,6 @@ components:
           type:
             - string
             - "null"
-          maxLength: 30
         logoAssetId:
           type:
             - string

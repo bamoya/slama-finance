@@ -257,10 +257,10 @@ expectedVersion }]` (1–100). Returns the actual invoice/payment/BL identifiers
   `payments.bank_account_snapshot` on creation and, for older rows, on detachment.
   Technical bank detachment deliberately retains the payment version so an issued
   receipt remains accessible. The immutable creation request is not rewritten.
-- Template media release checks surviving estimate/invoice/receipt appearance
-  snapshots. Required assets remain pinned even after template removal. BLs do
-  not store template or brand-asset references in the current schema; their saved
-  renderer uses its existing fixed design.
+- Template media release checks surviving estimate/invoice/BL/receipt appearance
+  snapshots. Required assets remain pinned even after template removal. BL template
+  references are included in impact confirmation and detached without rewriting
+  saved appearance or content versions (forward migration `0003`).
 - `POST /v1/sales/cancellation[/preview]` accepts `resource` (`estimates`,
   `delivery_notes`, `payments`) and versioned `records`; confirmation adds `reason`
   and `token`. Preview and confirmation require `.read/update` on the selected

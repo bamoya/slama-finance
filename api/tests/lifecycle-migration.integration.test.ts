@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { readMigrationFiles } from 'drizzle-orm/migrator'
@@ -7,13 +10,22 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { isolatedDatabase } from './helpers/postgres.js'
 
-const migrationsFolder = fileURLToPath(new URL('../db/migrations/', import.meta.url))
+const sourceMigrationsFolder = fileURLToPath(new URL('../db/migrations/', import.meta.url))
 describe('deployed baseline lifecycle upgrade', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let schema: string
+  let migrationsFolder: string
   beforeEach(async () => {
     fixture = await isolatedDatabase({ migrationCount: 2 })
     schema = (await fixture.client`select current_schema() as name`)[0]!.name
+    // Isolate explicit public-schema FK declarations just like the SQL fixture
+    // helper does, without modifying the actual deployed migration files.
+    migrationsFolder = await mkdtemp(join(tmpdir(), 'slama-migration-upgrade-'))
+    await cp(sourceMigrationsFolder, migrationsFolder, { recursive: true })
+    for (const file of (await readdir(migrationsFolder)).filter((file) => file.endsWith('.sql'))) {
+      const path = join(migrationsFolder, file)
+      await writeFile(path, (await readFile(path, 'utf8')).replaceAll('"public".', `"${schema}".`))
+    }
     // Model a real deployment: the original two migrations are already recorded.
     await fixture.client`create table __drizzle_migrations(id serial primary key, hash text not null, created_at bigint)`
     for (const migration of readMigrationFiles({ migrationsFolder }).slice(0, 2))
@@ -21,6 +33,7 @@ describe('deployed baseline lifecycle upgrade', () => {
   })
   afterEach(async () => {
     await fixture?.cleanup()
+    if (migrationsFolder) await rm(migrationsFolder, { recursive: true, force: true })
   })
   const upgrade = () => migrate(fixture.db, { migrationsFolder, migrationsSchema: schema })
   async function existingRecords(conflict = false) {
@@ -77,7 +90,7 @@ describe('deployed baseline lifecycle upgrade', () => {
     expect(await fixture.client`select * from delivery_invoice_allocations`).toHaveLength(1)
     const journal =
       await fixture.client`select hash,created_at from __drizzle_migrations order by id`
-    expect(journal).toHaveLength(3)
+    expect(journal).toHaveLength(readMigrationFiles({ migrationsFolder }).length)
     await upgrade()
     expect(
       await fixture.client`select hash,created_at from __drizzle_migrations order by id`,
@@ -111,10 +124,41 @@ describe('deployed baseline lifecycle upgrade', () => {
     // Explicit fixture-only repair; production is never reconciled automatically.
     await fixture.client`delete from delivery_invoice_allocations where invoice_line_id=${ids.extraLine!}`
     await upgrade()
-    expect(await fixture.client`select * from __drizzle_migrations`).toHaveLength(3)
+    expect(await fixture.client`select * from __drizzle_migrations`).toHaveLength(
+      readMigrationFiles({ migrationsFolder }).length,
+    )
     expect(
       (await fixture.client`select invoice_id from delivery_notes where id=${ids.note}`)[0]!
         .invoice_id,
     ).toBe(ids.invoice)
+  })
+  it('preserves historical Classic BL designs when upgrading the deployed 0002 schema', async () => {
+    const migrations = readMigrationFiles({ migrationsFolder })
+    await fixture.client.begin(async (tx) => {
+      for (const statement of migrations[2]!.sql) if (statement.trim()) await tx.unsafe(statement)
+      await tx`insert into __drizzle_migrations(hash,created_at) values(${migrations[2]!.hash},${migrations[2]!.folderMillis})`
+    })
+    const clientId = randomUUID(),
+      noteId = randomUUID()
+    await fixture.client`insert into clients(id,type,legal_name,address_line1,city) values(${clientId},'company','Legacy client','Rue Atlas','Rabat')`
+    await fixture.client`insert into delivery_notes(id,number,status,client_id,delivery_date,delivery_address,issuer_snapshot,client_snapshot,delivered_at) values(${noteId},'BL-LEGACY','delivered',${clientId},'2026-10-01','Rabat','{"legalName":"Frozen company"}','{"legalName":"Frozen client"}',now())`
+    const [template] =
+      await fixture.client`insert into document_templates(name,layout,accent_color,footer_text) values('Current default','atelier','#176c51','Must not appear on old BL') returning id`
+    await fixture.client`update company_settings set default_template_id=${template!.id} where id=1`
+    const [before] =
+      await fixture.client`select issuer_snapshot,client_snapshot,number,version,content_version from delivery_notes where id=${noteId}`
+    await upgrade()
+    const [after] =
+      await fixture.client`select issuer_snapshot,client_snapshot,number,version,content_version,template_id,appearance_snapshot from delivery_notes where id=${noteId}`
+    expect(after).toMatchObject(before!)
+    expect(after!.template_id).toBeNull()
+    expect(after!.appearance_snapshot).toEqual({
+      layout: 'classic',
+      density: 'standard',
+      accentColor: '#ad7d1d',
+    })
+    const journal = await fixture.client`select * from __drizzle_migrations`
+    await upgrade()
+    expect(await fixture.client`select * from __drizzle_migrations`).toEqual(journal)
   })
 })

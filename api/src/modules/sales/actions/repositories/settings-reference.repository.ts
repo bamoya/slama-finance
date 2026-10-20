@@ -1,5 +1,6 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm'
 
+import { deliveryNotes } from '../../../../../db/schema/delivery-notes.js'
 import { estimates } from '../../../../../db/schema/estimates.js'
 import { invoices } from '../../../../../db/schema/invoices.js'
 import { payments } from '../../../../../db/schema/payments.js'
@@ -13,6 +14,15 @@ async function settingsReferenceGraph(
 ) {
   const column = resource === 'templates' ? 'templateId' : 'bankAccountId'
   return {
+    delivery_notes:
+      resource === 'templates'
+        ? await tx
+            .select()
+            .from(deliveryNotes)
+            .where(inArray(deliveryNotes.templateId, ids))
+            .orderBy(asc(deliveryNotes.id))
+            .for('update')
+        : [],
     estimates: await tx
       .select()
       .from(estimates)
@@ -107,6 +117,27 @@ export function createSettingsReferenceRepository() {
           actorKind: 'user',
           action: 'detach_bank',
           entityTable: 'payments',
+          entityKey: { id: before.id },
+          beforeValues: before,
+          afterValues: after,
+        })
+      }
+      for (const before of state.delivery_notes) {
+        const [after] = await tx
+          .update(deliveryNotes)
+          .set({
+            templateId: null,
+            version: sql`${deliveryNotes.version} + 1`,
+            updatedAt: new Date(),
+            updatedByUserId: actor,
+          })
+          .where(eq(deliveryNotes.id, before.id))
+          .returning()
+        await tx.insert(auditEvents).values({
+          actorUserId: actor,
+          actorKind: 'user',
+          action: 'detach_setting',
+          entityTable: 'delivery_notes',
           entityKey: { id: before.id },
           beforeValues: before,
           afterValues: after,

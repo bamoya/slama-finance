@@ -117,13 +117,13 @@ describe('Company settings module', () => {
       ...editable(initial),
       legalName: 'Company',
       ice: '001234567890123',
-      phone: '0612345678',
+      phone: '06 12 34 56 78 05 22 33 44 55 ext 12',
       shareCapital: '10000.00',
     })
     expect(saved.statusCode).toBe(200)
     expect(saved.json()).toMatchObject({
       version: 2,
-      phone: '+212612345678',
+      phone: '06 12 34 56 78 05 22 33 44 55 ext 12',
       ice: '001234567890123',
       updatedByUserId: testUserId,
     })

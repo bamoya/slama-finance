@@ -26,7 +26,7 @@ export async function renderDeliveryPdf(
       sections: row.instructions ? [{ title: 'Instructions', text: row.instructions }] : [],
       receptionSignature: row.includeReceptionSignature,
     },
-    images.appearance ?? {},
+    images.appearance ?? record(row.appearanceSnapshot),
     images,
   )
   return result.pdf.save()

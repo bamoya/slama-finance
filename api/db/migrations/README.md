@@ -19,6 +19,12 @@ using that older history require a separately reviewed upgrade, not a forced res
   ownership is inferred from existing links; conflicting owners block and roll
   back the migration with the affected BL IDs for explicit reconciliation.
 
+- `0003_delivery_document_templates.sql` adds a template reference and saved appearance
+  to BLs. Existing records receive their historical Classic design, not the current
+  company template. New/finalizing drafts select the company default. Existing issued
+  PDFs are unchanged; explicit latest-design regeneration can use the selected
+  template's current settings (or company default for legacy unbound BLs).
+
 The startup initializer still creates the restricted runtime database role and
 bootstraps the first administrator from deployment environment variables. Drizzle
 records successful migrations; subsequent startups do not reapply them.

@@ -1,13 +1,12 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
 import {
   useConfirmClientDeletion,
   usePreviewClientDeletion,
 } from '../../../api/generated/clients/clients'
+import { DeletionCascadeOption } from '../../../components/management/deletion-cascade-option'
 import { DeletionImpactSummary } from '../../../components/management/deletion-impact-summary'
 import { ImpactConfirmationDialog } from '../../../components/management/impact-confirmation-dialog'
-import { Checkbox } from '../../../components/ui/checkbox'
-import { Field, FieldLabel } from '../../../components/ui/field'
 import { translate } from '../../../lib/i18n'
 
 export function ClientDeletionDialog({
@@ -23,7 +22,6 @@ export function ClientDeletionDialog({
   onDismiss?: () => void
   onComplete: () => Promise<unknown>
 }) {
-  const id = useId()
   const [cascadeDocuments, setCascadeDocuments] = useState(false)
   const preview = usePreviewClientDeletion()
   const confirm = useConfirmClientDeletion()
@@ -45,16 +43,13 @@ export function ClientDeletionDialog({
       )}
       previewKey={JSON.stringify(selection)}
       options={
-        <Field className="flex-row items-start gap-3">
-          <Checkbox
-            id={id}
-            checked={cascadeDocuments}
-            onCheckedChange={(value) => setCascadeDocuments(value === true)}
-          />
-          <FieldLabel htmlFor={id}>
-            {translate('Also delete all related estimates, invoices, delivery notes and payments')}
-          </FieldLabel>
-        </Field>
+        <DeletionCascadeOption
+          checked={cascadeDocuments}
+          onCheckedChange={setCascadeDocuments}
+          label={translate(
+            'Also delete all related estimates, invoices, delivery notes and payments',
+          )}
+        />
       }
       loadPreview={async () => {
         const impact = await preview.mutateAsync({ data: selection })

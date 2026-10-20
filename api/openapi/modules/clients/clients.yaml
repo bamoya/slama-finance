@@ -185,7 +185,7 @@ components:
         tradeName: { type: [string, 'null'], maxLength: 200 }
         contactName: { type: [string, 'null'], maxLength: 200 }
         email: { type: [string, 'null'], format: email, maxLength: 254 }
-        phone: { type: [string, 'null'], maxLength: 30 }
+        phone: { type: [string, 'null'] }
         ice: { type: [string, 'null'], pattern: '^[0-9]{15}$' }
         taxIdentifier: { type: [string, 'null'], maxLength: 30 }
         registrationNumber: { type: [string, 'null'], maxLength: 50 }
@@ -216,7 +216,7 @@ components:
         tradeName: { type: [string, 'null'], maxLength: 200 }
         contactName: { type: [string, 'null'], maxLength: 200 }
         email: { type: [string, 'null'], format: email, maxLength: 254 }
-        phone: { type: [string, 'null'], maxLength: 30 }
+        phone: { type: [string, 'null'] }
         ice: { type: [string, 'null'], pattern: '^[0-9]{15}$' }
         taxIdentifier: { type: [string, 'null'], maxLength: 30 }
         registrationNumber: { type: [string, 'null'], maxLength: 50 }

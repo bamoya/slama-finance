@@ -1,5 +1,3 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js'
-
 import {
   BankAccountSchema,
   CompanySettingsSchema,
@@ -78,14 +76,6 @@ export function createSettingsService(
           'VALIDATION_ERROR',
           'RC number and registration city must be provided together.',
         )
-      if (data.phone) {
-        const phone = parsePhoneNumberFromString(data.phone, 'MA')
-        if (!phone?.isValid())
-          throw new AppError(400, 'VALIDATION_ERROR', 'Invalid phone number.', {
-            phone: ['Enter a valid phone number.'],
-          })
-        data.phone = phone.number
-      }
       if (data.email) data.email = data.email.toLowerCase()
       return repo.transaction(async (tx) => {
         await repo.authorizeWrite(tx, actor, 'company_settings.update')

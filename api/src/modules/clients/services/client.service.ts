@@ -1,5 +1,3 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js'
-
 import {
   type ClientInput,
   ClientInputSchema,
@@ -111,11 +109,6 @@ function normalize(input: ClientInput) {
       'INVALID_DELIVERY_ADDRESS',
       'Enter a complete separate delivery address or leave it empty.',
     )
-  if (normalized.phone) {
-    const phone = parsePhoneNumberFromString(normalized.phone, 'MA')
-    if (!phone?.isValid()) throw new AppError(400, 'INVALID_PHONE', 'Enter a valid phone number.')
-    normalized.phone = phone.number
-  }
   return normalized
 }
 

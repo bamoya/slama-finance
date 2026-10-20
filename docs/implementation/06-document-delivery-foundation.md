@@ -39,9 +39,17 @@ after checking no active code still depends on them.
   template (company default if none was selected), copying presentation fields only.
   An unavailable/archived template fails explicitly. Customer/issuer identities, dates,
   numbers, products, quantities, prices, tax and payment terms are never refreshed.
-- Delivery notes currently have no appearance snapshot: saved retains the original
-  delivery-note layout; latest applies the company's default template. This limitation
-  is stated in the confirmation dialog. No database schema migration was introduced.
+- Delivery notes resolve the company template on draft creation/edit and finalization.
+  Finalization freezes `template_id` and `appearance_snapshot`, including logo and
+  signature references. Saved regeneration preserves that appearance; latest uses
+  the selected template's current settings (company default for legacy unbound BLs).
+  Migration `0003` preserves historical Classic appearance on existing BLs; it does
+  not refresh issued identities or existing PDF files. Receipts continue inheriting
+  their invoice's appearance, rather than independently switching company defaults.
+- Brand image bounds are shared by preview and PDF rendering. Logos use 60×60 pt
+  (46×46 compact), or 107×76 pt (72×44 compact) in Atelier. Signatures fit 155×72 pt
+  (145×52 compact). Aspect ratios are preserved; header/signature spacing reserves
+  the larger bounds. Existing artifacts change only after explicit regeneration.
 - Each replacement uploads a new immutable object before atomically switching the
   existing artifact metadata. The artifact ID and source version remain stable.
   Compare-and-swap prevents concurrent replacements; failure leaves the old download intact.

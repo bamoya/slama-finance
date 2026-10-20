@@ -13,7 +13,7 @@ export function createSettingsReferenceService(
     const state = await repo.graph(tx, resource, ids)
     const groups = [],
       requiredPermissions = []
-    for (const key of ['estimates', 'invoices', 'payments'] as const) {
+    for (const key of ['estimates', 'invoices', 'payments', 'delivery_notes'] as const) {
       if (!state[key].length) continue
       for (const action of ['read', 'update']) {
         const permission = `${key}.${action}`

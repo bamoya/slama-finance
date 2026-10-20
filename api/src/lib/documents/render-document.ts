@@ -44,6 +44,9 @@ export async function renderDocument(
   const c = await createDocumentCanvas()
   const layout = text(appearance.layout) || 'classic'
   const compact = appearance.density === 'compact'
+  const logoSize = compact ? 46 : 60
+  const signatureWidth = compact ? 145 : 155
+  const signatureHeight = compact ? 52 : 72
   const tight = compact || layout === 'minimal'
   const atelier = layout === 'atelier'
   const essential = layout === 'essential'
@@ -98,7 +101,7 @@ export async function renderDocument(
           20,
           sideY,
           sidebar - 40,
-          compact ? 36 : 62,
+          compact ? 44 : 76,
           'Company logo',
         )
         sideY += logo.height + 12
@@ -144,13 +147,13 @@ export async function renderDocument(
       if (images.logo) {
         await c.image(
           images.logo,
-          essential ? right - 52 : left,
+          essential ? right - logoSize : left,
           y,
-          compact ? 38 : 48,
-          compact ? 38 : 48,
+          logoSize,
+          logoSize,
           'Company logo',
         )
-        if (!essential) issuerX += compact ? 48 : 58
+        if (!essential) issuerX += logoSize + 10
       }
       if (essential) issuerTop += titleHeight + numberHeight + 14
       const issuerWidth = essential ? width : width * 0.5 - (issuerX - left) - 10
@@ -169,7 +172,7 @@ export async function renderDocument(
         Math.max(
           issuerTop,
           headerTop + titleHeight + numberHeight + 8,
-          headerTop + (images.logo ? 48 : 0),
+          headerTop + (images.logo ? logoSize : 0),
         ) + (compact ? 8 : 14)
       if (layout === 'modern') c.rect(left - 8, headerTop, 4, y - headerTop, accent)
       else
@@ -415,11 +418,17 @@ export async function renderDocument(
     c.rect(left, y, Math.min(width, 230), 0.5, rule)
   }
   if (appearance.showSignature === true && images.signature) {
-    const signatureHeight = compact ? 42 : 58
     await ensure(signatureHeight + 30)
     y = Math.max(y + 15, bottom - signatureHeight - 20)
-    c.text(label('Authorized signature'), right - 130, y, 8, muted)
-    await c.image(images.signature, right - 130, y + 14, 130, signatureHeight, 'Company signature')
+    c.text(label('Authorized signature'), right - signatureWidth, y, 8, muted)
+    await c.image(
+      images.signature,
+      right - signatureWidth,
+      y + 14,
+      signatureWidth,
+      signatureHeight,
+      'Company signature',
+    )
   }
   for (let i = 0; i < c.pageCount; i++) {
     c.selectPage(i)

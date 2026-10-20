@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { SalesDeletionSelection } from '../../../api/generated/models'
@@ -6,9 +6,8 @@ import {
   useConfirmSalesDeletion,
   usePreviewSalesDeletion,
 } from '../../../api/generated/sales/sales'
+import { DeletionCascadeOption } from '../../../components/management/deletion-cascade-option'
 import { ImpactConfirmationDialog } from '../../../components/management/impact-confirmation-dialog'
-import { Checkbox } from '../../../components/ui/checkbox'
-import { Field, FieldLabel } from '../../../components/ui/field'
 import { registerTranslations } from '../../../lib/i18n'
 
 registerTranslations('salesDeletion', {
@@ -46,7 +45,6 @@ export function SalesDeletionDialog({
   onComplete: () => Promise<unknown>
 }) {
   const { t } = useTranslation('salesDeletion')
-  const id = useId()
   const [cascadeInvoices, setCascadeInvoices] = useState(false)
   const preview = usePreviewSalesDeletion()
   const confirm = useConfirmSalesDeletion()
@@ -68,14 +66,11 @@ export function SalesDeletionDialog({
       }}
       options={
         resource === 'estimates' ? (
-          <Field className="flex-row items-start gap-3">
-            <Checkbox
-              id={id}
-              checked={cascadeInvoices}
-              onCheckedChange={(value) => setCascadeInvoices(value === true)}
-            />
-            <FieldLabel htmlFor={id}>{t('cascade')}</FieldLabel>
-          </Field>
+          <DeletionCascadeOption
+            checked={cascadeInvoices}
+            onCheckedChange={setCascadeInvoices}
+            label={t('cascade')}
+          />
         ) : undefined
       }
       loadPreview={async () => {

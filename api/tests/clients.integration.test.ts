@@ -106,7 +106,7 @@ describe('Clients module', () => {
     expect((await app.inject({ url: '/v1/clients?q=%25', cookies })).json().total).toBe(0)
   })
 
-  it('rejects incompatible identities, incomplete RC and delivery addresses, and invalid phone', async () => {
+  it('rejects incompatible identities, incomplete RC and delivery addresses, but accepts free-text phones', async () => {
     expect(
       (await request('POST', '/v1/clients', individual({ ice: '000123456789012' }))).statusCode,
     ).toBe(400)
@@ -117,9 +117,10 @@ describe('Clients module', () => {
       (await request('POST', '/v1/clients', company({ deliveryAddressLine1: 'Warehouse' })))
         .statusCode,
     ).toBe(400)
-    expect(
-      (await request('POST', '/v1/clients', individual({ phone: 'bad-phone' }))).statusCode,
-    ).toBe(400)
+    const phone = '06 12 34 56 78 05 22 33 44 55 ext 12'
+    const client = await request('POST', '/v1/clients', individual({ phone }))
+    expect(client.statusCode).toBe(201)
+    expect(client.json().phone).toBe(phone)
     expect(
       (await request('POST', '/v1/clients', individual({ email: 'not-email' }))).statusCode,
     ).toBe(400)

@@ -153,7 +153,7 @@ export const companyIdentityFields: SettingsField[] = [
     },
     nullable: true,
     get hint() {
-      return translate('Moroccan national or international format.')
+      return translate('Multiple phone numbers can be separated by spaces.')
     },
   },
 ]

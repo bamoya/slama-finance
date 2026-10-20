@@ -115,6 +115,7 @@ erDiagram
     product_variants o|--o{ invoice_lines : selected_package
     clients o|--o{ estimates : "1 to 0..N"
     document_templates o|--o{ estimates : "0..1 to 0..N"
+    document_templates o|--o{ delivery_notes : "0..1 to 0..N"
     estimates ||--o{ estimate_lines : "1 to 0..N"
     products o|--o{ estimate_lines : "0..1 to 0..N"
     product_variants o|--o{ estimate_lines : selected_package
@@ -223,6 +224,7 @@ erDiagram
         uuid bank_account_id FK }
     delivery_notes { uuid id PK
         uuid client_id FK
+        uuid template_id FK
         uuid invoice_id FK }
     delivery_note_lines { uuid id PK
         uuid delivery_note_id FK
@@ -238,6 +240,7 @@ erDiagram
     estimates o|--o{ invoices : converted_from
     clients o|--o{ estimates : offered_to
     document_templates o|--o{ estimates : appearance
+    document_templates o|--o{ delivery_notes : appearance
     estimates ||--o{ estimate_lines : contains
     products o|--o{ estimate_lines : selected_from
     product_variants o|--o{ estimate_lines : selected_package
@@ -696,6 +699,8 @@ erDiagram
         text number UK "nullable until delivered"
         uuid client_id FK
         uuid invoice_id FK "nullable"
+        uuid template_id FK "nullable; company default frozen on delivery"
+        jsonb appearance_snapshot "saved design; legacy Classic retained"
         text status "draft delivered cancelled"
         text locale_override "nullable; null inherits company language at preparation"
         date delivery_date
@@ -1139,9 +1144,9 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   delivery address, require a nonblank first line, city and country. If the
   delivery first line is NULL, all other delivery address fields must be NULL
   and the complete billing address is used. Never merge parts of two addresses.
-- Phone and email remain optional for record creation. Normalize supplied
-  phone numbers to international format using Morocco as the default country,
-  while accepting valid foreign numbers. Email notifications require a valid
+- Phone and email remain optional for record creation. Phone fields accept free
+  text, including multiple numbers separated by spaces, without phone-format
+  validation or international normalization. Email notifications require a valid
   email address; an absent address must not prevent cash sales.
 - Company settings use `MAD`, `fr-MA` and `Africa/Casablanca` by default.
   System language is centrally configured by company locale (`fr-MA` or `en-GB`).

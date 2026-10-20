@@ -14,6 +14,7 @@ import { assertVersion, companyDate } from '../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
 import type { createJobSupport } from '../../../../support/jobs/index.js'
 import { documentClient } from '../../shared/services/document-client.js'
+import { documentAppearance } from '../../shared/services/document-defaults.js'
 import type {
   createDeliveryNoteRepository,
   DeliveryNoteRow,
@@ -67,6 +68,7 @@ export function createDeliveryNoteService(
     retained?: unknown,
   ) {
     const company = await repo.company(tx)
+    const template = await repo.template(company.defaultTemplateId, tx)
     const invoice = input.invoiceId ? await repo.invoice(input.invoiceId, tx) : null
     if (invoice && invoice.clientId !== input.clientId)
       throw new AppError(400, 'CLIENT_MISMATCH', 'Delivery note client must match its invoice.')
@@ -119,6 +121,8 @@ export function createDeliveryNoteService(
       header: {
         clientId: input.clientId,
         invoiceId: invoice?.id ?? null,
+        templateId: template?.id ?? null,
+        appearanceSnapshot: documentAppearance(template, company),
         deliveryDate: input.deliveryDate,
         deliveryAddress: input.deliveryAddress.trim(),
         instructions: input.instructions?.trim() || null,
@@ -282,9 +286,11 @@ export function createDeliveryNoteService(
           await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
         ).snapshot
         const issuer = before.issuerSnapshot as Record<string, unknown>
+        const company = await repo.company(tx)
+        const template = await repo.template(company.defaultTemplateId, tx)
         const locale = resolveLocale(
           before.localeOverride,
-          before.invoiceId ? issuer.locale : (await repo.company(tx)).locale,
+          before.invoiceId ? issuer.locale : company.locale,
         )
         const year = new Intl.DateTimeFormat('en', {
           year: 'numeric',
@@ -305,6 +311,8 @@ export function createDeliveryNoteService(
                   number,
                   updatedByUserId: actor,
                   clientSnapshot: currentClientSnapshot,
+                  templateId: template?.id ?? null,
+                  appearanceSnapshot: documentAppearance(template, company),
                 },
                 savepoint,
                 true,

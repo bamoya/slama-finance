@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 
+import { PDFDict, PDFDocument, PDFName } from 'pdf-lib'
+import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
@@ -20,6 +22,7 @@ describe('Estimates lifecycle', () => {
   let app: Awaited<ReturnType<typeof buildApp>>
   let cookies: { slama_session: string }
   let storage: ObjectStorage
+  let objects: Map<string, Uint8Array>
   beforeEach(async () => {
     fixture = await isolatedDatabase()
     await fixture.client`update company_settings set legal_name='Slama Agricole', address_line1='Rue Atlas', city='Casablanca' where id=1`
@@ -27,7 +30,7 @@ describe('Estimates lifecycle', () => {
     const hash = await createPasswordService().hash('estimates-password-123')
     await fixture.client`update users set password_hash=${hash} where id=${testUserId}`
     await fixture.client`insert into user_roles (user_id,role_id) select ${testUserId},id from roles where key='admin'`
-    const objects = new Map<string, Uint8Array>()
+    objects = new Map<string, Uint8Array>()
     storage = {
       async putImmutable(input) {
         if (objects.has(input.key)) throw new Error('Immutable')
@@ -92,9 +95,9 @@ describe('Estimates lifecycle', () => {
       },
     ],
   })
-  async function cancellableInvoice() {
+  async function cancellableInvoice(templateId: string | null = null) {
     const { validUntil: _, ...input } = revisionInput()
-    const created = await post('/v1/invoices', { ...input, dueDate: null })
+    const created = await post('/v1/invoices', { ...input, templateId, dueDate: null })
     expect(created.statusCode, created.body).toBe(201)
     const issued = await post(`/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
@@ -269,6 +272,184 @@ describe('Estimates lifecycle', () => {
         await fixture.client`select status from invoices where id in (${first.id},${second.id})`
       ).every((row) => row.status === 'cancelled'),
     ).toBe(true)
+  })
+  async function brandedDeliveryTemplate() {
+    const png = await sharp({
+      create: { width: 100, height: 40, channels: 4, background: '#176c51' },
+    })
+      .png()
+      .toBuffer()
+    const assets = []
+    for (const purpose of ['company_logo', 'company_signature']) {
+      const id = randomUUID(),
+        key = `media/${id}.png`
+      objects.set(key, new Uint8Array(png))
+      await fixture.client`insert into media_assets(id,object_key,original_filename,content_type,byte_size,sha256,purpose,status) values(${id},${key},'brand.png','image/png',${png.length},${createHash('sha256').update(png).digest('hex')},${purpose},'ready')`
+      assets.push(id)
+    }
+    const [template] =
+      await fixture.client`insert into document_templates(name,layout,density,accent_color,logo_asset_id,signature_asset_id,show_signature,footer_text) values('BL default','atelier','compact','#176c51',${assets[0]!},${assets[1]!},true,'Saved BL footer') returning id`
+    await fixture.client`update company_settings set default_template_id=${template!.id} where id=1`
+    return { id: template!.id as string, assets }
+  }
+  async function independentDelivery() {
+    const created = await post('/v1/delivery-notes', {
+      clientId,
+      invoiceId: null,
+      deliveryDate: '2026-10-01',
+      deliveryAddress: 'Rue Hassan',
+      instructions: null,
+      includeReceptionSignature: true,
+      lines: [
+        { productVariantId: null, sourceInvoiceLineId: null, productName: 'Wheat', quantity: 2 },
+      ],
+    })
+    expect(created.statusCode, created.body).toBe(201)
+    return created.json()
+  }
+  it.each(['independent', 'invoice'] as const)(
+    'uses the company template for %s BLs, freezes it on delivery and renders both brand images',
+    async (kind) => {
+      const template = await brandedDeliveryTemplate()
+      const [other] =
+        await fixture.client`insert into document_templates(name,layout) values('Other invoice choice','essential') returning id`
+      let draft
+      if (kind === 'invoice') {
+        const invoice = await cancellableInvoice(other!.id)
+        const created = await post(`/v1/invoices/${invoice.id}/delivery-note`, {})
+        expect(created.statusCode, created.body).toBe(201)
+        draft = created.json()
+      } else draft = await independentDelivery()
+      expect(draft.templateId).toBe(template.id)
+      const [next] =
+        await fixture.client`insert into document_templates(name,layout,density,accent_color,logo_asset_id,signature_asset_id,show_signature,footer_text) values('Current BL default','modern','standard','#176c51',${template.assets[0]!},${template.assets[1]!},true,'Frozen footer') returning id`
+      await fixture.client`update company_settings set default_template_id=${next!.id} where id=1`
+      const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+        expectedVersion: draft.version,
+      })
+      expect(delivered.statusCode, delivered.body).toBe(200)
+      expect(delivered.json().templateId).toBe(next!.id)
+      const version = delivered.json().contentVersion
+      const [frozen] =
+        await fixture.client`select appearance_snapshot from delivery_notes where id=${draft.id}`
+      expect(frozen!.appearance_snapshot).toMatchObject({
+        layout: 'modern',
+        density: 'standard',
+        showSignature: true,
+        logoAssetId: template.assets[0],
+        signatureAssetId: template.assets[1],
+        footerText: 'Frozen footer',
+      })
+      const regenerated = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+        design: 'saved',
+      })
+      expect(regenerated.statusCode, regenerated.body).toBe(200)
+      const download = await app.inject({
+        url: `/v1/artifacts/${regenerated.json().id}/download`,
+        cookies,
+      })
+      expect(download.statusCode).toBe(200)
+      const pdf = await PDFDocument.load(download.rawPayload)
+      expect(
+        pdf.getPage(0).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict).keys(),
+      ).toHaveLength(2)
+      const media = createMediaModule(() => fixture.db, storage)
+      await fixture.client`update document_templates set footer_text='Latest footer' where id=${next!.id}`
+      await fixture.client`update company_settings set default_template_id=${other!.id} where id=1`
+      expect(
+        (await media.publicApi.documentImages('delivery_note', draft.id, version)).appearance,
+      ).toEqual(frozen!.appearance_snapshot)
+      expect(
+        (await media.publicApi.documentImages('delivery_note', draft.id, version, 'latest'))
+          .appearance,
+      ).toMatchObject({ layout: 'modern', footerText: 'Latest footer' })
+      const latest = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+        design: 'latest',
+      })
+      expect(latest.statusCode, latest.body).toBe(200)
+      expect(
+        (
+          await fixture.client`select appearance_snapshot from delivery_notes where id=${draft.id}`
+        )[0]!.appearance_snapshot,
+      ).toEqual(frozen!.appearance_snapshot)
+    },
+  )
+  it('detaches deleted templates from BLs but preserves frozen designs and needed media', async () => {
+    const template = await brandedDeliveryTemplate(),
+      draft = await independentDelivery()
+    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+      expectedVersion: draft.version,
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    const version = delivered.json().contentVersion
+    const media = createMediaModule(() => fixture.db, storage)
+    const before = (await media.publicApi.documentImages('delivery_note', draft.id, version))
+      .appearance
+    const selection = { resource: 'templates', records: [{ id: template.id, expectedVersion: 1 }] }
+    const preview = await post('/v1/settings/deletion/preview', selection)
+    expect(preview.statusCode, preview.body).toBe(200)
+    expect(preview.json().groups).toContainEqual(
+      expect.objectContaining({ resource: 'delivery_notes', operation: 'detach' }),
+    )
+    const deleted = await post('/v1/settings/deletion', {
+      ...selection,
+      token: preview.json().token,
+    })
+    expect(deleted.statusCode, deleted.body).toBe(204)
+    const [row] =
+      await fixture.client`select template_id,appearance_snapshot,content_version from delivery_notes where id=${draft.id}`
+    expect(row).toEqual({
+      template_id: null,
+      appearance_snapshot: before,
+      content_version: version,
+    })
+    const retained = await media.publicApi.documentImages('delivery_note', draft.id, version)
+    expect(retained.logo).toBeDefined()
+    expect(retained.signature).toBeDefined()
+    for (const id of template.assets)
+      expect(
+        (await fixture.client`select status from media_assets where id=${id}`)[0]!.status,
+      ).toBe('ready')
+    expect(
+      (await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, { design: 'saved' }))
+        .statusCode,
+    ).toBe(200)
+  })
+  it('keeps legacy BLs Classic until explicit latest-design regeneration uses the company default', async () => {
+    await brandedDeliveryTemplate()
+    const draft = await independentDelivery()
+    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+      expectedVersion: draft.version,
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    const legacy = { layout: 'classic', density: 'standard', accentColor: '#ad7d1d' }
+    await fixture.client`update delivery_notes set template_id=null,appearance_snapshot=${JSON.stringify(legacy)}::jsonb where id=${draft.id}`
+    const media = createMediaModule(() => fixture.db, storage)
+    const saved = await media.publicApi.documentImages(
+      'delivery_note',
+      draft.id,
+      delivered.json().contentVersion,
+    )
+    expect(saved.appearance).toEqual(legacy)
+    expect(saved.logo).toBeUndefined()
+    expect(saved.signature).toBeUndefined()
+    const latest = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+      design: 'latest',
+    })
+    expect(latest.statusCode, latest.body).toBe(200)
+    const downloaded = await app.inject({
+      url: `/v1/artifacts/${latest.json().id}/download`,
+      cookies,
+    })
+    const pdf = await PDFDocument.load(downloaded.rawPayload)
+    expect(
+      pdf.getPage(0).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict).keys(),
+    ).toHaveLength(2)
+    expect(
+      (
+        await fixture.client`select appearance_snapshot from delivery_notes where id=${draft.id}`
+      )[0]!.appearance_snapshot,
+    ).toEqual(legacy)
   })
   it('resolves company template/date defaults and preserves explicit choices and issued snapshots', async () => {
     const [template] =

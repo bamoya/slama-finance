@@ -36,6 +36,59 @@ const image = sharp(
   .toBuffer()
 
 describe('canonical document preview', () => {
+  it.each(layouts)(
+    'fits enlarged brand images inside %s without stretching or crossing page edges',
+    async (layout) => {
+      const square = await sharp({
+        create: { width: 100, height: 100, channels: 4, background: '#123456' },
+      })
+        .png()
+        .toBuffer()
+      for (const density of ['standard', 'compact'] as const) {
+        for (const asset of [await image, square]) {
+          const result = await renderTemplatePreview({ ...data, layout, density }, 'invoice', {
+            logo: asset,
+            signature: asset,
+          })
+          const dimensions = (name: string) => {
+            const match = result.html.match(
+              new RegExp(
+                `<image x="([\\d.-]+)" y="([\\d.-]+)" width="([\\d.-]+)" height="([\\d.-]+)" aria-label="${name}"`,
+              ),
+            )!
+            expect(match).not.toBeNull()
+            return {
+              x: Number(match[1]),
+              y: Number(match[2]),
+              width: Number(match[3]),
+              height: Number(match[4]),
+            }
+          }
+          const compact = density === 'compact'
+          const logo = dimensions('Company logo'),
+            signature = dimensions('Company signature')
+          const logoWidth = layout === 'atelier' ? (compact ? 72 : 107) : compact ? 46 : 60
+          const logoHeight = layout === 'atelier' ? (compact ? 44 : 76) : logoWidth
+          expect(logo.width).toBeLessThanOrEqual(logoWidth + 0.001)
+          expect(logo.height).toBeLessThanOrEqual(logoHeight + 0.001)
+          expect(signature.width).toBeLessThanOrEqual(compact ? 145 : 155)
+          expect(signature.height).toBeLessThanOrEqual(compact ? 52 : 72)
+          const ratio = asset === square ? 1 : 200 / 70
+          expect(logo.width / logo.height).toBeCloseTo(ratio, 5)
+          expect(signature.width / signature.height).toBeCloseTo(ratio, 5)
+          if (asset === square) expect(logo.height).toBeCloseTo(logoHeight, 5)
+          else expect(signature.width).toBeCloseTo(compact ? 145 : 155, 5)
+          for (const box of [logo, signature]) {
+            expect(box.x).toBeGreaterThanOrEqual(0)
+            expect(box.y).toBeGreaterThanOrEqual(0)
+            expect(box.x + box.width).toBeLessThanOrEqual(595.28)
+            expect(box.y + box.height).toBeLessThan(841.89 - (compact ? 25 : 30))
+          }
+          expect(result.pageCount).toBe(1)
+        }
+      }
+    },
+  )
   for (const layout of layouts)
     for (const density of ['standard', 'compact'] as const) {
       it(`renders ${layout}/${density} consistently for all four document types`, async () => {

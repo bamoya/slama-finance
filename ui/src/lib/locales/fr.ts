@@ -1,5 +1,9 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Related records will also be permanently deleted.':
+    'Les éléments associés seront également supprimés définitivement.',
+  'Leave unchecked to preserve related records.':
+    'Laissez cette option décochée pour conserver les éléments associés.',
   'Company defaults and live references will be cleared. Documents, payment history and saved designs remain unchanged. Images needed by existing documents are retained.':
     'Les choix par défaut de l’entreprise et les références actives seront retirés. Les documents, l’historique des paiements et les présentations enregistrées restent inchangés. Les images nécessaires aux documents existants sont conservées.',
   'Only the listed records will be cancelled. Related invoices, estimates, delivery notes and payments remain unchanged. No real transfer or physical delivery is reversed.':
@@ -873,7 +877,8 @@ export const french: Record<string, string> = {
   Module: 'Module',
   Monthly: 'Mensuel',
   More: 'Plus',
-  'Moroccan national or international format.': 'Format national marocain ou international.',
+  'Multiple phone numbers can be separated by spaces.':
+    'Vous pouvez saisir plusieurs numéros séparés par des espaces.',
   Morocco: 'Maroc',
   'My account': 'Mon compte',
   'My profile': 'Mon profil',
@@ -988,8 +993,8 @@ export const french: Record<string, string> = {
   Organization: 'Organisation',
   'Organize products and review category activity.':
     'Organisez les produits et consultez l’activité des catégories.',
-  'Original keeps the existing delivery-note layout. Latest uses the company’s current default template.':
-    'Le design d’origine conserve la présentation du bon de livraison. Le dernier design utilise le modèle par défaut actuel de l’entreprise.',
+  'Original preserves the saved design. Latest uses the selected template’s current settings, or the company default for older delivery notes.':
+    'Le design d’origine conserve la présentation enregistrée. Le dernier design utilise les paramètres actuels du modèle sélectionné, ou le modèle par défaut de l’entreprise pour les anciens bons de livraison.',
   'Original saved design': 'Design d’origine enregistré',
   Other: 'Autre',
   Outstanding: 'Solde à recevoir',

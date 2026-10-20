@@ -18,6 +18,7 @@ import { users } from './auth.js'
 import { products, productVariants } from './catalog.js'
 import { clients } from './clients.js'
 import { invoiceLines, invoices } from './invoices.js'
+import { documentTemplates } from './settings.js'
 
 export const deliveryNotes = pgTable(
   'delivery_notes',
@@ -26,6 +27,12 @@ export const deliveryNotes = pgTable(
     number: text('number').unique(),
     clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'restrict' }),
+    templateId: uuid('template_id').references(() => documentTemplates.id, {
+      onDelete: 'restrict',
+    }),
+    appearanceSnapshot: jsonb('appearance_snapshot')
+      .notNull()
+      .default({ layout: 'classic', density: 'standard', accentColor: '#ad7d1d' }),
     status: text('status').notNull().default('draft'),
     deliveryDate: date('delivery_date').notNull(),
     issuerSnapshot: jsonb('issuer_snapshot').notNull(),

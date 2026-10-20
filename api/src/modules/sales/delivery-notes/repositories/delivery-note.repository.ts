@@ -9,7 +9,11 @@ import {
   deliveryNotes,
 } from '../../../../../db/schema/delivery-notes.js'
 import { invoiceLines, invoices } from '../../../../../db/schema/invoices.js'
-import { auditEvents, companySettings } from '../../../../../db/schema/settings.js'
+import {
+  auditEvents,
+  companySettings,
+  documentTemplates,
+} from '../../../../../db/schema/settings.js'
 import type { ListDeliveryNotesQuery } from '../../../../contracts/generated/sales/delivery-notes.schemas.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
@@ -112,6 +116,13 @@ export function createDeliveryNoteRepository(database: () => Database) {
       const [row] = await tx.select().from(clients).where(eq(clients.id, id))
       if (!row || row.archivedAt)
         throw new AppError(400, 'INVALID_CLIENT', 'Select an active client.')
+      return row
+    },
+    async template(id: string | null, tx: Transaction) {
+      if (!id) return null
+      const [row] = await tx.select().from(documentTemplates).where(eq(documentTemplates.id, id))
+      if (!row || row.archivedAt)
+        throw new AppError(400, 'INVALID_TEMPLATE', 'Select an active template.')
       return row
     },
     async company(tx: Transaction) {

@@ -1,14 +1,13 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
 import {
   useConfirmCatalogDeletion,
   usePreviewCatalogDeletion,
 } from '../../../api/generated/catalog/catalog'
 import type { CatalogDeletionSelection } from '../../../api/generated/models'
+import { DeletionCascadeOption } from '../../../components/management/deletion-cascade-option'
 import { DeletionImpactSummary } from '../../../components/management/deletion-impact-summary'
 import { ImpactConfirmationDialog } from '../../../components/management/impact-confirmation-dialog'
-import { Checkbox } from '../../../components/ui/checkbox'
-import { Field, FieldLabel } from '../../../components/ui/field'
 import { translate } from '../../../lib/i18n'
 
 export function CatalogDeletionDialog({
@@ -26,7 +25,6 @@ export function CatalogDeletionDialog({
   onDismiss?: () => void
   onComplete: () => Promise<unknown>
 }) {
-  const id = useId()
   const [cascadeProducts, setCascadeProducts] = useState(false)
   const preview = usePreviewCatalogDeletion()
   const confirm = useConfirmCatalogDeletion()
@@ -50,16 +48,11 @@ export function CatalogDeletionDialog({
       }}
       options={
         resource === 'categories' ? (
-          <Field className="flex-row items-start gap-3">
-            <Checkbox
-              id={id}
-              checked={cascadeProducts}
-              onCheckedChange={(value) => setCascadeProducts(value === true)}
-            />
-            <FieldLabel htmlFor={id}>
-              {translate('Also delete products and variants in these categories')}
-            </FieldLabel>
-          </Field>
+          <DeletionCascadeOption
+            checked={cascadeProducts}
+            onCheckedChange={setCascadeProducts}
+            label={translate('Also delete products and variants in these categories')}
+          />
         ) : undefined
       }
       loadPreview={async () => {

@@ -182,7 +182,7 @@ const salesEnglish = {
   savedPdfDesign: 'Original saved design',
   latestPdfDesign: 'Latest template design',
   deliveryPdfDesign:
-    'Original keeps the existing delivery-note layout. Latest uses the company’s current default template.',
+    'Original preserves the saved design. Latest uses the selected template’s current settings, or the company default for older delivery notes.',
   closeRegeneration: 'Cancel',
   closeRegeneratedPdf: 'Done',
   regeneratingPdf: 'Regenerating…',

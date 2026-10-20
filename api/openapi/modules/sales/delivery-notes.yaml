@@ -336,6 +336,11 @@ components:
         status: { type: string, enum: [draft, delivered, cancelled] }
         clientId: { type: [string, 'null'], format: uuid }
         clientDisplayName: { type: string }
+        templateId:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: Company default selected for this delivery note. Design is frozen on delivery; explicit latest-design regeneration does not rewrite its saved appearance.
         invoiceId: { type: [string, 'null'], format: uuid }
         invoiceNumber: { type: [string, 'null'] }
         invoices:

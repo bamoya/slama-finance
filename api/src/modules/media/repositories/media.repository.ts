@@ -22,12 +22,17 @@ export function createMediaRepository(database: () => Database) {
       tx: Transaction,
       design: 'saved' | 'latest' = 'saved',
     ) {
+      let deliveryAppearance
       if (type === 'delivery_note') {
         const [delivery] = await tx.select().from(deliveryNotes).where(eq(deliveryNotes.id, id))
         if (!delivery || delivery.contentVersion !== version || delivery.status === 'draft')
           throw new AppError(409, 'DOCUMENT_CHANGED', 'Document is not ready for rendering.')
-        if (design === 'saved')
-          return { layout: 'classic', accentColor: '#ad7d1d' } as Record<string, unknown>
+        deliveryAppearance = {
+          appearance: delivery.appearanceSnapshot,
+          templateId: delivery.templateId,
+          version: delivery.contentVersion,
+          status: delivery.status,
+        }
       }
       let receipt
       if (type === 'payment_receipt') {
@@ -47,7 +52,7 @@ export function createMediaRepository(database: () => Database) {
         type === 'payment_receipt'
           ? [receipt]
           : type === 'delivery_note'
-            ? []
+            ? [deliveryAppearance]
             : await tx
                 .select({
                   appearance: table.appearanceSnapshot,
@@ -141,6 +146,7 @@ export function createMediaRepository(database: () => Database) {
       const documentRefs =
         await tx.execute(sql`select 1 from invoices where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
         union all select 1 from estimates where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
+        union all select 1 from delivery_notes where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
         union all select 1 from payments where receipt_snapshot->'appearance'->>'logoAssetId' = ${id} or receipt_snapshot->'appearance'->>'signatureAssetId' = ${id} limit 1`)
       return {
         company: company.length > 0,
