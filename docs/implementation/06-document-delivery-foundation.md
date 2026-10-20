@@ -30,22 +30,25 @@ after checking no active code still depends on them.
   Draft PDF generation remains unavailable; issue the invoice/estimate or deliver the delivery note first.
 - Issued/finalized invoices, estimates and delivery notes remain immutable in their
   business information. The API rejects updates; direct UI edit routes return to details.
-- Details offer **Regenerate PDF**, with confirmation and original/latest design choices.
+- Details offer **Regenerate PDF**, with confirmation and no design selector.
   Requires both the resource's `read` and `update` permissions; downloading requires `read`.
-- `POST /v1/documents/{documentType}/{id}/regenerate-pdf` accepts `{ "design": "saved" | "latest" }`.
+- `POST /v1/documents/{documentType}/{id}/regenerate-pdf` accepts `{}`.
+  The deprecated optional `design` field is accepted for old clients but ignored.
   It renders synchronously and returns the active artifact ID and generation timestamp.
   The UI waits for completion, disables repeat submission, and refreshes artifact queries.
-- Saved design uses the original appearance snapshot. Latest uses the document's current
-  template (company default if none was selected), copying presentation fields only.
-  An unavailable/archived template fails explicitly. Customer/issuer identities, dates,
-  numbers, products, quantities, prices, tax and payment terms are never refreshed.
+- Explicit regeneration uses current company/client identity and contact details and
+  the current company default template (Classic if no default is configured).
+  A missing/deleted client falls back to the saved identity. Archived clients can
+  still supply current printable details. Stored business snapshots are not rewritten.
+  Dates, numbers, products, quantities, prices, tax, bank/payment data, delivery
+  addresses and payment terms remain unchanged. An archived default template fails explicitly.
 - Delivery notes resolve the company template on draft creation/edit and finalization.
   Finalization freezes `template_id` and `appearance_snapshot`, including logo and
-  signature references. Saved regeneration preserves that appearance; latest uses
-  the selected template's current settings (company default for legacy unbound BLs).
+  signature references. Initial generation uses that appearance; explicit regeneration
+  uses the current company default, including for legacy BLs and payment receipts.
   Migration `0003` preserves historical Classic appearance on existing BLs; it does
-  not refresh issued identities or existing PDF files. Receipts continue inheriting
-  their invoice's appearance, rather than independently switching company defaults.
+  not refresh issued identities or existing PDF files. Initial receipts inherit
+  their invoice's appearance; only explicit regeneration refreshes printable identities and design.
 - Brand image bounds are shared by preview and PDF rendering. Logos use 60×60 pt
   (46×46 compact), or 107×76 pt (72×44 compact) in Atelier. Signatures fit 155×72 pt
   (145×52 compact). Aspect ratios are preserved; header/signature spacing reserves

@@ -1,5 +1,6 @@
 import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
+import { PaymentReceiptSnapshotSchema } from '../../contracts/generated/sales/payments.schemas.js'
 import type { ObjectStorage } from '../../integrations/contracts.js'
 import type { Database } from '../../lib/db.js'
 import type { Transaction } from '../../lib/db.js'
@@ -63,6 +64,7 @@ import {
   createPaymentReceiptService,
 } from './payments/services/payment-receipt.service.js'
 import { renderPaymentReceiptPdf } from './payments/services/payment-receipt-pdf.service.js'
+import { createFreshDocumentParties } from './shared/repositories/fresh-document-parties.js'
 import { createReportingReadRepository } from './shared/repositories/reporting-read.repository.js'
 import { renderDeliveryPdf } from './shared/services/delivery-pdf.service.js'
 import { createReportingReadService } from './shared/services/reporting-read.service.js'
@@ -147,12 +149,28 @@ export function createSalesModule(
   const artifacts = createArtifactSupport(database, storage, owners)
   const deletions = createSalesDeletionService(invoicesRepo, artifacts.service)
   const jobs = createJobSupport(database)
+  const freshParties = createFreshDocumentParties(database)
   const receipts = createPaymentReceiptService(
     paymentsRepo,
     artifacts.service,
     async (id, version, design) => {
       const images = await media.documentImages('payment_receipt', id, version, design)
-      return renderPaymentReceiptPdf(await paymentsRepo.one(id), images)
+      const row = await paymentsRepo.one(id)
+      if (design === 'saved') return renderPaymentReceiptPdf(row, images)
+      const snapshot = PaymentReceiptSnapshotSchema.parse(row.receiptSnapshot)
+      const invoice = await invoicesRepo.one(row.invoiceId)
+      const parties = await freshParties(invoice.clientId, snapshot.issuer, snapshot.client)
+      return renderPaymentReceiptPdf(
+        {
+          ...row,
+          receiptSnapshot: {
+            ...snapshot,
+            issuer: parties.issuerSnapshot,
+            client: parties.clientSnapshot,
+          },
+        },
+        images,
+      )
     },
   )
   const finalized =
@@ -184,24 +202,25 @@ export function createSalesModule(
     artifacts.service,
     async (type, id, version, design) => {
       const images = await media.documentImages(type, id, version, design)
-      if (type === 'delivery_note')
-        return renderDeliveryPdf(
-          await deliveryNotesRepo.one(id),
-          await deliveryNotesRepo.lines(id),
-          images,
-        )
+      if (type === 'delivery_note') {
+        const row = await deliveryNotesRepo.one(id)
+        const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
+        return renderDeliveryPdf({ ...row, ...parties }, await deliveryNotesRepo.lines(id), images)
+      }
       if (type === 'invoice') {
         const row = await invoicesRepo.one(id)
+        const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
         return renderSalesPdf(
-          { ...row, appearanceSnapshot: images.appearance },
+          { ...row, ...parties, appearanceSnapshot: images.appearance },
           await invoicesRepo.lines(id),
           'INVOICE',
           images,
         )
       }
       const row = await estimatesRepo.one(id)
+      const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
       return renderSalesPdf(
-        { ...row, appearanceSnapshot: images.appearance },
+        { ...row, ...parties, appearanceSnapshot: images.appearance },
         await estimatesRepo.lines(id),
         'ESTIMATE',
         images,
@@ -312,7 +331,7 @@ export function createSalesModule(
             scope,
             createArtifactController(artifacts.service, (params, input, actor) =>
               params.documentType === 'payment_receipt'
-                ? receipts.regenerate(params.id, actor, input.design)
+                ? receipts.regenerate(params.id, actor, 'latest')
                 : regenerate({ ...params, documentType: params.documentType }, input, actor),
             ),
             authenticate,

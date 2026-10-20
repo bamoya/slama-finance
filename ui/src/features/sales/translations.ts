@@ -177,7 +177,7 @@ const salesEnglish = {
   preparePdf: 'Prepare PDF',
   regeneratePdf: 'Regenerate PDF',
   regeneratePdfDescription:
-    'Only the PDF presentation changes. Document information stays locked. The previous PDF remains available until the replacement is ready.',
+    'Uses current company and client details and the company default template. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.',
   pdfDesign: 'Design',
   savedPdfDesign: 'Original saved design',
   latestPdfDesign: 'Latest template design',

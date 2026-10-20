@@ -66,26 +66,26 @@ export function createMediaRepository(database: () => Database) {
         throw new AppError(409, 'DOCUMENT_CHANGED', 'Document is not ready for rendering.')
       if (design === 'saved') return row!.appearance as Record<string, unknown>
       const [company] = await tx.select().from(companySettings).limit(1)
-      const templateId = row?.templateId ?? company?.defaultTemplateId
+      const templateId = company?.defaultTemplateId
       const [template] = templateId
         ? await tx.select().from(documentTemplates).where(eq(documentTemplates.id, templateId))
         : []
-      if (!template || template.archivedAt)
+      if (templateId && (!template || template.archivedAt))
         throw new AppError(
           409,
           'TEMPLATE_UNAVAILABLE',
-          'The latest template is unavailable. Use the saved design.',
+          'The company default template is unavailable.',
         )
       return {
-        layout: template.layout,
-        density: template.density,
-        accentColor: template.accentColor,
-        logoAssetId: template.logoAssetId ?? company?.logoAssetId,
-        signatureAssetId: template.signatureAssetId,
-        showSignature: template.showSignature,
-        showBankDetails: template.showBankDetails,
-        showPaymentTerms: template.showPaymentTerms,
-        footerText: template.footerText,
+        layout: template?.layout ?? 'classic',
+        density: template?.density ?? 'standard',
+        accentColor: template?.accentColor ?? '#ad7d1d',
+        logoAssetId: template?.logoAssetId ?? company?.logoAssetId,
+        signatureAssetId: template?.signatureAssetId ?? null,
+        showSignature: template?.showSignature ?? false,
+        showBankDetails: template?.showBankDetails ?? true,
+        showPaymentTerms: template?.showPaymentTerms ?? true,
+        footerText: template?.footerText ?? null,
       } as Record<string, unknown>
     },
     // Shared with settings/identity writes: serialize attachment, deletion and permission changes.

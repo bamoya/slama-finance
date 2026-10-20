@@ -11,6 +11,7 @@ import { createPasswordService } from '../src/modules/identity/auth/services/pas
 import { createMediaModule } from '../src/modules/media/index.js'
 import { createEstimateRepository } from '../src/modules/sales/estimates/repositories/estimate.repository.js'
 import { createSalesModule } from '../src/modules/sales/index.js'
+import { createFreshDocumentParties } from '../src/modules/sales/shared/repositories/fresh-document-parties.js'
 import { renderSalesPdf } from '../src/modules/sales/shared/services/sales-pdf.service.js'
 import { isolatedDatabase, testUserId } from './helpers/postgres.js'
 
@@ -23,6 +24,29 @@ describe('Estimates lifecycle', () => {
   let cookies: { slama_session: string }
   let storage: ObjectStorage
   let objects: Map<string, Uint8Array>
+
+  it('refreshes printable company/client identity without rewriting issued data, including detached fallback', async () => {
+    const invoice = await cancellableInvoice()
+    const [before] = await fixture.client`select * from invoices where id=${invoice.id}`
+    await fixture.client`update company_settings set legal_name='Fresh company',phone='06 11 22 33 44 05 22 33 44 55' where id=1`
+    await fixture.client`update clients set legal_name='Fresh client',phone='06 55 44 33 22' where id=${clientId}`
+    const refresh = createFreshDocumentParties(() => fixture.db)
+    const parties = await refresh(clientId, before!.issuer_snapshot, before!.client_snapshot)
+    expect(parties.issuerSnapshot).toMatchObject({
+      legalName: 'Fresh company',
+      phone: '06 11 22 33 44 05 22 33 44 55',
+    })
+    expect(parties.clientSnapshot).toMatchObject({
+      legalName: 'Fresh client',
+      phone: '06 55 44 33 22',
+    })
+    const regenerated = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
+    expect(regenerated.statusCode, regenerated.body).toBe(200)
+    expect((await fixture.client`select * from invoices where id=${invoice.id}`)[0]).toEqual(before)
+    expect(
+      (await refresh(null, before!.issuer_snapshot, before!.client_snapshot)).clientSnapshot,
+    ).toEqual(before!.client_snapshot)
+  })
   beforeEach(async () => {
     fixture = await isolatedDatabase()
     await fixture.client`update company_settings set legal_name='Slama Agricole', address_line1='Rue Atlas', city='Casablanca' where id=1`
@@ -362,7 +386,7 @@ describe('Estimates lifecycle', () => {
       expect(
         (await media.publicApi.documentImages('delivery_note', draft.id, version, 'latest'))
           .appearance,
-      ).toMatchObject({ layout: 'modern', footerText: 'Latest footer' })
+      ).toMatchObject({ layout: 'essential' })
       const latest = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
         design: 'latest',
       })
@@ -876,7 +900,7 @@ describe('Estimates lifecycle', () => {
       design: 'saved',
     })
     expect(regenerated.statusCode, regenerated.body).toBe(200)
-    const [replacement] =
+    let [replacement] =
       await fixture.client`select * from document_artifacts where document_id=${id}`
     expect(replacement!.id).toBe(previous!.id)
     expect(replacement!.object_key).not.toBe(previous!.object_key)
@@ -885,11 +909,12 @@ describe('Estimates lifecycle', () => {
     ).toBe(400)
     expect(
       (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' })).statusCode,
-    ).toBe(409)
+    ).toBe(200)
     expect((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()).toEqual(before)
     expect(
       await fixture.client`select id from audit_events where action='regenerate_pdf'`,
-    ).toHaveLength(1)
+    ).toHaveLength(2)
+    ;[replacement] = await fixture.client`select * from document_artifacts where document_id=${id}`
     const put = storage.putImmutable
     storage.putImmutable = async () => {
       throw new Error('Storage offline')

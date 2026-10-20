@@ -17,8 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../../../components/ui/dialog'
-import { Field, FieldGroup, FieldLabel } from '../../../components/ui/field'
-import { Select, SelectGroup, SelectOption } from '../../../components/ui/select'
 import { useUiLanguage } from '../../../lib/i18n'
 import { refreshSales } from '../refresh'
 
@@ -32,14 +30,13 @@ export function RegeneratePdfDialog({
   const { t } = useTranslation('sales')
   const cache = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [design, setDesign] = useState('saved')
   const regenerate = useRegenerateDocumentPdf({ request: { timeout: 60_000 } })
   const submit = async () => {
     try {
       await regenerate.mutateAsync({
         documentType,
         id,
-        data: RegenerateDocumentPdfInputSchema.parse({ design }),
+        data: RegenerateDocumentPdfInputSchema.parse({}),
       })
       await refreshSales(cache)
     } catch {
@@ -53,7 +50,6 @@ export function RegeneratePdfDialog({
         if (regenerate.isPending) return
         setOpen(value)
         if (value) {
-          setDesign('saved')
           regenerate.reset()
         }
       }}
@@ -69,25 +65,6 @@ export function RegeneratePdfDialog({
         <DialogDescription role="status">
           {t(regenerate.isSuccess ? 'pdfRegenerated' : 'regeneratePdfDescription')}
         </DialogDescription>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="pdf-design">{t('pdfDesign')}</FieldLabel>
-            <Select
-              id="pdf-design"
-              value={design}
-              onValueChange={setDesign}
-              disabled={regenerate.isPending}
-            >
-              <SelectGroup>
-                <SelectOption value="saved">{t('savedPdfDesign')}</SelectOption>
-                <SelectOption value="latest">{t('latestPdfDesign')}</SelectOption>
-              </SelectGroup>
-            </Select>
-          </Field>
-        </FieldGroup>
-        {documentType === 'delivery_note' && (
-          <p className="text-sm text-muted-foreground">{t('deliveryPdfDesign')}</p>
-        )}
         <FormError error={regenerate.error} />
         <div className="flex justify-end gap-3">
           <Button variant="outline" disabled={regenerate.isPending} onClick={() => setOpen(false)}>

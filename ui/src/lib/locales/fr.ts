@@ -977,8 +977,8 @@ export const french: Record<string, string> = {
     'Seuls les bons indépendants et livrés peuvent être facturés.',
   'Only schedules without any runs can be deleted. History is retained by archiving.':
     'Seules les planifications sans exécution peuvent être supprimées. L’archivage conserve l’historique.',
-  'Only the PDF presentation changes. Document information stays locked. The previous PDF remains available until the replacement is ready.':
-    'Seule la présentation du PDF change. Les informations du document restent verrouillées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
+  'Uses current company and client details and the company default template. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.':
+    'Utilise les coordonnées actuelles de l’entreprise et du client et le modèle par défaut de l’entreprise. Les données financières restent inchangées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
   'Open documents': 'Documents ouverts',
   'Open draft revision': 'Ouvrir la révision en brouillon',
   'Open full list': 'Ouvrir la liste complète',

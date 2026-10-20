@@ -21,10 +21,10 @@ export function createRegeneratePdfService(
     type: Params['documentType'],
     id: string,
     version: number,
-    design: RegenerateDocumentPdfInput['design'],
+    design: 'saved' | 'latest',
   ) => Promise<Uint8Array>,
 ) {
-  return async (params: Params, input: RegenerateDocumentPdfInput, actor: string) => {
+  return async (params: Params, _input: RegenerateDocumentPdfInput, actor: string) => {
     const repo = repos[params.documentType]
     const resource =
       params.documentType === 'delivery_note' ? 'delivery_notes' : `${params.documentType}s`
@@ -34,12 +34,12 @@ export function createRegeneratePdfService(
       documentId: params.id,
       sourceVersion: row.contentVersion,
       actor,
-      design: input.design,
+      design: 'latest',
       authorize: async (tx) => {
         await repo.authorize(tx, actor, `${resource}.read`)
         await repo.authorize(tx, actor, `${resource}.update`)
       },
-      render: () => render(params.documentType, params.id, row.contentVersion, input.design),
+      render: () => render(params.documentType, params.id, row.contentVersion, 'latest'),
     })
     return { id: result.id, generatedAt: result.generatedAt.toISOString() }
   }

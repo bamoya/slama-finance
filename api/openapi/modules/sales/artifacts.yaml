@@ -42,9 +42,12 @@ components:
     RegenerateDocumentPdfInput:
       type: object
       additionalProperties: false
-      required: [design]
       properties:
-        design: { type: string, enum: [saved, latest] }
+        design:
+          type: string
+          enum: [saved, latest]
+          deprecated: true
+          description: Ignored for compatibility. Regeneration always uses current company/client details and the company default template, preserving financial data.
     RegeneratedDocumentPdf:
       type: object
       additionalProperties: false
