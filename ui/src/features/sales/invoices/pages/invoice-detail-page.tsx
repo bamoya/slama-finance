@@ -10,7 +10,7 @@ import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
-import { uiLocale } from '../../../../lib/i18n'
+import { displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
@@ -86,7 +86,7 @@ export function InvoiceDetailPage() {
         eyebrow={translate('Sales')}
         title={row.number ?? translate('Draft invoice')}
         description={translate('Created {{value0}}', {
-          value0: new Date(row.createdAt).toLocaleDateString(uiLocale()),
+          value0: displayDateTime(row.createdAt).split(' ')[0],
         })}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -145,7 +145,12 @@ export function InvoiceDetailPage() {
             )}
             {row.status !== 'draft' && (
               <Can permission="invoices.update">
-                <RegeneratePdfDialog documentType="invoice" id={row.id} disabled={busy} />
+                <RegeneratePdfDialog
+                  documentType="invoice"
+                  id={row.id}
+                  disabled={busy}
+                  currentTemplateId={row.templateId}
+                />
               </Can>
             )}
             {['issued', 'sent'].includes(row.status) && (

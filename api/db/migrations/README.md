@@ -25,6 +25,12 @@ using that older history require a separately reviewed upgrade, not a forced res
   PDFs are unchanged; explicit latest-design regeneration can use the selected
   template's current settings (or company default for legacy unbound BLs).
 
+- `0004_flexible_client_details.sql` makes client billing addresses nullable,
+allow independent RC values and partial delivery addresses, and require only one
+personal name for individual clients. Existing rows are retained without a reset.
+  It also removes the mandatory BL delivery-address check so sparse client records
+  can still be used to create delivery documents.
+
 The startup initializer still creates the restricted runtime database role and
 bootstraps the first administrator from deployment environment variables. Drizzle
 records successful migrations; subsequent startups do not reapply them.

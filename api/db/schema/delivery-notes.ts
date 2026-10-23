@@ -66,7 +66,6 @@ export const deliveryNotes = pgTable(
       'delivery_notes_locale_override',
       sql`${t.localeOverride} is null or ${t.localeOverride} in ('fr-MA','en-GB')`,
     ),
-    check('delivery_notes_address', sql`length(trim(${t.deliveryAddress})) > 0`),
     check(
       'delivery_notes_prepared_data',
       sql`(${t.status} = 'draft' and ${t.number} is null) or (${t.status} = 'delivered' and ${t.number} is not null) or ${t.status} = 'cancelled'`,

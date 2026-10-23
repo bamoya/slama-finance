@@ -8,6 +8,7 @@ import type {
   ReportSectionKey,
 } from '../../../api/generated/schemas/reporting/reporting.schemas'
 import { Button } from '../../../components/ui/button'
+import { displayDate, displayDateTime } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { Can, useAuthorization } from '../../identity'
 import { CollectionCalendar } from './collection-calendar'
@@ -34,7 +35,7 @@ export function VisualReport({
 }) {
   useUiLanguage()
 
-  const { t, i18n } = useTranslation('reportVisuals')
+  const { t } = useTranslation('reportVisuals')
   const { t: reports } = useTranslation('reports')
   const { can } = useAuthorization()
   const data = {
@@ -77,14 +78,16 @@ export function VisualReport({
     <div className="grid min-w-0 gap-content">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <strong>{t(frozen ? 'frozen' : 'live')}</strong>
-        <span>{t('period', data.filters)}</span>
+        <span>
+          {t('period', {
+            ...data.filters,
+            from: displayDate(data.filters.from),
+            to: displayDate(data.filters.to),
+          })}
+        </span>
         <span>
           {t('capture', {
-            time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? 'en', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-              timeZone: data.filters.timezone,
-            }).format(new Date(data.capturedAt)),
+            time: displayDateTime(data.capturedAt, data.filters.timezone),
           })}
         </span>
       </div>

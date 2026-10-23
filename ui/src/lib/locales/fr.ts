@@ -1,5 +1,9 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Document template': 'Modèle du document',
+  'Saved template': 'Modèle enregistré',
+  'Open calendar': 'Ouvrir le calendrier',
+  'Enter a valid date as DD-MM-YYYY.': 'Saisissez une date valide au format JJ-MM-AAAA.',
   'Related records will also be permanently deleted.':
     'Les éléments associés seront également supprimés définitivement.',
   'Leave unchecked to preserve related records.':
@@ -977,8 +981,8 @@ export const french: Record<string, string> = {
     'Seuls les bons indépendants et livrés peuvent être facturés.',
   'Only schedules without any runs can be deleted. History is retained by archiving.':
     'Seules les planifications sans exécution peuvent être supprimées. L’archivage conserve l’historique.',
-  'Uses current company and client details and the company default template. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.':
-    'Utilise les coordonnées actuelles de l’entreprise et du client et le modèle par défaut de l’entreprise. Les données financières restent inchangées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
+  'Uses current company and client details and the selected template. The chosen template is saved on this document. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.':
+    'Utilise les coordonnées actuelles de l’entreprise et du client et le modèle sélectionné. Ce modèle sera enregistré sur le document. Les données financières restent inchangées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
   'Open documents': 'Documents ouverts',
   'Open draft revision': 'Ouvrir la révision en brouillon',
   'Open full list': 'Ouvrir la liste complète',

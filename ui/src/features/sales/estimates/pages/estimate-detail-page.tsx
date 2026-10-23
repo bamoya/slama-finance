@@ -11,11 +11,12 @@ import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
-import { uiLocale } from '../../../../lib/i18n'
+import { displayDate, displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
+import { DocumentTemplateSummary } from '../../components/document-template-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { SalesCancellationDialog } from '../../components/sales-cancellation-dialog'
 import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
@@ -90,7 +91,7 @@ export function EstimateDetailPage() {
         eyebrow={translate('Sales')}
         title={row.number ?? translate('Draft estimate')}
         description={translate('Created {{value0}}', {
-          value0: new Date(row.createdAt).toLocaleDateString(uiLocale()),
+          value0: displayDateTime(row.createdAt).split(' ')[0],
         })}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -153,7 +154,12 @@ export function EstimateDetailPage() {
             )}
             {row.status !== 'draft' && (
               <Can permission="estimates.update">
-                <RegeneratePdfDialog documentType="estimate" id={row.id} disabled={busy} />
+                <RegeneratePdfDialog
+                  documentType="estimate"
+                  id={row.id}
+                  disabled={busy}
+                  currentTemplateId={row.templateId}
+                />
               </Can>
             )}
             {['issued', 'sent'].includes(row.status) && (
@@ -318,6 +324,7 @@ export function EstimateDetailPage() {
           <DocumentPaymentSummary document={row} />
           <section className="grid gap-3 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
             <h2 className="text-lg font-bold">{translate('Details')}</h2>
+            <DocumentTemplateSummary templateId={row.templateId} />
             <p className="text-sm">
               <span className="text-[var(--muted)]">{translate('Client')}</span>
               <br />
@@ -330,12 +337,12 @@ export function EstimateDetailPage() {
             <p className="text-sm">
               <span className="text-[var(--muted)]">{translate('Issue date')}</span>
               <br />
-              {row.issueDate}
+              {displayDate(row.issueDate)}
             </p>
             <p className="text-sm">
               <span className="text-[var(--muted)]">{translate('Valid until')}</span>
               <br />
-              {row.validUntil ?? translate('Not set')}
+              {row.validUntil ? displayDate(row.validUntil) : translate('Not set')}
             </p>
             <p className="text-sm">
               <span className="text-[var(--muted)]">{translate('Payment terms')}</span>

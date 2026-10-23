@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '../../../../components/ui/dialog'
-import { uiLocale } from '../../../../lib/i18n'
+import { displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 export function TemporaryCredential({
   credential,
@@ -50,8 +50,7 @@ export function TemporaryCredential({
           {credential.temporaryPassword}
         </p>
         <p className="text-sm text-[var(--muted)]">
-          {translate('Expires:')}{' '}
-          {new Date(credential.temporaryPasswordExpiresAt).toLocaleString(uiLocale())}
+          {translate('Expires:')} {displayDateTime(credential.temporaryPasswordExpiresAt)}
         </p>
         <p role="status" className="mt-2 text-sm">
           {copied}

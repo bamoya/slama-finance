@@ -49,7 +49,12 @@ export function PaymentReceiptActions({ payment }: { payment: Payment }) {
         </Button>
       </Can>
       <Can permission="payments.update">
-        <RegeneratePdfDialog documentType="payment_receipt" id={payment.id} disabled={busy} />
+        <RegeneratePdfDialog
+          documentType="payment_receipt"
+          id={payment.id}
+          disabled={busy}
+          currentTemplateId={payment.receiptTemplateId}
+        />
       </Can>
       <FormError error={error} />
     </Can>

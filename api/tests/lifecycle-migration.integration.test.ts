@@ -36,6 +36,25 @@ describe('deployed baseline lifecycle upgrade', () => {
     if (migrationsFolder) await rm(migrationsFolder, { recursive: true, force: true })
   })
   const upgrade = () => migrate(fixture.db, { migrationsFolder, migrationsSchema: schema })
+  it('upgrades existing clients without data loss and accepts sparse client details', async () => {
+    const [old] =
+      await fixture.client`insert into clients(type,legal_name,address_line1,city) values('company','Existing company','Rue Atlas','Rabat') returning *`
+    await upgrade()
+    expect((await fixture.client`select * from clients where id=${old!.id}`)[0]).toEqual(old)
+    await fixture.client`update clients set address_line1=null,city=null,country_code=null,registration_number='123',registration_city=null where id=${old!.id}`
+    const [sparse] =
+      await fixture.client`insert into clients(type,last_name,delivery_city) values('individual','Amrani','Rabat') returning *`
+    expect(sparse).toMatchObject({
+      first_name: null,
+      last_name: 'Amrani',
+      address_line1: null,
+      city: null,
+      country_code: null,
+      delivery_city: 'Rabat',
+    })
+    await upgrade()
+    expect((await fixture.client`select * from clients where id=${sparse!.id}`)[0]).toEqual(sparse)
+  })
   async function existingRecords(conflict = false) {
     const client = randomUUID(),
       estimate = randomUUID(),

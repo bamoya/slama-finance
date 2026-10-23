@@ -5,6 +5,10 @@ import type {
   ArtifactOwnerAccess,
   createArtifactSupport,
 } from '../../../../support/artifacts/index.js'
+import {
+  type RenderedDesign,
+  saveDocumentDesign,
+} from '../../shared/repositories/document-design.repository.js'
 import type { createPaymentRepository } from '../repositories/payment.repository.js'
 
 type Repository = ReturnType<typeof createPaymentRepository>
@@ -38,7 +42,12 @@ export function createPaymentReceiptOwner(repo: Repository): ArtifactOwnerAccess
 export function createPaymentReceiptService(
   repo: Repository,
   artifacts: Artifacts,
-  render: (id: string, version: number, design: 'saved' | 'latest') => Promise<Uint8Array>,
+  render: (
+    id: string,
+    version: number,
+    design: 'saved' | 'latest',
+    templateId?: string | null,
+  ) => Promise<{ bytes: Uint8Array; design?: RenderedDesign }>,
 ) {
   async function prepare(id: string, actor: string) {
     return repo.transaction(async (tx) => {
@@ -72,7 +81,13 @@ export function createPaymentReceiptService(
       )
     })
   }
-  async function generate(id: string, actor: string, design: 'saved' | 'latest', force: boolean) {
+  async function generate(
+    id: string,
+    actor: string,
+    design: 'saved' | 'latest',
+    force: boolean,
+    templateId?: string | null,
+  ) {
     const row = await prepare(id, actor)
     if (!force) {
       const existing = (await artifacts.list('payment_receipt', id, actor)).find(
@@ -84,7 +99,9 @@ export function createPaymentReceiptService(
       await repo.authorize(tx, actor, 'payments.read')
       if (force || !(await repo.one(id, tx)).receiptIssuedAt)
         await repo.authorize(tx, actor, 'payments.update')
+      if (templateId) await repo.authorize(tx, actor, 'templates.read')
     }
+    let renderedDesign: RenderedDesign | undefined
     const result = await artifacts.regeneratePdf({
       type: 'payment_receipt',
       documentId: id,
@@ -92,13 +109,27 @@ export function createPaymentReceiptService(
       actor,
       design,
       authorize,
-      render: () => render(id, row.version, design),
+      render: async () => {
+        const result = await render(id, row.version, design, templateId)
+        renderedDesign = result.design
+        return result.bytes
+      },
+      onPublish: force
+        ? async (tx) => {
+            if (renderedDesign)
+              await saveDocumentDesign(tx, 'payment_receipt', id, actor, renderedDesign)
+          }
+        : undefined,
     })
     return { id: result.id, generatedAt: result.generatedAt.toISOString() }
   }
   return {
     download: (id: string, actor: string) => generate(id, actor, 'saved', false),
-    regenerate: (id: string, actor: string, design: 'saved' | 'latest') =>
-      generate(id, actor, design, true),
+    regenerate: (
+      id: string,
+      actor: string,
+      design: 'saved' | 'latest',
+      templateId?: string | null,
+    ) => generate(id, actor, design, true, templateId),
   }
 }

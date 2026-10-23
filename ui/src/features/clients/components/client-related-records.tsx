@@ -9,6 +9,7 @@ import { RequestState } from '../../../components/management/request-state'
 import { StatusBadge } from '../../../components/management/status-badge'
 import { Button } from '../../../components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group'
+import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { useAuthorization } from '../../identity'
 import {
@@ -226,11 +227,13 @@ export function ClientRelatedRecords({
                             </Link>
                           </td>
                           <td className="px-5 py-4">
-                            {'issueDate' in item
-                              ? item.issueDate
-                              : 'deliveryDate' in item
-                                ? item.deliveryDate
-                                : item.paymentDate}
+                            {displayDate(
+                              'issueDate' in item
+                                ? item.issueDate
+                                : 'deliveryDate' in item
+                                  ? item.deliveryDate
+                                  : item.paymentDate,
+                            )}
                           </td>
                           <td className="px-5 py-4">
                             <StatusBadge

@@ -1,17 +1,23 @@
 # 04 — Clients
 
-Status: implemented in the API and UI. The final clients schema is included in `0000_fresh_baseline.sql`.
+Status: implemented in the API and UI. Baseline schema is in `0000_fresh_baseline.sql`; deployed databases receive flexible client fields through forward migration `0004_flexible_client_details.sql`.
 
 [Index](README.md) · Depends on 02/03 · Next: [Catalog](05-catalog.md)
 
 ## Models
 
-Create `clients` with explicit `individual | company` type. Individual first/last
-names and company legal/trade/contact names follow conditional checks. Include
+Create `clients` with explicit `individual | company` type. Require a company legal
+name or at least one individual first/last name. All other fields are optional,
+including partial billing/delivery addresses and independent RC number/city. Include
 Moroccan ICE/IF/RC/registration city/TP fields, optional email/phone, billing and
 optional separate delivery address, locale, notes, archival and L3 audit columns.
 Keep identifiers as strings. Do not add staff-login credentials or client portals.
 Client email is optional and is not a universal unique client identity.
+Supplied email/identifier values still follow their format rules. Phone is free text.
+Missing client data is omitted from PDFs, without empty labels or placeholders.
+Delivery notes may also omit the delivery address when none is available; partial
+separate addresses take precedence without mixing billing details into them.
+UI and PDF dates display `DD-MM-YYYY`; API/database values remain ISO.
 
 ## API, rules and permissions
 

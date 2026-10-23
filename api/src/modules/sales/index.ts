@@ -153,14 +153,14 @@ export function createSalesModule(
   const receipts = createPaymentReceiptService(
     paymentsRepo,
     artifacts.service,
-    async (id, version, design) => {
-      const images = await media.documentImages('payment_receipt', id, version, design)
+    async (id, version, design, templateId) => {
+      const images = await media.documentImages('payment_receipt', id, version, design, templateId)
       const row = await paymentsRepo.one(id)
-      if (design === 'saved') return renderPaymentReceiptPdf(row, images)
+      if (design === 'saved') return { bytes: await renderPaymentReceiptPdf(row, images) }
       const snapshot = PaymentReceiptSnapshotSchema.parse(row.receiptSnapshot)
       const invoice = await invoicesRepo.one(row.invoiceId)
       const parties = await freshParties(invoice.clientId, snapshot.issuer, snapshot.client)
-      return renderPaymentReceiptPdf(
+      const bytes = await renderPaymentReceiptPdf(
         {
           ...row,
           receiptSnapshot: {
@@ -171,6 +171,7 @@ export function createSalesModule(
         },
         images,
       )
+      return { bytes, design: images }
     },
   )
   const finalized =
@@ -200,31 +201,40 @@ export function createSalesModule(
   const regenerate = createRegeneratePdfService(
     { invoice: invoicesRepo, estimate: estimatesRepo, delivery_note: deliveryNotesRepo },
     artifacts.service,
-    async (type, id, version, design) => {
-      const images = await media.documentImages(type, id, version, design)
+    async (type, id, version, design, templateId) => {
+      const images = await media.documentImages(type, id, version, design, templateId)
       if (type === 'delivery_note') {
         const row = await deliveryNotesRepo.one(id)
         const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
-        return renderDeliveryPdf({ ...row, ...parties }, await deliveryNotesRepo.lines(id), images)
+        return {
+          bytes: await renderDeliveryPdf(
+            { ...row, ...parties },
+            await deliveryNotesRepo.lines(id),
+            images,
+          ),
+          design: images,
+        }
       }
       if (type === 'invoice') {
         const row = await invoicesRepo.one(id)
         const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
-        return renderSalesPdf(
+        const bytes = await renderSalesPdf(
           { ...row, ...parties, appearanceSnapshot: images.appearance },
           await invoicesRepo.lines(id),
           'INVOICE',
           images,
         )
+        return { bytes, design: images }
       }
       const row = await estimatesRepo.one(id)
       const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
-      return renderSalesPdf(
+      const bytes = await renderSalesPdf(
         { ...row, ...parties, appearanceSnapshot: images.appearance },
         await estimatesRepo.lines(id),
         'ESTIMATE',
         images,
       )
+      return { bytes, design: images }
     },
   )
   const preparePdf = async (
@@ -331,7 +341,7 @@ export function createSalesModule(
             scope,
             createArtifactController(artifacts.service, (params, input, actor) =>
               params.documentType === 'payment_receipt'
-                ? receipts.regenerate(params.id, actor, 'latest')
+                ? receipts.regenerate(params.id, actor, 'latest', input.templateId)
                 : regenerate({ ...params, documentType: params.documentType }, input, actor),
             ),
             authenticate,

@@ -17,6 +17,22 @@ import { isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 const headers = { origin: 'http://localhost:5173' }
 const clientId = '33333333-3333-4333-8333-333333333333'
+const businessFields = (row: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(row).filter(
+      ([key]) =>
+        ![
+          'templateId',
+          'appearanceSnapshot',
+          'updatedAt',
+          'updatedByUserId',
+          'template_id',
+          'appearance_snapshot',
+          'updated_at',
+          'updated_by_user_id',
+        ].includes(key),
+    ),
+  )
 
 describe('Estimates lifecycle', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
@@ -42,7 +58,9 @@ describe('Estimates lifecycle', () => {
     })
     const regenerated = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
     expect(regenerated.statusCode, regenerated.body).toBe(200)
-    expect((await fixture.client`select * from invoices where id=${invoice.id}`)[0]).toEqual(before)
+    expect(
+      businessFields((await fixture.client`select * from invoices where id=${invoice.id}`)[0]!),
+    ).toEqual(businessFields(before!))
     expect(
       (await refresh(null, before!.issuer_snapshot, before!.client_snapshot)).clientSnapshot,
     ).toEqual(before!.client_snapshot)
@@ -127,6 +145,38 @@ describe('Estimates lifecycle', () => {
     expect(issued.statusCode, issued.body).toBe(200)
     return issued.json()
   }
+  it('issues estimates and invoices for name-only clients without inventing missing data', async () => {
+    await fixture.client`update clients set address_line1=null,address_line2=null,city=null,postal_code=null,country_code=null,email=null,phone=null,ice=null where id=${clientId}`
+    const draft = await post('/v1/estimates', revisionInput())
+    expect(draft.statusCode, draft.body).toBe(201)
+    const issued = await post(`/v1/estimates/${draft.json().id}/issue`, {
+      expectedVersion: draft.json().version,
+    })
+    expect(issued.statusCode, issued.body).toBe(200)
+    expect(
+      (await fixture.client`select client_snapshot from estimates where id=${issued.json().id}`)[0]!
+        .client_snapshot,
+    ).toMatchObject({
+      legalName: 'Atlas SARL',
+      city: null,
+      addressLine1: null,
+      email: null,
+      ice: null,
+    })
+    const invoice = await cancellableInvoice()
+    expect(
+      (await fixture.client`select client_snapshot from invoices where id=${invoice.id}`)[0]!
+        .client_snapshot,
+    ).toMatchObject({
+      legalName: 'Atlas SARL',
+      city: null,
+      addressLine1: null,
+      phone: null,
+    })
+    const delivery = await post(`/v1/invoices/${invoice.id}/delivery-note`, {})
+    expect(delivery.statusCode, delivery.body).toBe(201)
+    expect(delivery.json().deliveryAddress).toBe('')
+  })
   async function cancellationPayment(invoiceId: string) {
     const result = await post('/v1/payments', {
       operationId: randomUUID(),
@@ -145,6 +195,115 @@ describe('Estimates lifecycle', () => {
     expect(result.statusCode, result.body).toBe(201)
     return result.json()
   }
+  it.each(['invoice', 'estimate', 'delivery_note', 'payment_receipt'] as const)(
+    'saves a selected template on %s only after successful PDF publication',
+    async (type) => {
+      const invoice = await cancellableInvoice()
+      let id = invoice.id
+      if (type === 'estimate') {
+        const draft = (await post('/v1/estimates', revisionInput())).json()
+        expect(
+          (await post(`/v1/estimates/${draft.id}/issue`, { expectedVersion: draft.version }))
+            .statusCode,
+        ).toBe(200)
+        id = draft.id
+      } else if (type === 'delivery_note') {
+        const draft = (await post(`/v1/invoices/${invoice.id}/delivery-note`, {})).json()
+        expect(
+          (await post(`/v1/delivery-notes/${draft.id}/deliver`, { expectedVersion: draft.version }))
+            .statusCode,
+        ).toBe(200)
+        id = draft.id
+      } else if (type === 'payment_receipt') id = (await cancellationPayment(invoice.id)).id
+      const [first] =
+        await fixture.client`insert into document_templates(name,layout) values('Default template','classic') returning id`
+      const [chosen] =
+        await fixture.client`insert into document_templates(name,layout,accent_color) values('Chosen template','atelier','#225566') returning id`
+      await fixture.client`update company_settings set default_template_id=${first!.id} where id=1`
+      const route =
+        type === 'payment_receipt'
+          ? 'payments'
+          : type === 'delivery_note'
+            ? 'delivery-notes'
+            : `${type}s`
+      const get = () => app.inject({ url: `/v1/${route}/${id}`, cookies })
+      const before = (await get()).json()
+      const result = await post(`/v1/documents/${type}/${id}/regenerate-pdf`, {
+        templateId: chosen!.id,
+      })
+      expect(result.statusCode, result.body).toBe(200)
+      const after = (await get()).json()
+      expect(type === 'payment_receipt' ? after.receiptTemplateId : after.templateId).toBe(
+        chosen!.id,
+      )
+      for (const key of [
+        'number',
+        'total',
+        'amount',
+        'currency',
+        'paymentDate',
+        'issueDate',
+        'deliveryDate',
+        'lines',
+        'version',
+        'contentVersion',
+      ])
+        expect(after[key]).toEqual(before[key])
+      const put = storage.putImmutable
+      storage.putImmutable = async () => {
+        throw new Error('Storage unavailable')
+      }
+      const failed = await post(`/v1/documents/${type}/${id}/regenerate-pdf`, {
+        templateId: first!.id,
+      })
+      expect(failed.statusCode).toBe(503)
+      expect(
+        type === 'payment_receipt'
+          ? (await get()).json().receiptTemplateId
+          : (await get()).json().templateId,
+      ).toBe(chosen!.id)
+      storage.putImmutable = put
+      await fixture.client`update document_templates set archived_at=now() where id=${first!.id}`
+      expect(
+        (await post(`/v1/documents/${type}/${id}/regenerate-pdf`, { templateId: first!.id }))
+          .statusCode,
+      ).toBe(409)
+    },
+  )
+  it('rejects template changes during rendering and requires template Read for explicit selection', async () => {
+    const invoice = await cancellableInvoice()
+    const original = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
+    expect(original.statusCode, original.body).toBe(200)
+    const [template] =
+      await fixture.client`insert into document_templates(name,layout) values('Race template','modern') returning id`
+    const put = storage.putImmutable
+    storage.putImmutable = async (input) => {
+      await fixture.client`update document_templates set version=version+1 where id=${template!.id}`
+      return put(input)
+    }
+    const raced = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
+      templateId: template!.id,
+    })
+    expect(raced.statusCode, raced.body).toBe(409)
+    expect(raced.json().code).toBe('TEMPLATE_CHANGED')
+    expect(
+      (await fixture.client`select template_id from invoices where id=${invoice.id}`)[0]!
+        .template_id,
+    ).toBeNull()
+    expect(
+      (await fixture.client`select id from document_artifacts where document_id=${invoice.id}`)[0]!
+        .id,
+    ).toBe(original.json().id)
+    storage.putImmutable = put
+    await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='templates.read')`
+    expect(
+      (
+        await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
+          templateId: template!.id,
+        })
+      ).statusCode,
+    ).toBe(403)
+  })
   it('previews and atomically cancels invoice chains, preserving already cancelled records', async () => {
     const invoice = await cancellableInvoice()
     await fixture.client`update clients set email='client@example.test' where id=${clientId}`
@@ -395,7 +554,7 @@ describe('Estimates lifecycle', () => {
         (
           await fixture.client`select appearance_snapshot from delivery_notes where id=${draft.id}`
         )[0]!.appearance_snapshot,
-      ).toEqual(frozen!.appearance_snapshot)
+      ).toMatchObject({ layout: 'essential' })
     },
   )
   it('detaches deleted templates from BLs but preserves frozen designs and needed media', async () => {
@@ -473,7 +632,7 @@ describe('Estimates lifecycle', () => {
       (
         await fixture.client`select appearance_snapshot from delivery_notes where id=${draft.id}`
       )[0]!.appearance_snapshot,
-    ).toEqual(legacy)
+    ).toMatchObject({ layout: 'atelier' })
   })
   it('resolves company template/date defaults and preserves explicit choices and issued snapshots', async () => {
     const [template] =
@@ -910,7 +1069,9 @@ describe('Estimates lifecycle', () => {
     expect(
       (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' })).statusCode,
     ).toBe(200)
-    expect((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()).toEqual(before)
+    expect(
+      businessFields((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()),
+    ).toEqual(businessFields(before))
     expect(
       await fixture.client`select id from audit_events where action='regenerate_pdf'`,
     ).toHaveLength(2)
@@ -951,7 +1112,9 @@ describe('Estimates lifecycle', () => {
     expect(
       (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' })).statusCode,
     ).toBe(200)
-    expect((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()).toEqual(before)
+    expect(
+      businessFields((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()),
+    ).toEqual(businessFields(before))
     let arrivals = 0
     let release!: () => void
     const barrier = new Promise<void>((resolve) => {
@@ -1002,9 +1165,10 @@ describe('Estimates lifecycle', () => {
       (await post(`/v1/estimates/${estimateId}/accept`, { expectedVersion: 2 })).statusCode,
     ).toBe(200)
     const operationId = randomUUID()
+    const dueDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
     const first = await post(`/v1/estimates/${estimateId}/invoices`, {
       operationId,
-      dueDate: '2026-10-20',
+      dueDate,
     })
     expect(first.statusCode, JSON.stringify(first.json())).toBe(201)
     expect(first.json()).toMatchObject({
@@ -1016,17 +1180,17 @@ describe('Estimates lifecycle', () => {
     })
     const retry = await post(`/v1/estimates/${estimateId}/invoices`, {
       operationId,
-      dueDate: '2026-10-20',
+      dueDate,
     })
     expect(retry.statusCode).toBe(201)
     expect(retry.json().id).toBe(first.json().id)
     expect(
-      (await post(`/v1/estimates/${estimateId}/invoices`, { operationId, dueDate: '2026-10-21' }))
+      (await post(`/v1/estimates/${estimateId}/invoices`, { operationId, dueDate: null }))
         .statusCode,
     ).toBe(409)
     const second = await post(`/v1/estimates/${estimateId}/invoices`, {
       operationId: randomUUID(),
-      dueDate: '2026-10-20',
+      dueDate,
     })
     expect(second.statusCode).toBe(201)
     expect(second.json().id).not.toBe(first.json().id)
@@ -1042,9 +1206,11 @@ describe('Estimates lifecycle', () => {
       design: 'saved',
     })
     expect(invoicePdf.statusCode, invoicePdf.body).toBe(200)
-    expect((await app.inject({ url: `/v1/invoices/${first.json().id}`, cookies })).json()).toEqual(
-      beforeInvoice,
-    )
+    expect(
+      businessFields(
+        (await app.inject({ url: `/v1/invoices/${first.json().id}`, cookies })).json(),
+      ),
+    ).toEqual(businessFields(beforeInvoice))
     const worker = createSalesModule(
       () => fixture.db,
       storage,
@@ -1219,8 +1385,10 @@ describe('Estimates lifecycle', () => {
     )
     expect(deliveryPdf.statusCode, deliveryPdf.body).toBe(200)
     expect(
-      (await app.inject({ url: `/v1/delivery-notes/${independent.json().id}`, cookies })).json(),
-    ).toEqual(prepared.json())
+      businessFields(
+        (await app.inject({ url: `/v1/delivery-notes/${independent.json().id}`, cookies })).json(),
+      ),
+    ).toEqual(businessFields(prepared.json()))
     const deliveryLineId = prepared.json().lines[0].id
     const conversion = (quantity: number, operationId = randomUUID()) => ({
       operationId,

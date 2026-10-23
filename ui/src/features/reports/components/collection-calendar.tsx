@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { ReportAnalysis } from '../../../api/generated/schemas/reporting/reporting.schemas'
 import { Button } from '../../../components/ui/button'
+import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { AnalyticsPanel } from './analytics-panel'
 
@@ -59,8 +60,8 @@ export function CollectionCalendar({
                     size="cell"
                     variant="ghost"
                     disabled={!onDay}
-                    title={t('dayAmount', { date, amount })}
-                    aria-label={t('dayAmount', { date, amount })}
+                    title={t('dayAmount', { date: displayDate(date), amount })}
+                    aria-label={t('dayAmount', { date: displayDate(date), amount })}
                     onClick={() => onDay?.(date, currency)}
                     style={{
                       gridColumnStart:

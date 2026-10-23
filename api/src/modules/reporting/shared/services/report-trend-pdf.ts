@@ -99,12 +99,7 @@ export function drawReportTrend(
   ]
   for (const day of tickDays) {
     const date = new Date(start + day * 86400000).toISOString().slice(0, 10)
-    const label = new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      ...(days > 180 ? { year: '2-digit' } : {}),
-      timeZone: 'UTC',
-    }).format(new Date(date))
+    const label = date.split('-').reverse().join('-')
     line(x(date), plotTop, x(date), baseline + 3, '#d7ded9', true)
     c.text(
       label,

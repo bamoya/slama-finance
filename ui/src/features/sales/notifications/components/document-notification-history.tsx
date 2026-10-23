@@ -11,7 +11,7 @@ import { DataTablePagination } from '../../../../components/management/data-tabl
 import { FormError } from '../../../../components/management/form-error'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button } from '../../../../components/ui/button'
-import { uiLocale } from '../../../../lib/i18n'
+import { displayDateTime } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import {
@@ -71,7 +71,7 @@ export function DocumentNotificationHistory({
             columns={[
               {
                 title: t('date'),
-                render: (row) => new Date(row.createdAt).toLocaleString(uiLocale()),
+                render: (row) => displayDateTime(row.createdAt),
               },
               { title: t('kind'), render: (row) => t(row.kind) },
               { title: t('status'), render: (row) => t(row.status) },

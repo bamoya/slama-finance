@@ -301,6 +301,7 @@ components:
         id: { type: string, format: uuid }
         number: { type: string }
         receiptNumber: { type: string }
+        receiptTemplateId: { type: [string, 'null'], format: uuid, readOnly: true }
         receiptIssuedAt: { type: [string, 'null'], format: date-time }
         invoiceId: { type: string, format: uuid }
         invoiceNumber: { type: string }

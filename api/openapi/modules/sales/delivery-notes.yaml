@@ -238,7 +238,7 @@ components:
         clientId: { type: [string, 'null'], format: uuid }
         invoiceId: { type: [string, 'null'], format: uuid }
         deliveryDate: { type: string, format: date }
-        deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
+        deliveryAddress: { type: string, maxLength: 1000 }
         instructions: { type: [string, 'null'], maxLength: 4000 }
         includeReceptionSignature: { type: boolean }
         localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }
@@ -267,7 +267,7 @@ components:
         clientId: { type: [string, 'null'], format: uuid }
         invoiceId: { type: [string, 'null'], format: uuid }
         deliveryDate: { type: string, format: date }
-        deliveryAddress: { type: string, minLength: 1, maxLength: 1000 }
+        deliveryAddress: { type: string, maxLength: 1000 }
         instructions: { type: [string, 'null'], maxLength: 4000 }
         includeReceptionSignature: { type: boolean }
         localeOverride: { type: [string, 'null'], enum: [fr-MA, en-GB, null] }

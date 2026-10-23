@@ -450,8 +450,8 @@ erDiagram
     clients {
         uuid id PK
         text type "individual or company; explicit selection required"
-        text first_name "nullable; required for individual"
-        text last_name "nullable; required for individual"
+        text first_name "nullable; individuals need first or last name"
+        text last_name "nullable; individuals need first or last name"
         text legal_name "nullable; required for company; raison sociale"
         text trade_name "nullable; company only"
         text contact_name "nullable; company contact person"
@@ -462,16 +462,16 @@ erDiagram
         text registration_number "nullable; company only; RC number"
         text registration_city "nullable; company only; RC registration city"
         text professional_tax_number "nullable; company only; TP or Patente"
-        text address_line1
+        text address_line1 "nullable"
         text address_line2 "nullable"
         text city
         text postal_code "nullable"
-        char country_code "2 chars; default MA"
+        char country_code "nullable; 2 chars"
         text delivery_address_line1 "nullable; NULL means use full billing address"
         text delivery_address_line2 "nullable"
-        text delivery_city "nullable; required for separate delivery address"
+        text delivery_city "nullable; partial address allowed"
         text delivery_postal_code "nullable"
-        char delivery_country_code "nullable; required for separate delivery address"
+        char delivery_country_code "nullable; partial address allowed"
         text locale "default fr-MA; supports en-GB"
         text notes "nullable"
         timestamptz archived_at "nullable"
@@ -1112,7 +1112,7 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
 <summary>Client identity and Moroccan company profile</summary>
 
 - CHECK `type IN ('individual', 'company')`. For individuals, require nonblank
-  `first_name` and `last_name`; company identity, contact-person and business
+  at least one of `first_name` or `last_name`; company identity, contact-person and business
   identifier fields must be NULL. For companies, require nonblank `legal_name`
   and keep personal first/last names NULL. A contact person is optional and is
   not the legal billing identity. These are database CHECK constraints, not
@@ -1135,15 +1135,15 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
   NULL. Validate supplied identifiers with approved format rules and show
   localized field names. Do not assume all identifiers have the same length
   or impose global uniqueness on RC numbers without their registration city.
-- Treat RC number and registration city as a pair: either both are supplied
-  or both are NULL. This applies to customer companies and company settings.
+- Client RC number and registration city can be supplied independently.
+  Company settings still require both or neither.
   `share_capital` is nullable and nonnegative, using the monetary precision
   defined at L2. A missing value is not equivalent to zero capital.
 - `address_line1`, `city`, `postal_code` and `country_code` describe the billing
-  address. Country defaults to `MA`; postal codes are text. For a separate
-  delivery address, require a nonblank first line, city and country. If the
-  delivery first line is NULL, all other delivery address fields must be NULL
-  and the complete billing address is used. Never merge parts of two addresses.
+  address. All client address components are nullable, including country; postal
+  codes are text. Partial separate delivery addresses are allowed. Do not invent
+  missing information. Omit missing fields from generated PDFs. Company settings
+  requirements remain unchanged. UI/PDF dates display `DD-MM-YYYY`; storage uses ISO.
 - Phone and email remain optional for record creation. Phone fields accept free
   text, including multiple numbers separated by spaces, without phone-format
   validation or international normalization. Email notifications require a valid

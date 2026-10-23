@@ -152,6 +152,7 @@ export function createArtifactService(
       design: 'saved' | 'latest'
       authorize: (tx: Transaction) => Promise<void>
       render: () => Promise<Uint8Array>
+      onPublish?: (tx: Transaction) => Promise<void>
     }) {
       const previous = await repo.transaction(async (tx) => {
         await input.authorize(tx)
@@ -211,6 +212,7 @@ export function createArtifactService(
             'ARTIFACT_CONFLICT',
             'Another PDF was published. Reload and retry.',
           )
+        await input.onPublish?.(tx)
         await repo.auditRegeneration(previous, next, input.design, tx)
         await owners.published?.(tx, next)
         return next

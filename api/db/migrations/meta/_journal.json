@@ -29,6 +29,13 @@
       "when": 1792455617607,
       "tag": "0003_delivery_document_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792765073941,
+      "tag": "0004_flexible_client_details",
+      "breakpoints": true
     }
   ]
 }

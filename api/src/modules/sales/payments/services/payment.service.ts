@@ -85,6 +85,9 @@ export function createPaymentService(
     return dto(PaymentSchema.strip(), {
       ...row,
       receiptNumber: row.number.replace(/^PAY-/, 'REC-'),
+      receiptTemplateId: row.receiptSnapshot
+        ? PaymentReceiptSnapshotSchema.parse(row.receiptSnapshot).templateId
+        : null,
       invoiceNumber: related.invoiceNumber,
       clientId: related.clientId,
       clientName: related.clientName,
@@ -100,6 +103,9 @@ export function createPaymentService(
           dto(PaymentSchema.strip(), {
             ...item.payment,
             receiptNumber: item.payment.number.replace(/^PAY-/, 'REC-'),
+            receiptTemplateId: item.payment.receiptSnapshot
+              ? PaymentReceiptSnapshotSchema.parse(item.payment.receiptSnapshot).templateId
+              : null,
             invoiceNumber: item.invoiceNumber,
             clientId: item.clientId,
             clientName: item.clientName,

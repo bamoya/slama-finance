@@ -149,34 +149,7 @@ components:
     ClientInput:
       type: object
       additionalProperties: false
-      required:
-        [
-          type,
-          firstName,
-          lastName,
-          legalName,
-          tradeName,
-          contactName,
-          email,
-          phone,
-          ice,
-          taxIdentifier,
-          registrationNumber,
-          registrationCity,
-          professionalTaxNumber,
-          addressLine1,
-          addressLine2,
-          city,
-          postalCode,
-          countryCode,
-          deliveryAddressLine1,
-          deliveryAddressLine2,
-          deliveryCity,
-          deliveryPostalCode,
-          deliveryCountryCode,
-          locale,
-          notes,
-        ]
+      required: [type]
       properties:
         type: { type: string, enum: [individual, company] }
         firstName: { type: [string, 'null'], maxLength: 120 }
@@ -191,11 +164,11 @@ components:
         registrationNumber: { type: [string, 'null'], maxLength: 50 }
         registrationCity: { type: [string, 'null'], maxLength: 120 }
         professionalTaxNumber: { type: [string, 'null'], maxLength: 50 }
-        addressLine1: { type: string, minLength: 1, maxLength: 250 }
+        addressLine1: { type: [string, 'null'], maxLength: 250 }
         addressLine2: { type: [string, 'null'], maxLength: 250 }
-        city: { type: string, minLength: 1, maxLength: 120 }
+        city: { type: [string, 'null'], maxLength: 120 }
         postalCode: { type: [string, 'null'], maxLength: 20 }
-        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        countryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
         deliveryAddressLine1: { type: [string, 'null'], maxLength: 250 }
         deliveryAddressLine2: { type: [string, 'null'], maxLength: 250 }
         deliveryCity: { type: [string, 'null'], maxLength: 120 }
@@ -222,11 +195,11 @@ components:
         registrationNumber: { type: [string, 'null'], maxLength: 50 }
         registrationCity: { type: [string, 'null'], maxLength: 120 }
         professionalTaxNumber: { type: [string, 'null'], maxLength: 50 }
-        addressLine1: { type: string, minLength: 1, maxLength: 250 }
+        addressLine1: { type: [string, 'null'], maxLength: 250 }
         addressLine2: { type: [string, 'null'], maxLength: 250 }
-        city: { type: string, minLength: 1, maxLength: 120 }
+        city: { type: [string, 'null'], maxLength: 120 }
         postalCode: { type: [string, 'null'], maxLength: 20 }
-        countryCode: { type: string, pattern: '^[A-Z]{2}$' }
+        countryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
         deliveryAddressLine1: { type: [string, 'null'], maxLength: 250 }
         deliveryAddressLine2: { type: [string, 'null'], maxLength: 250 }
         deliveryCity: { type: [string, 'null'], maxLength: 120 }
@@ -289,11 +262,11 @@ components:
         registrationNumber: { type: [string, 'null'] }
         registrationCity: { type: [string, 'null'] }
         professionalTaxNumber: { type: [string, 'null'] }
-        addressLine1: { type: string }
+        addressLine1: { type: [string, 'null'] }
         addressLine2: { type: [string, 'null'] }
-        city: { type: string }
+        city: { type: [string, 'null'] }
         postalCode: { type: [string, 'null'] }
-        countryCode: { type: string }
+        countryCode: { type: [string, 'null'] }
         deliveryAddressLine1: { type: [string, 'null'] }
         deliveryAddressLine2: { type: [string, 'null'] }
         deliveryCity: { type: [string, 'null'] }

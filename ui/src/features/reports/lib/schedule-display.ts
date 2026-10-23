@@ -1,4 +1,4 @@
-import i18n from '../../../lib/i18n'
+import { displayDateTime } from '../../../lib/dates'
 import { registerTranslations } from '../../../lib/i18n'
 
 registerTranslations('reports', {
@@ -9,11 +9,5 @@ registerTranslations('reports', {
 })
 
 export function formatReportInstant(value: string, timezone: string) {
-  return (
-    new Intl.DateTimeFormat(i18n.language, {
-      timeZone: timezone,
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(value)) + ` · ${timezone}`
-  )
+  return displayDateTime(value, timezone) + ` · ${timezone}`
 }

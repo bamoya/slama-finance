@@ -10,6 +10,7 @@ import { PaymentReceiptActions } from './payment-receipt-actions'
 
 vi.mock('../../../../api/http', () => ({ apiRequest: vi.fn() }))
 vi.mock('../../../identity', () => ({
+  useAuthorization: () => ({ can: () => false }),
   Can: ({ children }: { children: React.ReactNode }) => children,
 }))
 const payment = {

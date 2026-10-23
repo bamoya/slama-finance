@@ -4,6 +4,7 @@ import { Link } from 'wouter'
 import type { Invoice } from '../../../../api/generated/models'
 import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { useAuthorization } from '../../../identity'
 import { usePayments } from '../../payments/queries'
@@ -35,7 +36,7 @@ export function InvoicePaymentHistory({ invoice }: { invoice: Invoice }) {
                   {payment.number}
                 </Link>
                 <span className="text-[var(--muted)]">
-                  {payment.paymentDate} · {t(payment.method)}
+                  {displayDate(payment.paymentDate)} · {t(payment.method)}
                 </span>
               </div>
               <div className="flex items-center gap-3">

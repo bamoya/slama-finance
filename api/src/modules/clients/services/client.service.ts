@@ -13,13 +13,14 @@ import type { createClientRepository } from '../repositories/client.repository.j
 
 const dto = <T>(schema: { parse(value: unknown): T }, value: unknown): T =>
   schema.parse(JSON.parse(JSON.stringify(value)))
-const nullable = (value: string | null) => value?.trim() || null
+const nullable = (value: string | null | undefined) => value?.trim() || null
 const displayName = (row: {
   type: string
   firstName: string | null
   lastName: string | null
   legalName: string | null
-}) => (row.type === 'company' ? row.legalName! : `${row.firstName} ${row.lastName}`)
+}) =>
+  row.type === 'company' ? row.legalName! : [row.firstName, row.lastName].filter(Boolean).join(' ')
 const output = (row: Awaited<ReturnType<ReturnType<typeof createClientRepository>['one']>>) =>
   dto(ClientSchema, { ...row, displayName: displayName(row) })
 
@@ -39,27 +40,22 @@ function normalize(input: ClientInput) {
     registrationNumber: nullable(data.registrationNumber),
     registrationCity: nullable(data.registrationCity),
     professionalTaxNumber: nullable(data.professionalTaxNumber),
-    addressLine1: data.addressLine1.trim(),
+    addressLine1: nullable(data.addressLine1),
     addressLine2: nullable(data.addressLine2),
-    city: data.city.trim(),
+    city: nullable(data.city),
     postalCode: nullable(data.postalCode),
-    countryCode: data.countryCode,
+    countryCode: data.countryCode ?? null,
+    locale: data.locale ?? 'fr-MA',
     deliveryAddressLine1: nullable(data.deliveryAddressLine1),
     deliveryAddressLine2: nullable(data.deliveryAddressLine2),
     deliveryCity: nullable(data.deliveryCity),
     deliveryPostalCode: nullable(data.deliveryPostalCode),
-    deliveryCountryCode: data.deliveryCountryCode,
+    deliveryCountryCode: data.deliveryCountryCode ?? null,
     notes: nullable(data.notes),
   }
-  if (!normalized.addressLine1 || !normalized.city)
-    throw new AppError(400, 'INVALID_ADDRESS', 'Billing address and city are required.')
   if (data.type === 'individual') {
-    if (!normalized.firstName || !normalized.lastName)
-      throw new AppError(
-        400,
-        'INVALID_CLIENT_IDENTITY',
-        'Individual first and last names are required.',
-      )
+    if (!normalized.firstName && !normalized.lastName)
+      throw new AppError(400, 'INVALID_CLIENT_IDENTITY', 'Enter at least a first or last name.')
     if (
       [
         normalized.legalName,
@@ -82,32 +78,6 @@ function normalize(input: ClientInput) {
       400,
       'INVALID_CLIENT_IDENTITY',
       'A company requires a legal name and no personal name fields.',
-    )
-  if (!!normalized.registrationNumber !== !!normalized.registrationCity)
-    throw new AppError(
-      400,
-      'INVALID_REGISTRATION',
-      'RC number and registration city must be supplied together.',
-    )
-  if (normalized.deliveryAddressLine1) {
-    if (!normalized.deliveryCity || !normalized.deliveryCountryCode)
-      throw new AppError(
-        400,
-        'INVALID_DELIVERY_ADDRESS',
-        'A separate delivery address requires city and country.',
-      )
-  } else if (
-    [
-      normalized.deliveryAddressLine2,
-      normalized.deliveryCity,
-      normalized.deliveryPostalCode,
-      normalized.deliveryCountryCode,
-    ].some(Boolean)
-  )
-    throw new AppError(
-      400,
-      'INVALID_DELIVERY_ADDRESS',
-      'Enter a complete separate delivery address or leave it empty.',
     )
   return normalized
 }

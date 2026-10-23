@@ -15,10 +15,12 @@ export async function documentClient(
     !retained ||
     typeof retained !== 'object' ||
     !('type' in retained) ||
-    !('addressLine1' in retained) ||
-    !retained.addressLine1 ||
-    !('city' in retained) ||
-    !retained.city
+    !(['legalName', 'firstName', 'lastName'] as const).some(
+      (key) =>
+        key in retained &&
+        typeof (retained as Record<string, unknown>)[key] === 'string' &&
+        String((retained as Record<string, unknown>)[key]).trim(),
+    )
   )
     throw new AppError(
       400,

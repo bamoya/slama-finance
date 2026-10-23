@@ -40,7 +40,13 @@ export function ClientDetailPage() {
       </div>
     )
   const client = query.data
-  const delivery = client.deliveryAddressLine1
+  const delivery = [
+    client.deliveryAddressLine1,
+    client.deliveryAddressLine2,
+    client.deliveryCity,
+    client.deliveryPostalCode,
+    client.deliveryCountryCode,
+  ].some(Boolean)
     ? [
         client.deliveryAddressLine1,
         client.deliveryAddressLine2,
@@ -65,7 +71,7 @@ export function ClientDetailPage() {
           client.type === 'company' ? translate('Company client') : translate('Individual client')
         }
         title={client.displayName}
-        description={`${client.city}, ${client.countryCode} · ${client.email || translate('No email address')}`}
+        description={[client.city, client.countryCode, client.email].filter(Boolean).join(' · ')}
         actions={
           <div className="flex flex-wrap gap-2">
             <Can permission="clients.update">

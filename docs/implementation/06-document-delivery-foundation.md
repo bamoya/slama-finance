@@ -30,22 +30,29 @@ after checking no active code still depends on them.
   Draft PDF generation remains unavailable; issue the invoice/estimate or deliver the delivery note first.
 - Issued/finalized invoices, estimates and delivery notes remain immutable in their
   business information. The API rejects updates; direct UI edit routes return to details.
-- Details offer **Regenerate PDF**, with confirmation and no design selector.
+- Details offer **Regenerate PDF**, with confirmation and an active-template selector.
+  The current document template is preselected when available; company default is
+  an explicit alternative. Choosing a template requires `templates.read`.
   Requires both the resource's `read` and `update` permissions; downloading requires `read`.
-- `POST /v1/documents/{documentType}/{id}/regenerate-pdf` accepts `{}`.
+- `POST /v1/documents/{documentType}/{id}/regenerate-pdf` accepts `{ "templateId": "uuid" }`.
+  Null or omitted template ID resolves the company default (Classic if unset).
   The deprecated optional `design` field is accepted for old clients but ignored.
   It renders synchronously and returns the active artifact ID and generation timestamp.
   The UI waits for completion, disables repeat submission, and refreshes artifact queries.
 - Explicit regeneration uses current company/client identity and contact details and
-  the current company default template (Classic if no default is configured).
+  the selected active template, falling back to the company default when omitted.
   A missing/deleted client falls back to the saved identity. Archived clients can
-  still supply current printable details. Stored business snapshots are not rewritten.
+  still supply current printable details. Stored identity/financial snapshots are not rewritten.
+  Successful publication atomically saves the selected template reference and rendered
+  appearance on the document (or receipt snapshot) and audits the change. Entity details
+  show the saved choice. Failed storage/rendering, changed/archived templates or unavailable
+  media leave both the prior PDF and the document template unchanged.
   Dates, numbers, products, quantities, prices, tax, bank/payment data, delivery
   addresses and payment terms remain unchanged. An archived default template fails explicitly.
 - Delivery notes resolve the company template on draft creation/edit and finalization.
   Finalization freezes `template_id` and `appearance_snapshot`, including logo and
   signature references. Initial generation uses that appearance; explicit regeneration
-  uses the current company default, including for legacy BLs and payment receipts.
+  saves the selected/current company default, including for legacy BLs and payment receipts.
   Migration `0003` preserves historical Classic appearance on existing BLs; it does
   not refresh issued identities or existing PDF files. Initial receipts inherit
   their invoice's appearance; only explicit regeneration refreshes printable identities and design.

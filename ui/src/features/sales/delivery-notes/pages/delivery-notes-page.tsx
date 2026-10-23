@@ -13,6 +13,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { useTableSelection } from '../../../../components/management/use-table-selection'
 import { buttonVariants } from '../../../../components/ui/button'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
@@ -78,7 +79,7 @@ export function DeliveryNotesPage() {
         </Can>
       ),
     },
-    { title: t('deliveryDate'), render: (row) => row.deliveryDate },
+    { title: t('deliveryDate'), render: (row) => displayDate(row.deliveryDate) },
     {
       title: t('relatedInvoice'),
       render: (row) =>

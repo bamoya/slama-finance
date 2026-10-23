@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../../../components/ui/collapsible'
+import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { cn } from '../../../lib/utils'
 import { useClientActivity } from '../../sales'
@@ -65,7 +66,7 @@ function ActivityBranch({ node, filtered }: { node: ActivityNode; filtered: bool
                 {node.number ?? t('draft')}
               </Link>
               <p className="text-xs text-[var(--muted)]">
-                {t(node.kind)} · {node.date}
+                {t(node.kind)} · {displayDate(node.date)}
                 {node.method && ` · ${t(`methods.${node.method}`)}`}
               </p>
               {node.reference && (

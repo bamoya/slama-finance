@@ -27,10 +27,21 @@ it('prefills the selected client delivery address only once', () => {
   expect(fill).toHaveBeenCalledTimes(1)
 })
 it('uses billing details when no separate delivery address is configured', () => {
-  state.client = { ...client, deliveryAddressLine1: null }
+  state.client = {
+    ...client,
+    deliveryAddressLine1: null,
+    deliveryCity: null,
+    deliveryCountryCode: null,
+  }
   const fill = vi.fn()
   renderHook(() => useDeliveryAddressDefault('a', fill))
   expect(fill).toHaveBeenCalledWith('Billing street, Rabat, MA')
+})
+it('uses partial separate addresses without mixing in billing data', () => {
+  state.client = { ...client, deliveryAddressLine1: null, deliveryCountryCode: null }
+  const fill = vi.fn()
+  renderHook(() => useDeliveryAddressDefault('a', fill))
+  expect(fill).toHaveBeenCalledWith('Casablanca')
 })
 it('preserves saved addresses and custom input while loading', () => {
   const fill = vi.fn()

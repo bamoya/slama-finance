@@ -63,17 +63,21 @@ export function createMediaService(
     return row
   }
   return {
-    // Internal PDF-worker capability only. IDs come from the persisted document
-    // snapshot, never from a request; raw media HTTP authorization is unchanged.
+    // Internal PDF capability. Asset IDs come from a saved appearance or a
+    // validated active template, never directly from HTTP image inputs.
+    // The sales caller authorizes explicit template selection; raw media HTTP
+    // authorization is unchanged.
     async documentImages(
       type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt',
       id: string,
       version: number,
       design: 'saved' | 'latest' = 'saved',
+      templateId?: string | null,
     ) {
       return repo.transaction(async (tx) => {
         await repo.lock(tx)
-        const appearance = await repo.documentAppearance(type, id, version, tx, design)
+        const resolved = await repo.documentAppearance(type, id, version, tx, design, templateId)
+        const { appearance } = resolved
         const load = async (assetId: unknown, purpose: Purpose) => {
           if (!assetId) return undefined
           if (typeof assetId !== 'string')
@@ -84,6 +88,8 @@ export function createMediaService(
           return storage.get(asset.objectKey)
         }
         return {
+          templateId: resolved.templateId,
+          templateVersion: resolved.templateVersion,
           appearance,
           logo: await load(appearance.logoAssetId, 'company_logo'),
           signature:

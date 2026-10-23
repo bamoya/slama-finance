@@ -10,6 +10,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { useTableSelection } from '../../../../components/management/use-table-selection'
 import { buttonVariants } from '../../../../components/ui/button'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
@@ -86,8 +87,8 @@ export function InvoicesPage() {
         </Can>
       ),
     },
-    { title: t('issueDate'), render: (row) => row.issueDate },
-    { title: t('dueDate'), render: (row) => row.dueDate ?? '—' },
+    { title: t('issueDate'), render: (row) => displayDate(row.issueDate) },
+    { title: t('dueDate'), render: (row) => displayDate(row.dueDate) },
     {
       title: t('total'),
       render: (row) => (

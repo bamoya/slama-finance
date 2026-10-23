@@ -5,10 +5,12 @@ import { Link, useParams } from 'wouter'
 import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { useBankAccounts } from '../../../settings'
 import { DocumentClientLink } from '../../components/document-client-link'
+import { DocumentTemplateSummary } from '../../components/document-template-summary'
 import { useInvoice } from '../../invoices/queries'
 import { InvoiceBalance } from '../components/invoice-balance'
 import { PaymentActions } from '../components/payment-actions'
@@ -68,6 +70,7 @@ export function PaymentDetailPage() {
         <div className="grid content-start gap-section">
           <section className="grid gap-4 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
             <h2 className="text-lg font-bold">{t('paymentDetails')}</h2>
+            <DocumentTemplateSummary templateId={row.receiptTemplateId} />
             {row.receiptIssuedAt && (
               <p className="text-sm text-muted-foreground">
                 {t('receiptIssuedNotice', { number: row.receiptNumber })}
@@ -102,11 +105,11 @@ export function PaymentDetailPage() {
               </div>
               <div>
                 <dt className="text-[var(--muted)]">{t('paymentDate')}</dt>
-                <dd>{row.paymentDate}</dd>
+                <dd>{displayDate(row.paymentDate)}</dd>
               </div>
               <div>
                 <dt className="text-[var(--muted)]">{t('collectedOn')}</dt>
-                <dd>{row.collectedOn ?? '—'}</dd>
+                <dd>{displayDate(row.collectedOn)}</dd>
               </div>
               <div>
                 <dt className="text-[var(--muted)]">{t('method')}</dt>

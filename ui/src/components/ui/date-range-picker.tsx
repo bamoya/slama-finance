@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { useTranslation } from 'react-i18next'
 
+import { displayDate } from '../../lib/dates'
 import { registerTranslations, useUiLanguage } from '../../lib/i18n'
 import { Button } from './button'
 import { Calendar } from './calendar'
@@ -43,17 +44,12 @@ export function DateRangePicker({
 }) {
   useUiLanguage()
 
-  const { t, i18n: language } = useTranslation('dateRange')
+  const { t } = useTranslation('dateRange')
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<DateRange>()
   const start = parseDate(from),
     end = parseDate(to)
-  const format = (date: Date) =>
-    new Intl.DateTimeFormat(language.language, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(date)
+  const format = (date: Date) => displayDate(dateString(date))
   const title = label ?? t('title')
   const display =
     start && end

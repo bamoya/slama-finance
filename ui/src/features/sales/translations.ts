@@ -177,7 +177,7 @@ const salesEnglish = {
   preparePdf: 'Prepare PDF',
   regeneratePdf: 'Regenerate PDF',
   regeneratePdfDescription:
-    'Uses current company and client details and the company default template. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.',
+    'Uses current company and client details and the selected template. The chosen template is saved on this document. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.',
   pdfDesign: 'Design',
   savedPdfDesign: 'Original saved design',
   latestPdfDesign: 'Latest template design',

@@ -17,7 +17,7 @@ export async function renderDeliveryPdf(
       title: documentTitle('delivery', record(row.issuerSnapshot).locale),
       number: row.number ?? '',
       issuer: party(row.issuerSnapshot),
-      client: [party(row.clientSnapshot)[0] ?? '', row.deliveryAddress],
+      client: [party(row.clientSnapshot)[0] ?? '', row.deliveryAddress].filter(Boolean),
       date: row.deliveryDate,
       lines: lines.map((line) => ({
         name: line.productName + (line.packageWeightG ? ` · ${line.packageWeightG} g` : ''),

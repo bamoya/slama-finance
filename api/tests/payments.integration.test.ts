@@ -288,7 +288,21 @@ describe('Payments lifecycle', () => {
     expect(regenerated.statusCode, regenerated.body).toBe(200)
     expect(regenerated.json().id).toBe(prepared.json().id)
     const [after] = await fixture.client`select receipt_snapshot from payments where id=${id}`
-    expect(after!.receipt_snapshot).toEqual(before!.receipt_snapshot)
+    const {
+      appearance: _oldAppearance,
+      templateId: _oldTemplate,
+      ...oldBusiness
+    } = before!.receipt_snapshot
+    const {
+      appearance: _newAppearance,
+      templateId: _newTemplate,
+      ...newBusiness
+    } = after!.receipt_snapshot
+    expect(newBusiness).toEqual(oldBusiness)
+    expect(after!.receipt_snapshot).toMatchObject({
+      templateId: template!.id,
+      appearance: { layout: 'modern' },
+    })
   })
 
   it('requires Edit to first issue or regenerate receipts, but only Read to download issued receipts', async () => {

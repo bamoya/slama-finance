@@ -13,7 +13,13 @@ export function useDeliveryAddressDefault(
   useEffect(() => {
     if (!pendingClientId || client.data?.id !== pendingClientId) return
     const data = client.data
-    const address = data.deliveryAddressLine1?.trim()
+    const address = [
+      data.deliveryAddressLine1,
+      data.deliveryAddressLine2,
+      data.deliveryCity,
+      data.deliveryPostalCode,
+      data.deliveryCountryCode,
+    ].some((part) => part?.trim())
       ? [
           data.deliveryAddressLine1,
           data.deliveryAddressLine2,

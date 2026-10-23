@@ -100,7 +100,15 @@ function ClientEditor({ client }: { client: Client | null }) {
   const actions = useClientActions()
   const [error, setError] = useState<unknown>()
   const [issues, setIssues] = useState<string[]>([])
-  const [separateDelivery, setSeparateDelivery] = useState(Boolean(client?.deliveryAddressLine1))
+  const [separateDelivery, setSeparateDelivery] = useState(
+    [
+      client?.deliveryAddressLine1,
+      client?.deliveryAddressLine2,
+      client?.deliveryCity,
+      client?.deliveryPostalCode,
+      client?.deliveryCountryCode,
+    ].some(Boolean),
+  )
   const form = useForm({
     defaultValues: client ? fromClient(client) : empty,
     onSubmit: async ({ value }) => {
@@ -229,8 +237,8 @@ function ClientEditor({ client }: { client: Client | null }) {
                 {(type) =>
                   type === 'individual' ? (
                     <div className="grid gap-content sm:grid-cols-2">
-                      {field('firstName', 'First name', { required: true })}
-                      {field('lastName', 'Last name', { required: true })}
+                      {field('firstName', 'First name')}
+                      {field('lastName', 'Last name')}
                     </div>
                   ) : (
                     <div className="grid gap-content sm:grid-cols-2">
@@ -250,9 +258,9 @@ function ClientEditor({ client }: { client: Client | null }) {
             <section className="grid gap-content rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
               <h2 className="text-lg font-bold">{translate('Billing address')}</h2>
               <div className="grid gap-content sm:grid-cols-2">
-                {field('addressLine1', 'Address line 1', { required: true })}
+                {field('addressLine1', 'Address line 1')}
                 {field('addressLine2', 'Address line 2')}
-                {field('city', 'City', { required: true })}
+                {field('city', 'City')}
                 {field('postalCode', 'Postal code')}
                 <form.Field name="countryCode">
                   {(control) => (
@@ -260,9 +268,11 @@ function ClientEditor({ client }: { client: Client | null }) {
                       {translate('Country code')}
                       <Input
                         aria-label={translate('Country code')}
-                        value={control.state.value}
+                        value={control.state.value ?? ''}
                         maxLength={2}
-                        onChange={(event) => control.handleChange(event.target.value.toUpperCase())}
+                        onChange={(event) =>
+                          control.handleChange(event.target.value.toUpperCase() || null)
+                        }
                       />
                     </label>
                   )}
@@ -297,9 +307,9 @@ function ClientEditor({ client }: { client: Client | null }) {
               </div>
               {separateDelivery && (
                 <div className="grid gap-content sm:grid-cols-2">
-                  {field('deliveryAddressLine1', 'Delivery address line 1', { required: true })}
+                  {field('deliveryAddressLine1', 'Delivery address line 1')}
                   {field('deliveryAddressLine2', 'Delivery address line 2')}
-                  {field('deliveryCity', 'Delivery city', { required: true })}
+                  {field('deliveryCity', 'Delivery city')}
                   {field('deliveryPostalCode', 'Delivery postal code')}
                   <form.Field name="deliveryCountryCode">
                     {(control) => (

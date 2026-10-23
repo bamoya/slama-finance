@@ -43,11 +43,15 @@ components:
       type: object
       additionalProperties: false
       properties:
+        templateId:
+          type: [string, 'null']
+          format: uuid
+          description: Active template to apply and save on the document after successful PDF publication. Null or omitted uses the company default.
         design:
           type: string
           enum: [saved, latest]
           deprecated: true
-          description: Ignored for compatibility. Regeneration always uses current company/client details and the company default template, preserving financial data.
+          description: Ignored for compatibility. Regeneration uses current company/client details and the selected or company default template, preserving financial data.
     RegeneratedDocumentPdf:
       type: object
       additionalProperties: false

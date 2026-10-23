@@ -4,6 +4,10 @@ import type {
 } from '../../../../contracts/generated/sales/artifacts.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import type { createArtifactSupport } from '../../../../support/artifacts/index.js'
+import {
+  type RenderedDesign,
+  saveDocumentDesign,
+} from '../../shared/repositories/document-design.repository.js'
 
 type Params = Omit<RegenerateDocumentPdfParams, 'documentType'> & {
   documentType: Exclude<RegenerateDocumentPdfParams['documentType'], 'payment_receipt'>
@@ -22,13 +26,15 @@ export function createRegeneratePdfService(
     id: string,
     version: number,
     design: 'saved' | 'latest',
-  ) => Promise<Uint8Array>,
+    templateId?: string | null,
+  ) => Promise<{ bytes: Uint8Array; design: RenderedDesign }>,
 ) {
-  return async (params: Params, _input: RegenerateDocumentPdfInput, actor: string) => {
+  return async (params: Params, input: RegenerateDocumentPdfInput, actor: string) => {
     const repo = repos[params.documentType]
     const resource =
       params.documentType === 'delivery_note' ? 'delivery_notes' : `${params.documentType}s`
     const row = await repo.one(params.id)
+    let renderedDesign: RenderedDesign
     const result = await artifacts.regeneratePdf({
       type: params.documentType,
       documentId: params.id,
@@ -38,8 +44,21 @@ export function createRegeneratePdfService(
       authorize: async (tx) => {
         await repo.authorize(tx, actor, `${resource}.read`)
         await repo.authorize(tx, actor, `${resource}.update`)
+        if (input.templateId) await repo.authorize(tx, actor, 'templates.read')
       },
-      render: () => render(params.documentType, params.id, row.contentVersion, 'latest'),
+      render: async () => {
+        const result = await render(
+          params.documentType,
+          params.id,
+          row.contentVersion,
+          'latest',
+          input.templateId,
+        )
+        renderedDesign = result.design
+        return result.bytes
+      },
+      onPublish: (tx) =>
+        saveDocumentDesign(tx, params.documentType, params.id, actor, renderedDesign),
     })
     return { id: result.id, generatedAt: result.generatedAt.toISOString() }
   }

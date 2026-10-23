@@ -197,7 +197,13 @@ export function createDeliveryNoteService(
           )
         const client = await repo.client(invoice.clientId, tx)
         const lines = await repo.invoiceLines(id, tx)
-        const address = client.deliveryAddressLine1
+        const address = [
+          client.deliveryAddressLine1,
+          client.deliveryAddressLine2,
+          client.deliveryCity,
+          client.deliveryPostalCode,
+          client.deliveryCountryCode,
+        ].some(Boolean)
           ? [
               client.deliveryAddressLine1,
               client.deliveryAddressLine2,

@@ -9,6 +9,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { useTableSelection } from '../../../../components/management/use-table-selection'
 import { buttonVariants } from '../../../../components/ui/button'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
@@ -75,7 +76,7 @@ export function PaymentsPage() {
         </Can>
       ),
     },
-    { title: t('paymentDate'), render: (row) => row.paymentDate },
+    { title: t('paymentDate'), render: (row) => displayDate(row.paymentDate) },
     { title: t('method'), render: (row) => t(row.method) },
     {
       title: t('amount'),

@@ -11,6 +11,7 @@ import { DataTable } from '../../../components/management/data-table'
 import { DataTablePagination } from '../../../components/management/data-table-pagination'
 import { EmptyState } from '../../../components/management/page-state'
 import { StatsGrid } from '../../../components/management/stats-grid'
+import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { Can } from '../../identity'
 import { formatReportInstant } from '../lib/schedule-display'
@@ -50,7 +51,13 @@ export function ReportViewer({
     <div className="grid gap-section">
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
         <strong>{t(frozen ? 'frozen' : 'live')}</strong>
-        <span>{t('period', data.filters)}</span>
+        <span>
+          {t('period', {
+            ...data.filters,
+            from: displayDate(data.filters.from),
+            to: displayDate(data.filters.to),
+          })}
+        </span>
         <span>
           {t('captured', { time: formatReportInstant(data.capturedAt, data.filters.timezone) })}
         </span>
@@ -116,7 +123,7 @@ export function ReportViewer({
                       )
                     },
                   },
-                  { title: t('date'), render: (row) => row.date ?? '—' },
+                  { title: t('date'), render: (row) => displayDate(row.date) },
                   {
                     title: t('status'),
                     render: (row) => (row.status ? t(`statuses.${row.status}`) : '—'),
@@ -197,7 +204,7 @@ function ReportSeries({ section }: { section: ReportSection }) {
                     />
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {point.date}
+                    {displayDate(point.date)}
                     <br />
                     {t(`metrics.${point.key}`)}
                   </span>

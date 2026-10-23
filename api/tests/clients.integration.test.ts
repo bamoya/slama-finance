@@ -47,7 +47,7 @@ const company = (changes: Record<string, unknown> = {}) =>
     registrationNumber: '42',
     registrationCity: 'Casablanca',
     professionalTaxNumber: '00091',
-    email: ' OFFICE@ATLAS.MA ',
+    email: 'OFFICE@ATLAS.MA',
     ...changes,
   })
 
@@ -106,17 +106,17 @@ describe('Clients module', () => {
     expect((await app.inject({ url: '/v1/clients?q=%25', cookies })).json().total).toBe(0)
   })
 
-  it('rejects incompatible identities, incomplete RC and delivery addresses, but accepts free-text phones', async () => {
+  it('rejects incompatible identities but accepts partial contact, RC and address data', async () => {
     expect(
       (await request('POST', '/v1/clients', individual({ ice: '000123456789012' }))).statusCode,
     ).toBe(400)
     expect(
       (await request('POST', '/v1/clients', company({ registrationCity: null }))).statusCode,
-    ).toBe(400)
+    ).toBe(201)
     expect(
       (await request('POST', '/v1/clients', company({ deliveryAddressLine1: 'Warehouse' })))
         .statusCode,
-    ).toBe(400)
+    ).toBe(201)
     const phone = '06 12 34 56 78 05 22 33 44 55 ext 12'
     const client = await request('POST', '/v1/clients', individual({ phone }))
     expect(client.statusCode).toBe(201)
@@ -125,8 +125,45 @@ describe('Clients module', () => {
       (await request('POST', '/v1/clients', individual({ email: 'not-email' }))).statusCode,
     ).toBe(400)
     await expect(
-      fixture.client`insert into clients (type, first_name, last_name, address_line1, city) values ('individual', null, 'Amrani', 'Street', 'Rabat')`,
+      fixture.client`insert into clients (type, first_name, last_name) values ('individual', null, null)`,
     ).rejects.toThrow()
+  })
+
+  it('creates name-only companies and individuals and allows clearing optional fields', async () => {
+    for (const input of [
+      { type: 'company', legalName: 'Minimal company' },
+      { type: 'individual', firstName: 'Sara' },
+      { type: 'individual', lastName: 'Amrani' },
+    ]) {
+      const created = await request('POST', '/v1/clients', input)
+      expect(created.statusCode, created.body).toBe(201)
+      expect(created.json()).toMatchObject({
+        addressLine1: null,
+        city: null,
+        countryCode: null,
+        email: null,
+        ice: null,
+        phone: null,
+      })
+      expect(created.json().displayName).not.toContain('null')
+    }
+    const created = (await request('POST', '/v1/clients', company())).json()
+    const updated = await request('PATCH', `/v1/clients/${created.id}`, {
+      expectedVersion: created.version,
+      addressLine1: null,
+      city: null,
+      countryCode: null,
+      registrationNumber: null,
+      registrationCity: 'Rabat',
+      ice: null,
+    })
+    expect(updated.statusCode, updated.body).toBe(200)
+    expect(updated.json()).toMatchObject({
+      addressLine1: null,
+      city: null,
+      registrationNumber: null,
+      registrationCity: 'Rabat',
+    })
   })
 
   it('updates full identity atomically, preserves versions, and archives without deleting', async () => {

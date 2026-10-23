@@ -3,6 +3,7 @@ import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts
 
 import type { ReportAnalysis } from '../../../api/generated/schemas/reporting/reporting.schemas'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../components/ui/chart'
+import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { AnalyticsPanel } from './analytics-panel'
 
@@ -56,7 +57,7 @@ export function VisualTrend({
       series(previous, 'revenue').map((point) => [point.date, Number(point.value)]),
     )
     values.forEach((entry, index) => {
-      const day = new Date(`${previous.filters.from}T12:00:00Z`)
+      const day = new Date(`${displayDate(previous.filters.from)}T12:00:00Z`)
       day.setUTCDate(day.getUTCDate() + index)
       entry.previous = prior.get(day.toISOString().slice(0, 10)) ?? 0
     })
@@ -82,7 +83,7 @@ export function VisualTrend({
             tickLine={false}
             axisLine={false}
             minTickGap={30}
-            tickFormatter={(date: string) => date.slice(5)}
+            tickFormatter={(date: string) => displayDate(date)}
           />
           <YAxis
             width={48}
@@ -97,6 +98,7 @@ export function VisualTrend({
           <ChartTooltip
             content={
               <ChartTooltipContent
+                labelFormatter={(value) => displayDate(String(value))}
                 formatter={(value, name) => (
                   <span>
                     {t(String(name))}: <strong>{money(Number(value))}</strong>
@@ -141,7 +143,8 @@ export function VisualTrend({
         {previous && data.filters.bucket === 'day' && (
           <span className="flex items-center gap-2">
             <span className="size-2 rounded-full bg-[var(--chart-3)]" />
-            {t('previous')} · {previous.filters.from} – {previous.filters.to}
+            {t('previous')} · {displayDate(previous.filters.from)} –{' '}
+            {displayDate(previous.filters.to)}
           </span>
         )}
         {['revenue', 'collections']

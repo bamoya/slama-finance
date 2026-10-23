@@ -12,12 +12,12 @@
   margin: 0 0 0.75rem;
 }
 .email-visual-editor h1 {
-  font-size: 1.6rem;
+  font-size: calc(1.6rem * var(--ui-font-scale));
   font-weight: 700;
   margin-bottom: 0.75rem;
 }
 .email-visual-editor h2 {
-  font-size: 1.3rem;
+  font-size: calc(1.3rem * var(--ui-font-scale));
   font-weight: 700;
   margin-bottom: 0.75rem;
 }
@@ -60,6 +60,7 @@
    targets and print/PDF output stay at their normal scale. */
 :root {
   --ui-scale: 1;
+  --ui-font-scale: 1.1;
 }
 @media screen and (min-width: 1024px) {
   :root {
@@ -76,26 +77,26 @@
    documents and retain their print typography. Portalled menus and dialogs
    use these same tokens as the rest of the UI. */
 @theme {
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1rem;
-  --text-sm: 0.8125rem;
-  --text-sm--line-height: 1.125rem;
-  --text-base: 0.875rem;
-  --text-base--line-height: 1.25rem;
-  --text-lg: 1rem;
-  --text-lg--line-height: 1.375rem;
-  --text-xl: 1.125rem;
-  --text-xl--line-height: 1.5rem;
-  --text-2xl: 1.375rem;
-  --text-2xl--line-height: 1.625rem;
-  --text-3xl: 1.625rem;
-  --text-3xl--line-height: 1.875rem;
-  --text-4xl: 2rem;
-  --text-4xl--line-height: 2.25rem;
-  --text-5xl: 2.375rem;
-  --text-5xl--line-height: 2.5rem;
-  --text-6xl: 2.875rem;
-  --text-6xl--line-height: 3rem;
+  --text-xs: calc(0.75rem * var(--ui-font-scale));
+  --text-xs--line-height: calc(1rem * var(--ui-font-scale));
+  --text-sm: calc(0.8125rem * var(--ui-font-scale));
+  --text-sm--line-height: calc(1.125rem * var(--ui-font-scale));
+  --text-base: calc(0.875rem * var(--ui-font-scale));
+  --text-base--line-height: calc(1.25rem * var(--ui-font-scale));
+  --text-lg: calc(1rem * var(--ui-font-scale));
+  --text-lg--line-height: calc(1.375rem * var(--ui-font-scale));
+  --text-xl: calc(1.125rem * var(--ui-font-scale));
+  --text-xl--line-height: calc(1.5rem * var(--ui-font-scale));
+  --text-2xl: calc(1.375rem * var(--ui-font-scale));
+  --text-2xl--line-height: calc(1.625rem * var(--ui-font-scale));
+  --text-3xl: calc(1.625rem * var(--ui-font-scale));
+  --text-3xl--line-height: calc(1.875rem * var(--ui-font-scale));
+  --text-4xl: calc(2rem * var(--ui-font-scale));
+  --text-4xl--line-height: calc(2.25rem * var(--ui-font-scale));
+  --text-5xl: calc(2.375rem * var(--ui-font-scale));
+  --text-5xl--line-height: calc(2.5rem * var(--ui-font-scale));
+  --text-6xl: calc(2.875rem * var(--ui-font-scale));
+  --text-6xl--line-height: calc(3rem * var(--ui-font-scale));
 }
 
 .product-editor {
@@ -116,7 +117,7 @@
   .product-editor[data-quantity-only='true'] .product-editor-heading {
     display: grid;
     gap: 8px;
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-font-scale));
     color: var(--muted);
   }
   .product-editor[data-quantity-only='true'] .product-editor-row {
@@ -159,7 +160,7 @@
   min-width: 0;
 }
 .product-editor-number {
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -170,7 +171,7 @@
   grid-column: 2 / 4;
 }
 .product-editor-mode-text {
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-font-scale));
   color: var(--muted);
 }
 .product-editor-vat {
@@ -194,7 +195,7 @@
   border-radius: 8px;
 }
 .product-editor-label {
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-font-scale));
   color: var(--muted);
 }
 @container (min-width: 640px) {
@@ -206,7 +207,7 @@
   .product-editor-heading {
     display: grid;
     padding: 8px 0;
-    font-size: 11px;
+    font-size: calc(11px * var(--ui-font-scale));
     color: var(--muted);
     border-bottom: 1px solid var(--border);
   }
@@ -670,13 +671,13 @@ body {
 .auth-eyebrow {
   margin-top: 22px;
   color: var(--slama-gold-deep);
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-font-scale));
   font-weight: 800;
   letter-spacing: 0.16em;
 }
 .login-card h1 {
   margin: 12px 0 10px;
-  font-size: 32px;
+  font-size: calc(32px * var(--ui-font-scale));
   letter-spacing: -1.3px;
 }
 .login-card p {
@@ -714,7 +715,7 @@ body {
 .login-card small {
   margin-top: 20px;
   color: #a29584;
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-font-scale));
 }
 .auth-error {
   width: 100%;
@@ -724,7 +725,7 @@ body {
   border: 1px solid var(--error-border);
   color: var(--error-text);
   background: var(--error-bg);
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
 }
 .app-canvas {
   --topbar-height: var(--ui-topbar-height);
@@ -782,7 +783,7 @@ body {
   border: 1px solid transparent;
   border-radius: 0.75rem;
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: calc(0.6875rem * var(--ui-font-scale));
 }
 .mobile-nav-active {
   color: var(--accent);
@@ -946,7 +947,7 @@ body {
   align-items: center;
   gap: 18px;
   color: #6f6557;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-font-scale));
 }
 .topbar-actions button {
   position: relative;
@@ -1031,12 +1032,12 @@ body {
   white-space: nowrap;
 }
 .metric-value strong {
-  font-size: clamp(20px, 1.8vw, 31px);
+  font-size: calc(clamp(20px, 1.8vw, 31px) * var(--ui-font-scale));
   letter-spacing: -1.2px;
 }
 .metric-value span {
   color: var(--slama-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
 }
 .metric-value .positive {
   color: #197a45;
@@ -1054,7 +1055,7 @@ body {
 }
 .panel h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: calc(16px * var(--ui-font-scale));
   letter-spacing: -0.4px;
 }
 .legend {
@@ -1062,7 +1063,7 @@ body {
   gap: 22px;
   margin-top: 37px;
   color: var(--slama-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
 }
 .legend span,
 .chart-tooltip span {
@@ -1094,12 +1095,12 @@ body {
 }
 .forecast-summary strong {
   display: block;
-  font-size: 31px;
+  font-size: calc(31px * var(--ui-font-scale));
   letter-spacing: -1.3px;
 }
 .forecast-summary span {
   color: var(--slama-muted);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-font-scale));
 }
 .forecast-controls {
   display: flex;
@@ -1116,7 +1117,7 @@ body {
   border-radius: 24px;
   background: #fff;
   box-shadow: 0 1px 2px #f1e8d9;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
   font-weight: 650;
 }
 .icon-button {
@@ -1167,14 +1168,14 @@ body {
   flex-direction: column;
   justify-content: space-between;
   color: #aa9d89;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
 }
 .chart-months {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   padding: 0 8px;
   color: #aa9d89;
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
 }
 .chart-months .current-month {
   color: #4b3c28;
@@ -1191,10 +1192,10 @@ body {
   border-radius: 18px;
   background: rgba(255, 253, 248, 0.96);
   box-shadow: 0 10px 28px rgba(90, 66, 25, 0.13);
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
 }
 .chart-tooltip strong {
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
 }
 .chart-tooltip span {
   color: var(--slama-muted);
@@ -1223,7 +1224,7 @@ body {
   gap: 15px;
 }
 .text-button {
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
   font-weight: 650;
 }
 .risk-content {
@@ -1257,11 +1258,11 @@ body {
   box-shadow: inset 0 0 0 1px #f0e6d6;
 }
 .risk-donut strong {
-  font-size: 26px;
+  font-size: calc(26px * var(--ui-font-scale));
 }
 .risk-donut span {
   color: var(--slama-muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
 }
 .risk-breakdown {
   display: grid;
@@ -1270,14 +1271,14 @@ body {
 .risk-breakdown h3,
 .briefing-item h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-font-scale));
 }
 .risk-line {
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
   border-bottom: 1px dashed #eee3d3;
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
 }
 .risk-line span {
   display: flex;
@@ -1305,13 +1306,13 @@ body {
 .attention-count {
   display: block;
   margin-top: 30px;
-  font-size: 29px;
+  font-size: calc(29px * var(--ui-font-scale));
   letter-spacing: -1px;
 }
 .attention-count span {
   margin-left: 6px;
   color: var(--slama-muted);
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-font-scale));
   font-weight: 500;
   letter-spacing: 0;
 }
@@ -1323,7 +1324,7 @@ body {
   border-radius: 50%;
   color: #fff;
   background: #b6a68d;
-  font-size: 10px;
+  font-size: calc(10px * var(--ui-font-scale));
 }
 .briefing-item {
   display: flex;
@@ -1350,7 +1351,7 @@ body {
 .briefing-meta {
   margin: 0 0 8px;
   color: #a29787;
-  font-size: 10px;
+  font-size: calc(10px * var(--ui-font-scale));
   font-weight: 760;
 }
 .chips {
@@ -1364,7 +1365,7 @@ body {
   border-radius: 11px;
   color: #6c6254;
   background: #f8f1e5;
-  font-size: 11px;
+  font-size: calc(11px * var(--ui-font-scale));
   font-weight: 630;
 }
 [data-status='active'] {

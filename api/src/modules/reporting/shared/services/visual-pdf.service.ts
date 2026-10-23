@@ -2,6 +2,7 @@ import { Decimal } from 'decimal.js'
 
 import type { ReportAnalysis } from '../../../../contracts/generated/reporting/reporting.schemas.js'
 import { createDocumentCanvas, H, W } from '../../../../lib/documents/canvas.js'
+import { displayDate } from '../../../../lib/documents/display-date.js'
 import { AppError } from '../../../../lib/errors.js'
 import { drawReportDonut, isRingBreakdown, reportDonutHeight } from './report-breakdown-pdf.js'
 import {
@@ -135,10 +136,13 @@ export async function renderVisualPdf(snapshot: ReportAnalysis, language: 'fr' |
     y += 9
     wrap(snapshot.companyName, 10, ink, true)
     if (c.pageCount === 1) wrap(title, 16, ink, true)
-    wrap(`${snapshot.filters.from} - ${snapshot.filters.to} · ${snapshot.filters.timezone}`, 9)
+    wrap(
+      `${displayDate(snapshot.filters.from)} - ${displayDate(snapshot.filters.to)} · ${snapshot.filters.timezone}`,
+      9,
+    )
     if (c.pageCount === 1)
       wrap(
-        `${tr('Données figées au', 'Captured at')} ${snapshot.capturedAt} · ${tr('définitions', 'definitions')} ${snapshot.metricDefinitionVersion}`,
+        `${tr('Données figées au', 'Captured at')} ${displayDate(snapshot.capturedAt)} · ${tr('définitions', 'definitions')} ${snapshot.metricDefinitionVersion}`,
         8,
       )
     y += 7

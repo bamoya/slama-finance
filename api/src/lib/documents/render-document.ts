@@ -1,4 +1,5 @@
 import { createDocumentCanvas, H, W } from './canvas.js'
+import { displayDate } from './display-date.js'
 import { documentLabel } from './document-labels.js'
 import type { DocumentImages, DocumentModel } from './types.js'
 import { text } from './types.js'
@@ -26,18 +27,28 @@ export async function renderDocument(
   // Translate generated labels only, never product names, customer data or custom terms.
   model = {
     ...model,
-    reference: model.reference ? [label(model.reference[0]), model.reference[1]] : undefined,
+    date: displayDate(model.date),
+    reference: model.reference?.[1]
+      ? [label(model.reference[0]), displayDate(model.reference[1])]
+      : undefined,
     totals: model.totals?.map(([key, value]) => [label(key), value]),
-    sections: model.sections?.map((section) => ({ ...section, title: label(section.title) })),
+    sections: model.sections
+      ?.filter((section) => section.text.trim())
+      .map((section) => ({ ...section, title: label(section.title) })),
     receipt: model.receipt
       ? {
           ...model.receipt,
           status: label(model.receipt.status),
           fields: model.receipt.fields.map(([key, value]) => [
             label(key),
-            key === 'Method' || key === 'Collection date' ? label(value) : value,
+            key === 'Method'
+              ? label(value)
+              : key === 'Collection date'
+                ? displayDate(value)
+                : value,
           ]),
           balances: model.receipt.balances.map(([key, value]) => [label(key), value]),
+          note: displayDate(model.receipt.note),
         }
       : undefined,
   }

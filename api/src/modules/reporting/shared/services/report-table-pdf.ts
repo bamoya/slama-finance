@@ -1,6 +1,7 @@
 import type { ReportSection } from '../../../../contracts/generated/reporting/reporting.schemas.js'
 import type { createDocumentCanvas } from '../../../../lib/documents/canvas.js'
 import { H, W } from '../../../../lib/documents/canvas.js'
+import { displayDate } from '../../../../lib/documents/display-date.js'
 import { frenchReportLabel } from './report-labels.js'
 import { reportTable } from './report-table.js'
 
@@ -45,6 +46,7 @@ export function drawReportTable(
         group.columns.map((column) => {
           const value = row[column.key]
           if (value == null) return '—'
+          if (column.key === 'date') return displayDate(String(value))
           if (column.kind === 'number')
             return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
               maximumFractionDigits: column.key === 'quantity' || column.key === 'weightKg' ? 3 : 2,

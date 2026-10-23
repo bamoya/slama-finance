@@ -20,11 +20,11 @@ export const clients = pgTable(
     registrationNumber: text('registration_number'),
     registrationCity: text('registration_city'),
     professionalTaxNumber: text('professional_tax_number'),
-    addressLine1: text('address_line1').notNull(),
+    addressLine1: text('address_line1'),
     addressLine2: text('address_line2'),
-    city: text('city').notNull(),
+    city: text('city'),
     postalCode: text('postal_code'),
-    countryCode: text('country_code').notNull().default('MA'),
+    countryCode: text('country_code'),
     deliveryAddressLine1: text('delivery_address_line1'),
     deliveryAddressLine2: text('delivery_address_line2'),
     deliveryCity: text('delivery_city'),
@@ -50,8 +50,7 @@ export const clients = pgTable(
     check(
       'client_identity_valid',
       sql`(
-    (${t.type} = 'individual' and ${t.firstName} is not null and ${t.lastName} is not null
-      and length(trim(${t.firstName})) > 0 and length(trim(${t.lastName})) > 0
+    (${t.type} = 'individual' and (length(trim(coalesce(${t.firstName},''))) > 0 or length(trim(coalesce(${t.lastName},''))) > 0)
       and ${t.legalName} is null and ${t.tradeName} is null and ${t.contactName} is null
       and ${t.ice} is null and ${t.taxIdentifier} is null and ${t.registrationNumber} is null
       and ${t.registrationCity} is null and ${t.professionalTaxNumber} is null)
@@ -59,22 +58,12 @@ export const clients = pgTable(
   )`,
     ),
     check(
-      'client_rc_pair',
-      sql`(${t.registrationNumber} is null) = (${t.registrationCity} is null)`,
-    ),
-    check(
       'client_billing_address',
-      sql`length(trim(${t.addressLine1})) > 0 and length(trim(${t.city})) > 0 and ${t.countryCode} ~ '^[A-Z]{2}$'`,
+      sql`${t.countryCode} is null or ${t.countryCode} ~ '^[A-Z]{2}$'`,
     ),
     check(
       'client_delivery_address',
-      sql`(
-    (${t.deliveryAddressLine1} is null and ${t.deliveryAddressLine2} is null and ${t.deliveryCity} is null
-      and ${t.deliveryPostalCode} is null and ${t.deliveryCountryCode} is null)
-    or (${t.deliveryAddressLine1} is not null and length(trim(${t.deliveryAddressLine1})) > 0
-      and ${t.deliveryCity} is not null and length(trim(${t.deliveryCity})) > 0
-      and ${t.deliveryCountryCode} is not null and ${t.deliveryCountryCode} ~ '^[A-Z]{2}$')
-  )`,
+      sql`${t.deliveryCountryCode} is null or ${t.deliveryCountryCode} ~ '^[A-Z]{2}$'`,
     ),
     check('client_locale_valid', sql`${t.locale} in ('fr-MA', 'en-GB')`),
     check('client_version_positive', sql`${t.version} > 0`),

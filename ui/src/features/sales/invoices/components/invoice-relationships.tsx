@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
 
 import type { Invoice } from '../../../../api/generated/models'
+import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
+import { DocumentTemplateSummary } from '../../components/document-template-summary'
 
 export function InvoiceRelationships({
   invoice,
@@ -19,6 +21,7 @@ export function InvoiceRelationships({
   return (
     <section className="grid gap-3 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
       <h2 className="text-lg font-bold">{t('details')}</h2>
+      <DocumentTemplateSummary templateId={invoice.templateId} />
       <div className="text-sm">
         <span className="text-[var(--muted)]">{t('client')}</span>
         <br />
@@ -31,12 +34,12 @@ export function InvoiceRelationships({
       <div className="text-sm">
         <span className="text-[var(--muted)]">{t('issueDate')}</span>
         <br />
-        {invoice.issueDate}
+        {displayDate(invoice.issueDate)}
       </div>
       <div className="text-sm">
         <span className="text-[var(--muted)]">{t('dueDate')}</span>
         <br />
-        {invoice.dueDate ?? t('notSet')}
+        {invoice.dueDate ? displayDate(invoice.dueDate) : t('notSet')}
       </div>
       {(invoice.sourceEstimateId || invoice.sourceEstimateNumber) && (
         <Can permission="estimates.read">

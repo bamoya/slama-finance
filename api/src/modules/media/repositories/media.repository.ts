@@ -21,6 +21,7 @@ export function createMediaRepository(database: () => Database) {
       version: number,
       tx: Transaction,
       design: 'saved' | 'latest' = 'saved',
+      selectedTemplateId?: string | null,
     ) {
       let deliveryAppearance
       if (type === 'delivery_note') {
@@ -64,9 +65,14 @@ export function createMediaRepository(database: () => Database) {
                 .where(eq(table.id, id))
       if (type !== 'delivery_note' && (!row || row.version !== version || row.status === 'draft'))
         throw new AppError(409, 'DOCUMENT_CHANGED', 'Document is not ready for rendering.')
-      if (design === 'saved') return row!.appearance as Record<string, unknown>
+      if (design === 'saved')
+        return {
+          appearance: row!.appearance as Record<string, unknown>,
+          templateId: row!.templateId ?? null,
+          templateVersion: null,
+        }
       const [company] = await tx.select().from(companySettings).limit(1)
-      const templateId = company?.defaultTemplateId
+      const templateId = selectedTemplateId ?? company?.defaultTemplateId
       const [template] = templateId
         ? await tx.select().from(documentTemplates).where(eq(documentTemplates.id, templateId))
         : []
@@ -77,16 +83,20 @@ export function createMediaRepository(database: () => Database) {
           'The company default template is unavailable.',
         )
       return {
-        layout: template?.layout ?? 'classic',
-        density: template?.density ?? 'standard',
-        accentColor: template?.accentColor ?? '#ad7d1d',
-        logoAssetId: template?.logoAssetId ?? company?.logoAssetId,
-        signatureAssetId: template?.signatureAssetId ?? null,
-        showSignature: template?.showSignature ?? false,
-        showBankDetails: template?.showBankDetails ?? true,
-        showPaymentTerms: template?.showPaymentTerms ?? true,
-        footerText: template?.footerText ?? null,
-      } as Record<string, unknown>
+        templateId: template?.id ?? null,
+        templateVersion: template?.version ?? null,
+        appearance: {
+          layout: template?.layout ?? 'classic',
+          density: template?.density ?? 'standard',
+          accentColor: template?.accentColor ?? '#ad7d1d',
+          logoAssetId: template?.logoAssetId ?? company?.logoAssetId,
+          signatureAssetId: template?.signatureAssetId ?? null,
+          showSignature: template?.showSignature ?? false,
+          showBankDetails: template?.showBankDetails ?? true,
+          showPaymentTerms: template?.showPaymentTerms ?? true,
+          footerText: template?.footerText ?? null,
+        } as Record<string, unknown>,
+      }
     },
     // Shared with settings/identity writes: serialize attachment, deletion and permission changes.
     lock: (tx: Transaction) => tx.execute(sql`select pg_advisory_xact_lock(73619001)`),

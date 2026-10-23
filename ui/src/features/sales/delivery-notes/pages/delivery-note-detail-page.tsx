@@ -10,9 +10,11 @@ import { PageHeader } from '../../../../components/management/page-header'
 import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
+import { displayDate } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { Can } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
+import { DocumentTemplateSummary } from '../../components/document-template-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { SalesCancellationDialog } from '../../components/sales-cancellation-dialog'
 import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
@@ -82,7 +84,9 @@ export function DeliveryNoteDetailPage() {
       <PageHeader
         eyebrow={translate('Sales')}
         title={row.number ?? translate('Draft delivery note')}
-        description={translate('Delivery planned for {{value0}}', { value0: row.deliveryDate })}
+        description={translate('Delivery planned for {{value0}}', {
+          value0: displayDate(row.deliveryDate),
+        })}
         actions={
           <div className="flex flex-wrap gap-2">
             {row.status === 'draft' && (
@@ -125,7 +129,12 @@ export function DeliveryNoteDetailPage() {
             )}
             {row.status !== 'draft' && (
               <Can permission="delivery_notes.update">
-                <RegeneratePdfDialog documentType="delivery_note" id={row.id} disabled={busy} />
+                <RegeneratePdfDialog
+                  documentType="delivery_note"
+                  id={row.id}
+                  disabled={busy}
+                  currentTemplateId={row.templateId}
+                />
               </Can>
             )}
             {row.status === 'delivered' && (
@@ -215,6 +224,7 @@ export function DeliveryNoteDetailPage() {
         <div className="grid content-start gap-section">
           <section className="grid gap-3 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
             <h2 className="text-lg font-bold">{translate('Details')}</h2>
+            <DocumentTemplateSummary templateId={row.templateId} />
             <p className="text-sm">
               <span className="text-[var(--muted)]">{t('client')}</span>
               <br />
