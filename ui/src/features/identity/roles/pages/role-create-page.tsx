@@ -35,14 +35,9 @@ export function RoleCreatePage() {
               name: 'name',
               label: translate('Role name'),
               get hint() {
-                return translate('For example: Sales team')
-              },
-            },
-            {
-              name: 'key',
-              label: translate('Role key'),
-              get hint() {
-                return translate('Lowercase letters, numbers and hyphens; for example sales-team.')
+                return translate(
+                  'Spaces, hyphens and underscores are allowed. The internal key is generated automatically.',
+                )
               },
             },
             {

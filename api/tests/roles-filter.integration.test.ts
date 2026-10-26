@@ -45,6 +45,46 @@ describe('role deletion and staff role filters', () => {
       await fixture.client`INSERT INTO role_permissions (role_id,permission_id) SELECT ${record!.id}, id FROM permissions WHERE key=${permission}`
     return record!.id as string
   }
+  it('generates stable unique keys from free-text role names, including accents and separators', async () => {
+    const create = (name: string) =>
+      app.inject({ method: 'POST', url: '/v1/rbac/roles', headers, cookies, payload: { name } })
+    const first = await create('Équipe - vente_interne')
+    expect(first.statusCode, first.body).toBe(201)
+    expect(first.json()).toMatchObject({
+      name: 'Équipe - vente_interne',
+      key: 'equipe-vente-interne',
+      permissionKeys: [],
+    })
+    const second = await create('Équipe - vente_interne')
+    expect(second.statusCode, second.body).toBe(201)
+    expect(second.json().key).toMatch(/^equipe-vente-interne-[a-f0-9]{8}$/)
+    const numeric = await create('2026 - Support')
+    expect(numeric.statusCode, numeric.body).toBe(201)
+    expect(numeric.json().key).toBe('role-2026-support')
+    const blank = await create('  ')
+    expect(blank.statusCode).toBe(400)
+  })
+  it('accepts explicit hyphen/underscore keys and keeps duplicate-key protection', async () => {
+    const payload = { name: 'Back-office_team', key: 'back_office-team' }
+    const create = () =>
+      app.inject({ method: 'POST', url: '/v1/rbac/roles', headers, cookies, payload })
+    expect((await create()).statusCode).toBe(201)
+    expect((await create()).statusCode).toBe(409)
+    expect((await fixture.client`select key from roles where key='admin'`)[0]!.key).toBe('admin')
+  })
+  it('serializes automatic key allocation for concurrent role creation', async () => {
+    const create = () =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/rbac/roles',
+        headers,
+        cookies,
+        payload: { name: 'Sales team' },
+      })
+    const results = await Promise.all([create(), create()])
+    expect(results.map((result) => result.statusCode)).toEqual([201, 201])
+    expect(new Set(results.map((result) => result.json().key)).size).toBe(2)
+  })
   async function user(name: string, roleIds: string[]) {
     const [record] =
       await fixture.client`INSERT INTO users (email,password_hash,first_name,last_name,must_change_password) VALUES (${name + '@example.test'},${passwordHash},${name},'Test',false) RETURNING id`

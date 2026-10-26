@@ -309,14 +309,13 @@ describe('API-integrated identity pages', () => {
   it('creates an empty role then navigates to permission setup', async () => {
     vi.mocked(api.createRole).mockResolvedValue({ ...role, permissionKeys: [] })
     const { location } = setup(<RoleCreatePage />, '/settings/roles/new')
-    fill('Role name', 'Viewer')
-    fill('Role key', 'viewer')
+    fill('Role name', 'Sales - back_office')
+    expect(screen.queryByLabelText('Role key')).not.toBeInTheDocument()
     fill('Description', 'Read-only access')
     fireEvent.click(screen.getByRole('button', { name: 'Create role' }))
     await waitFor(() => expect(location.history.at(-1)).toBe('/settings/roles/' + roleId))
     expect(api.createRole).toHaveBeenCalledWith({
-      name: 'Viewer',
-      key: 'viewer',
+      name: 'Sales - back_office',
       description: 'Read-only access',
     })
   })
@@ -326,7 +325,6 @@ describe('API-integrated identity pages', () => {
     )
     const { location } = setup(<RoleCreatePage />, '/settings/roles/new')
     fill('Role name', 'Viewer')
-    fill('Role key', 'viewer')
     fireEvent.click(screen.getByRole('button', { name: 'Create role' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('already exists')
     expect(location.history.at(-1)).toBe('/settings/roles/new')

@@ -38,6 +38,12 @@ historical records: referenced accounts must be archived instead. Archive remain
 sessions, preferences and role assignments through existing cascading constraints;
 document creator references use the existing `ON DELETE SET NULL` behavior.
 
+Role creation requires only a display name; spaces, hyphens, underscores and accents
+are allowed. The API generates a stable unique internal key, resolving collisions
+under the identity lock. Existing keys are unchanged. API callers may optionally
+provide a key using lowercase letters, numbers, hyphens or underscores; explicit
+duplicate keys are rejected. The UI does not require manual key entry.
+
 Role permission replacement accepts stable permission slugs using the existing
 registry `key`: `PUT /v1/rbac/roles/:roleId/permissions` with
 `{ "permissionKeys": ["roles.read", "staff.create"] }`. UUID permission IDs are

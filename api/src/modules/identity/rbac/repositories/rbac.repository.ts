@@ -95,7 +95,15 @@ export function createRbacRepository(database: () => Database) {
         .where(eq(userRoles.roleId, roleId))
       return rows.map((row) => row.id)
     },
-    async createRole(input: CreateRole, tx: Transaction) {
+    async roleKeyExists(key: string, tx: Transaction) {
+      const [role] = await tx
+        .select({ id: roles.id })
+        .from(roles)
+        .where(eq(roles.key, key))
+        .limit(1)
+      return Boolean(role)
+    },
+    async createRole(input: CreateRole & { key: string }, tx: Transaction) {
       const [role] = await tx.insert(roles).values(input).returning()
       return { ...role!, permissionKeys: [] as string[] }
     },

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 import type { CreateRole } from '../../../../contracts/generated/identity/rbac.schemas.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
@@ -64,7 +66,32 @@ export function createRbacService(
         const keys = (await repository.permissionsFor(actorId, tx)).map((item) => item.key)
         if (!(await repository.activeActor(actorId, tx)) || !keys.includes('roles.create'))
           throw new AppError(403, 'FORBIDDEN', 'Forbidden')
-        return repository.createRole(input, tx)
+        const name = input.name.trim()
+        if (name.length < 2)
+          throw new AppError(
+            400,
+            'VALIDATION_ERROR',
+            'Enter a role name of at least two characters.',
+            { name: ['Enter a role name of at least two characters.'] },
+          )
+        let key = input.key
+        if (!key) {
+          let base = name
+            .normalize('NFKD')
+            .replace(/\p{M}/gu, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+          if (!/^[a-z]/.test(base)) base = `role-${base || 'custom'}`
+          base = base.slice(0, 60).replace(/-+$/, '')
+          key = base
+          while (await repository.roleKeyExists(key, tx))
+            key = `${base}-${randomUUID().slice(0, 8)}`
+        }
+        return repository.createRole(
+          { ...input, key, name, description: input.description?.trim() },
+          tx,
+        )
       }),
     deleteRole: (roleId: string, actorId: string) =>
       database().transaction(async (tx) => {

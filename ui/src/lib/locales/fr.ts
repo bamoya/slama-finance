@@ -1,5 +1,8 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Spaces, hyphens and underscores are allowed. The internal key is generated automatically.':
+    'Les espaces, tirets et tirets bas sont autorisés. La clé interne est générée automatiquement.',
+  'DD-MM-YYYY': 'JJ-MM-AAAA',
   'Document template': 'Modèle du document',
   'Saved template': 'Modèle enregistré',
   'Open calendar': 'Ouvrir le calendrier',

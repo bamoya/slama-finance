@@ -179,8 +179,9 @@ components:
       properties:
         key:
           type: string
-          pattern: ^[a-z][a-z0-9-]*$
+          pattern: ^[a-z][a-z0-9_-]*$
           maxLength: 80
+          description: Optional stable identifier. Generated uniquely from the role name when omitted. Lowercase letters, numbers, hyphens and underscores are allowed.
         name:
           type: string
           minLength: 2
@@ -189,7 +190,6 @@ components:
           type: string
           maxLength: 500
       required:
-        - key
         - name
       additionalProperties: false
     PermissionAssignment:

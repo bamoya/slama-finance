@@ -65,6 +65,7 @@
 @media screen and (min-width: 1024px) {
   :root {
     --ui-scale: 0.8;
+    --ui-font-scale: 1.16;
     --ui-topbar-height: calc(60px * var(--ui-scale));
     font-size: calc(100% * var(--ui-scale));
   }
