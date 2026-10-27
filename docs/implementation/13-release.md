@@ -55,6 +55,20 @@ delivery identity, cleanup respects pending attachment references. Rehearse rest
 database plus private object storage together and verify usable old PDFs and login.
 Document recovery steps and operator retries; backups are not verified until restored.
 
+## Release branch and CI
+
+`slama` is the release branch, initially created from `master`. Both branches use
+the same `.github/workflows/publish-images.yml` workflow:
+
+- Pushes and pull requests run the existing quality, UI and API checks.
+- Successful pushes to `master` or `slama` publish API, UI and release images to
+  the same GHCR repositories, using immutable commit-SHA tags and digests.
+- The existing documentation-only change optimization applies to both branches;
+  checks still run, but image publication is skipped for documentation-only changes.
+- Other branches and pull requests do not publish images.
+- This does not introduce an automatic deployment, a mutable release tag or
+  different runtime secrets for the release branch.
+
 ## Release checklist
 
 - [ ] Accountant validates public invoice numbering and final document wording.
