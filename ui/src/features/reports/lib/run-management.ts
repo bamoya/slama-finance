@@ -1,4 +1,5 @@
 import type { ReportRun } from '../../../api/generated/schemas/reporting/reporting.schemas'
+import { numberFormatter } from '../../../lib/number-format'
 
 export function hasMissingFiles(row: ReportRun) {
   const output = row.configurationSnapshot.output
@@ -16,7 +17,7 @@ export const canCleanRun = (row: ReportRun) =>
 
 export function formatFileSize(bytes: number, language: string) {
   const unit = bytes >= 1048576 ? 'megabyte' : 'kilobyte'
-  return new Intl.NumberFormat(language, { style: 'unit', unit, maximumFractionDigits: 1 }).format(
+  return numberFormatter(language, { style: 'unit', unit, maximumFractionDigits: 1 }).format(
     bytes / (unit === 'megabyte' ? 1048576 : 1024),
   )
 }

@@ -6,6 +6,7 @@ import type {
   ReportSectionKey,
 } from '../../../api/generated/schemas/reporting/reporting.schemas'
 import { type StatItem, StatsGrid } from '../../../components/management/stats-grid'
+import { numberFormatter } from '../../../lib/number-format'
 
 type Metric = ReportSection['metrics'][number]
 const dashboardMetrics = [
@@ -29,9 +30,9 @@ export function ReportSummary({
   const { t, i18n } = useTranslation('reportVisuals')
   const locale = i18n.resolvedLanguage ?? 'en'
   const money = (value: number, currency: string) =>
-    new Intl.NumberFormat(locale, { style: 'currency', currency }).format(value)
+    numberFormatter(locale, { style: 'currency', currency }).format(value)
   const number = (value: number, fraction = 0) =>
-    new Intl.NumberFormat(locale, { maximumFractionDigits: fraction }).format(value)
+    numberFormatter(locale, { maximumFractionDigits: fraction }).format(value)
   const currencies = data.currencies.length ? data.currencies : [data.filters.currency ?? 'MAD']
   const products = data.sections.find((section) => section.key === 'sales_by_product')
   const metricValue = (section: ReportSection | undefined, key: string, currency: string) =>

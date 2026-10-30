@@ -5,6 +5,7 @@ import type { ReportAnalysis } from '../../../api/generated/schemas/reporting/re
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../components/ui/chart'
 import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
+import { numberFormatter } from '../../../lib/number-format'
 import { AnalyticsPanel } from './analytics-panel'
 
 export function VisualTrend({
@@ -20,9 +21,7 @@ export function VisualTrend({
 
   const { t, i18n } = useTranslation('reportVisuals')
   const money = (value: number) =>
-    new Intl.NumberFormat(i18n.resolvedLanguage ?? 'en', { style: 'currency', currency }).format(
-      value,
-    )
+    numberFormatter(i18n.resolvedLanguage ?? 'en', { style: 'currency', currency }).format(value)
   const series = (snapshot: ReportAnalysis | undefined, section: string) =>
     snapshot?.sections
       .find((item) => item.key === section)
@@ -90,7 +89,7 @@ export function VisualTrend({
             tickLine={false}
             axisLine={false}
             tickFormatter={(value: number) =>
-              new Intl.NumberFormat(i18n.resolvedLanguage ?? 'en', { notation: 'compact' }).format(
+              numberFormatter(i18n.resolvedLanguage ?? 'en', { maximumFractionDigits: 0 }).format(
                 value,
               )
             }

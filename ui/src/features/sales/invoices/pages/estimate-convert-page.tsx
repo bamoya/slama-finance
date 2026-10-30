@@ -11,6 +11,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { refreshEstimates, useEstimate } from '../../estimates/queries'
 import { refreshInvoices, useEstimateInvoices, useInvoiceActions } from '../queries'
 
@@ -68,7 +69,7 @@ export function EstimateConvertPage() {
         <section className="grid gap-4 rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">
           <h2 className="text-lg font-bold">{translate('Source estimate')}</h2>
           <p>
-            {row.number ?? translate('Draft')} · {row.total} {row.currency}
+            {row.number ?? translate('Draft')} · {displayNumber(row.total)} {row.currency}
           </p>
           <p className="text-sm text-[var(--muted)]">
             {translate('Status:')} {row.status}

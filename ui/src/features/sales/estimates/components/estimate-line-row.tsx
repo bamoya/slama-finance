@@ -10,6 +10,7 @@ import { Input } from '../../../../components/ui/input'
 import { Select, SelectOption } from '../../../../components/ui/select'
 import { Switch } from '../../../../components/ui/switch'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { useProducts } from '../../../products'
 type Line = EstimateInput['lines'][number]
 
@@ -39,7 +40,7 @@ export function EstimateLineRow({
         .filter((v) => !v.archivedAt)
         .map((v) => ({
           value: v.id,
-          label: `${product.name} · ${v.weightG} g`,
+          label: `${product.name} · ${displayNumber(v.weightG)} g`,
           productName: product.name,
           price: v.pricePerItem,
         })),

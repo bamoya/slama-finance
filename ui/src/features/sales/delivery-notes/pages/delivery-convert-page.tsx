@@ -15,6 +15,7 @@ import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { validationMessage } from '../../../../lib/error-messages'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { TemplatePicker } from '../../components/template-picker'
 import { refreshInvoices, useInvoiceActions } from '../../invoices/queries'
 import { refreshDeliveries, useDeliveryNote, useDeliveryNotes } from '../queries'
@@ -190,7 +191,8 @@ function Editor({ note }: { note: NonNullable<ReturnType<typeof useDeliveryNote>
                     <span className="self-center text-sm font-semibold">
                       {source?.productName}
                       <small className="block font-normal text-[var(--muted)]">
-                        {source?.noteNumber} · {source?.remainingBillableQuantity}{' '}
+                        {source?.noteNumber} ·{' '}
+                        {displayNumber(source?.remainingBillableQuantity ?? 0)}{' '}
                         {translate('available')}
                       </small>
                     </span>
@@ -285,7 +287,7 @@ function Editor({ note }: { note: NonNullable<ReturnType<typeof useDeliveryNote>
                   )
                   .map((item) => ({
                     value: item.id,
-                    label: `${item.noteNumber} · ${item.productName} · ${t('availableQuantity', { quantity: item.remainingBillableQuantity })}`,
+                    label: `${item.noteNumber} · ${item.productName} · ${t('availableQuantity', { quantity: displayNumber(item.remainingBillableQuantity) })}`,
                     keywords: [item.productReference ?? ''],
                   }))}
                 placeholder={t('addDeliveredProduct')}

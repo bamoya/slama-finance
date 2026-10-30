@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Invoice } from '../../../../api/generated/models'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 
 export function InvoiceBalance({ invoice }: { invoice: Invoice }) {
   useUiLanguage()
@@ -21,31 +22,31 @@ export function InvoiceBalance({ invoice }: { invoice: Invoice }) {
         <div>
           <dt className="text-[var(--muted)]">{t('total')}</dt>
           <dd className="font-semibold">
-            {invoice.total} {invoice.currency}
+            {displayNumber(invoice.total)} {invoice.currency}
           </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)]">{t('paidAmount')}</dt>
           <dd className="font-semibold">
-            {invoice.paidAmount} {invoice.currency}
+            {displayNumber(invoice.paidAmount)} {invoice.currency}
           </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)]">{t('pendingAmount')}</dt>
           <dd className="font-semibold">
-            {invoice.pendingAmount} {invoice.currency}
+            {displayNumber(invoice.pendingAmount)} {invoice.currency}
           </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)]">{t('outstandingAmount')}</dt>
           <dd className="font-semibold">
-            {invoice.outstandingAmount} {invoice.currency}
+            {displayNumber(invoice.outstandingAmount)} {invoice.currency}
           </dd>
         </div>
         <div>
           <dt className="text-[var(--muted)]">{t('availableBalance')}</dt>
           <dd className="font-semibold">
-            {invoice.availableBalance} {invoice.currency}
+            {displayNumber(invoice.availableBalance)} {invoice.currency}
           </dd>
         </div>
       </dl>

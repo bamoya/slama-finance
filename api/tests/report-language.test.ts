@@ -163,7 +163,7 @@ describe('scheduled report languages and visual parity', () => {
       language: 'en',
     })
     expect(text.mock.calls.map(([value]) => value)).toEqual(
-      expect.arrayContaining(['29', '30', '1,200', '0']),
+      expect.arrayContaining(['29', '30', '1\u00a0200', '0']),
     )
   })
 })

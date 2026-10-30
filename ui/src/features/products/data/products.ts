@@ -1,4 +1,5 @@
 import { translate } from '../../../lib/i18n'
+import { numberFormatter } from '../../../lib/number-format'
 export type Product = {
   id: string
   name: string
@@ -64,7 +65,7 @@ export const products: Product[] = [
 ]
 
 export const formatMoney = (amount: number) =>
-  new Intl.NumberFormat('fr-MA', {
+  numberFormatter('fr-MA', {
     style: 'currency',
     currency: 'MAD',
     maximumFractionDigits: 0,

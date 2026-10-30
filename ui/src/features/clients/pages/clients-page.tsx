@@ -15,6 +15,7 @@ import { buttonVariants } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Select, SelectOption } from '../../../components/ui/select'
 import { translate, useUiLanguage } from '../../../lib/i18n'
+import { displayNumber } from '../../../lib/number-format'
 import { Can, useAuthorization } from '../../identity'
 import { ClientActions } from '../components/client-actions'
 import { ClientBulkActions } from '../components/client-bulk-actions'
@@ -229,7 +230,7 @@ export function ClientsPage() {
                             {client.financialSummary?.currencies.length
                               ? client.financialSummary.currencies.map((summary) => (
                                   <p key={summary.currency} className="whitespace-nowrap">
-                                    {summary[key]} {summary.currency}
+                                    {displayNumber(summary[key])} {summary.currency}
                                   </p>
                                 ))
                               : '—'}

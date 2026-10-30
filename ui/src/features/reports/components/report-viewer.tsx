@@ -13,6 +13,7 @@ import { EmptyState } from '../../../components/management/page-state'
 import { StatsGrid } from '../../../components/management/stats-grid'
 import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
+import { displayNumber } from '../../../lib/number-format'
 import { Can } from '../../identity'
 import { formatReportInstant } from '../lib/schedule-display'
 
@@ -78,7 +79,7 @@ export function ReportViewer({
               <StatsGrid
                 items={section.metrics.map((metric) => ({
                   label: `${t(`metrics.${metric.key}`)}${metric.currency ? ` · ${metric.currency}` : ''}`,
-                  value: `${metric.value}${metric.unit === 'kg' ? ' kg' : metric.unit === 'money' && metric.currency ? ` ${metric.currency}` : ''}`,
+                  value: `${displayNumber(metric.value)}${metric.unit === 'kg' ? ' kg' : metric.unit === 'money' && metric.currency ? ` ${metric.currency}` : ''}`,
                   detail: t(`basis.${metric.timeBasis}`),
                 }))}
               />
@@ -129,19 +130,31 @@ export function ReportViewer({
                     render: (row) => (row.status ? t(`statuses.${row.status}`) : '—'),
                   },
                   { title: t('currency'), render: (row) => row.currency ?? '—' },
-                  { title: t('net'), render: (row) => row.net ?? '—', align: 'right' },
-                  { title: t('vat'), render: (row) => row.vat ?? '—', align: 'right' },
                   {
-                    title: t('amount'),
-                    render: (row) => row.amount ?? row.gross ?? '—',
+                    title: t('net'),
+                    render: (row) => (row.net == null ? '—' : displayNumber(row.net)),
                     align: 'right',
                   },
-                  { title: t('quantity'), render: (row) => row.quantity ?? '—', align: 'right' },
+                  {
+                    title: t('vat'),
+                    render: (row) => (row.vat == null ? '—' : displayNumber(row.vat)),
+                    align: 'right',
+                  },
+                  {
+                    title: t('amount'),
+                    render: (row) => displayNumber(row.amount ?? row.gross ?? '—'),
+                    align: 'right',
+                  },
+                  {
+                    title: t('quantity'),
+                    render: (row) => (row.quantity == null ? '—' : displayNumber(row.quantity)),
+                    align: 'right',
+                  },
                   {
                     title: t('weight'),
                     render: (row) => (
                       <span>
-                        {row.weightKg ?? '—'}
+                        {row.weightKg == null ? '—' : displayNumber(row.weightKg)}
                         {row.unknownWeightCount > 0 && (
                           <small className="block">
                             {t('unknownWeight', { count: row.unknownWeightCount })}
@@ -196,7 +209,7 @@ function ReportSeries({ section }: { section: ReportSection }) {
                   key={`${point.date}-${point.key}-${index}`}
                   className="grid w-20 gap-2 text-center"
                 >
-                  <span className="text-xs tabular-nums">{point.value}</span>
+                  <span className="text-xs tabular-nums">{displayNumber(point.value)}</span>
                   <div className="flex h-32 items-end justify-center">
                     <div
                       className="w-8 rounded-t bg-[var(--accent)]"

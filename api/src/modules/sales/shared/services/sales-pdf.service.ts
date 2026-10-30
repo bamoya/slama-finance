@@ -1,6 +1,7 @@
 import { documentTitle } from '../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../lib/documents/render-document.js'
 import { type DocumentImages, party, record, text } from '../../../../lib/documents/types.js'
+import { displayNumber } from '../../../../lib/number-format.js'
 import type {
   EstimateLineRow,
   EstimateRow,
@@ -29,7 +30,9 @@ export async function renderSalesPdf(
         'validUntil' in row ? (row.validUntil ?? '') : (row.dueDate ?? ''),
       ],
       lines: lines.map((line) => ({
-        name: line.productName + (line.packageWeightG ? ` · ${line.packageWeightG} g` : ''),
+        name:
+          line.productName +
+          (line.packageWeightG ? ` · ${displayNumber(line.packageWeightG)} g` : ''),
         quantity: String(line.quantity),
         price: line.unitPrice,
         total: line.totalAmount,

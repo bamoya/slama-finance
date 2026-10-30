@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '../../../components/ui/toggle-group'
 import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
+import { displayNumber } from '../../../lib/number-format'
 import { useAuthorization } from '../../identity'
 import {
   listDeliveryNotesQuerySchema,
@@ -249,9 +250,9 @@ export function ClientRelatedRecords({
                           </td>
                           <td className="px-5 py-4 tabular-nums">
                             {'total' in item
-                              ? `${item.total} ${item.currency}`
+                              ? `${displayNumber(item.total)} ${item.currency}`
                               : 'amount' in item
-                                ? `${item.amount} ${item.currency}`
+                                ? `${displayNumber(item.amount)} ${item.currency}`
                                 : '—'}
                           </td>
                         </tr>

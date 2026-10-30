@@ -120,12 +120,12 @@ describe('canonical document preview', () => {
           if (kind === 'delivery') {
             expect(result.html).toContain('Réceptionnaire / signature')
             expect(result.html).not.toContain('Prix unitaire')
-            expect(result.html).not.toContain('700.00')
+            expect(result.html).not.toContain('700,00')
           }
           if (kind === 'payment_receipt') {
             expect(result.html).toContain('Chèque reçu — en attente d’encaissement')
-            expect(result.html).toContain('1500.00 MAD')
-            expect(result.html).toContain('3500.00 MAD')
+            expect(result.html).toContain('1\u00a0500,00 MAD')
+            expect(result.html).toContain('3\u00a0500,00 MAD')
             expect(result.html).not.toContain('Nom du produit')
             expect(result.html).not.toContain('Bank details from')
           }
@@ -159,7 +159,7 @@ describe('canonical document preview', () => {
         for (const page of pages.filter((page) => /Item \d+</.test(page)))
           expect(page.match(/>Nom du produit<\/text>/g)).toHaveLength(1)
         for (let index = 1; index <= 45; index++) expect(result.html).toContain(`Item ${index}<`)
-        expect(result.html).toContain('4500.00 MAD')
+        expect(result.html).toContain('4\u00a0500,00 MAD')
       })
     }
   it.each(layouts)('compact density fits more rows for %s', async (layout) => {

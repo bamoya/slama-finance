@@ -6,6 +6,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { useAuthorization } from '../../../identity'
 import { usePayments } from '../../payments/queries'
 
@@ -41,7 +42,7 @@ export function InvoicePaymentHistory({ invoice }: { invoice: Invoice }) {
               </div>
               <div className="flex items-center gap-3">
                 <strong>
-                  {payment.amount} {payment.currency}
+                  {displayNumber(payment.amount)} {payment.currency}
                 </strong>
                 <StatusBadge
                   label={t(payment.status)}

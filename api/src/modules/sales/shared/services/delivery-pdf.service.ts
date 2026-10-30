@@ -1,6 +1,7 @@
 import { documentTitle } from '../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../lib/documents/render-document.js'
 import { type DocumentImages, party, record } from '../../../../lib/documents/types.js'
+import { displayNumber } from '../../../../lib/number-format.js'
 import type {
   DeliveryLineRow,
   DeliveryNoteRow,
@@ -20,7 +21,9 @@ export async function renderDeliveryPdf(
       client: [party(row.clientSnapshot)[0] ?? '', row.deliveryAddress].filter(Boolean),
       date: row.deliveryDate,
       lines: lines.map((line) => ({
-        name: line.productName + (line.packageWeightG ? ` · ${line.packageWeightG} g` : ''),
+        name:
+          line.productName +
+          (line.packageWeightG ? ` · ${displayNumber(line.packageWeightG)} g` : ''),
         quantity: String(line.quantity),
       })),
       sections: row.instructions ? [{ title: 'Instructions', text: row.instructions }] : [],

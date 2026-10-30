@@ -15,6 +15,7 @@ import {
 } from '../../../components/ui/collapsible'
 import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
+import { displayNumber } from '../../../lib/number-format'
 import { cn } from '../../../lib/utils'
 import { useClientActivity } from '../../sales'
 import {
@@ -91,10 +92,10 @@ function ActivityBranch({ node, filtered }: { node: ActivityNode; filtered: bool
                 />
               )}
               <div className="text-right text-sm tabular-nums">
-                {node.amount && <p className="font-semibold">{node.amount}</p>}
+                {node.amount && <p className="font-semibold">{displayNumber(node.amount)}</p>}
                 {node.outstanding && (
                   <p className="text-xs text-[var(--muted)]">
-                    {t('outstanding')}: {node.outstanding}
+                    {t('outstanding')}: {displayNumber(node.outstanding)}
                   </p>
                 )}
               </div>

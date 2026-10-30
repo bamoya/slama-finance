@@ -6,6 +6,7 @@ import type { ReportSection } from '../../../api/generated/schemas/reporting/rep
 import { Button } from '../../../components/ui/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../components/ui/chart'
 import { translate, useUiLanguage } from '../../../lib/i18n'
+import { numberFormatter } from '../../../lib/number-format'
 import { AnalyticsPanel } from './analytics-panel'
 type ReportVisualPoint = NonNullable<ReportSection['visuals']>[number]
 
@@ -56,7 +57,7 @@ export function VisualBreakdown({
       : entries.reduce((sum, point) => sum + point.value, 0)
   const max = Math.max(1, ...entries.map((point) => point.value))
   const format = (point: (typeof entries)[number]) =>
-    new Intl.NumberFormat(
+    numberFormatter(
       i18n.resolvedLanguage ?? 'en',
       point.unit === 'money' && point.currency
         ? { style: 'currency', currency: point.currency }

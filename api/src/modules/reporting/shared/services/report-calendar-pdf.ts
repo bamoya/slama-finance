@@ -1,4 +1,5 @@
 import type { createDocumentCanvas } from '../../../../lib/documents/canvas.js'
+import { numberFormatter } from '../../../../lib/number-format.js'
 
 type Canvas = Awaited<ReturnType<typeof createDocumentCanvas>>
 export function collectionMonthHeight(dates: string[]) {
@@ -77,9 +78,8 @@ export function drawCollectionMonth(
     const ink = intensity > 0.66 ? '#ffffff' : '#26322e'
     c.rect(x, y, cellWidth - 3, 30, fill)
     c.text(String(day), x + 4, y + 3, 7, ink)
-    const label = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 })
-      .format(amount)
-      .replace(/[\u00a0\u202f]/g, ' ')
+    const label = numberFormatter(locale, { maximumFractionDigits: 2 }).format(amount)
+
     const size = Math.min(8, (8 * (cellWidth - 10)) / Math.max(1, c.measure(label, 8, 'bold')))
     c.text(label, x + 4, y + 15, size, ink, 'bold')
   }

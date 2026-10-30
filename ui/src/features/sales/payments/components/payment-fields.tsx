@@ -6,6 +6,7 @@ import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { Select, SelectOption } from '../../../../components/ui/select'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 
 export type PaymentMethod = PaymentInput['method']
 export type PaymentState = PaymentInput['status']
@@ -95,7 +96,7 @@ export function PaymentFields({
             )
             .map((invoice) => ({
               value: invoice.id,
-              label: `${invoice.number ?? t('draftInvoice')} · ${invoice.clientDisplayName} · ${invoice.availableBalance} ${invoice.currency}`,
+              label: `${invoice.number ?? t('draftInvoice')} · ${invoice.clientDisplayName} · ${displayNumber(invoice.availableBalance)} ${invoice.currency}`,
               keywords: [invoice.clientDisplayName, invoice.number ?? ''],
             }))}
           placeholder={t('selectInvoice')}
@@ -120,7 +121,7 @@ export function PaymentFields({
           />
           {available && (
             <span className="text-xs font-normal text-[var(--muted)]">
-              {t('paymentAmountHint', available)}
+              {t('paymentAmountHint', { ...available, amount: displayNumber(available.amount) })}
             </span>
           )}
         </label>

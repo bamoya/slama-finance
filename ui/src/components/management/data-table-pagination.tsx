@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 import { useTranslation } from 'react-i18next'
 
 import { registerTranslations, useUiLanguage } from '../../lib/i18n'
+import { displayNumber } from '../../lib/number-format'
 import { Button } from '../ui/button'
 import { Select, SelectGroup, SelectOption } from '../ui/select'
 
@@ -61,9 +62,9 @@ export function DataTablePagination(props: Props) {
     >
       <span className="text-muted-foreground tabular-nums" aria-live="polite">
         {t('range', {
-          from,
-          to: from ? Math.min((pageIndex + 1) * pageSize, props.total) : 0,
-          total: props.total,
+          from: displayNumber(from),
+          to: displayNumber(from ? Math.min((pageIndex + 1) * pageSize, props.total) : 0),
+          total: displayNumber(props.total),
         })}
       </span>
       <div className="flex flex-wrap items-center gap-3">
@@ -85,7 +86,7 @@ export function DataTablePagination(props: Props) {
           </Select>
         )}
         <span className="whitespace-nowrap tabular-nums">
-          {t('page', { page: pageIndex + 1, pages })}
+          {t('page', { page: displayNumber(pageIndex + 1), pages: displayNumber(pages) })}
         </span>
         <div className="flex items-center gap-1">
           <Button

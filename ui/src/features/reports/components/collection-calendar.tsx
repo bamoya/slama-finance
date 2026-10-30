@@ -4,6 +4,7 @@ import type { ReportAnalysis } from '../../../api/generated/schemas/reporting/re
 import { Button } from '../../../components/ui/button'
 import { displayDate } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
+import { numberFormatter } from '../../../lib/number-format'
 import { AnalyticsPanel } from './analytics-panel'
 
 export function CollectionCalendar({
@@ -50,7 +51,7 @@ export function CollectionCalendar({
             <div className="grid grid-cols-7 gap-1">
               {days.map((date, index) => {
                 const value = amounts.get(date) ?? 0,
-                  amount = new Intl.NumberFormat(i18n.resolvedLanguage ?? 'en', {
+                  amount = numberFormatter(i18n.resolvedLanguage ?? 'en', {
                     style: 'currency',
                     currency,
                   }).format(value)

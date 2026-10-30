@@ -8,6 +8,7 @@ import { Button } from '../../../../components/ui/button'
 import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { EstimateLinesEditor } from '../../estimates/components/estimate-lines-editor'
 import { useInvoice } from '../../invoices/queries'
 
@@ -81,7 +82,7 @@ export function DeliveryLinesEditor({
                 options={
                   invoice.data?.lines.map((item) => ({
                     value: item.id,
-                    label: `${item.productName} · ${item.packageWeightG ?? '—'} g · ${t('orderedQuantity', { quantity: item.quantity })}`,
+                    label: `${item.productName} · ${item.packageWeightG ? displayNumber(item.packageWeightG) : '—'} g · ${t('orderedQuantity', { quantity: displayNumber(item.quantity) })}`,
                     keywords: [item.productReference ?? ''],
                   })) ?? []
                 }

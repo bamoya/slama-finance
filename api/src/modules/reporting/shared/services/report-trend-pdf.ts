@@ -1,13 +1,14 @@
 import { rgb } from 'pdf-lib'
 
 import { type createDocumentCanvas, H } from '../../../../lib/documents/canvas.js'
+import { numberFormatter } from '../../../../lib/number-format.js'
 
 type Canvas = Awaited<ReturnType<typeof createDocumentCanvas>>
 type Dataset = { label: string; color: string; values: number[]; dashed: boolean }
 const formatNumber = (value: number, decimals = 2, language = 'fr') =>
-  new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', { maximumFractionDigits: decimals })
-    .format(value)
-    .replace(/[\u00a0\u202f]/g, ' ')
+  numberFormatter(language === 'fr' ? 'fr-FR' : 'en-GB', {
+    maximumFractionDigits: decimals,
+  }).format(value)
 
 export function trendAxis(values: number[]) {
   const max = Math.max(0, ...values)

@@ -13,6 +13,7 @@ import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { displayDate, displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
@@ -274,16 +275,16 @@ export function EstimateDetailPage() {
                         {line.productName}
                         {line.packageWeightG ? (
                           <span className="ml-2 text-xs text-[var(--muted)]">
-                            {line.packageWeightG} {translate('g')}
+                            {displayNumber(line.packageWeightG)} {translate('g')}
                           </span>
                         ) : null}
                       </td>
-                      <td className="py-3">{line.quantity}</td>
-                      <td className="py-3">{line.unitPrice}</td>
+                      <td className="py-3">{displayNumber(line.quantity)}</td>
+                      <td className="py-3">{displayNumber(line.unitPrice)}</td>
                       <td className="py-3">
                         {line.vatRate === null ? translate('Off') : `${line.vatRate}%`}
                       </td>
-                      <td className="py-3 text-right">{line.totalAmount}</td>
+                      <td className="py-3 text-right">{displayNumber(line.totalAmount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -291,15 +292,15 @@ export function EstimateDetailPage() {
             </div>
             <div className="mt-5 grid justify-end gap-1 text-right text-sm">
               <p>
-                {translate('Subtotal:')} {row.subtotal} {row.currency}
+                {translate('Subtotal:')} {displayNumber(row.subtotal)} {row.currency}
               </p>
               {Number(row.taxTotal) > 0 && (
                 <p>
-                  {translate('VAT:')} {row.taxTotal} {row.currency}
+                  {translate('VAT:')} {displayNumber(row.taxTotal)} {row.currency}
                 </p>
               )}
               <strong className="text-lg">
-                {translate('Total:')} {row.total} {row.currency}
+                {translate('Total:')} {displayNumber(row.total)} {row.currency}
               </strong>
             </div>
           </section>

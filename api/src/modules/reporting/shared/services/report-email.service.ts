@@ -2,6 +2,7 @@ import type {
   ReportAnalysis,
   ReportSchedule,
 } from '../../../../contracts/generated/reporting/reporting.schemas.js'
+import { numberFormatter } from '../../../../lib/number-format.js'
 import { frenchReportLabel } from './report-labels.js'
 import { reportLabel } from './visual-pdf.service.js'
 
@@ -57,7 +58,7 @@ export function composeReportEmail(
         )
         .map((metric) => ({
           label: `${label(section.key)} · ${label(metric.key)}`,
-          value: `${new Intl.NumberFormat(fr ? 'fr-FR' : 'en-GB', { minimumFractionDigits: metric.unit === 'money' ? 2 : 0, maximumFractionDigits: metric.unit === 'money' ? 2 : 3 }).format(Number(metric.value))}${metric.unit === 'money' && metric.currency ? ` ${metric.currency}` : metric.unit === 'kg' ? ' kg' : metric.currency ? ` (${metric.currency})` : ''}`,
+          value: `${numberFormatter(fr ? 'fr-FR' : 'en-GB', { minimumFractionDigits: metric.unit === 'money' ? 2 : 0, maximumFractionDigits: metric.unit === 'money' ? 2 : 3 }).format(Number(metric.value))}${metric.unit === 'money' && metric.currency ? ` ${metric.currency}` : metric.unit === 'kg' ? ' kg' : metric.currency ? ` (${metric.currency})` : ''}`,
           basis:
             metric.timeBasis === 'capture'
               ? fr

@@ -1,6 +1,7 @@
 import { rgb } from 'pdf-lib'
 
 import { type createDocumentCanvas, H } from '../../../../lib/documents/canvas.js'
+import { numberFormatter } from '../../../../lib/number-format.js'
 
 type Canvas = Awaited<ReturnType<typeof createDocumentCanvas>>
 export const reportPalette = ['#a87828', '#3d8075', '#557ea8', '#ad8867', '#a65c72']
@@ -87,7 +88,7 @@ export function drawReportDonut(
     const x = left + 140
     c.rect(x, y + 3, 6, 6, reportPalette[(start + offset) % reportPalette.length]!)
     const percent = total ? (Math.max(0, point.value) / total) * 100 : 0
-    const value = `${point.formatted} · ${percent.toLocaleString(language, { maximumFractionDigits: 1 })}%`
+    const value = `${point.formatted} · ${numberFormatter(language, { maximumFractionDigits: 1 }).format(percent)}%`
     const available = width - 155
     for (const line of c.wrap(point.label, available, 8)) {
       c.text(line, x + 12, y, 8, '#64716b')

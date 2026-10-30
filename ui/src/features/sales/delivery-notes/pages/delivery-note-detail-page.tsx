@@ -12,6 +12,7 @@ import { StatusBadge } from '../../../../components/management/status-badge'
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { displayDate } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { Can } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentTemplateSummary } from '../../components/document-template-summary'
@@ -209,11 +210,13 @@ export function DeliveryNoteDetailPage() {
                     <tr key={line.id} className="border-b border-[var(--border)]">
                       <td className="py-3 font-medium">{line.productName}</td>
                       <td className="py-3">
-                        {line.packageWeightG ? `${line.packageWeightG} g` : '—'}
+                        {line.packageWeightG ? `${displayNumber(line.packageWeightG)} g` : '—'}
                       </td>
-                      <td className="py-3 text-right">{line.quantity}</td>
-                      <td className="py-3 text-right">{line.billedQuantity}</td>
-                      <td className="py-3 text-right">{line.remainingBillableQuantity}</td>
+                      <td className="py-3 text-right">{displayNumber(line.quantity)}</td>
+                      <td className="py-3 text-right">{displayNumber(line.billedQuantity)}</td>
+                      <td className="py-3 text-right">
+                        {displayNumber(line.remainingBillableQuantity)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

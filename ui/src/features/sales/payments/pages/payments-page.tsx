@@ -11,6 +11,7 @@ import { useTableSelection } from '../../../../components/management/use-table-s
 import { buttonVariants } from '../../../../components/ui/button'
 import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentFilters } from '../../components/document-filters'
@@ -83,7 +84,7 @@ export function PaymentsPage() {
       align: 'right',
       render: (row) => (
         <strong>
-          {row.amount} {row.currency}
+          {displayNumber(row.amount)} {row.currency}
         </strong>
       ),
     },

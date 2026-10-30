@@ -4,6 +4,7 @@ import type { ReportAnalysis } from '../../../../contracts/generated/reporting/r
 import { createDocumentCanvas, H, W } from '../../../../lib/documents/canvas.js'
 import { displayDate } from '../../../../lib/documents/display-date.js'
 import { AppError } from '../../../../lib/errors.js'
+import { displayNumber } from '../../../../lib/number-format.js'
 import { drawReportDonut, isRingBreakdown, reportDonutHeight } from './report-breakdown-pdf.js'
 import {
   collectionMonthHeight,
@@ -20,13 +21,11 @@ const ink = '#26322e',
   muted = '#64716b',
   light = '#f1f3f1'
 const formatFigure = (value: string, unit: string, language: 'fr' | 'en') => {
-  const [whole, fraction] = new Decimal(value)
-    .toDecimalPlaces(unit === 'money' ? 2 : 3)
-    .toFixed(unit === 'money' ? 2 : undefined)
-    .split('.')
-  return (
-    whole!.replace(/\B(?=(\d{3})+(?!\d))/g, language === 'fr' ? ' ' : ',') +
-    (fraction ? `${language === 'fr' ? ',' : '.'}${fraction}` : '')
+  return displayNumber(
+    new Decimal(value)
+      .toDecimalPlaces(unit === 'money' ? 2 : 3)
+      .toFixed(unit === 'money' ? 2 : undefined),
+    language,
   )
 }
 const labels: Record<string, string> = {

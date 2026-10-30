@@ -12,6 +12,7 @@ import { useTableSelection } from '../../../../components/management/use-table-s
 import { buttonVariants } from '../../../../components/ui/button'
 import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { Can, useAuthorization } from '../../../identity'
 import { DocumentClientLink } from '../../components/document-client-link'
 import { DocumentFilters } from '../../components/document-filters'
@@ -93,14 +94,14 @@ export function InvoicesPage() {
       title: t('total'),
       render: (row) => (
         <strong>
-          {row.total} {row.currency}
+          {displayNumber(row.total)} {row.currency}
         </strong>
       ),
       align: 'right',
     },
     {
       title: t('outstandingAmount'),
-      render: (row) => `${row.outstandingAmount} ${row.currency}`,
+      render: (row) => `${displayNumber(row.outstandingAmount)} ${row.currency}`,
       align: 'right',
     },
     {

@@ -2,6 +2,7 @@ import type { ReportSection } from '../../../../contracts/generated/reporting/re
 import type { createDocumentCanvas } from '../../../../lib/documents/canvas.js'
 import { H, W } from '../../../../lib/documents/canvas.js'
 import { displayDate } from '../../../../lib/documents/display-date.js'
+import { displayNumber, numberFormatter } from '../../../../lib/number-format.js'
 import { frenchReportLabel } from './report-labels.js'
 import { reportTable } from './report-table.js'
 
@@ -48,11 +49,10 @@ export function drawReportTable(
           if (value == null) return '—'
           if (column.key === 'date') return displayDate(String(value))
           if (column.kind === 'number')
-            return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
+            return numberFormatter(language === 'fr' ? 'fr-FR' : 'en-GB', {
               maximumFractionDigits: column.key === 'quantity' || column.key === 'weightKg' ? 3 : 2,
-            })
-              .format(Number(value))
-              .replaceAll('\u202f', ' ')
+            }).format(Number(value))
+
           if (column.key === 'status' || column.key === 'method')
             return language === 'fr'
               ? frenchReportLabel(text(value))
@@ -60,7 +60,7 @@ export function drawReportTable(
           return text(value)
         }),
       ),
-      group.totals,
+      group.totals.map((value) => displayNumber(value, language)),
     ]
     records.forEach((values, index) => {
       const totals = index === records.length - 1

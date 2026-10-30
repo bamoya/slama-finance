@@ -7,6 +7,7 @@ import { RequestState } from '../../../../components/management/request-state'
 import { StatusBadge } from '../../../../components/management/status-badge'
 import { displayDate } from '../../../../lib/dates'
 import { useUiLanguage } from '../../../../lib/i18n'
+import { displayNumber } from '../../../../lib/number-format'
 import { Can, useAuthorization } from '../../../identity'
 import { useBankAccounts } from '../../../settings'
 import { DocumentClientLink } from '../../components/document-client-link'
@@ -48,7 +49,7 @@ export function PaymentDetailPage() {
       <PageHeader
         eyebrow={t('payments')}
         title={row.number}
-        description={`${row.amount} ${row.currency}`}
+        description={`${displayNumber(row.amount)} ${row.currency}`}
         actions={
           <>
             <StatusBadge
