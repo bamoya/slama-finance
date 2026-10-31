@@ -2236,6 +2236,8 @@ export const french: Record<string, string> = {
     'Paiement soumis. L’offre sera activée après vérification.',
   'Submit payment': 'Soumettre le paiement',
   'Administration navigation': 'Navigation de l’administration',
+  'Administration mobile navigation': 'Navigation mobile de l’administration',
+  'Administrator account menu': 'Menu du compte administrateur',
   'Billing settings': 'Paramètres de facturation',
   'Audit log': 'Journal d’audit',
   'Reject payment': 'Rejeter le paiement',

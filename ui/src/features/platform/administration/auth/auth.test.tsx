@@ -39,7 +39,7 @@ describe('admin login and two-factor flow', () => {
     await signIn()
     expect(await screen.findByRole('img', { name: 'Authenticator QR code' })).toBeInTheDocument()
     expect(screen.getByText('ABCDEF')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/admin/payments'))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/admin'))
     expect(calls.find((call) => call.url === '/v1/admin/auth/2fa')?.data).toEqual({
       code: '123456',
     })

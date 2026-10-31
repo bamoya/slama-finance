@@ -1,4 +1,4 @@
-import { Redirect, Route } from 'wouter'
+import { Route } from 'wouter'
 
 import { AcceptInvitationPage } from '../../features/organization/identity'
 import {
@@ -22,6 +22,7 @@ import {
   AdminBillingSettingsPage,
   AdminCustomerDetailPage,
   AdminCustomersPage,
+  AdminOverviewPage,
   AdminPaymentsPage,
   AdminSignInPage,
 } from '../../features/platform/administration'
@@ -39,9 +40,7 @@ export const publicRoutes = (
     <Route path="/admin/customers" component={AdminCustomersPage} />
     <Route path="/admin/billing-settings" component={AdminBillingSettingsPage} />
     <Route path="/admin/audit" component={AdminAuditLogPage} />
-    <Route path="/admin">
-      <Redirect to="/admin/payments" replace />
-    </Route>
+    <Route path="/admin" component={AdminOverviewPage} />
     <Route
       path={/^\/(?:fonctionnalites|tarifs|contact|confidentialite|conditions|mentions-legales)?$/}
       component={MarketingSite}

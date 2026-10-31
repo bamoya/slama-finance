@@ -74,7 +74,7 @@ export function AdminSignInPage() {
                 try {
                   const session = await verify.mutateAsync({ data: { code } })
                   client.setQueryData(getGetAdminSessionQueryKey(), session)
-                  navigate(adminPaths.payments, { replace: true })
+                  navigate(adminPaths.overview, { replace: true })
                 } catch (error) {
                   // Five wrong codes revoke the pending session: start over.
                   if (

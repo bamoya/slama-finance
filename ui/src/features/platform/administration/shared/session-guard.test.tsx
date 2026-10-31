@@ -34,6 +34,7 @@ describe('admin session guard', () => {
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'))
     expect(hrefs).toEqual([
+      '/admin',
       '/admin/payments',
       '/admin/customers',
       '/admin/billing-settings',
