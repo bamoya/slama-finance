@@ -103,3 +103,72 @@ export function useAdminTestLifecycle() {
     vi.restoreAllMocks()
   })
 }
+
+export const ownerId = '22222222-2222-4222-8222-222222222222'
+export const organizationId = '44444444-4444-4444-8444-000000000001'
+
+/** A complete customer detail; pass overrides for the parts a test cares about. */
+export function ownerDetail(over: Record<string, unknown> = {}) {
+  return {
+    owner: {
+      id: ownerId,
+      email: 'owner@example.test',
+      firstName: 'Sara',
+      lastName: 'Alaoui',
+      locale: 'fr',
+      emailVerifiedAt: '2026-09-01T09:05:00Z',
+      createdAt: '2026-09-01T09:00:00Z',
+      disabledAt: null,
+    },
+    restriction: {
+      blockedAt: null,
+      blockReason: null,
+      deletionRequestedAt: null,
+      deletionDueAt: null,
+      deletionReason: null,
+    },
+    invitationPending: false,
+    subscription: {
+      planCode: 'essential',
+      planName: 'Essential',
+      status: 'active',
+      trialEndsAt: null,
+      paidThroughAt: '2026-11-01T09:00:00Z',
+      cycle: 'monthly',
+      cancelAtPeriodEnd: false,
+      graceEndsAt: null,
+      blockedAt: null,
+      retentionEndsAt: null,
+      nextPlanCode: null,
+      pendingPayment: null,
+      entitlements: {
+        organizations: 3,
+        staffPerOrganization: 5,
+        features: [],
+        storageBytes: 5e9,
+        businessEmails: 500,
+      },
+      organizationCount: 1,
+      usage: {
+        storageBytes: 1.2e9,
+        businessEmails: 40,
+        emailPeriodStart: '2026-10-01T00:00:00Z',
+        emailPeriodEnd: '2026-11-01T00:00:00Z',
+      },
+    },
+    organizations: [
+      {
+        id: organizationId,
+        name: 'Atlas Conseil',
+        slug: 'atlas',
+        createdAt: '2026-09-02T09:00:00Z',
+        activatedAt: null,
+        state: 'active',
+        suspendedAt: null,
+        suspensionReason: null,
+      },
+    ],
+    payments: [],
+    ...over,
+  }
+}

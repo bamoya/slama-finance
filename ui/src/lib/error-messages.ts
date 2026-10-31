@@ -48,6 +48,31 @@ export function errorMessage(error: unknown): string {
       NOT_FOUND: 'Cet élément est introuvable ou n’est plus disponible.',
       UNAUTHENTICATED: 'Session administrateur expirée. Reconnectez-vous.',
       EMAIL_UNAVAILABLE: 'L’envoi des invitations est temporairement indisponible.',
+      TWO_FACTOR_INVALID:
+        'Code d’authentification incorrect ou déjà utilisé. Saisissez le code actuel de votre application.',
+      ALREADY_BLOCKED: 'Ce client est déjà bloqué.',
+      NOT_BLOCKED: 'Ce client n’est pas bloqué.',
+      DELETION_SCHEDULED: 'La suppression de ce client est déjà programmée.',
+      DELETION_NOT_SCHEDULED: 'Aucune suppression n’est programmée pour ce client.',
+      DELETION_DUE:
+        'La date de suppression est atteinte : la suppression ne peut plus être annulée.',
+      SUBSCRIPTION_NOT_STARTED: 'L’abonnement de ce client n’a pas encore démarré.',
+      SUBSCRIPTION_SUSPENDED: 'L’abonnement est suspendu. Reprenez-le avant cette action.',
+      SUBSCRIPTION_NOT_SUSPENDED: 'L’abonnement de ce client n’est pas suspendu.',
+      NO_PAID_PERIOD:
+        'Ce client n’a aucune période payée en cours : changement d’offre impossible.',
+      SAME_PLAN: 'Le client est déjà sur cette offre.',
+      ORGANIZATION_SUSPENDED: 'Cette organisation est suspendue.',
+      ORGANIZATION_NOT_SUSPENDED: 'Cette organisation n’est pas suspendue.',
+      INVITATION_NOT_PENDING:
+        'Ce client a déjà défini son mot de passe : aucune invitation en attente.',
+      EMAIL_TAKEN: 'Un compte existe déjà avec cette adresse e-mail.',
+      INVALID_SUBSCRIPTION: 'L’abonnement indiqué est incomplet ou incohérent.',
+      INVALID_COVERAGE:
+        'Dates de couverture invalides : le début ne doit pas être dans le futur et la fin doit être dans le futur.',
+      INVALID_PLAN: 'Cette offre n’est pas disponible.',
+      INVITATION_DELIVERY_FAILED:
+        'Le client a été créé mais l’e-mail d’invitation n’a pas pu être envoyé. Renvoyez l’invitation.',
     }
     if (invitationErrors[error.code]) return invitationErrors[error.code]!
 

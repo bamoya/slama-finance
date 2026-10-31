@@ -1,6 +1,12 @@
-import { useGetAdminOwner } from '../../../../../api/generated/administration/administration'
-import type { AdminOwnerDetailPaymentsItem } from '../../../../../api/generated/models'
-import { type DataColumn, DataTable } from '../../../../../components/management/data-table'
+import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+
+import {
+  useConfirmAdminPayment,
+  useGetAdminOwner,
+  useRejectAdminPayment,
+} from '../../../../../api/generated/administration/administration'
+import type { AdminPayment } from '../../../../../api/generated/models'
 import { PageHeader } from '../../../../../components/management/page-header'
 import { RequestState } from '../../../../../components/management/request-state'
 import { StatusBadge } from '../../../../../components/management/status-badge'
@@ -8,59 +14,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../../compone
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import {
-  cycleLabel,
-  formatDh,
-  paymentKindLabel,
-  paymentStatusTone,
-  planLabel,
-} from '../../../subscriptions/components/billing-format'
+  type Decision,
+  PaymentDecisionDialog,
+} from '../../payments/components/payment-decision-dialog'
 import { adminPaths } from '../../shared/admin-paths'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
+import type { CustomerAction } from '../components/customer-action'
+import { CustomerActionDialogs } from '../components/customer-action-dialogs'
+import { CustomerActionsMenu } from '../components/customer-actions-menu'
+import { CustomerOrganizationsCard } from '../components/customer-organizations-card'
+import { CustomerPaymentsCard } from '../components/customer-payments-card'
+import { CustomerRestrictionBanner } from '../components/customer-restriction-banner'
+import { CustomerSubscriptionCard } from '../components/customer-subscription-card'
 import { SubscriptionStatusBadge } from '../components/subscription-status-badge'
-
-const paymentStatus = {
-  confirmed: 'Confirmed',
-  rejected: 'Rejected',
-  submitted: 'Awaiting verification',
-} as const
-
-type CustomerPayment = AdminOwnerDetailPaymentsItem
-
-const paymentColumns: DataColumn<CustomerPayment>[] = [
-  {
-    title: 'Submitted',
-    render: (p) => <span className="whitespace-nowrap">{displayDateTime(p.submittedAt)}</span>,
-  },
-  { title: 'Type', render: (p) => paymentKindLabel(p.kind) },
-  {
-    title: 'Plan',
-    render: (p) => (
-      <span className="whitespace-nowrap">
-        {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
-      </span>
-    ),
-  },
-  { title: 'Reference', render: (p) => <span className="break-all">{p.reference}</span> },
-  {
-    title: 'Total incl. tax',
-    align: 'right',
-    render: (p) => <span className="whitespace-nowrap">{formatDh(p.amount.amountTtc)}</span>,
-  },
-  {
-    title: 'Status',
-    render: (p) => (
-      <>
-        <StatusBadge label={paymentStatus[p.status]} tone={paymentStatusTone(p.status)} />
-        {p.rejectionReason && (
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            {translate('Reason:')} {p.rejectionReason}
-          </p>
-        )}
-      </>
-    ),
-  },
-]
 
 function Item({ label, value }: { label: string; value: string }) {
   return (
@@ -73,8 +40,23 @@ function Item({ label, value }: { label: string; value: string }) {
 
 export function AdminCustomerDetailPage({ customerId }: { customerId: string }) {
   useUiLanguage()
+  const client = useQueryClient()
   const query = useGetAdminOwner(customerId, { query: { retry: false } })
+  const confirm = useConfirmAdminPayment()
+  const reject = useRejectAdminPayment()
+  const [action, setAction] = useState<CustomerAction | null>(null)
+  const [decision, setDecision] = useState<{ payment: AdminPayment; decision: Decision } | null>(
+    null,
+  )
   const detail = query.data
+  const refresh = () =>
+    client.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        typeof queryKey[0] === 'string' &&
+        ['/v1/admin/payments', '/v1/admin/owners', '/v1/admin/overview'].some((prefix) =>
+          String(queryKey[0]).startsWith(prefix),
+        ),
+    })
   return (
     <AdministrationLayout title="Customer">
       {query.isPending || query.isError || !detail ? (
@@ -96,8 +78,21 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
               'Subscription, organizations and payment history of this customer.',
             )}
             backHref={adminPaths.customers}
-            status={<SubscriptionStatusBadge status={detail.subscription.status} />}
+            status={
+              <span className="flex flex-wrap items-center gap-2">
+                <SubscriptionStatusBadge status={detail.subscription.status} />
+                {detail.restriction.blockedAt && <StatusBadge label="Blocked" tone="overdue" />}
+                {detail.restriction.deletionRequestedAt && (
+                  <StatusBadge label="Deletion scheduled" tone="overdue" />
+                )}
+                {detail.invitationPending && (
+                  <StatusBadge label="Invitation pending" tone="draft" />
+                )}
+              </span>
+            }
+            actions={<CustomerActionsMenu detail={detail} onSelect={setAction} />}
           />
+          <CustomerRestrictionBanner restriction={detail.restriction} />
           <Card>
             <CardHeader>
               <CardTitle>{translate('Profile')}</CardTitle>
@@ -116,87 +111,50 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
                 />
                 <Item
                   label={translate('Account')}
-                  value={translate(detail.owner.disabledAt ? 'Disabled' : 'Active')}
+                  value={translate(
+                    detail.restriction.blockedAt
+                      ? 'Blocked'
+                      : detail.invitationPending
+                        ? 'Invitation pending'
+                        : detail.owner.disabledAt
+                          ? 'Disabled'
+                          : 'Active',
+                  )}
                 />
               </dl>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{translate('Subscription')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Item label={translate('Plan')} value={planLabel(detail.subscription.planCode)} />
-                <Item
-                  label={translate('Cycle')}
-                  value={detail.subscription.cycle ? cycleLabel(detail.subscription.cycle) : '—'}
-                />
-                <Item
-                  label={translate('Paid through')}
-                  value={
-                    detail.subscription.paidThroughAt
-                      ? displayDateTime(detail.subscription.paidThroughAt)
-                      : '—'
-                  }
-                />
-                <Item
-                  label={translate('Trial ends')}
-                  value={
-                    detail.subscription.trialEndsAt
-                      ? displayDateTime(detail.subscription.trialEndsAt)
-                      : '—'
-                  }
-                />
-                <Item
-                  label={translate('Organizations')}
-                  value={`${detail.subscription.organizationCount} / ${detail.subscription.entitlements.organizations ?? translate('Unlimited')}`}
-                />
-                <Item
-                  label={translate('Storage used')}
-                  value={`${(detail.subscription.usage.storageBytes / 1e9).toFixed(2)} / ${detail.subscription.entitlements.storageBytes / 1e9} GB`}
-                />
-                <Item
-                  label={translate('Business emails queued')}
-                  value={`${detail.subscription.usage.businessEmails} / ${detail.subscription.entitlements.businessEmails}`}
-                />
-              </dl>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{translate('Organizations')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {detail.organizations.length ? (
-                <ul className="divide-y divide-[var(--border)]">
-                  {detail.organizations.map((organization) => (
-                    <li key={organization.id} className="flex flex-wrap justify-between gap-2 py-2">
-                      <span className="font-semibold">{organization.name}</span>
-                      <span className="text-sm text-[var(--muted)]">
-                        {displayDateTime(organization.createdAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-[var(--muted)]">{translate('No organizations yet.')}</p>
-              )}
-            </CardContent>
-          </Card>
-          <section aria-label={translate('Payment history')}>
-            <Card className="gap-0 overflow-hidden p-0">
-              <CardHeader className="border-b border-[var(--border)] p-4">
-                <CardTitle>{translate('Payment history')}</CardTitle>
-              </CardHeader>
-              <DataTable
-                items={detail.payments}
-                columns={paymentColumns}
-                emptyTitle={translate('No payments yet.')}
-                emptyDescription={translate('Payments submitted by this customer appear here.')}
-              />
-            </Card>
-          </section>
+          <CustomerSubscriptionCard
+            detail={detail}
+            onDecide={(payment, next) => setDecision({ payment, decision: next })}
+          />
+          <CustomerOrganizationsCard organizations={detail.organizations} onSelect={setAction} />
+          <CustomerPaymentsCard payments={detail.payments} />
+          {action && (
+            <CustomerActionDialogs
+              detail={detail}
+              action={action}
+              onClose={() => setAction(null)}
+            />
+          )}
+          {decision && (
+            <PaymentDecisionDialog
+              payment={decision.payment}
+              decision={decision.decision}
+              onClose={() => setDecision(null)}
+              onConfirm={async (receivedReference) => {
+                await confirm.mutateAsync({
+                  paymentId: decision.payment.id,
+                  data: receivedReference ? { receivedReference } : {},
+                })
+                await refresh()
+              }}
+              onReject={async (reason) => {
+                await reject.mutateAsync({ paymentId: decision.payment.id, data: { reason } })
+                await refresh()
+              }}
+            />
+          )}
         </>
       )}
     </AdministrationLayout>

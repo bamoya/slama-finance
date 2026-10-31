@@ -1,5 +1,107 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  Impact: 'Impact',
+  'What will happen': 'Ce qui va se passer',
+  'Reason (internal)': 'Motif (interne)',
+  'Indicate the reason for this action.': 'Indiquez le motif de cette action.',
+  'Kept in the audit log. Never shown to the customer.':
+    'Conservé dans le journal d’audit. Jamais affiché au client.',
+  'Type the customer email to confirm': 'Saisissez l’e-mail du client pour confirmer',
+  'New plan': 'Nouvelle offre',
+  'Free adjustment by an administrator: no payment is requested or recorded.':
+    'Ajustement gratuit par un administrateur : aucun paiement n’est demandé ni enregistré.',
+  'Days to add': 'Jours à ajouter',
+  'Between 1 and 366 days.': 'Entre 1 et 366 jours.',
+  'Change plan': 'Changer d’offre',
+  'Switch the current paid period to another plan immediately.':
+    'Bascule immédiatement la période payée en cours vers une autre offre.',
+  'The new plan applies right away, with the same coverage dates.':
+    'La nouvelle offre s’applique immédiatement, avec les mêmes dates de couverture.',
+  'No payment is requested. A 0 DH adjustment is added to the history.':
+    'Aucun paiement n’est demandé. Un ajustement de 0 DH est ajouté à l’historique.',
+  'Downgrading never deletes data.':
+    'Un passage à une offre inférieure ne supprime jamais de données.',
+  'Extend coverage': 'Prolonger la couverture',
+  'Add days to the paid coverage, or to the trial when there is no paid coverage.':
+    'Ajoute des jours à la couverture payée, ou à l’essai en l’absence de couverture payée.',
+  'The coverage end date moves forward by the number of days entered.':
+    'La date de fin de couverture est repoussée du nombre de jours saisi.',
+  'A 0 DH adjustment is added to the payment history.':
+    'Un ajustement de 0 DH est ajouté à l’historique des paiements.',
+  'Suspend subscription': 'Suspendre l’abonnement',
+  'Blocks access and freezes the coverage clock.':
+    'Bloque l’accès et fige le décompte de la couverture.',
+  'Organizations of this customer become unavailable ({{count}}).':
+    'Les organisations de ce client deviennent indisponibles ({{count}}).',
+  'The coverage clock is frozen until the subscription is resumed.':
+    'Le décompte de la couverture est figé jusqu’à la reprise de l’abonnement.',
+  'The customer is not told the reason.': 'Le client n’est pas informé du motif.',
+  'Restores access to the customer.': 'Rétablit l’accès du client.',
+  'Access is restored.': 'L’accès est rétabli.',
+  'Remaining paid or trial time is shifted by the suspended duration.':
+    'Le temps payé ou d’essai restant est décalé de la durée de suspension.',
+  'Block customer': 'Bloquer le client',
+  'Blocks the owner portal and every organization of this customer.':
+    'Bloque le portail propriétaire et toutes les organisations de ce client.',
+  'All sessions of the customer and their staff are closed.':
+    'Toutes les sessions du client et de son équipe sont fermées.',
+  'A payment never lifts the block: only unblocking does.':
+    'Un paiement ne lève jamais le blocage : seul le déblocage le fait.',
+  'Unblock customer': 'Débloquer le client',
+  'Lifts the administrator block.': 'Lève le blocage administrateur.',
+  'The customer and their staff can sign in again.':
+    'Le client et son équipe peuvent se reconnecter.',
+  'Other restrictions (scheduled deletion, suspensions) remain.':
+    'Les autres restrictions (suppression programmée, suspensions) restent en vigueur.',
+  'Sends a new email to set the password.': 'Envoie un nouvel e-mail pour définir le mot de passe.',
+  'A new link valid for 72 hours is emailed to {{email}}.':
+    'Un nouveau lien valable 72 heures est envoyé à {{email}}.',
+  'Earlier links stop working.': 'Les liens précédents cessent de fonctionner.',
+  'Delete customer': 'Supprimer le client',
+  'Schedules the permanent deletion of this customer.':
+    'Programme la suppression définitive de ce client.',
+  'The customer is blocked immediately: organizations unavailable ({{count}}), sessions closed.':
+    'Le client est bloqué immédiatement : organisations indisponibles ({{count}}), sessions fermées.',
+  'Deletion is scheduled 30 days from now and can be cancelled until then.':
+    'La suppression est programmée dans 30 jours et peut être annulée d’ici là.',
+  'Permanent removal of data is not automatic yet.':
+    'La suppression définitive des données n’est pas encore automatique.',
+  'Cancel deletion': 'Annuler la suppression',
+  'Cancels the scheduled deletion before its due date.':
+    'Annule la suppression programmée avant son échéance.',
+  'The previous state is restored, including any outstanding restriction.':
+    'L’état précédent est rétabli, y compris les restrictions en cours.',
+  'Suspend organization': 'Suspendre l’organisation',
+  'Sessions of this organization are closed and sign-in stops.':
+    'Les sessions de cette organisation sont fermées et la connexion est interrompue.',
+  'Background workers of this organization stop.':
+    'Les traitements en arrière-plan de cette organisation s’arrêtent.',
+  'Only an administrator can reactivate it.': 'Seul un administrateur peut la réactiver.',
+  'Reactivate organization': 'Réactiver l’organisation',
+  'Users of this organization can sign in again.':
+    'Les utilisateurs de cette organisation peuvent se reconnecter.',
+  Access: 'Accès',
+  'The customer creates their first organization after signing in.':
+    'Le client crée sa première organisation après sa connexion.',
+  'Admin adjustment': 'Ajustement admin',
+  Restrictions: 'Restrictions',
+  'Blocked since {{date}}': 'Bloqué depuis le {{date}}',
+  'Deletion scheduled for {{date}}': 'Suppression programmée le {{date}}',
+  'Deletion scheduled': 'Suppression programmée',
+  'The deletion can be cancelled until the due date.':
+    'La suppression peut être annulée jusqu’à l’échéance.',
+  'Reasons are internal and never shown to the customer.':
+    'Les motifs sont internes et jamais affichés au client.',
+  'Suspended by an administrator: the coverage clock is frozen.':
+    'Suspendu par un administrateur : le décompte de la couverture est figé.',
+  Blocked: 'Bloqué',
+  'Invitation pending': 'Invitation en attente',
+  'Authenticator code': 'Code d’authentification',
+  'This sensitive action requires a fresh code from your authenticator app.':
+    'Cette action sensible exige un code à jour de votre application d’authentification.',
+  'Setting up': 'En configuration',
+  'Organization active': 'Active',
+  'Organization suspended': 'Suspendue',
   'Suspended subscriptions': 'Abonnements suspendus',
   'Customer status': 'Statut du client',
   'Subscription suspended': 'Abonnement suspendu',
