@@ -14,7 +14,7 @@ export function AuditChangeDiff({ before, after }: { before: unknown; after: unk
           <h3 className="mb-1 text-xs font-semibold uppercase text-[var(--muted)]">
             {translate(label)}
           </h3>
-          <pre className="max-h-64 overflow-auto rounded-lg bg-[var(--accent-soft)] p-3 text-xs">
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--accent-soft)] p-3 text-xs">
             {value === null ? '—' : JSON.stringify(value, null, 2)}
           </pre>
         </div>
