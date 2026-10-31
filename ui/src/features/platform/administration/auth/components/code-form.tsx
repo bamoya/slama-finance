@@ -52,7 +52,7 @@ export function CodeForm({ onSubmit }: { onSubmit: (code: string) => Promise<voi
         void submit(code)
       }}
     >
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Label htmlFor="verification-code">{translate('Verification code')}</Label>
         <InputOTP
           id="verification-code"
@@ -68,17 +68,18 @@ export function CodeForm({ onSubmit }: { onSubmit: (code: string) => Promise<voi
           aria-describedby={invalid ? 'verification-code-error' : undefined}
           onChange={setCode}
           onComplete={(value) => void submit(value)}
+          containerClassName="w-full justify-center gap-3"
         >
-          <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
+          <InputOTPGroup className="flex-1">
+            <InputOTPSlot index={0} className="h-12 flex-1 text-lg" />
+            <InputOTPSlot index={1} className="h-12 flex-1 text-lg" />
+            <InputOTPSlot index={2} className="h-12 flex-1 text-lg" />
           </InputOTPGroup>
           <InputOTPSeparator />
-          <InputOTPGroup>
-            <InputOTPSlot index={3} />
-            <InputOTPSlot index={4} />
-            <InputOTPSlot index={5} />
+          <InputOTPGroup className="flex-1">
+            <InputOTPSlot index={3} className="h-12 flex-1 text-lg" />
+            <InputOTPSlot index={4} className="h-12 flex-1 text-lg" />
+            <InputOTPSlot index={5} className="h-12 flex-1 text-lg" />
           </InputOTPGroup>
         </InputOTP>
         {invalid && (
