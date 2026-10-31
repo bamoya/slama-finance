@@ -353,7 +353,7 @@ export function createSalesModule(
             authenticate,
           )
         },
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       )
     },
   }
@@ -393,7 +393,7 @@ export function createSalesNotificationsModule(
             createSalesNotificationController(service),
             permission,
           ),
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       ),
   }
 }

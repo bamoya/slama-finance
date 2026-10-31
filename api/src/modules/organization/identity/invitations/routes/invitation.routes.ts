@@ -9,19 +9,19 @@ export function registerInvitationRoutes(
   permission: (key: string) => preHandlerHookHandler,
 ) {
   const config = { rateLimit: { max: 5, timeWindow: '1 minute' } }
-  app.get('/v1/staff/invitations', { preHandler: permission('staff.read') }, controller.list)
+  app.get('/api/v1/staff/invitations', { preHandler: permission('staff.read') }, controller.list)
   app.post(
-    '/v1/staff/invitations',
+    '/api/v1/staff/invitations',
     { config, preHandler: permission('staff.create') },
     controller.create,
   )
   app.post(
-    '/v1/staff/invitations/:invitationId/resend',
+    '/api/v1/staff/invitations/:invitationId/resend',
     { config, preHandler: permission('staff.update') },
     controller.resend,
   )
   app.post(
-    '/v1/staff/invitations/:invitationId/revoke',
+    '/api/v1/staff/invitations/:invitationId/revoke',
     { preHandler: permission('staff.update') },
     controller.revoke,
   )
@@ -29,12 +29,12 @@ export function registerInvitationRoutes(
     organizationStaffInspectInvitationParamsSchema.parse(request.params)
   }
   app.post(
-    '/v1/organizations/:organizationId/auth/invitations/inspect',
+    '/api/v1/organizations/:organizationId/auth/invitations/inspect',
     { config, preHandler: validate },
     controller.inspect,
   )
   app.post(
-    '/v1/organizations/:organizationId/auth/invitations/accept',
+    '/api/v1/organizations/:organizationId/auth/invitations/accept',
     { config, preHandler: validate },
     controller.accept,
   )

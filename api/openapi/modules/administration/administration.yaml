@@ -1,5 +1,5 @@
 paths:
-  /v1/admin/auth/login:
+  /api/v1/admin/auth/login:
     post:
       operationId: adminLogin
       tags: [administration]
@@ -21,7 +21,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/auth/2fa:
+  /api/v1/admin/auth/2fa:
     post:
       operationId: adminVerifyTwoFactor
       tags: [administration]
@@ -43,7 +43,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/auth/logout:
+  /api/v1/admin/auth/logout:
     post:
       operationId: adminLogout
       tags: [administration]
@@ -56,7 +56,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/auth/me:
+  /api/v1/admin/auth/me:
     get:
       operationId: getAdminSession
       tags: [administration]
@@ -72,7 +72,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/payments:
+  /api/v1/admin/payments:
     get:
       operationId: listAdminPayments
       tags: [administration]
@@ -95,7 +95,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/payments/{paymentId}/confirm:
+  /api/v1/admin/payments/{paymentId}/confirm:
     post:
       operationId: confirmAdminPayment
       tags: [administration]
@@ -118,7 +118,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/payments/{paymentId}/reject:
+  /api/v1/admin/payments/{paymentId}/reject:
     post:
       operationId: rejectAdminPayment
       tags: [administration]
@@ -141,7 +141,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners:
+  /api/v1/admin/owners:
     get:
       operationId: listAdminOwners
       tags: [administration]
@@ -190,7 +190,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}:
+  /api/v1/admin/owners/{ownerId}:
     get:
       operationId: getAdminOwner
       tags: [administration]
@@ -208,7 +208,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/invitation:
+  /api/v1/admin/owners/{ownerId}/invitation:
     post:
       operationId: resendAdminOwnerInvitation
       tags: [administration]
@@ -229,7 +229,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/block:
+  /api/v1/admin/owners/{ownerId}/block:
     post:
       operationId: blockAdminOwner
       tags: [administration]
@@ -253,7 +253,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/unblock:
+  /api/v1/admin/owners/{ownerId}/unblock:
     post:
       operationId: unblockAdminOwner
       tags: [administration]
@@ -277,7 +277,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/deletion:
+  /api/v1/admin/owners/{ownerId}/deletion:
     post:
       operationId: scheduleAdminOwnerDeletion
       tags: [administration]
@@ -301,7 +301,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/deletion/cancel:
+  /api/v1/admin/owners/{ownerId}/deletion/cancel:
     post:
       operationId: cancelAdminOwnerDeletion
       tags: [administration]
@@ -325,7 +325,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/subscription/suspend:
+  /api/v1/admin/owners/{ownerId}/subscription/suspend:
     post:
       operationId: suspendAdminSubscription
       tags: [administration]
@@ -349,7 +349,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/subscription/resume:
+  /api/v1/admin/owners/{ownerId}/subscription/resume:
     post:
       operationId: resumeAdminSubscription
       tags: [administration]
@@ -373,7 +373,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/subscription/plan:
+  /api/v1/admin/owners/{ownerId}/subscription/plan:
     post:
       operationId: changeAdminSubscriptionPlan
       tags: [administration]
@@ -397,7 +397,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/owners/{ownerId}/subscription/extension:
+  /api/v1/admin/owners/{ownerId}/subscription/extension:
     post:
       operationId: extendAdminSubscription
       tags: [administration]
@@ -421,7 +421,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/organizations/{organizationId}/suspend:
+  /api/v1/admin/organizations/{organizationId}/suspend:
     post:
       operationId: suspendAdminOrganization
       tags: [administration]
@@ -445,7 +445,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/organizations/{organizationId}/reactivate:
+  /api/v1/admin/organizations/{organizationId}/reactivate:
     post:
       operationId: reactivateAdminOrganization
       tags: [administration]
@@ -469,7 +469,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/billing-settings:
+  /api/v1/admin/billing-settings:
     get:
       operationId: getAdminBillingSettings
       tags: [administration]
@@ -506,7 +506,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/audit:
+  /api/v1/admin/audit:
     get:
       operationId: listAdminAudit
       tags: [administration]
@@ -526,7 +526,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/admin/overview:
+  /api/v1/admin/overview:
     get:
       operationId: getAdminOverview
       tags: [administration]

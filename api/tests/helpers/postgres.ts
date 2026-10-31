@@ -88,9 +88,9 @@ export function attachTestDatabase(
   app.inject = ((options: string | { url?: string; headers?: Record<string, unknown> }) => {
     const input = typeof options === 'string' ? { url: options } : options
     if (
-      input.url?.startsWith('/v1/organizations/') ||
-      input.url?.startsWith('/v1/owner') ||
-      input.url?.startsWith('/v1/admin/')
+      input.url?.startsWith('/api/v1/organizations/') ||
+      input.url?.startsWith('/api/v1/owner') ||
+      input.url?.startsWith('/api/v1/admin/')
     )
       return inject(input as never)
     return inject({

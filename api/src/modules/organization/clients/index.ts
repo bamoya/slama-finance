@@ -31,7 +31,7 @@ export function createClientModule(
           registerClientRoutes(scope, createClientController(service), permission)
           registerClientDeletionRoutes(scope, createClientDeletionController(deletion), permission)
         },
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       )
     },
   }
@@ -64,7 +64,7 @@ export function createClientNotificationModule(
             createClientNotificationController(service),
             permission,
           ),
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       ),
   }
 }

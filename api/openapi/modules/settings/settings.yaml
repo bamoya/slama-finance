@@ -1,5 +1,5 @@
 paths:
-  /v1/company-settings:
+  /api/v1/company-settings:
     get:
       operationId: getCompanySettings
       x-permissions:
@@ -40,7 +40,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/bank-accounts:
+  /api/v1/bank-accounts:
     get:
       operationId: listBankAccounts
       x-permissions:
@@ -83,7 +83,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/bank-accounts/{id}:
+  /api/v1/bank-accounts/{id}:
     delete:
       operationId: deleteBankAccount
       x-permissions:
@@ -168,7 +168,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/bank-accounts/{id}/restore:
+  /api/v1/bank-accounts/{id}/restore:
     post:
       operationId: restoreBankAccount
       x-permissions:
@@ -202,7 +202,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/bank-accounts/{id}/archive:
+  /api/v1/bank-accounts/{id}/archive:
     post:
       operationId: archiveBankAccount
       x-permissions:
@@ -233,7 +233,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/document-templates:
+  /api/v1/document-templates:
     get:
       operationId: listDocumentTemplates
       x-permissions:
@@ -276,7 +276,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/document-templates/{id}:
+  /api/v1/document-templates/{id}:
     delete:
       operationId: deleteDocumentTemplate
       x-permissions:
@@ -361,7 +361,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/document-templates/{id}/archive:
+  /api/v1/document-templates/{id}/archive:
     post:
       operationId: archiveDocumentTemplate
       x-permissions:
@@ -392,7 +392,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/document-templates/preview:
+  /api/v1/document-templates/preview:
     post:
       operationId: previewDocumentTemplate
       parameters:

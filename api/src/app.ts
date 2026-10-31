@@ -131,6 +131,7 @@ export async function buildApp(options: AppOptions = {}) {
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
+  app.get('/api/v1/health', async () => ({ status: 'ok' }))
   app.get('/ready', async () => {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
@@ -255,7 +256,7 @@ export async function buildApp(options: AppOptions = {}) {
             ? 'staff_roles'
             : key === 'notification_rules.update' || key.startsWith('notification_dispatches.')
               ? 'business_emails'
-              : request.url.startsWith('/v1/report-schedules')
+              : request.url.startsWith('/api/v1/report-schedules')
                 ? 'scheduled_reports'
                 : request.url.includes('/export')
                   ? 'report_exports'

@@ -13,15 +13,15 @@ declare module 'fastify' {
 export function registerTenantScope(app: FastifyInstance) {
   app.addHook('onRequest', (request, _reply, done) => {
     if (
-      !request.url.startsWith('/v1/') ||
-      request.url.startsWith('/v1/owner/') ||
-      request.url.startsWith('/v1/owner-auth/') ||
+      !request.url.startsWith('/api/v1/') ||
+      request.url.startsWith('/api/v1/owner/') ||
+      request.url.startsWith('/api/v1/owner-auth/') ||
       // The SaaS administration realm never selects or enters a tenant scope.
-      request.url.startsWith('/v1/admin/') ||
+      request.url.startsWith('/api/v1/admin/') ||
       request.method === 'OPTIONS'
     )
       return done()
-    const routeScope = /^\/v1\/organizations\/([a-f0-9-]+)\//i.exec(request.url)?.[1]
+    const routeScope = /^\/api\/v1\/organizations\/([a-f0-9-]+)\//i.exec(request.url)?.[1]
     const headerScope = request.headers['x-organization-id']
     const organizationId = routeScope ?? headerScope
     if (

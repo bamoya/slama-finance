@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info: { title: Sales cancellation, version: 0.1.0 }
 paths:
-  /v1/sales/cancellation/preview:
+  /api/v1/sales/cancellation/preview:
     post:
       operationId: previewSalesCancellation
       tags: [sales]
@@ -21,7 +21,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/sales/cancellation:
+  /api/v1/sales/cancellation:
     post:
       operationId: confirmSalesCancellation
       tags: [sales]

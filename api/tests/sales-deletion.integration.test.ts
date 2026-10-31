@@ -42,13 +42,13 @@ describe('Impact-confirmed sales deletion', () => {
     cascadeInvoices,
   })
   async function preview(input: SalesDeletionSelection) {
-    const response = await post('/v1/sales/deletion/preview', input)
+    const response = await post('/api/v1/sales/deletion/preview', input)
     expect(response.statusCode, response.body).toBe(200)
     return response.json()
   }
   async function remove(input: SalesDeletionSelection) {
     const impact = await preview(input)
-    const response = await post('/v1/sales/deletion', { ...input, token: impact.token })
+    const response = await post('/api/v1/sales/deletion', { ...input, token: impact.token })
     expect(response.statusCode, response.body).toBe(204)
     return impact
   }
@@ -99,7 +99,7 @@ describe('Impact-confirmed sales deletion', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'deletion-test-password' },
     })
@@ -127,11 +127,13 @@ describe('Impact-confirmed sales deletion', () => {
     ],
   })
   async function estimate() {
-    const created = await post('/v1/estimates', { ...base(), validUntil: null })
+    const created = await post('/api/v1/estimates', { ...base(), validUntil: null })
     expect(created.statusCode, created.body).toBe(201)
-    const issued = await post(`/v1/estimates/${created.json().id}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/estimates/${created.json().id}/issue`, {
+      expectedVersion: 1,
+    })
     expect(issued.statusCode, issued.body).toBe(200)
-    const accepted = await post(`/v1/estimates/${created.json().id}/accept`, {
+    const accepted = await post(`/api/v1/estimates/${created.json().id}/accept`, {
       expectedVersion: issued.json().version,
     })
     expect(accepted.statusCode, accepted.body).toBe(200)
@@ -139,16 +141,16 @@ describe('Impact-confirmed sales deletion', () => {
   }
   async function invoice(source?: Estimate, issue = true, operationId = randomUUID()) {
     const created = source
-      ? await post(`/v1/estimates/${source.id}/invoices`, { operationId, dueDate: null })
-      : await post('/v1/invoices', { ...base(), dueDate: null })
+      ? await post(`/api/v1/estimates/${source.id}/invoices`, { operationId, dueDate: null })
+      : await post('/api/v1/invoices', { ...base(), dueDate: null })
     expect(created.statusCode, created.body).toBe(201)
     if (!issue) return created.json<Invoice>()
-    const issued = await post(`/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
     return issued.json<Invoice>()
   }
   async function payment(owner: Invoice) {
-    const result = await post('/v1/payments', {
+    const result = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId: owner.id,
       amount: '40.00',
@@ -166,7 +168,7 @@ describe('Impact-confirmed sales deletion', () => {
     return result.json<Payment>()
   }
   async function delivery(owner: Invoice) {
-    const result = await post(`/v1/invoices/${owner.id}/delivery-note`, {})
+    const result = await post(`/api/v1/invoices/${owner.id}/delivery-note`, {})
     expect(result.statusCode, result.body).toBe(201)
     return result.json<DeliveryNote>()
   }
@@ -196,23 +198,23 @@ describe('Impact-confirmed sales deletion', () => {
     const issued = await invoice()
     const draft = await invoice(undefined, false)
     await fixture.client`update clients set legal_name='Updated identity' where id=${clientId}`
-    await deleteEntity('/v1/clients/deletion', {
+    await deleteEntity('/api/v1/clients/deletion', {
       records: [{ id: clientId, expectedVersion: 1 }],
       cascadeDocuments: false,
     })
-    const kept = await app.inject({ url: `/v1/invoices/${issued.id}`, cookies })
+    const kept = await app.inject({ url: `/api/v1/invoices/${issued.id}`, cookies })
     expect(kept.statusCode, kept.body).toBe(200)
     expect(kept.json().clientId).toBeNull()
     expect(kept.json().clientDisplayName).toBe('Atlas')
-    const drafts = await app.inject({ url: `/v1/invoices/${draft.id}`, cookies })
+    const drafts = await app.inject({ url: `/api/v1/invoices/${draft.id}`, cookies })
     expect(drafts.json().clientDisplayName).toBe('Updated identity')
-    const published = await post(`/v1/invoices/${draft.id}/issue`, {
+    const published = await post(`/api/v1/invoices/${draft.id}/issue`, {
       expectedVersion: drafts.json().version,
     })
     expect(published.statusCode, published.body).toBe(200)
-    const listed = await app.inject({ url: '/v1/invoices', cookies })
+    const listed = await app.inject({ url: '/api/v1/invoices', cookies })
     expect(listed.json().items).toHaveLength(2)
-    const invalid = await post('/v1/invoices', { ...base(), clientId: null, dueDate: null })
+    const invalid = await post('/api/v1/invoices', { ...base(), clientId: null, dueDate: null })
     expect(invalid.statusCode).toBe(400)
   })
   it('cascades client-owned document chains only after explicit confirmation', async () => {
@@ -220,7 +222,7 @@ describe('Impact-confirmed sales deletion', () => {
     const owner = await invoice(source)
     await delivery(owner)
     await payment(owner)
-    await deleteEntity('/v1/clients/deletion', {
+    await deleteEntity('/api/v1/clients/deletion', {
       records: [{ id: clientId, expectedVersion: 1 }],
       cascadeDocuments: true,
     })
@@ -232,10 +234,10 @@ describe('Impact-confirmed sales deletion', () => {
   })
   it('rejects stale client impact without deleting any selected client', async () => {
     const input = { records: [{ id: clientId, expectedVersion: 1 }], cascadeDocuments: true }
-    const preview = await post('/v1/clients/deletion/preview', input)
+    const preview = await post('/api/v1/clients/deletion/preview', input)
     expect(preview.statusCode, preview.body).toBe(200)
     await invoice(undefined, false)
-    const result = await post('/v1/clients/deletion', { ...input, token: preview.json().token })
+    const result = await post('/api/v1/clients/deletion', { ...input, token: preview.json().token })
     expect(result.statusCode, result.body).toBe(409)
     expect(await fixture.client`select id from clients where id=${clientId}`).toHaveLength(1)
   })
@@ -248,7 +250,7 @@ describe('Impact-confirmed sales deletion', () => {
       await tx`insert into products(id,name,reference,category_id) values(${product},'Wheat','WH-1',${category})`
       await tx`insert into product_variants(id,product_id,weight_g,price_per_item) values(${variant},${product},500,20)`
     })
-    await deleteEntity('/v1/catalog/deletion', {
+    await deleteEntity('/api/v1/catalog/deletion', {
       resource: 'categories',
       records: [{ id: category, expectedVersion: 1 }],
       cascadeProducts: false,
@@ -259,7 +261,7 @@ describe('Impact-confirmed sales deletion', () => {
     expect(await fixture.client`select id from product_variants where id=${variant}`).toHaveLength(
       1,
     )
-    await deleteEntity('/v1/catalog/deletion', {
+    await deleteEntity('/api/v1/catalog/deletion', {
       resource: 'products',
       records: [{ id: product, expectedVersion: 2 }],
       cascadeProducts: false,
@@ -275,13 +277,13 @@ describe('Impact-confirmed sales deletion', () => {
       await tx`insert into products(id,name,reference) values(${product},'Wheat','WH-1')`
       await tx`insert into product_variants(id,product_id,weight_g,price_per_item) values(${variant},${product},500,20)`
     })
-    const created = await post('/v1/invoices', {
+    const created = await post('/api/v1/invoices', {
       ...base(),
       dueDate: null,
       lines: [{ ...base().lines[0], productVariantId: variant }],
     })
     expect(created.statusCode, created.body).toBe(201)
-    const issued = await post(`/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
     const original = issued.json<Invoice>()
     const input = {
@@ -289,13 +291,13 @@ describe('Impact-confirmed sales deletion', () => {
       records: [{ id: product, expectedVersion: 1 }],
       cascadeProducts: false,
     }
-    const preview = await post('/v1/catalog/deletion/preview', input)
+    const preview = await post('/api/v1/catalog/deletion/preview', input)
     expect(preview.statusCode, preview.body).toBe(200)
     await fixture.client`update product_variants set price_per_item=25 where id=${variant}`
-    const stale = await post('/v1/catalog/deletion', { ...input, token: preview.json().token })
+    const stale = await post('/api/v1/catalog/deletion', { ...input, token: preview.json().token })
     expect(stale.statusCode).toBe(409)
-    await deleteEntity('/v1/catalog/deletion', input)
-    const kept = await app.inject({ url: `/v1/invoices/${original.id}`, cookies })
+    await deleteEntity('/api/v1/catalog/deletion', input)
+    const kept = await app.inject({ url: `/api/v1/invoices/${original.id}`, cookies })
     expect(kept.statusCode, kept.body).toBe(200)
     expect(kept.json().contentVersion).toBe(original.contentVersion)
     expect(kept.json().lines[0]).toMatchObject({
@@ -310,7 +312,7 @@ describe('Impact-confirmed sales deletion', () => {
   it('rejects an entire client cascade batch without child delete permission', async () => {
     await invoice()
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='invoices.delete')`
-    const result = await post('/v1/clients/deletion/preview', {
+    const result = await post('/api/v1/clients/deletion/preview', {
       records: [{ id: clientId, expectedVersion: 1 }],
       cascadeDocuments: true,
     })
@@ -323,7 +325,7 @@ describe('Impact-confirmed sales deletion', () => {
       await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Main','Credit Agricole','Slama','225091032701984651012213') returning id`
     await fixture.client`update company_settings set default_bank_account_id=${bank!.id} where id=1`
     const owner = await invoice()
-    const recorded = await post('/v1/payments', {
+    const recorded = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId: owner.id,
       amount: '40.00',
@@ -338,19 +340,19 @@ describe('Impact-confirmed sales deletion', () => {
       chequeNumber: null,
     })
     expect(recorded.statusCode, recorded.body).toBe(201)
-    const impact = await deleteEntity('/v1/settings/deletion', {
+    const impact = await deleteEntity('/api/v1/settings/deletion', {
       resource: 'bank_accounts',
       records: [{ id: bank!.id, expectedVersion: 1 }],
     })
     expect(
       impact.groups.some((group: { resource: string }) => group.resource === 'company_settings'),
     ).toBe(true)
-    const kept = await app.inject({ url: `/v1/invoices/${owner.id}`, cookies })
+    const kept = await app.inject({ url: `/api/v1/invoices/${owner.id}`, cookies })
     expect(kept.statusCode, kept.body).toBe(200)
     expect(kept.json().bankAccountId).toBeNull()
     expect(kept.json().bankDetailsSnapshot).toEqual(owner.bankDetailsSnapshot)
     expect(kept.json().contentVersion).toBe(owner.contentVersion)
-    const payment = await app.inject({ url: `/v1/payments/${recorded.json().id}`, cookies })
+    const payment = await app.inject({ url: `/api/v1/payments/${recorded.json().id}`, cookies })
     expect(payment.json()).toMatchObject({
       bankAccountId: null,
       bankAccountSnapshot: { bankName: 'Credit Agricole' },
@@ -369,13 +371,13 @@ describe('Impact-confirmed sales deletion', () => {
     const input = { resource: 'templates', records: [{ id: template!.id, expectedVersion: 1 }] }
     const [frozen] =
       await fixture.client`select appearance_snapshot from invoices where id=${owner.id}`
-    const preview = await post('/v1/settings/deletion/preview', input)
+    const preview = await post('/api/v1/settings/deletion/preview', input)
     expect(preview.statusCode, preview.body).toBe(200)
     await invoice(undefined, false)
-    const stale = await post('/v1/settings/deletion', { ...input, token: preview.json().token })
+    const stale = await post('/api/v1/settings/deletion', { ...input, token: preview.json().token })
     expect(stale.statusCode).toBe(409)
-    await deleteEntity('/v1/settings/deletion', input)
-    const kept = await app.inject({ url: `/v1/invoices/${owner.id}`, cookies })
+    await deleteEntity('/api/v1/settings/deletion', input)
+    const kept = await app.inject({ url: `/api/v1/invoices/${owner.id}`, cookies })
     expect(kept.json().templateId).toBeNull()
     expect(
       (await fixture.client`select appearance_snapshot from invoices where id=${owner.id}`)[0]!
@@ -391,7 +393,7 @@ describe('Impact-confirmed sales deletion', () => {
     const owner = await invoice(),
       paid = await payment(owner),
       note = await delivery(owner)
-    const delivered = await post(`/v1/delivery-notes/${note.id}/deliver`, {
+    const delivered = await post(`/api/v1/delivery-notes/${note.id}/deliver`, {
       expectedVersion: note.version,
       receivedByName: null,
     })
@@ -401,9 +403,9 @@ describe('Impact-confirmed sales deletion', () => {
       resource: 'delivery_notes',
       records: [{ id: note.id, expectedVersion: delivered.json().version }],
     }
-    const preview = await post('/v1/sales/cancellation/preview', input)
+    const preview = await post('/api/v1/sales/cancellation/preview', input)
     expect(preview.statusCode, preview.body).toBe(200)
-    const result = await post('/v1/sales/cancellation', {
+    const result = await post('/api/v1/sales/cancellation', {
       ...input,
       token: preview.json().token,
       reason: 'Delivery cancelled',
@@ -421,7 +423,7 @@ describe('Impact-confirmed sales deletion', () => {
   })
   it('rejects the whole cancellation batch if one record is stale or ineligible', async () => {
     const source = await estimate(),
-      draft = await post('/v1/estimates', { ...base(), validUntil: null })
+      draft = await post('/api/v1/estimates', { ...base(), validUntil: null })
     const input = {
       resource: 'estimates',
       records: [
@@ -429,7 +431,7 @@ describe('Impact-confirmed sales deletion', () => {
         { id: draft.json().id, expectedVersion: 1 },
       ],
     }
-    const result = await post('/v1/sales/cancellation/preview', input)
+    const result = await post('/api/v1/sales/cancellation/preview', input)
     expect(result.statusCode).toBe(409)
     expect(
       (await fixture.client`select status from estimates where id=${source.id}`)[0]!.status,
@@ -446,10 +448,10 @@ describe('Impact-confirmed sales deletion', () => {
         { id: second.id, expectedVersion: second.version },
       ],
     }
-    const preview = await post('/v1/sales/cancellation/preview', input)
+    const preview = await post('/api/v1/sales/cancellation/preview', input)
     expect(preview.statusCode, preview.body).toBe(200)
     await fixture.client`update payments set version=version+1 where id=${second.id}`
-    const stale = await post('/v1/sales/cancellation', {
+    const stale = await post('/api/v1/sales/cancellation', {
       ...input,
       token: preview.json().token,
       reason: 'Correction',
@@ -459,14 +461,14 @@ describe('Impact-confirmed sales deletion', () => {
       (await fixture.client`select status from payments where id=${first.id}`)[0]!.status,
     ).toBe('confirmed')
     input.records[1]!.expectedVersion++
-    const updated = await post('/v1/sales/cancellation/preview', input)
-    const result = await post('/v1/sales/cancellation', {
+    const updated = await post('/api/v1/sales/cancellation/preview', input)
+    const result = await post('/api/v1/sales/cancellation', {
       ...input,
       token: updated.json().token,
       reason: 'Correction',
     })
     expect(result.statusCode, result.body).toBe(204)
-    const kept = await app.inject({ url: `/v1/invoices/${owner.id}`, cookies })
+    const kept = await app.inject({ url: `/api/v1/invoices/${owner.id}`, cookies })
     expect(kept.json()).toMatchObject({
       status: 'issued',
       paidAmount: '0.00',
@@ -482,8 +484,8 @@ describe('Impact-confirmed sales deletion', () => {
       resource: 'estimates',
       records: [{ id: source.id, expectedVersion: source.version }],
     }
-    const preview = await post('/v1/sales/cancellation/preview', input)
-    const result = await post('/v1/sales/cancellation', {
+    const preview = await post('/api/v1/sales/cancellation/preview', input)
+    const result = await post('/api/v1/sales/cancellation', {
       ...input,
       token: preview.json().token,
       reason: 'Estimate withdrawn',
@@ -506,15 +508,15 @@ describe('Impact-confirmed sales deletion', () => {
     const id = randomUUID()
     await fixture.client`insert into users(id,email,first_name,password_hash,must_change_password) values(${id},'staff@example.test','Staff','hash',false)`
     await fixture.client`insert into audit_events(actor_id,actor_kind,action,entity_table,entity_key) values(${id},'user','create','clients',${JSON.stringify({ id: clientId })}::jsonb)`
-    await deleteEntity('/v1/staff/deletion', { ids: [id] })
+    await deleteEntity('/api/v1/staff/deletion', { ids: [id] })
     const [user] =
       await fixture.client`select email,first_name,disabled_at,deleted_at from users where id=${id}`
     expect(user!.first_name).toBe('Deleted user')
     expect(user!.email).not.toBe('staff@example.test')
     expect(user!.deleted_at).not.toBeNull()
     expect(await fixture.client`select id from audit_events where actor_id=${id}`).toHaveLength(1)
-    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(404)
-    const self = await post('/v1/staff/deletion/preview', { ids: [testUserId] })
+    expect((await app.inject({ url: `/api/v1/staff/${id}`, cookies })).statusCode).toBe(404)
+    const self = await post('/api/v1/staff/deletion/preview', { ids: [testUserId] })
     expect(self.statusCode).toBe(409)
   })
   it('fences a running PDF worker when its owner is deleted during storage I/O', async () => {
@@ -561,9 +563,9 @@ describe('Impact-confirmed sales deletion', () => {
     await fixture.client.unsafe(
       `create function reject_payment_deletion() returns trigger language plpgsql as $$ begin raise exception 'test rollback'; end $$; create trigger reject_payment_deletion before delete on payments for each row execute function reject_payment_deletion();`,
     )
-    expect((await post('/v1/sales/deletion', { ...input, token: impact.token })).statusCode).toBe(
-      500,
-    )
+    expect(
+      (await post('/api/v1/sales/deletion', { ...input, token: impact.token })).statusCode,
+    ).toBe(500)
     expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('2')
     expect((await fixture.client`select count(*) from delivery_notes`)[0]!.count).toBe('2')
     expect(
@@ -615,7 +617,7 @@ describe('Impact-confirmed sales deletion', () => {
   it('detaches invoices and revisions by default, preserves source numbers and leaves preserved drafts usable', async () => {
     const source = await estimate()
     const preserved = await invoice(source, false)
-    const revision = await post(`/v1/estimates/${source.id}/revisions`, {
+    const revision = await post(`/api/v1/estimates/${source.id}/revisions`, {
       expectedVersion: source.version,
     })
     expect(revision.statusCode, revision.body).toBe(200)
@@ -626,7 +628,7 @@ describe('Impact-confirmed sales deletion', () => {
       'detach',
     ])
     const current = (
-      await app.inject({ url: `/v1/invoices/${preserved.id}`, cookies })
+      await app.inject({ url: `/api/v1/invoices/${preserved.id}`, cookies })
     ).json<Invoice>()
     expect(current).toMatchObject({
       sourceEstimateId: null,
@@ -635,7 +637,7 @@ describe('Impact-confirmed sales deletion', () => {
       contentVersion: preserved.contentVersion,
     })
     expect(
-      (await post(`/v1/invoices/${current.id}/issue`, { expectedVersion: current.version }))
+      (await post(`/api/v1/invoices/${current.id}/issue`, { expectedVersion: current.version }))
         .statusCode,
     ).toBe(200)
     expect(
@@ -653,8 +655,13 @@ describe('Impact-confirmed sales deletion', () => {
     const input = selection('estimates', [source])
     const impact = await preview(input)
     expect(
-      (await post('/v1/sales/deletion', { ...input, cascadeInvoices: true, token: impact.token }))
-        .statusCode,
+      (
+        await post('/api/v1/sales/deletion', {
+          ...input,
+          cascadeInvoices: true,
+          token: impact.token,
+        })
+      ).statusCode,
     ).toBe(409)
     const cascaded = await remove({ ...input, cascadeInvoices: true })
     expect(
@@ -681,7 +688,9 @@ describe('Impact-confirmed sales deletion', () => {
     await file('payment_receipt', paid.id, paid.version)
     await fixture.client`update payments set receipt_issued_at=now() where id=${paid.id}`
     await remove(selection('payments', [paid]))
-    const current = (await app.inject({ url: `/v1/invoices/${owner.id}`, cookies })).json<Invoice>()
+    const current = (
+      await app.inject({ url: `/api/v1/invoices/${owner.id}`, cookies })
+    ).json<Invoice>()
     expect(current).toMatchObject({
       status: 'issued',
       paidAmount: '0.00',
@@ -694,19 +703,19 @@ describe('Impact-confirmed sales deletion', () => {
     const input = selection('invoices', [first, second])
     const original = await preview(input)
     await payment(second)
-    expect((await post('/v1/sales/deletion', { ...input, token: original.token })).statusCode).toBe(
-      409,
-    )
+    expect(
+      (await post('/api/v1/sales/deletion', { ...input, token: original.token })).statusCode,
+    ).toBe(409)
     const fresh = await preview(input)
     await fixture.client`delete from role_permissions where role_id in (select id from roles where key='admin') and permission_id in (select id from permissions where key='payments.delete')`
-    expect((await post('/v1/sales/deletion', { ...input, token: fresh.token })).statusCode).toBe(
-      403,
-    )
+    expect(
+      (await post('/api/v1/sales/deletion', { ...input, token: fresh.token })).statusCode,
+    ).toBe(403)
     expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('2')
     expect(
       (
         await post(
-          '/v1/sales/deletion/preview',
+          '/api/v1/sales/deletion/preview',
           selection('invoices', [first, { ...first, id: first.id.toUpperCase() }]),
         )
       ).statusCode,
@@ -714,19 +723,20 @@ describe('Impact-confirmed sales deletion', () => {
     expect(
       (
         await post(
-          '/v1/sales/deletion/preview',
+          '/api/v1/sales/deletion/preview',
           selection('invoices', [first, { id: randomUUID(), version: 1 }]),
         )
       ).statusCode,
     ).toBe(404)
     expect(
-      (await post('/v1/sales/deletion/preview', selection('invoices', [first], true))).statusCode,
+      (await post('/api/v1/sales/deletion/preview', selection('invoices', [first], true)))
+        .statusCode,
     ).toBe(400)
     expect(
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/sales/deletion/preview',
+          url: '/api/v1/sales/deletion/preview',
           headers,
           payload: selection('invoices', [first]),
         })
@@ -746,9 +756,9 @@ describe('Impact-confirmed sales deletion', () => {
       retainedFiles: 1,
       files: 0,
     })
-    expect((await post('/v1/sales/deletion', { ...input, token: blocked.token })).statusCode).toBe(
-      409,
-    )
+    expect(
+      (await post('/api/v1/sales/deletion', { ...input, token: blocked.token })).statusCode,
+    ).toBe(409)
     await fixture.client`update outbound_messages set status='failed',lease_token=null,locked_until=null where id=${ownMessage}`
     await remove(input)
     expect(objects.has(shared)).toBe(true)
@@ -771,9 +781,9 @@ describe('Impact-confirmed sales deletion', () => {
     await fixture.client.unsafe(
       `create function reject_invoice_deletion() returns trigger language plpgsql as $$ begin raise exception 'test rollback'; end $$; create trigger reject_invoice_deletion before delete on invoices for each row execute function reject_invoice_deletion();`,
     )
-    expect((await post('/v1/sales/deletion', { ...input, token: impact.token })).statusCode).toBe(
-      500,
-    )
+    expect(
+      (await post('/api/v1/sales/deletion', { ...input, token: impact.token })).statusCode,
+    ).toBe(500)
     expect((await fixture.client`select id from payments where id=${paid.id}`).length).toBe(1)
     expect(
       (await fixture.client`select count(*) from audit_events where action='delete'`)[0]!.count,
@@ -784,8 +794,8 @@ describe('Impact-confirmed sales deletion', () => {
     const fresh = await preview(input)
     const request = { ...input, token: fresh.token }
     const outcomes = await Promise.all([
-      post('/v1/sales/deletion', request),
-      post('/v1/sales/deletion', request),
+      post('/api/v1/sales/deletion', request),
+      post('/api/v1/sales/deletion', request),
     ])
     expect(outcomes.map((row) => row.statusCode).sort()).toEqual([204, 404])
     expect(
@@ -799,13 +809,16 @@ describe('Impact-confirmed sales deletion', () => {
     const operationId = randomUUID()
     const owner = await invoice(source, true, operationId)
     await remove(selection('invoices', [owner]))
-    const retry = await post(`/v1/estimates/${source.id}/invoices`, { operationId, dueDate: null })
+    const retry = await post(`/api/v1/estimates/${source.id}/invoices`, {
+      operationId,
+      dueDate: null,
+    })
     expect(retry.statusCode).toBe(409)
     expect(retry.json().code).toBe('OPERATION_DELETED')
-    const draft = await post(`/v1/estimates/${source.id}/revisions`, {
+    const draft = await post(`/api/v1/estimates/${source.id}/revisions`, {
       expectedVersion: source.version,
     })
-    const revision = await post(`/v1/estimates/${draft.json().id}/issue`, {
+    const revision = await post(`/api/v1/estimates/${draft.json().id}/issue`, {
       expectedVersion: draft.json().version,
     })
     expect(revision.statusCode, revision.body).toBe(200)

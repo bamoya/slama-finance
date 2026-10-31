@@ -1,5 +1,5 @@
 paths:
-  /v1/staff:
+  /api/v1/staff:
     post:
       operationId: createStaff
       description: Creating with nonempty roleIds also requires roles.update. Granting roles remains limited to permissions held by the actor. Editing existing staff role assignments requires both staff.update and roles.update.
@@ -87,7 +87,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffPage
         default: *a1
-  /v1/staff/{userId}/roles:
+  /api/v1/staff/{userId}/roles:
     put:
       operationId: replaceUserRoles
       x-permissions: [staff.update, roles.update]
@@ -114,7 +114,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/staff/{userId}:
+  /api/v1/staff/{userId}:
     get:
       operationId: getStaff
       x-permissions: [staff.read]
@@ -163,7 +163,7 @@ paths:
         "204": &a3
           description: Completed without response body
         default: *a1
-  /v1/staff/{userId}/archive:
+  /api/v1/staff/{userId}/archive:
     post:
       operationId: archiveStaff
       x-permissions: [staff.update]
@@ -172,7 +172,7 @@ paths:
       responses:
         "204": *a3
         default: *a1
-  /v1/staff/{userId}/disable:
+  /api/v1/staff/{userId}/disable:
     post:
       operationId: disableStaff
       x-permissions: [staff.update]
@@ -181,7 +181,7 @@ paths:
       responses:
         "204": *a3
         default: *a1
-  /v1/staff/{userId}/enable:
+  /api/v1/staff/{userId}/enable:
     post:
       operationId: enableStaff
       x-permissions: [staff.update]
@@ -190,7 +190,7 @@ paths:
       responses:
         "204": *a3
         default: *a1
-  /v1/staff/{userId}/temporary-password:
+  /api/v1/staff/{userId}/temporary-password:
     post:
       operationId: reissueTemporaryPassword
       x-permissions: [staff.update]

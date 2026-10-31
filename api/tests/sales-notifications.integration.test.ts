@@ -73,7 +73,7 @@ describe('consent-aware sales notifications', () => {
       mediaStorage: storage,
     })
     attachTestDatabase(app, fixture)
-    const login = await post('/v1/auth/login', {
+    const login = await post('/api/v1/auth/login', {
       email: 'operator@example.test',
       password: 'notifications-password-123',
     })
@@ -85,10 +85,10 @@ describe('consent-aware sales notifications', () => {
     await fixture?.cleanup()
   })
   async function rule(event: string, enabled = true, extra: object = {}) {
-    const list = await get('/v1/notification-rules')
+    const list = await get('/api/v1/notification-rules')
     expect(list.statusCode, list.body).toBe(200)
     const r = list.json().items.find((row: { eventKey: string }) => row.eventKey === event)
-    const update = await patch(`/v1/notification-rules/${r.id}`, {
+    const update = await patch(`/api/v1/notification-rules/${r.id}`, {
       expectedVersion: r.version,
       enabled,
       offsetDays: 0,
@@ -128,9 +128,9 @@ describe('consent-aware sales notifications', () => {
       ],
       ...(type === 'invoice' ? { dueDate: date } : { validUntil: date }),
     }
-    const draft = await post(`/v1/${type}s`, input)
+    const draft = await post(`/api/v1/${type}s`, input)
     expect(draft.statusCode, draft.body).toBe(201)
-    const issued = await post(`/v1/${type}s/${draft.json().id}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/${type}s/${draft.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
     if (!automatic)
       await fixture.client`update clients set email='client@example.test' where id=${clientId}`
@@ -147,7 +147,7 @@ describe('consent-aware sales notifications', () => {
       bodyTemplate:
         '<h2>Bonjour {{clientName}}</h2><p>{{total}} {{currency}}</p><script>bad()</script>',
     }
-    const preview = await post(`/v1/notification-rules/${r.id}/preview`, template)
+    const preview = await post(`/api/v1/notification-rules/${r.id}/preview`, template)
     expect(preview.statusCode, preview.body).toBe(200)
     expect(preview.json().html).toContain('<h2>Bonjour Client Exemple</h2>')
     expect(preview.json().html).not.toContain('<script>')
@@ -156,14 +156,14 @@ describe('consent-aware sales notifications', () => {
       (await fixture.client`select count(*)::int as count from outbound_messages`)[0]!.count,
     ).toBe(0)
     expect(
-      (await get('/v1/notification-rules'))
+      (await get('/api/v1/notification-rules'))
         .json()
         .items.find((item: { id: string }) => item.id === r.id).bodyFormat,
     ).toBe('text')
     const saved = await rule('invoice_sent', false, template)
     expect(saved.bodyFormat).toBe('html')
     expect(saved.bodyTemplate).not.toContain('<script>')
-    const test = await post(`/v1/notification-rules/${r.id}/test`, {})
+    const test = await post(`/api/v1/notification-rules/${r.id}/test`, {})
     expect(test.statusCode, test.body).toBe(202)
     const [message] =
       await fixture.client`select * from outbound_messages where id=${test.json().messageId}`
@@ -172,20 +172,20 @@ describe('consent-aware sales notifications', () => {
     expect(JSON.stringify(message)).not.toContain('client@example.test')
     expect(JSON.stringify(message)).not.toContain('<script>')
     expect(message!.html).toBe(preview.json().html)
-    const invalid = await post(`/v1/notification-rules/${r.id}/preview`, {
+    const invalid = await post(`/api/v1/notification-rules/${r.id}/preview`, {
       ...template,
       bodyTemplate: '{{paymentNumber}}',
     })
     expect(invalid.statusCode).toBe(400)
     const unauthorized = await app.inject({
       method: 'POST',
-      url: `/v1/notification-rules/${r.id}/preview`,
+      url: `/api/v1/notification-rules/${r.id}/preview`,
       headers,
       payload: template,
     })
     expect(unauthorized.statusCode).toBe(403) // Missing session is rejected by the CSRF guard first.
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='notification_rules.update')`
-    const forbidden = await post(`/v1/notification-rules/${r.id}/preview`, template)
+    const forbidden = await post(`/api/v1/notification-rules/${r.id}/preview`, template)
     expect(forbidden.statusCode).toBe(403)
   })
   it.each(['invoice', 'estimate'] as const)(
@@ -200,7 +200,7 @@ describe('consent-aware sales notifications', () => {
       ).toBe('0')
       const pref = await app.inject({
         method: 'PUT',
-        url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+        url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
         headers,
         cookies,
         payload: { expectedVersion: 0, enabled: true, cc: [] },
@@ -215,9 +215,10 @@ describe('consent-aware sales notifications', () => {
       expect(w.provider.messages).toHaveLength(1)
       expect(w.provider.messages[0]!.attachments).toHaveLength(1)
       expect(
-        (await post(`/v1/${type}s/${doc.id}/issue`, { expectedVersion: doc.version })).statusCode,
+        (await post(`/api/v1/${type}s/${doc.id}/issue`, { expectedVersion: doc.version }))
+          .statusCode,
       ).toBe(409)
-      await post(`/v1/${type}s/${doc.id}/pdf`, {})
+      await post(`/api/v1/${type}s/${doc.id}/pdf`, {})
       expect(
         (
           await fixture.client`select count(*) from background_jobs where job_type='prepare_notification'`
@@ -229,7 +230,7 @@ describe('consent-aware sales notifications', () => {
     const r = await rule('invoice_sent', true)
     await app.inject({
       method: 'PUT',
-      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
       headers,
       cookies,
       payload: { expectedVersion: 0, enabled: false, cc: [] },
@@ -246,7 +247,7 @@ describe('consent-aware sales notifications', () => {
     const doc = await document('invoice', companyDate(new Date()), true)
     const pref = await app.inject({
       method: 'PUT',
-      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
       headers,
       cookies,
       payload: { expectedVersion: 0, enabled: false, cc: [] },
@@ -263,13 +264,13 @@ describe('consent-aware sales notifications', () => {
     const r = await rule('delivery_prepared', false)
     const pref = await app.inject({
       method: 'PUT',
-      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
       headers,
       cookies,
       payload: { expectedVersion: 0, enabled: true, cc: [] },
     })
     expect(pref.statusCode, pref.body).toBe(200)
-    const draft = await post('/v1/delivery-notes', {
+    const draft = await post('/api/v1/delivery-notes', {
       clientId,
       invoiceId: null,
       deliveryDate: companyDate(new Date()),
@@ -282,7 +283,7 @@ describe('consent-aware sales notifications', () => {
     })
     expect(draft.statusCode, draft.body).toBe(201)
     expect(
-      (await post(`/v1/delivery-notes/${draft.json().id}/deliver`, { expectedVersion: 1 }))
+      (await post(`/api/v1/delivery-notes/${draft.json().id}/deliver`, { expectedVersion: 1 }))
         .statusCode,
     ).toBe(200)
     const w = workers()
@@ -291,14 +292,14 @@ describe('consent-aware sales notifications', () => {
     expect(w.provider.messages).toHaveLength(1)
     expect(w.provider.messages[0]!.attachments).toHaveLength(1)
     expect(w.provider.messages[0]!.subject).toContain('Bon de livraison')
-    const history = await get(`/v1/documents/delivery_note/${draft.json().id}/notifications`)
+    const history = await get(`/api/v1/documents/delivery_note/${draft.json().id}/notifications`)
     expect(history.statusCode, history.body).toBe(200)
     expect(history.json().items).toHaveLength(2)
   })
   it('manually sends delivered BLs idempotently with PDFs, rejecting drafts and stale versions', async () => {
     await rule('delivery_prepared', true)
     await fixture.client`update clients set email=null where id=${clientId}`
-    const draft = await post('/v1/delivery-notes', {
+    const draft = await post('/api/v1/delivery-notes', {
       clientId,
       invoiceId: null,
       deliveryDate: companyDate(new Date()),
@@ -310,9 +311,9 @@ describe('consent-aware sales notifications', () => {
       ],
     })
     expect(draft.statusCode, draft.body).toBe(201)
-    const url = `/v1/delivery-notes/${draft.json().id}/send`
+    const url = `/api/v1/delivery-notes/${draft.json().id}/send`
     expect((await post(url, { expectedVersion: 1, requestId: randomUUID() })).statusCode).toBe(409)
-    const delivered = await post(`/v1/delivery-notes/${draft.json().id}/deliver`, {
+    const delivered = await post(`/api/v1/delivery-notes/${draft.json().id}/deliver`, {
       expectedVersion: 1,
     })
     expect(delivered.statusCode, delivered.body).toBe(200)
@@ -328,8 +329,8 @@ describe('consent-aware sales notifications', () => {
     expect(w.provider.messages).toHaveLength(1)
     expect(w.provider.messages[0]!.attachments).toHaveLength(1)
     expect(w.provider.messages[0]!.subject).toContain('Bon de livraison')
-    expect((await get(`/v1/delivery-notes/${draft.json().id}`)).json().status).toBe('delivered')
-    const history = await get(`/v1/documents/delivery_note/${draft.json().id}/notifications`)
+    expect((await get(`/api/v1/delivery-notes/${draft.json().id}`)).json().status).toBe('delivered')
+    const history = await get(`/api/v1/documents/delivery_note/${draft.json().id}/notifications`)
     expect(history.json().items).toHaveLength(2)
     await rule('delivery_prepared', false)
     expect((await post(url, { ...input, requestId: randomUUID() })).statusCode).toBe(409)
@@ -347,7 +348,7 @@ describe('consent-aware sales notifications', () => {
     const r = await rule('invoice_due_reminder', false)
     const pref = await app.inject({
       method: 'PUT',
-      url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
       headers,
       cookies,
       payload: { expectedVersion: 0, enabled: true, cc: [] },
@@ -407,12 +408,12 @@ describe('consent-aware sales notifications', () => {
     expect((await policies.rule('invoice_sent')).locale).toBe('fr-MA')
   })
   it('defaults disabled, inherits and resets overrides with first-create concurrency protection', async () => {
-    const initial = await get(`/v1/clients/${clientId}/notification-preferences`)
+    const initial = await get(`/api/v1/clients/${clientId}/notification-preferences`)
     expect(
       initial.json().items.every((r: { reason: string }) => r.reason === 'RULE_DISABLED'),
     ).toBe(true)
     const r = await rule('invoice_sent')
-    const url = `/v1/clients/${clientId}/notification-preferences/${r.id}`
+    const url = `/api/v1/clients/${clientId}/notification-preferences/${r.id}`
     const writes = await Promise.all(
       [false, true].map((enabled) =>
         app.inject({
@@ -425,7 +426,7 @@ describe('consent-aware sales notifications', () => {
       ),
     )
     expect(writes.map((r) => r.statusCode).sort()).toEqual([200, 409])
-    const current = (await get(`/v1/clients/${clientId}/notification-preferences`))
+    const current = (await get(`/api/v1/clients/${clientId}/notification-preferences`))
       .json()
       .items.find((p: { ruleId: string }) => p.ruleId === r.id)
     const reset = await app.inject({
@@ -436,7 +437,7 @@ describe('consent-aware sales notifications', () => {
       payload: { expectedVersion: current.version },
     })
     expect(reset.statusCode, reset.body).toBe(204)
-    const after = (await get(`/v1/clients/${clientId}/notification-preferences`))
+    const after = (await get(`/api/v1/clients/${clientId}/notification-preferences`))
       .json()
       .items.find((p: { ruleId: string }) => p.ruleId === r.id)
     expect(after).toMatchObject({ version: 0, overrideEnabled: null, effectiveEnabled: true })
@@ -445,13 +446,17 @@ describe('consent-aware sales notifications', () => {
     await rule('invoice_sent')
     const doc = await document('invoice')
     const input = { expectedVersion: doc.version, requestId: randomUUID() }
-    const first = await post(`/v1/invoices/${doc.id}/send`, input)
+    const first = await post(`/api/v1/invoices/${doc.id}/send`, input)
     expect(first.statusCode, first.body).toBe(202)
-    const second = await post(`/v1/invoices/${doc.id}/send`, input)
+    const second = await post(`/api/v1/invoices/${doc.id}/send`, input)
     expect(second.json().jobId).toBe(first.json().jobId)
     expect(
-      (await post(`/v1/invoices/${doc.id}/send`, { ...input, expectedVersion: doc.version + 1 }))
-        .statusCode,
+      (
+        await post(`/api/v1/invoices/${doc.id}/send`, {
+          ...input,
+          expectedVersion: doc.version + 1,
+        })
+      ).statusCode,
     ).toBe(409)
     const w = workers()
     await w.producer.worker.runOne()
@@ -470,7 +475,7 @@ describe('consent-aware sales notifications', () => {
     })
     expect(row?.sent_at).toBeTruthy()
     expect(w.provider.messages).toHaveLength(1)
-    const timeline = await get(`/v1/documents/invoice/${doc.id}/notifications`)
+    const timeline = await get(`/api/v1/documents/invoice/${doc.id}/notifications`)
     expect(timeline.statusCode, timeline.body).toBe(200)
     expect(
       timeline
@@ -482,7 +487,7 @@ describe('consent-aware sales notifications', () => {
   it('manual work survives disabled automatic preferences and owner substitution is denied', async () => {
     await rule('invoice_sent')
     const doc = await document('invoice')
-    const request = await post(`/v1/invoices/${doc.id}/send`, {
+    const request = await post(`/api/v1/invoices/${doc.id}/send`, {
       expectedVersion: doc.version,
       requestId: randomUUID(),
     })
@@ -493,7 +498,10 @@ describe('consent-aware sales notifications', () => {
       await fixture.client`select id,message_id from notification_dispatches where source_id=${doc.id}`
     expect(d).toBeTruthy()
     const other = await document('invoice')
-    const bad = await post(`/v1/documents/invoice/${other.id}/notifications/${d!.id}/cancel`, {})
+    const bad = await post(
+      `/api/v1/documents/invoice/${other.id}/notifications/${d!.id}/cancel`,
+      {},
+    )
     expect(bad.statusCode, bad.body).toBe(404)
     await rule('invoice_sent', false)
     expect(await w.transport.status(d!.message_id)).toMatchObject({ status: 'queued' })
@@ -513,12 +521,12 @@ describe('consent-aware sales notifications', () => {
       if (customized)
         await app.inject({
           method: 'PUT',
-          url: `/v1/clients/${clientId}/notification-preferences/${r.id}`,
+          url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
           headers,
           cookies,
           payload: { expectedVersion: 0, enabled: false, cc: [] },
         })
-      const url = `/v1/${type}s/${doc.id}/send`
+      const url = `/api/v1/${type}s/${doc.id}/send`
       const input = { expectedVersion: doc.version, requestId: randomUUID() }
       const rejected = await post(url, input)
       expect(rejected.statusCode).toBe(409)
@@ -554,7 +562,7 @@ describe('consent-aware sales notifications', () => {
   it('expiry only transitions issued/sent estimates once and preserves printable content and accepted state', async () => {
     const issued = await document('estimate', '2026-01-01')
     const accepted = await document('estimate', '2026-01-01')
-    const accept = await post(`/v1/estimates/${accepted.id}/accept`, {
+    const accept = await post(`/api/v1/estimates/${accepted.id}/accept`, {
       expectedVersion: accepted.version,
     })
     expect(accept.statusCode, accept.body).toBe(200)
@@ -576,7 +584,7 @@ describe('consent-aware sales notifications', () => {
     await rule('payment_received')
     const invoice = await document('invoice')
     const today = companyDate(new Date())
-    const result = await post('/v1/payments', {
+    const result = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId: invoice.id,
       amount: '50.00',
@@ -597,12 +605,12 @@ describe('consent-aware sales notifications', () => {
     expect(first?.total).toBe(1)
     const [payment] = await fixture.client`select receipt_issued_at from payments where id=${id}`
     expect(payment?.receipt_issued_at).toBeNull()
-    const cancel = await post(`/v1/payments/${id}/cancel`, {
+    const cancel = await post(`/api/v1/payments/${id}/cancel`, {
       expectedVersion: 1,
       reason: 'Test correction',
     })
     expect(cancel.statusCode, cancel.body).toBe(200)
-    const restore = await post(`/v1/payments/${id}/restore`, {
+    const restore = await post(`/api/v1/payments/${id}/restore`, {
       expectedVersion: cancel.json().version,
     })
     expect(restore.statusCode, restore.body).toBe(200)
@@ -624,7 +632,7 @@ describe('consent-aware sales notifications', () => {
     const [dispatch] =
       await fixture.client`select message_id from notification_dispatches where source_id=${invoice.id} and event_key='invoice_due_reminder'`
     const today = companyDate(new Date())
-    const payment = await post('/v1/payments', {
+    const payment = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId: invoice.id,
       amount: '100.00',
@@ -645,16 +653,16 @@ describe('consent-aware sales notifications', () => {
   it('revision issue cancels predecessor preparation and never reverses supersession', async () => {
     await rule('estimate_sent')
     const estimate = await document('estimate')
-    const send = await post(`/v1/estimates/${estimate.id}/send`, {
+    const send = await post(`/api/v1/estimates/${estimate.id}/send`, {
       expectedVersion: estimate.version,
       requestId: randomUUID(),
     })
     expect(send.statusCode, send.body).toBe(202)
-    const revision = await post(`/v1/estimates/${estimate.id}/revisions`, {
+    const revision = await post(`/api/v1/estimates/${estimate.id}/revisions`, {
       expectedVersion: estimate.version,
     })
     expect(revision.statusCode, revision.body).toBe(200)
-    const issue = await post(`/v1/estimates/${revision.json().id}/issue`, {
+    const issue = await post(`/api/v1/estimates/${revision.json().id}/issue`, {
       expectedVersion: revision.json().version,
     })
     expect(issue.statusCode, issue.body).toBe(200)

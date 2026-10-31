@@ -26,7 +26,7 @@ export function createMediaModule(database: () => Database, storage: ObjectStora
     async registerRoutes(app: FastifyInstance, authenticate: preHandlerHookHandler) {
       await app.register(
         async (scope) => registerMediaRoutes(scope, createMediaController(service), authenticate),
-        { prefix: '/v1/media' },
+        { prefix: '/api/v1/media' },
       )
     },
   }

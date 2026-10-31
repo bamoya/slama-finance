@@ -78,7 +78,7 @@ export function createPlatformModule(options: {
             createOwnerAuthController(owners, options.secure),
             options.ownerAuth.portalOrigin,
           ),
-        { prefix: '/v1/owner-auth' },
+        { prefix: '/api/v1/owner-auth' },
       )
       await app.register(
         async (scope) =>
@@ -88,7 +88,7 @@ export function createPlatformModule(options: {
             options.ownerAuth.portalOrigin,
             createOwnerOnboardingController(onboarding),
           ),
-        { prefix: '/v1/owner' },
+        { prefix: '/api/v1/owner' },
       )
     },
   }

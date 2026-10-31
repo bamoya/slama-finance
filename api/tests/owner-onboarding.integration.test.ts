@@ -68,7 +68,7 @@ describe('Owner onboarding persistence and isolation', () => {
   const create = async (token = 'owner-a') => {
     const result = await request(
       'POST',
-      '/v1/owner/organizations',
+      '/api/v1/owner/organizations',
       { name: 'Atelier Atlas', requestId: randomUUID() },
       token,
     )
@@ -78,14 +78,14 @@ describe('Owner onboarding persistence and isolation', () => {
   const save = (draft: OwnerOnboarding, token = 'owner-a') =>
     request(
       'PUT',
-      `/v1/owner/organizations/${draft.organization.id}/onboarding`,
+      `/api/v1/owner/organizations/${draft.organization.id}/onboarding`,
       { configuration: draft.configuration, currentStep: 6, expectedVersion: draft.version },
       token,
     )
   it('creates an idempotent independent setup with an independent administrator and optional company data', async () => {
     const requestId = randomUUID(),
       payload = { name: '  Atelier Atlas  ', requestId }
-    const first = await request('POST', '/v1/owner/organizations', payload)
+    const first = await request('POST', '/api/v1/owner/organizations', payload)
     expect(first.statusCode).toBe(201)
     expect(first.json()).toMatchObject({
       organization: { id: requestId, name: 'Atelier Atlas', status: 'setup', staffCount: 1 },
@@ -97,7 +97,7 @@ describe('Owner onboarding persistence and isolation', () => {
         defaults: { currency: 'MAD', language: 'fr', vatEnabled: false, vatRate: 0 },
       },
     })
-    const second = await request('POST', '/v1/owner/organizations', payload)
+    const second = await request('POST', '/api/v1/owner/organizations', payload)
     expect(second.json()).toEqual(first.json())
     expect(
       (
@@ -105,12 +105,12 @@ describe('Owner onboarding persistence and isolation', () => {
       )[0]!.n,
     ).toBe(1)
     expect((await fixture.client`select count(*)::int n from users`)[0]!.n).toBe(2)
-    expect((await request('POST', '/v1/owner/organizations', payload, 'owner-b')).statusCode).toBe(
-      404,
-    )
+    expect(
+      (await request('POST', '/api/v1/owner/organizations', payload, 'owner-b')).statusCode,
+    ).toBe(404)
     expect(
       (
-        await request('POST', '/v1/owner/organizations', {
+        await request('POST', '/api/v1/owner/organizations', {
           ...payload,
           requestId: randomUUID(),
           name: '   ',
@@ -137,7 +137,9 @@ describe('Owner onboarding persistence and isolation', () => {
     })
     expect((await save(draft)).statusCode).toBe(409)
     expect(
-      (await request('GET', `/v1/owner/organizations/${draft.organization.id}/onboarding`)).json(),
+      (
+        await request('GET', `/api/v1/owner/organizations/${draft.organization.id}/onboarding`)
+      ).json(),
     ).toEqual(updated)
     const concurrent = await Promise.all([save(updated), save(updated)])
     expect(concurrent.map((r) => r.statusCode).sort()).toEqual([200, 409])
@@ -146,7 +148,7 @@ describe('Owner onboarding persistence and isolation', () => {
     const draft = await create()
     draft.configuration.invitations = [{ email: 'staff@example.test', role: 'staff' }]
     const saved = (await save(draft)).json<OwnerOnboarding>()
-    const url = `/v1/owner/organizations/${saved.organization.id}/onboarding/complete`
+    const url = `/api/v1/owner/organizations/${saved.organization.id}/onboarding/complete`
     const finished = await request('POST', url, { expectedVersion: saved.version })
     expect(finished.statusCode, finished.body).toBe(200)
     expect(finished.json().completedAt).toBeTruthy()
@@ -175,7 +177,7 @@ describe('Owner onboarding persistence and isolation', () => {
         (
           await request(
             method,
-            `/v1/owner/organizations/${draft.organization.id}/onboarding`,
+            `/api/v1/owner/organizations/${draft.organization.id}/onboarding`,
             method === 'PUT'
               ? { expectedVersion: 1, currentStep: 2, configuration: draft.configuration }
               : undefined,
@@ -187,7 +189,7 @@ describe('Owner onboarding persistence and isolation', () => {
       (
         await request(
           'POST',
-          `/v1/owner/organizations/${draft.organization.id}/onboarding/complete`,
+          `/api/v1/owner/organizations/${draft.organization.id}/onboarding/complete`,
           { expectedVersion: 1 },
           'owner-b',
         )
@@ -197,7 +199,7 @@ describe('Owner onboarding persistence and isolation', () => {
       (
         await request(
           'GET',
-          `/v1/owner/organizations/${draft.organization.id}/onboarding`,
+          `/api/v1/owner/organizations/${draft.organization.id}/onboarding`,
           undefined,
           'invalid',
         )
@@ -207,7 +209,7 @@ describe('Owner onboarding persistence and isolation', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/owner/organizations',
+          url: '/api/v1/owner/organizations',
           headers: { origin: 'https://foreign.example' },
           cookies: { slama_owner_session: 'owner-a' },
           payload: { name: 'Forbidden', requestId: randomUUID() },
@@ -229,7 +231,7 @@ describe('Owner onboarding persistence and isolation', () => {
     }
     const uploaded = await request(
       'POST',
-      `/v1/owner/organizations/${a.organization.id}/branding`,
+      `/api/v1/owner/organizations/${a.organization.id}/branding`,
       body,
     )
     expect(uploaded.statusCode).toBe(201)
@@ -237,7 +239,7 @@ describe('Owner onboarding persistence and isolation', () => {
     expect([...objects.keys()][0]).toContain(
       `/organizations/`.slice(1) + a.organization.id + '/branding/',
     )
-    const url = `/v1/owner/organizations/${a.organization.id}/branding/${asset.id}`
+    const url = `/api/v1/owner/organizations/${a.organization.id}/branding/${asset.id}`
     expect((await request('GET', url)).json().data).toBeTruthy()
     expect((await request('GET', url, undefined, 'owner-b')).statusCode).toBe(404)
     b.configuration.branding.logoAssetId = asset.id
@@ -249,7 +251,7 @@ describe('Owner onboarding persistence and isolation', () => {
     expect((await save(a)).statusCode).toBe(200)
     expect(
       (
-        await request('POST', `/v1/owner/organizations/${a.organization.id}/branding`, {
+        await request('POST', `/api/v1/owner/organizations/${a.organization.id}/branding`, {
           ...body,
           data: Buffer.from('<svg/>').toString('base64'),
         })

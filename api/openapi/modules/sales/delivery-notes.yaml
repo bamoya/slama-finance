@@ -1,5 +1,5 @@
 paths:
-  /v1/invoices/{id}/delivery-note:
+  /api/v1/invoices/{id}/delivery-note:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     post:
       operationId: createDeliveryNoteFromInvoice
@@ -13,7 +13,7 @@ paths:
               schema: { $ref: '#/components/schemas/DeliveryNote' }
         '409':
           description: Invoice is not active and issued, or already has an active delivery note.
-  /v1/delivery-notes:
+  /api/v1/delivery-notes:
     get:
       operationId: listDeliveryNotes
       x-permissions: [delivery_notes.read]
@@ -80,7 +80,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
           }
-  /v1/delivery-notes/{id}:
+  /api/v1/delivery-notes/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
       operationId: getDeliveryNote
@@ -119,7 +119,7 @@ paths:
         }
       responses:
         '204': { description: Deleted draft }
-  /v1/delivery-notes/{id}/deliver:
+  /api/v1/delivery-notes/{id}/deliver:
     post:
       operationId: deliverDeliveryNote
       x-permissions: [delivery_notes.update]
@@ -138,7 +138,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
           }
-  /v1/delivery-notes/{id}/cancel:
+  /api/v1/delivery-notes/{id}/cancel:
     post:
       operationId: cancelDeliveryNote
       x-permissions: [delivery_notes.update]
@@ -159,7 +159,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/DeliveryNote' } } },
           }
-  /v1/delivery-notes/{id}/pdf:
+  /api/v1/delivery-notes/{id}/pdf:
     post:
       operationId: prepareDeliveryNotePdf
       x-permissions: [delivery_notes.read]
@@ -171,7 +171,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/DeliveryNotePdfJob' } } },
           }
-  /v1/delivery-notes/{id}/artifacts:
+  /api/v1/delivery-notes/{id}/artifacts:
     get:
       operationId: listDeliveryNoteArtifacts
       x-permissions: [delivery_notes.read]

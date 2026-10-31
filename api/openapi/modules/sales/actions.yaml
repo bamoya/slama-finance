@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info: { title: Sales actions, version: 0.1.0 }
 paths:
-  /v1/sales/deletion/preview:
+  /api/v1/sales/deletion/preview:
     post:
       operationId: previewSalesDeletion
       tags: [sales]
@@ -22,7 +22,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/sales/deletion:
+  /api/v1/sales/deletion:
     post:
       operationId: confirmSalesDeletion
       tags: [sales]
@@ -39,7 +39,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/invoices/cancellation/preview:
+  /api/v1/invoices/cancellation/preview:
     post:
       operationId: previewInvoiceCancellation
       tags: [sales]
@@ -61,7 +61,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/invoices/cancellation:
+  /api/v1/invoices/cancellation:
     post:
       operationId: confirmInvoiceCancellation
       tags: [sales]

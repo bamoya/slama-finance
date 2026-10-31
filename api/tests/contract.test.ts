@@ -34,7 +34,7 @@ describe('OpenAPI source contract', () => {
       }
     }
     expect(new Set(ids).size).toBe(ids.length)
-    expect(Object.keys(document.paths ?? {})).not.toContain('/v1/auth/google')
+    expect(Object.keys(document.paths ?? {})).not.toContain('/api/v1/auth/google')
   })
   it('matches real health/readiness and standard-error response shapes', async () => {
     const source = JSON.parse(JSON.stringify(await SwaggerParser.dereference(path.pathname)))
@@ -51,7 +51,7 @@ describe('OpenAPI source contract', () => {
       expect(validate('Health', (await app.inject('/health')).json())).toBe(true)
       expect(validate('Error', (await app.inject('/ready')).json())).toBe(true)
       expect(validate('Error', (await app.inject('/missing')).json())).toBe(true)
-      expect(validate('Error', (await app.inject('/v1/auth/session')).json())).toBe(true)
+      expect(validate('Error', (await app.inject('/api/v1/auth/session')).json())).toBe(true)
       expect(validate('Error', { code: 'BAD', message: 'Missing ID' })).toBe(false)
     } finally {
       await app.close()
@@ -87,9 +87,9 @@ describe('OpenAPI source contract', () => {
         )
     }
     const management = [
-      '/v1/staff/invitations',
-      '/v1/staff/invitations/{invitationId}/resend',
-      '/v1/staff/invitations/{invitationId}/revoke',
+      '/api/v1/staff/invitations',
+      '/api/v1/staff/invitations/{invitationId}/resend',
+      '/api/v1/staff/invitations/{invitationId}/revoke',
     ]
     for (const url of management) {
       const item = document.paths[url]
@@ -115,32 +115,32 @@ describe('OpenAPI source contract', () => {
       }
     }
     expect(
-      (document.paths['/v1/staff/invitations']?.get as { 'x-permissions'?: string[] })[
+      (document.paths['/api/v1/staff/invitations']?.get as { 'x-permissions'?: string[] })[
         'x-permissions'
       ],
     ).toEqual(['staff.read'])
     expect(
-      (document.paths['/v1/staff/invitations']?.post as { 'x-permissions'?: string[] })[
+      (document.paths['/api/v1/staff/invitations']?.post as { 'x-permissions'?: string[] })[
         'x-permissions'
       ],
     ).toEqual(['staff.create'])
     expect(
       (
-        document.paths['/v1/staff/invitations/{invitationId}/resend']?.post as {
+        document.paths['/api/v1/staff/invitations/{invitationId}/resend']?.post as {
           'x-permissions'?: string[]
         }
       )['x-permissions'],
     ).toEqual(['staff.update'])
     expect(
       (
-        document.paths['/v1/staff/invitations/{invitationId}/revoke']?.post as {
+        document.paths['/api/v1/staff/invitations/{invitationId}/revoke']?.post as {
           'x-permissions'?: string[]
         }
       )['x-permissions'],
     ).toEqual(['staff.update'])
     for (const url of [
-      '/v1/organizations/{organizationId}/auth/invitations/inspect',
-      '/v1/organizations/{organizationId}/auth/invitations/accept',
+      '/api/v1/organizations/{organizationId}/auth/invitations/inspect',
+      '/api/v1/organizations/{organizationId}/auth/invitations/accept',
     ]) {
       expect((document.paths[url]?.post as { security?: unknown[] }).security).toEqual([])
     }

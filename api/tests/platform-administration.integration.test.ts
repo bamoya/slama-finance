@@ -44,14 +44,14 @@ describe('SaaS administration portal', () => {
   const login = (pw = password) =>
     app.inject({
       method: 'POST',
-      url: '/v1/admin/auth/login',
+      url: '/api/v1/admin/auth/login',
       headers,
       payload: { email, password: pw },
     })
   const verify = (cookie: string | undefined, code: string) =>
     app.inject({
       method: 'POST',
-      url: '/v1/admin/auth/2fa',
+      url: '/api/v1/admin/auth/2fa',
       headers,
       cookies: cookie ? { slama_admin_session: cookie } : {},
       payload: { code },
@@ -123,10 +123,10 @@ describe('SaaS administration portal', () => {
     await owner('noPayment', -30, null)
     await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${trial},'pro','monthly','activation','cash','overview-trial','MAD',100,0,100)`
 
-    const anonymous = await app.inject({ method: 'GET', url: '/v1/admin/overview' })
+    const anonymous = await app.inject({ method: 'GET', url: '/api/v1/admin/overview' })
     expect(anonymous.statusCode).toBe(401)
     const { cookie } = await signIn()
-    const response = await as(cookie).get('/v1/admin/overview')
+    const response = await as(cookie).get('/api/v1/admin/overview')
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({
       pendingPayments: 2,
@@ -142,11 +142,11 @@ describe('SaaS administration portal', () => {
     const token = randomBytes(32).toString('base64url')
     await fixture.client`insert into owner_sessions(owner_id,token_hash,expires_at) values (${testOwnerId},${sha(token)},now()+interval '1 day')`
     for (const url of [
-      '/v1/admin/auth/me',
-      '/v1/admin/payments',
-      '/v1/admin/owners',
-      '/v1/admin/billing-settings',
-      '/v1/admin/audit',
+      '/api/v1/admin/auth/me',
+      '/api/v1/admin/payments',
+      '/api/v1/admin/owners',
+      '/api/v1/admin/billing-settings',
+      '/api/v1/admin/audit',
     ]) {
       const response = await app.inject({
         method: 'GET',
@@ -158,7 +158,7 @@ describe('SaaS administration portal', () => {
     }
     const confirm = await app.inject({
       method: 'POST',
-      url: `/v1/admin/payments/${await submittedPayment('x')}/confirm`,
+      url: `/api/v1/admin/payments/${await submittedPayment('x')}/confirm`,
       headers,
       cookies: { slama_owner_session: token },
       payload: {},
@@ -170,7 +170,7 @@ describe('SaaS administration portal', () => {
     const wrong = await login('wrong-password')
     const unknown = await app.inject({
       method: 'POST',
-      url: '/v1/admin/auth/login',
+      url: '/api/v1/admin/auth/login',
       headers,
       payload: { email: 'nobody@example.test', password },
     })
@@ -185,7 +185,7 @@ describe('SaaS administration portal', () => {
     const cookie = pending.cookies.find((c) => c.name === 'slama_admin_session')!
     expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/' })
     // A pending (password-only) session never authorizes admin routes.
-    expect((await as(pendingCookie).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(pendingCookie).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
     const { secret, otpauthUri } = pending.json().enrollment
     expect(otpauthUri).toContain(`secret=${secret}`)
     const [stored] = await fixture.client`select totp_secret from platform_admins`
@@ -199,7 +199,7 @@ describe('SaaS administration portal', () => {
     expect(done.body).not.toContain(secret)
     const session = cookieOf(done)!
     expect(session).not.toBe(pendingCookie)
-    expect((await as(session).get('/v1/admin/auth/me')).statusCode).toBe(200)
+    expect((await as(session).get('/api/v1/admin/auth/me')).statusCode).toBe(200)
     // The pending token was rotated away.
     expect((await verify(pendingCookie, totp(key, Date.now() + 30_000))).statusCode).toBe(401)
 
@@ -214,9 +214,9 @@ describe('SaaS administration portal', () => {
       await fixture.client`select token_hash from platform_admin_sessions where verified_at is not null limit 1`
     expect(hash!.token_hash).toMatch(/^[a-f0-9]{64}$/)
 
-    const out = await as(session).post('/v1/admin/auth/logout')
+    const out = await as(session).post('/api/v1/admin/auth/logout')
     expect(out.statusCode).toBe(204)
-    expect((await as(session).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(session).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
   })
 
   it('revokes a pending sign-in after five wrong codes', async () => {
@@ -230,7 +230,7 @@ describe('SaaS administration portal', () => {
   it('expires sessions after 30 idle minutes and 8 hours absolute', async () => {
     const { cookie } = await signIn()
     await fixture.client`update platform_admin_sessions set last_seen_at=now()-interval '31 minutes' where token_hash=${sha(cookie)}`
-    expect((await as(cookie).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(cookie).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
 
     // Expired sessions are not resurrected, but a fresh sign-in still works.
     expect((await login()).json().step).toBe('verify')
@@ -238,19 +238,19 @@ describe('SaaS administration portal', () => {
 
   it('enforces the absolute lifetime even for active sessions', async () => {
     const { cookie } = await signIn()
-    const me = await as(cookie).get('/v1/admin/auth/me')
+    const me = await as(cookie).get('/api/v1/admin/auth/me')
     const expiresAt = new Date(me.json().expiresAt).getTime()
     expect(expiresAt - Date.now()).toBeGreaterThan(7.9 * 3_600_000)
     expect(expiresAt - Date.now()).toBeLessThanOrEqual(8 * 3_600_000)
     expect(me.json().idleTimeoutSeconds).toBe(1800)
     await fixture.client`update platform_admin_sessions set created_at=now()-interval '9 hours', expires_at=now()-interval '1 second', last_seen_at=now() where token_hash=${sha(cookie)}`
-    expect((await as(cookie).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(cookie).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
   })
 
   it('rejects a disabled administrator, including existing sessions', async () => {
     const { cookie } = await signIn()
     await accounts.disable(email)
-    expect((await as(cookie).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(cookie).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
     const denied = await login()
     expect(denied.statusCode).toBe(401)
     expect(denied.json().code).toBe('INVALID_CREDENTIALS')
@@ -260,7 +260,7 @@ describe('SaaS administration portal', () => {
   it('forces re-enrollment after a 2FA reset', async () => {
     const { cookie } = await signIn()
     await accounts.reset2fa(email)
-    expect((await as(cookie).get('/v1/admin/auth/me')).statusCode).toBe(401)
+    expect((await as(cookie).get('/api/v1/admin/auth/me')).statusCode).toBe(401)
     expect((await login()).json().step).toBe('enroll')
     expect((await auditRows('admin.reset_2fa')).length).toBe(1)
     expect((await auditRows('admin.create')).length).toBe(1)
@@ -269,10 +269,10 @@ describe('SaaS administration portal', () => {
   it('confirms payments idempotently with exactly one audit row', async () => {
     const { cookie } = await signIn()
     const id = await submittedPayment('bank-1')
-    const list = await as(cookie).get('/v1/admin/payments?status=submitted')
+    const list = await as(cookie).get('/api/v1/admin/payments?status=submitted')
     expect(list.statusCode).toBe(200)
     expect(list.json().items[0]).toMatchObject({ id, ownerEmail: 'fixture-owner@example.test' })
-    const first = await as(cookie).post(`/v1/admin/payments/${id}/confirm`, {
+    const first = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
       receivedReference: 'VIR-42',
     })
     expect(first.statusCode).toBe(200)
@@ -281,7 +281,7 @@ describe('SaaS administration portal', () => {
       decidedBy: email,
       receivedReference: 'VIR-42',
     })
-    const second = await as(cookie).post(`/v1/admin/payments/${id}/confirm`)
+    const second = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`)
     expect(second.statusCode).toBe(200)
     expect(second.json().coverageEnd).toBe(first.json().coverageEnd)
     const audit = await auditRows('payment.confirm')
@@ -290,18 +290,18 @@ describe('SaaS administration portal', () => {
     expect(audit[0]!.before.status).toBe('submitted')
     expect(audit[0]!.after.status).toBe('confirmed')
     expect(
-      (await as(cookie).post(`/v1/admin/payments/${id}/reject`, { reason: 'x' })).json().code,
+      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: 'x' })).json().code,
     ).toBe('PAYMENT_CONFIRMED')
   })
 
   it('requires a rejection reason and shows it to the owner', async () => {
     const { cookie } = await signIn()
     const id = await submittedPayment('bank-2')
-    expect((await as(cookie).post(`/v1/admin/payments/${id}/reject`, {})).statusCode).toBe(400)
+    expect((await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {})).statusCode).toBe(400)
     expect(
-      (await as(cookie).post(`/v1/admin/payments/${id}/reject`, { reason: '   ' })).statusCode,
+      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: '   ' })).statusCode,
     ).toBe(400)
-    const rejected = await as(cookie).post(`/v1/admin/payments/${id}/reject`, {
+    const rejected = await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
       reason: 'Transfer not received',
     })
     expect(rejected.statusCode).toBe(200)
@@ -310,7 +310,7 @@ describe('SaaS administration portal', () => {
       rejectionReason: 'Transfer not received',
     })
     expect(
-      (await as(cookie).post(`/v1/admin/payments/${id}/reject`, { reason: 'again' })).json()
+      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: 'again' })).json()
         .rejectionReason,
     ).toBe('Transfer not received')
     expect(await auditRows('payment.reject')).toHaveLength(1)
@@ -320,7 +320,7 @@ describe('SaaS administration portal', () => {
     await fixture.client`insert into owner_sessions(owner_id,token_hash,expires_at) values (${testOwnerId},${sha(token)},now()+interval '1 day')`
     const owner = await app.inject({
       method: 'GET',
-      url: '/v1/owner/subscription/payments',
+      url: '/api/v1/owner/subscription/payments',
       cookies: { slama_owner_session: token },
     })
     expect(owner.statusCode).toBe(200)
@@ -336,15 +336,15 @@ describe('SaaS administration portal', () => {
 
   it('updates billing settings with an audited before/after', async () => {
     const { cookie } = await signIn()
-    const before = (await as(cookie).get('/v1/admin/billing-settings')).json()
+    const before = (await as(cookie).get('/api/v1/admin/billing-settings')).json()
     expect(before.currency).toBe('MAD')
     expect(
-      (await as(cookie).put('/v1/admin/billing-settings', { ...before, paymentMethods: [] }))
+      (await as(cookie).put('/api/v1/admin/billing-settings', { ...before, paymentMethods: [] }))
         .statusCode,
     ).toBe(400)
     expect(
       (
-        await as(cookie).put('/v1/admin/billing-settings', {
+        await as(cookie).put('/api/v1/admin/billing-settings', {
           taxRateBasisPoints: 10001,
           paymentMethods: ['cash'],
           paymentInstructions: '',
@@ -356,13 +356,13 @@ describe('SaaS administration portal', () => {
       paymentMethods: ['bank_transfer'],
       paymentInstructions: 'RIB 0000',
     }
-    const updated = await as(cookie).put('/v1/admin/billing-settings', update)
+    const updated = await as(cookie).put('/api/v1/admin/billing-settings', update)
     expect(updated.statusCode).toBe(200)
     expect(updated.json()).toEqual({ currency: 'MAD', ...update })
     const [audit] = await auditRows('billing_settings.update')
     expect(audit!.before).toMatchObject({ paymentMethods: before.paymentMethods })
     expect(audit!.after).toMatchObject(update)
-    const log = (await as(cookie).get('/v1/admin/audit')).json()
+    const log = (await as(cookie).get('/api/v1/admin/audit')).json()
     expect(log.items[0]).toMatchObject({ action: 'billing_settings.update', actor: email })
     await expect(fixture.client`update platform_admin_audit set actor='x'`).rejects.toThrow(
       /append-only/,
@@ -372,7 +372,7 @@ describe('SaaS administration portal', () => {
 
   it('lists owners and details without tenant finance data', async () => {
     const { cookie } = await signIn()
-    const page = await as(cookie).get('/v1/admin/owners?search=FIXTURE')
+    const page = await as(cookie).get('/api/v1/admin/owners?search=FIXTURE')
     expect(page.statusCode).toBe(200)
     expect(page.json()).toMatchObject({ total: 1, page: 1 })
     expect(page.json().items[0]).toMatchObject({
@@ -381,14 +381,14 @@ describe('SaaS administration portal', () => {
       subscriptionStatus: 'active',
       organizationCount: 1,
     })
-    expect((await as(cookie).get('/v1/admin/owners?search=%25')).json().total).toBe(0)
+    expect((await as(cookie).get('/api/v1/admin/owners?search=%25')).json().total).toBe(0)
     await fixture.client`insert into platform_users (id,email,password_hash) values (${randomBytesUuid()},'no-organization@example.test','not-a-login-hash')`
-    const notStarted = (await as(cookie).get('/v1/admin/owners?status=not_started')).json()
+    const notStarted = (await as(cookie).get('/api/v1/admin/owners?status=not_started')).json()
     expect(notStarted.items.map((item: { email: string }) => item.email)).toEqual([
       'no-organization@example.test',
     ])
     expect(notStarted.items[0].subscriptionStatus).toBe('not_started')
-    const detail = await as(cookie).get(`/v1/admin/owners/${testOwnerId}`)
+    const detail = await as(cookie).get(`/api/v1/admin/owners/${testOwnerId}`)
     expect(detail.statusCode).toBe(200)
     expect(detail.json().organizations).toEqual([
       expect.objectContaining({ name: 'Fixture', slug: 'fixture' }),
@@ -403,7 +403,7 @@ describe('SaaS administration portal', () => {
       'subscription',
     ])
     expect(detail.body).not.toMatch(/password|invoice|client/i)
-    expect((await as(cookie).get(`/v1/admin/owners/${randomBytesUuid()}`)).statusCode).toBe(404)
+    expect((await as(cookie).get(`/api/v1/admin/owners/${randomBytesUuid()}`)).statusCode).toBe(404)
   })
 
   it('hides administrator tables from owner, staff and worker contexts', async () => {

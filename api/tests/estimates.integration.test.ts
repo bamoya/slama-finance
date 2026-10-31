@@ -59,7 +59,7 @@ describe('Estimates lifecycle', () => {
       legalName: 'Fresh client',
       phone: '06 55 44 33 22',
     })
-    const regenerated = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
+    const regenerated = await post(`/api/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
     expect(regenerated.statusCode, regenerated.body).toBe(200)
     expect(
       businessFields((await fixture.client`select * from invoices where id=${invoice.id}`)[0]!),
@@ -110,7 +110,7 @@ describe('Estimates lifecycle', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'estimates-password-123' },
     })
@@ -142,17 +142,17 @@ describe('Estimates lifecycle', () => {
   })
   async function cancellableInvoice(templateId: string | null = null) {
     const { validUntil: _, ...input } = revisionInput()
-    const created = await post('/v1/invoices', { ...input, templateId, dueDate: null })
+    const created = await post('/api/v1/invoices', { ...input, templateId, dueDate: null })
     expect(created.statusCode, created.body).toBe(201)
-    const issued = await post(`/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/invoices/${created.json().id}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, issued.body).toBe(200)
     return issued.json()
   }
   it('issues estimates and invoices for name-only clients without inventing missing data', async () => {
     await fixture.client`update clients set address_line1=null,address_line2=null,city=null,postal_code=null,country_code=null,email=null,phone=null,ice=null where id=${clientId}`
-    const draft = await post('/v1/estimates', revisionInput())
+    const draft = await post('/api/v1/estimates', revisionInput())
     expect(draft.statusCode, draft.body).toBe(201)
-    const issued = await post(`/v1/estimates/${draft.json().id}/issue`, {
+    const issued = await post(`/api/v1/estimates/${draft.json().id}/issue`, {
       expectedVersion: draft.json().version,
     })
     expect(issued.statusCode, issued.body).toBe(200)
@@ -176,12 +176,12 @@ describe('Estimates lifecycle', () => {
       addressLine1: null,
       phone: null,
     })
-    const delivery = await post(`/v1/invoices/${invoice.id}/delivery-note`, {})
+    const delivery = await post(`/api/v1/invoices/${invoice.id}/delivery-note`, {})
     expect(delivery.statusCode, delivery.body).toBe(201)
     expect(delivery.json().deliveryAddress).toBe('')
   })
   async function cancellationPayment(invoiceId: string) {
-    const result = await post('/v1/payments', {
+    const result = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId,
       amount: '10.00',
@@ -204,17 +204,20 @@ describe('Estimates lifecycle', () => {
       const invoice = await cancellableInvoice()
       let id = invoice.id
       if (type === 'estimate') {
-        const draft = (await post('/v1/estimates', revisionInput())).json()
+        const draft = (await post('/api/v1/estimates', revisionInput())).json()
         expect(
-          (await post(`/v1/estimates/${draft.id}/issue`, { expectedVersion: draft.version }))
+          (await post(`/api/v1/estimates/${draft.id}/issue`, { expectedVersion: draft.version }))
             .statusCode,
         ).toBe(200)
         id = draft.id
       } else if (type === 'delivery_note') {
-        const draft = (await post(`/v1/invoices/${invoice.id}/delivery-note`, {})).json()
+        const draft = (await post(`/api/v1/invoices/${invoice.id}/delivery-note`, {})).json()
         expect(
-          (await post(`/v1/delivery-notes/${draft.id}/deliver`, { expectedVersion: draft.version }))
-            .statusCode,
+          (
+            await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
+              expectedVersion: draft.version,
+            })
+          ).statusCode,
         ).toBe(200)
         id = draft.id
       } else if (type === 'payment_receipt') id = (await cancellationPayment(invoice.id)).id
@@ -229,9 +232,9 @@ describe('Estimates lifecycle', () => {
           : type === 'delivery_note'
             ? 'delivery-notes'
             : `${type}s`
-      const get = () => app.inject({ url: `/v1/${route}/${id}`, cookies })
+      const get = () => app.inject({ url: `/api/v1/${route}/${id}`, cookies })
       const before = (await get()).json()
-      const result = await post(`/v1/documents/${type}/${id}/regenerate-pdf`, {
+      const result = await post(`/api/v1/documents/${type}/${id}/regenerate-pdf`, {
         templateId: chosen!.id,
       })
       expect(result.statusCode, result.body).toBe(200)
@@ -256,7 +259,7 @@ describe('Estimates lifecycle', () => {
       storage.putImmutable = async () => {
         throw new Error('Storage unavailable')
       }
-      const failed = await post(`/v1/documents/${type}/${id}/regenerate-pdf`, {
+      const failed = await post(`/api/v1/documents/${type}/${id}/regenerate-pdf`, {
         templateId: first!.id,
       })
       expect(failed.statusCode).toBe(503)
@@ -268,14 +271,14 @@ describe('Estimates lifecycle', () => {
       storage.putImmutable = put
       await fixture.client`update document_templates set archived_at=now() where id=${first!.id}`
       expect(
-        (await post(`/v1/documents/${type}/${id}/regenerate-pdf`, { templateId: first!.id }))
+        (await post(`/api/v1/documents/${type}/${id}/regenerate-pdf`, { templateId: first!.id }))
           .statusCode,
       ).toBe(409)
     },
   )
   it('rejects template changes during rendering and requires template Read for explicit selection', async () => {
     const invoice = await cancellableInvoice()
-    const original = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
+    const original = await post(`/api/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
     expect(original.statusCode, original.body).toBe(200)
     const [template] =
       await fixture.client`insert into document_templates(name,layout) values('Race template','modern') returning id`
@@ -284,7 +287,7 @@ describe('Estimates lifecycle', () => {
       await fixture.client`update document_templates set version=version+1 where id=${template!.id}`
       return put(input)
     }
-    const raced = await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
+    const raced = await post(`/api/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
       templateId: template!.id,
     })
     expect(raced.statusCode, raced.body).toBe(409)
@@ -301,7 +304,7 @@ describe('Estimates lifecycle', () => {
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='templates.read')`
     expect(
       (
-        await post(`/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
+        await post(`/api/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {
           templateId: template!.id,
         })
       ).statusCode,
@@ -311,7 +314,7 @@ describe('Estimates lifecycle', () => {
     const invoice = await cancellableInvoice()
     await fixture.client`update clients set email='client@example.test' where id=${clientId}`
     await fixture.client`update notification_rules set sender_email='sender@example.test' where event_key='invoice_sent'`
-    const email = await post(`/v1/invoices/${invoice.id}/send`, {
+    const email = await post(`/api/v1/invoices/${invoice.id}/send`, {
       requestId: randomUUID(),
       expectedVersion: invoice.version,
       overridePreferences: true,
@@ -321,7 +324,7 @@ describe('Estimates lifecycle', () => {
     const preserved = await cancellationPayment(invoice.id)
     expect(
       (
-        await post(`/v1/payments/${preserved.id}/cancel`, {
+        await post(`/api/v1/payments/${preserved.id}/cancel`, {
           expectedVersion: preserved.version,
           reason: 'Original reason',
         })
@@ -331,7 +334,7 @@ describe('Estimates lifecycle', () => {
       await fixture.client`insert into delivery_notes(client_id,invoice_id,delivery_date,issuer_snapshot,client_snapshot,delivery_address) values(${clientId},${invoice.id},'2026-10-02','{}','{}','Rabat') returning id`
     await fixture.client`update payments set receipt_issued_at=now() where id=${payment.id}`
     const selection = { invoices: [{ id: invoice.id, expectedVersion: invoice.version }] }
-    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    const preview = await post('/api/v1/invoices/cancellation/preview', selection)
     expect(preview.statusCode, preview.body).toBe(200)
     expect(preview.json()).toMatchObject({
       invoices: [{ id: invoice.id }],
@@ -344,7 +347,7 @@ describe('Estimates lifecycle', () => {
       (await fixture.client`select status from invoices where id=${invoice.id}`)[0]!.status,
     ).toBe('issued')
     const input = { ...selection, token: preview.json().token, reason: 'Client cancelled order' }
-    expect((await post('/v1/invoices/cancellation', input)).statusCode).toBe(204)
+    expect((await post('/api/v1/invoices/cancellation', input)).statusCode).toBe(204)
     expect(
       (await fixture.client`select status from background_jobs where id=${email.json().jobId}`)[0]!
         .status,
@@ -362,7 +365,7 @@ describe('Estimates lifecycle', () => {
       (await fixture.client`select cancellation_reason from payments where id=${preserved.id}`)[0]!
         .cancellation_reason,
     ).toBe('Original reason')
-    expect((await post('/v1/invoices/cancellation', input)).statusCode).toBe(409)
+    expect((await post('/api/v1/invoices/cancellation', input)).statusCode).toBe(409)
     expect(
       (
         await fixture.client`select count(*) from audit_events where action='cancel' and entity_key->>'id'=${invoice.id}`
@@ -384,9 +387,9 @@ describe('Estimates lifecycle', () => {
     const selection = {
       invoices: [first, second].map((row) => ({ id: row.id, expectedVersion: row.version })),
     }
-    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    const preview = await post('/api/v1/invoices/cancellation/preview', selection)
     expect(preview.statusCode, preview.body).toBe(200)
-    const result = await post('/v1/invoices/cancellation', {
+    const result = await post('/api/v1/invoices/cancellation', {
       ...selection,
       token: preview.json().token,
       reason: 'Cancel all',
@@ -410,10 +413,10 @@ describe('Estimates lifecycle', () => {
     const selection = {
       invoices: [first, second].map((row) => ({ id: row.id, expectedVersion: row.version })),
     }
-    const preview = await post('/v1/invoices/cancellation/preview', selection)
+    const preview = await post('/api/v1/invoices/cancellation/preview', selection)
     expect(preview.statusCode, preview.body).toBe(200)
     const payment = await cancellationPayment(second.id)
-    const stale = await post('/v1/invoices/cancellation', {
+    const stale = await post('/api/v1/invoices/cancellation', {
       ...selection,
       token: preview.json().token,
       reason: 'Cancel both',
@@ -421,7 +424,7 @@ describe('Estimates lifecycle', () => {
     expect(stale.statusCode, stale.body).toBe(409)
     expect(stale.json().code).toBe('IMPACT_CHANGED')
     await fixture.client`delete from role_permissions where role_id in (select id from roles where key='admin') and permission_id in (select id from permissions where key='payments.update')`
-    expect((await post('/v1/invoices/cancellation/preview', selection)).statusCode).toBe(403)
+    expect((await post('/api/v1/invoices/cancellation/preview', selection)).statusCode).toBe(403)
     expect(
       (
         await fixture.client`select status from invoices where id in (${first.id},${second.id})`
@@ -430,7 +433,7 @@ describe('Estimates lifecycle', () => {
     expect(
       (await fixture.client`select status from payments where id=${payment.id}`)[0]!.status,
     ).toBe('confirmed')
-    const invalid = await post('/v1/invoices/cancellation/preview', {
+    const invalid = await post('/api/v1/invoices/cancellation/preview', {
       invoices: [
         { id: first.id, expectedVersion: first.version },
         { id: randomUUID(), expectedVersion: 1 },
@@ -439,18 +442,18 @@ describe('Estimates lifecycle', () => {
     expect(invalid.statusCode).toBe(404)
     expect(
       (
-        await post('/v1/invoices/cancellation/preview', {
+        await post('/api/v1/invoices/cancellation/preview', {
           invoices: [selection.invoices[0], selection.invoices[0]],
         })
       ).statusCode,
     ).toBe(400)
     await fixture.client`insert into role_permissions(role_id,permission_id) select r.id,p.id from roles r, permissions p where r.key='admin' and p.key='payments.update'`
-    const fresh = await post('/v1/invoices/cancellation/preview', selection)
+    const fresh = await post('/api/v1/invoices/cancellation/preview', selection)
     expect(fresh.statusCode, fresh.body).toBe(200)
     const request = { ...selection, token: fresh.json().token, reason: 'Cancel both' }
     const outcomes = await Promise.all([
-      post('/v1/invoices/cancellation', request),
-      post('/v1/invoices/cancellation', request),
+      post('/api/v1/invoices/cancellation', request),
+      post('/api/v1/invoices/cancellation', request),
     ])
     expect(outcomes.map((row) => row.statusCode).sort()).toEqual([204, 409])
     expect(
@@ -479,7 +482,7 @@ describe('Estimates lifecycle', () => {
     return { id: template!.id as string, assets }
   }
   async function independentDelivery() {
-    const created = await post('/v1/delivery-notes', {
+    const created = await post('/api/v1/delivery-notes', {
       clientId,
       invoiceId: null,
       deliveryDate: '2026-10-01',
@@ -502,7 +505,7 @@ describe('Estimates lifecycle', () => {
       let draft
       if (kind === 'invoice') {
         const invoice = await cancellableInvoice(other!.id)
-        const created = await post(`/v1/invoices/${invoice.id}/delivery-note`, {})
+        const created = await post(`/api/v1/invoices/${invoice.id}/delivery-note`, {})
         expect(created.statusCode, created.body).toBe(201)
         draft = created.json()
       } else draft = await independentDelivery()
@@ -510,7 +513,7 @@ describe('Estimates lifecycle', () => {
       const [next] =
         await fixture.client`insert into document_templates(name,layout,density,accent_color,logo_asset_id,signature_asset_id,show_signature,footer_text) values('Current BL default','modern','standard','#176c51',${template.assets[0]!},${template.assets[1]!},true,'Frozen footer') returning id`
       await fixture.client`update company_settings set default_template_id=${next!.id} where id=1`
-      const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+      const delivered = await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
         expectedVersion: draft.version,
       })
       expect(delivered.statusCode, delivered.body).toBe(200)
@@ -526,12 +529,12 @@ describe('Estimates lifecycle', () => {
         signatureAssetId: template.assets[1],
         footerText: 'Frozen footer',
       })
-      const regenerated = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+      const regenerated = await post(`/api/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
         design: 'saved',
       })
       expect(regenerated.statusCode, regenerated.body).toBe(200)
       const download = await app.inject({
-        url: `/v1/artifacts/${regenerated.json().id}/download`,
+        url: `/api/v1/artifacts/${regenerated.json().id}/download`,
         cookies,
       })
       expect(download.statusCode).toBe(200)
@@ -549,7 +552,7 @@ describe('Estimates lifecycle', () => {
         (await media.publicApi.documentImages('delivery_note', draft.id, version, 'latest'))
           .appearance,
       ).toMatchObject({ layout: 'essential' })
-      const latest = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+      const latest = await post(`/api/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
         design: 'latest',
       })
       expect(latest.statusCode, latest.body).toBe(200)
@@ -563,7 +566,7 @@ describe('Estimates lifecycle', () => {
   it('detaches deleted templates from BLs but preserves frozen designs and needed media', async () => {
     const template = await brandedDeliveryTemplate(),
       draft = await independentDelivery()
-    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+    const delivered = await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
       expectedVersion: draft.version,
     })
     expect(delivered.statusCode, delivered.body).toBe(200)
@@ -572,12 +575,12 @@ describe('Estimates lifecycle', () => {
     const before = (await media.publicApi.documentImages('delivery_note', draft.id, version))
       .appearance
     const selection = { resource: 'templates', records: [{ id: template.id, expectedVersion: 1 }] }
-    const preview = await post('/v1/settings/deletion/preview', selection)
+    const preview = await post('/api/v1/settings/deletion/preview', selection)
     expect(preview.statusCode, preview.body).toBe(200)
     expect(preview.json().groups).toContainEqual(
       expect.objectContaining({ resource: 'delivery_notes', operation: 'detach' }),
     )
-    const deleted = await post('/v1/settings/deletion', {
+    const deleted = await post('/api/v1/settings/deletion', {
       ...selection,
       token: preview.json().token,
     })
@@ -597,14 +600,17 @@ describe('Estimates lifecycle', () => {
         (await fixture.client`select status from media_assets where id=${id}`)[0]!.status,
       ).toBe('ready')
     expect(
-      (await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, { design: 'saved' }))
-        .statusCode,
+      (
+        await post(`/api/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+          design: 'saved',
+        })
+      ).statusCode,
     ).toBe(200)
   })
   it('keeps legacy BLs Classic until explicit latest-design regeneration uses the company default', async () => {
     await brandedDeliveryTemplate()
     const draft = await independentDelivery()
-    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+    const delivered = await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
       expectedVersion: draft.version,
     })
     expect(delivered.statusCode, delivered.body).toBe(200)
@@ -619,12 +625,12 @@ describe('Estimates lifecycle', () => {
     expect(saved.appearance).toEqual(legacy)
     expect(saved.logo).toBeUndefined()
     expect(saved.signature).toBeUndefined()
-    const latest = await post(`/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
+    const latest = await post(`/api/v1/documents/delivery_note/${draft.id}/regenerate-pdf`, {
       design: 'latest',
     })
     expect(latest.statusCode, latest.body).toBe(200)
     const downloaded = await app.inject({
-      url: `/v1/artifacts/${latest.json().id}/download`,
+      url: `/api/v1/artifacts/${latest.json().id}/download`,
       cookies,
     })
     const pdf = await PDFDocument.load(downloaded.rawPayload)
@@ -645,7 +651,7 @@ describe('Estimates lifecycle', () => {
     await fixture.client`update company_settings set default_template_id=${template!.id}, estimate_valid_days=23, payment_due_days=7 where id=1`
     for (const type of ['estimate', 'invoice'] as const) {
       await fixture.client`update document_templates set footer_text='Company footer' where id=${template!.id}`
-      const path = `/v1/${type}s`
+      const path = `/api/v1/${type}s`
       const dateField = type === 'estimate' ? 'validUntil' : 'dueDate'
       const fields =
         type === 'estimate'
@@ -689,16 +695,19 @@ describe('Estimates lifecycle', () => {
       )
       expect(frozen!.appearance_snapshot.footerText).toBe('Company footer')
     }
-    const invalid = await post('/v1/estimates', { ...revisionInput(), validUntil: '2026-10-01' })
+    const invalid = await post('/api/v1/estimates', {
+      ...revisionInput(),
+      validUntil: '2026-10-01',
+    })
     expect(invalid.statusCode).toBe(400)
   })
   it('defaults bank details, freezes them on issue and copies the agreement into invoice drafts', async () => {
     const [bank] =
       await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Main','Credit Agricole','Slama','225091032701984651012213') returning id`
-    const company = (await app.inject({ url: '/v1/company-settings', cookies })).json()
+    const company = (await app.inject({ url: '/api/v1/company-settings', cookies })).json()
     const configured = await app.inject({
       method: 'PATCH',
-      url: '/v1/company-settings',
+      url: '/api/v1/company-settings',
       headers,
       cookies,
       payload: {
@@ -720,7 +729,7 @@ describe('Estimates lifecycle', () => {
       },
     })
     expect(configured.statusCode, configured.body).toBe(200)
-    const draftResponse = await post('/v1/estimates', {
+    const draftResponse = await post('/api/v1/estimates', {
       ...revisionInput(),
       agreedPaymentMethod: 'bank_transfer',
     })
@@ -729,7 +738,7 @@ describe('Estimates lifecycle', () => {
     expect(draft.bankAccountId).toBe(bank!.id)
     expect(draft.bankDetailsSnapshot.bankName).toBe('Credit Agricole')
     await fixture.client`update bank_accounts set bank_name='Updated before issue' where id=${bank!.id}`
-    const issuedResponse = await post(`/v1/estimates/${draft.id}/issue`, {
+    const issuedResponse = await post(`/api/v1/estimates/${draft.id}/issue`, {
       expectedVersion: draft.version,
     })
     expect(issuedResponse.statusCode, issuedResponse.body).toBe(200)
@@ -737,13 +746,14 @@ describe('Estimates lifecycle', () => {
     expect(issued.bankDetailsSnapshot.bankName).toBe('Updated before issue')
     await fixture.client`update bank_accounts set bank_name='Changed after issue' where id=${bank!.id}`
     expect(
-      (await app.inject({ url: `/v1/estimates/${draft.id}`, cookies })).json().bankDetailsSnapshot,
+      (await app.inject({ url: `/api/v1/estimates/${draft.id}`, cookies })).json()
+        .bankDetailsSnapshot,
     ).toEqual(issued.bankDetailsSnapshot)
     expect(
-      (await post(`/v1/estimates/${draft.id}/accept`, { expectedVersion: issued.version }))
+      (await post(`/api/v1/estimates/${draft.id}/accept`, { expectedVersion: issued.version }))
         .statusCode,
     ).toBe(200)
-    const conversion = await post(`/v1/estimates/${draft.id}/invoices`, {
+    const conversion = await post(`/api/v1/estimates/${draft.id}/invoices`, {
       operationId: randomUUID(),
       dueDate: null,
     })
@@ -754,15 +764,15 @@ describe('Estimates lifecycle', () => {
       bankDetailsSnapshot: issued.bankDetailsSnapshot,
     })
     const invoice = conversion.json()
-    const finalized = await post(`/v1/invoices/${invoice.id}/issue`, {
+    const finalized = await post(`/api/v1/invoices/${invoice.id}/issue`, {
       expectedVersion: invoice.version,
     })
     expect(finalized.statusCode, finalized.body).toBe(200)
     expect(finalized.json().bankDetailsSnapshot.bankName).toBe('Changed after issue')
     await fixture.client`update bank_accounts set bank_name='Later change' where id=${bank!.id}`
     expect(
-      (await app.inject({ url: `/v1/invoices/${invoice.id}`, cookies })).json().bankDetailsSnapshot
-        .bankName,
+      (await app.inject({ url: `/api/v1/invoices/${invoice.id}`, cookies })).json()
+        .bankDetailsSnapshot.bankName,
     ).toBe('Changed after issue')
     expect((await fixture.client`select count(*) from payments`)[0]!.count).toBe('0')
   })
@@ -770,7 +780,7 @@ describe('Estimates lifecycle', () => {
     const [bank] =
       await fixture.client`insert into bank_accounts(name,bank_name,account_holder,rib) values('Other','Other Bank','Slama','225091032701984651012213') returning id`
     await fixture.client`update company_settings set default_bank_account_id=${bank!.id} where id=1`
-    for (const path of ['/v1/estimates', '/v1/invoices']) {
+    for (const path of ['/api/v1/estimates', '/api/v1/invoices']) {
       const fields = path.endsWith('invoices')
         ? { ...revisionInput(), validUntil: undefined, dueDate: null }
         : revisionInput()
@@ -789,40 +799,51 @@ describe('Estimates lifecycle', () => {
       ).toBe(bank!.id)
     }
     expect(
-      (await post(`/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
     ).toBe(409)
     await fixture.client`update company_settings set default_bank_account_id=null where id=1`
     expect(
-      (await post(`/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/bank-accounts/${bank!.id}/archive`, { expectedVersion: 1 })).statusCode,
     ).toBe(200)
     expect(
-      (await post('/v1/estimates', { ...revisionInput(), bankAccountId: bank!.id })).statusCode,
+      (await post('/api/v1/estimates', { ...revisionInput(), bankAccountId: bank!.id })).statusCode,
     ).toBe(400)
   })
   it('resolves draft company defaults at issue time and freezes the chosen document language', async () => {
-    const draft = (await post('/v1/estimates', revisionInput())).json()
+    const draft = (await post('/api/v1/estimates', revisionInput())).json()
     expect(draft.locale).toBe('fr-MA')
     expect(draft.localeOverride).toBeNull()
     await fixture.client`update company_settings set locale='en-GB' where id=1`
-    const refreshed = await app.inject({ method: 'GET', url: `/v1/estimates/${draft.id}`, cookies })
+    const refreshed = await app.inject({
+      method: 'GET',
+      url: `/api/v1/estimates/${draft.id}`,
+      cookies,
+    })
     expect(refreshed.json().locale).toBe('en-GB')
-    const issued = await post(`/v1/estimates/${draft.id}/issue`, { expectedVersion: draft.version })
+    const issued = await post(`/api/v1/estimates/${draft.id}/issue`, {
+      expectedVersion: draft.version,
+    })
     expect(issued.statusCode, issued.body).toBe(200)
     expect(issued.json().locale).toBe('en-GB')
     await fixture.client`update company_settings set locale='fr-MA' where id=1`
     expect(
-      (await app.inject({ method: 'GET', url: `/v1/estimates/${draft.id}`, cookies })).json()
+      (await app.inject({ method: 'GET', url: `/api/v1/estimates/${draft.id}`, cookies })).json()
         .locale,
     ).toBe('en-GB')
-    const explicit = await post('/v1/estimates', { ...revisionInput(), localeOverride: 'en-GB' })
+    const explicit = await post('/api/v1/estimates', {
+      ...revisionInput(),
+      localeOverride: 'en-GB',
+    })
     expect(explicit.json()).toMatchObject({ locale: 'en-GB', localeOverride: 'en-GB' })
   })
   async function acceptedEstimate() {
-    const created = await post('/v1/estimates', revisionInput())
+    const created = await post('/api/v1/estimates', revisionInput())
     expect(created.statusCode, created.body).toBe(201)
     const id = created.json().id
-    expect((await post(`/v1/estimates/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(200)
-    const accepted = await post(`/v1/estimates/${id}/accept`, { expectedVersion: 2 })
+    expect((await post(`/api/v1/estimates/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(
+      200,
+    )
+    const accepted = await post(`/api/v1/estimates/${id}/accept`, { expectedVersion: 2 })
     expect(accepted.statusCode).toBe(200)
     return accepted.json()
   }
@@ -831,7 +852,7 @@ describe('Estimates lifecycle', () => {
     const original = await acceptedEstimate()
     const attempts = await Promise.all(
       [1, 2].map(() =>
-        post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: original.version }),
+        post(`/api/v1/estimates/${original.id}/revisions`, { expectedVersion: original.version }),
       ),
     )
     expect(attempts.map((response) => response.statusCode)).toEqual([200, 200])
@@ -850,15 +871,16 @@ describe('Estimates lifecycle', () => {
       unitPrice: '50.00',
     })
     expect(revision.lines[0].id).not.toBe(original.lines[0].id)
-    const invoice = await post(`/v1/estimates/${original.id}/invoices`, {
+    const invoice = await post(`/api/v1/estimates/${original.id}/invoices`, {
       operationId: randomUUID(),
       dueDate: '2026-12-31',
     })
     expect(invoice.statusCode, invoice.body).toBe(201)
     expect(
-      (await post(`/v1/invoices/${invoice.json().id}/issue`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/invoices/${invoice.json().id}/issue`, { expectedVersion: 1 }))
+        .statusCode,
     ).toBe(200)
-    const payment = await post('/v1/payments', {
+    const payment = await post('/api/v1/payments', {
       operationId: randomUUID(),
       invoiceId: invoice.json().id,
       amount: '10.00',
@@ -877,7 +899,7 @@ describe('Estimates lifecycle', () => {
     const paymentsBefore = await fixture.client`select * from payments`
     const saved = await app.inject({
       method: 'PATCH',
-      url: `/v1/estimates/${revision.id}`,
+      url: `/api/v1/estimates/${revision.id}`,
       headers,
       cookies,
       payload: {
@@ -888,11 +910,11 @@ describe('Estimates lifecycle', () => {
     })
     expect(saved.statusCode, saved.body).toBe(200)
     expect(saved.json().total).toBe('180.00')
-    const issued = await post(`/v1/estimates/${revision.id}/issue`, {
+    const issued = await post(`/api/v1/estimates/${revision.id}/issue`, {
       expectedVersion: saved.json().version,
     })
     expect(issued.statusCode, issued.body).toBe(200)
-    const old = (await app.inject({ url: `/v1/estimates/${original.id}`, cookies })).json()
+    const old = (await app.inject({ url: `/api/v1/estimates/${original.id}`, cookies })).json()
     expect(old).toMatchObject({
       status: 'superseded',
       revisionId: revision.id,
@@ -903,35 +925,35 @@ describe('Estimates lifecycle', () => {
     expect(await fixture.client`select * from payments`).toEqual(paymentsBefore)
     expect(
       (
-        await post(`/v1/estimates/${original.id}/invoices`, {
+        await post(`/api/v1/estimates/${original.id}/invoices`, {
           operationId: randomUUID(),
           dueDate: '2026-12-31',
         })
       ).statusCode,
     ).toBe(409)
     expect(
-      (await post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: old.version }))
+      (await post(`/api/v1/estimates/${original.id}/revisions`, { expectedVersion: old.version }))
         .statusCode,
     ).toBe(409)
-    const accepted = await post(`/v1/estimates/${revision.id}/accept`, {
+    const accepted = await post(`/api/v1/estimates/${revision.id}/accept`, {
       expectedVersion: issued.json().version,
     })
     expect(accepted.statusCode).toBe(200)
     for (const _ of [1, 2])
       expect(
         (
-          await post(`/v1/estimates/${revision.id}/invoices`, {
+          await post(`/api/v1/estimates/${revision.id}/invoices`, {
             operationId: randomUUID(),
             dueDate: '2026-12-31',
           })
         ).statusCode,
       ).toBe(201)
-    const next = await post(`/v1/estimates/${revision.id}/revisions`, {
+    const next = await post(`/api/v1/estimates/${revision.id}/revisions`, {
       expectedVersion: accepted.json().version,
     })
     expect(next.statusCode).toBe(200)
     expect(next.json().revisionOfId).toBe(revision.id)
-    const history = await app.inject({ url: '/v1/estimates?status=superseded', cookies })
+    const history = await app.inject({ url: '/api/v1/estimates?status=superseded', cookies })
     expect(history.json().items.map((row: { id: string }) => row.id)).toContain(original.id)
     const audit =
       await fixture.client`select action from audit_events where entity_table='estimates'`
@@ -941,51 +963,56 @@ describe('Estimates lifecycle', () => {
   it('deletes an unfinished revision without invalidating its original; cancelled originals cannot be superseded', async () => {
     const original = await acceptedEstimate()
     const draft = (
-      await post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: original.version })
+      await post(`/api/v1/estimates/${original.id}/revisions`, {
+        expectedVersion: original.version,
+      })
     ).json()
     const deleted = await app.inject({
       method: 'DELETE',
-      url: `/v1/estimates/${draft.id}`,
+      url: `/api/v1/estimates/${draft.id}`,
       headers,
       cookies,
       payload: { expectedVersion: 1 },
     })
     expect(deleted.statusCode).toBe(204)
-    const old = (await app.inject({ url: `/v1/estimates/${original.id}`, cookies })).json()
+    const old = (await app.inject({ url: `/api/v1/estimates/${original.id}`, cookies })).json()
     expect(old).toMatchObject({ status: 'accepted', revisionId: null })
     const fresh = (
-      await post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: old.version })
+      await post(`/api/v1/estimates/${original.id}/revisions`, { expectedVersion: old.version })
     ).json()
     expect(fresh.id).not.toBe(draft.id)
     expect(
       (
-        await post(`/v1/estimates/${original.id}/cancel`, {
+        await post(`/api/v1/estimates/${original.id}/cancel`, {
           expectedVersion: old.version,
           reason: 'Order cancelled',
         })
       ).statusCode,
     ).toBe(200)
-    expect((await post(`/v1/estimates/${fresh.id}/issue`, { expectedVersion: 1 })).statusCode).toBe(
-      409,
-    )
-    expect((await app.inject({ url: `/v1/estimates/${fresh.id}`, cookies })).json().status).toBe(
-      'draft',
-    )
+    expect(
+      (await post(`/api/v1/estimates/${fresh.id}/issue`, { expectedVersion: 1 })).statusCode,
+    ).toBe(409)
+    expect(
+      (await app.inject({ url: `/api/v1/estimates/${fresh.id}`, cookies })).json().status,
+    ).toBe('draft')
   })
 
   it('rejects stale revisions, drafts, and missing create permission', async () => {
     const original = await acceptedEstimate()
     expect(
-      (await post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/estimates/${original.id}/revisions`, { expectedVersion: 1 })).statusCode,
     ).toBe(409)
-    const draft = (await post('/v1/estimates', revisionInput())).json()
+    const draft = (await post('/api/v1/estimates', revisionInput())).json()
     expect(
-      (await post(`/v1/estimates/${draft.id}/revisions`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/estimates/${draft.id}/revisions`, { expectedVersion: 1 })).statusCode,
     ).toBe(409)
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='estimates.create')`
     expect(
-      (await post(`/v1/estimates/${original.id}/revisions`, { expectedVersion: original.version }))
-        .statusCode,
+      (
+        await post(`/api/v1/estimates/${original.id}/revisions`, {
+          expectedVersion: original.version,
+        })
+      ).statusCode,
     ).toBe(403)
   })
 
@@ -1007,7 +1034,7 @@ describe('Estimates lifecycle', () => {
         },
       ],
     }
-    const created = await post('/v1/estimates', input)
+    const created = await post('/api/v1/estimates', input)
     expect(created.statusCode, JSON.stringify(created.json())).toBe(201)
     expect(created.json()).toMatchObject({
       status: 'draft',
@@ -1018,18 +1045,21 @@ describe('Estimates lifecycle', () => {
     })
     const id = created.json().id
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }))
+        .statusCode,
     ).toBe(409)
-    const issue = await post(`/v1/estimates/${id}/issue`, { expectedVersion: 1 })
+    const issue = await post(`/api/v1/estimates/${id}/issue`, { expectedVersion: 1 })
     expect(issue.statusCode).toBe(200)
     expect(issue.json()).toMatchObject({ status: 'issued', version: 2, contentVersion: 2 })
     expect(issue.json().number).toMatch(/^DEV-\d{4}-\d{10}$/)
-    expect((await post(`/v1/estimates/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(409)
-    expect((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json().number).toBe(
+    expect((await post(`/api/v1/estimates/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(
+      409,
+    )
+    expect((await app.inject({ url: `/api/v1/estimates/${id}`, cookies })).json().number).toBe(
       issue.json().number,
     )
     await fixture.client`update background_jobs set status='failed', attempts=max_attempts, finished_at=now() where payload->>'documentId'=${id}`
-    const retried = await post(`/v1/estimates/${id}/pdf`, {})
+    const retried = await post(`/api/v1/estimates/${id}/pdf`, {})
     expect(retried.statusCode).toBe(202)
     expect(
       (
@@ -1044,21 +1074,21 @@ describe('Estimates lifecycle', () => {
       createMediaModule(() => fixture.db, storage).publicApi,
     ).worker
     expect(await worker.runOne()).toBe(true)
-    const artifacts = await app.inject({ url: `/v1/estimates/${id}/artifacts`, cookies })
+    const artifacts = await app.inject({ url: `/api/v1/estimates/${id}/artifacts`, cookies })
     expect(artifacts.statusCode).toBe(200)
     const jobState = await fixture.client`select status,last_error_code from background_jobs`
     expect(artifacts.json(), JSON.stringify(jobState)).toHaveLength(1)
     const download = await app.inject({
-      url: `/v1/artifacts/${artifacts.json()[0].id}/download`,
+      url: `/api/v1/artifacts/${artifacts.json()[0].id}/download`,
       cookies,
     })
     expect(download.statusCode).toBe(200)
     expect(download.headers['content-type']).toContain('application/pdf')
     expect(download.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
-    const before = (await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()
+    const before = (await app.inject({ url: `/api/v1/estimates/${id}`, cookies })).json()
     const [previous] =
       await fixture.client`select * from document_artifacts where document_id=${id}`
-    const regenerated = await post(`/v1/documents/estimate/${id}/regenerate-pdf`, {
+    const regenerated = await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, {
       design: 'saved',
     })
     expect(regenerated.statusCode, regenerated.body).toBe(200)
@@ -1067,13 +1097,15 @@ describe('Estimates lifecycle', () => {
     expect(replacement!.id).toBe(previous!.id)
     expect(replacement!.object_key).not.toBe(previous!.object_key)
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'invalid' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'invalid' }))
+        .statusCode,
     ).toBe(400)
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' }))
+        .statusCode,
     ).toBe(200)
     expect(
-      businessFields((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()),
+      businessFields((await app.inject({ url: `/api/v1/estimates/${id}`, cookies })).json()),
     ).toEqual(businessFields(before))
     expect(
       await fixture.client`select id from audit_events where action='regenerate_pdf'`,
@@ -1084,7 +1116,8 @@ describe('Estimates lifecycle', () => {
       throw new Error('Storage offline')
     }
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }))
+        .statusCode,
     ).toBe(503)
     storage.putImmutable = put
     expect(
@@ -1092,11 +1125,12 @@ describe('Estimates lifecycle', () => {
         .object_key,
     ).toBe(replacement!.object_key)
     expect(
-      (await app.inject({ url: `/v1/artifacts/${replacement!.id}/download`, cookies })).statusCode,
+      (await app.inject({ url: `/api/v1/artifacts/${replacement!.id}/download`, cookies }))
+        .statusCode,
     ).toBe(200)
     const locked = await app.inject({
       method: 'PATCH',
-      url: `/v1/estimates/${id}`,
+      url: `/api/v1/estimates/${id}`,
       headers,
       cookies,
       payload: { ...input, expectedVersion: before.version },
@@ -1113,10 +1147,11 @@ describe('Estimates lifecycle', () => {
     )
     expect(latest.appearance).toMatchObject({ layout: 'modern', footerText: 'New template footer' })
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'latest' }))
+        .statusCode,
     ).toBe(200)
     expect(
-      businessFields((await app.inject({ url: `/v1/estimates/${id}`, cookies })).json()),
+      businessFields((await app.inject({ url: `/api/v1/estimates/${id}`, cookies })).json()),
     ).toEqual(businessFields(before))
     let arrivals = 0
     let release!: () => void
@@ -1130,19 +1165,20 @@ describe('Estimates lifecycle', () => {
       return result
     }
     const concurrent = await Promise.all([
-      post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }),
-      post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }),
+      post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }),
+      post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }),
     ])
     storage.putImmutable = put
     expect(concurrent.map((result) => result.statusCode).sort()).toEqual([200, 409])
     await fixture.client`delete from role_permissions where permission_id in (select id from permissions where key='estimates.update')`
     expect(
-      (await post(`/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' })).statusCode,
+      (await post(`/api/v1/documents/estimate/${id}/regenerate-pdf`, { design: 'saved' }))
+        .statusCode,
     ).toBe(403)
   })
 
   it('converts one accepted estimate into multiple deliberate invoices without duplicate retries', async () => {
-    const draft = await post('/v1/estimates', {
+    const draft = await post('/api/v1/estimates', {
       clientId,
       templateId: null,
       issueDate: '2026-09-27',
@@ -1162,14 +1198,14 @@ describe('Estimates lifecycle', () => {
     expect(draft.statusCode).toBe(201)
     const estimateId = draft.json().id
     expect(
-      (await post(`/v1/estimates/${estimateId}/issue`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/estimates/${estimateId}/issue`, { expectedVersion: 1 })).statusCode,
     ).toBe(200)
     expect(
-      (await post(`/v1/estimates/${estimateId}/accept`, { expectedVersion: 2 })).statusCode,
+      (await post(`/api/v1/estimates/${estimateId}/accept`, { expectedVersion: 2 })).statusCode,
     ).toBe(200)
     const operationId = randomUUID()
     const dueDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
-    const first = await post(`/v1/estimates/${estimateId}/invoices`, {
+    const first = await post(`/api/v1/estimates/${estimateId}/invoices`, {
       operationId,
       dueDate,
     })
@@ -1181,37 +1217,37 @@ describe('Estimates lifecycle', () => {
       taxTotal: '10.00',
       total: '60.00',
     })
-    const retry = await post(`/v1/estimates/${estimateId}/invoices`, {
+    const retry = await post(`/api/v1/estimates/${estimateId}/invoices`, {
       operationId,
       dueDate,
     })
     expect(retry.statusCode).toBe(201)
     expect(retry.json().id).toBe(first.json().id)
     expect(
-      (await post(`/v1/estimates/${estimateId}/invoices`, { operationId, dueDate: null }))
+      (await post(`/api/v1/estimates/${estimateId}/invoices`, { operationId, dueDate: null }))
         .statusCode,
     ).toBe(409)
-    const second = await post(`/v1/estimates/${estimateId}/invoices`, {
+    const second = await post(`/api/v1/estimates/${estimateId}/invoices`, {
       operationId: randomUUID(),
       dueDate,
     })
     expect(second.statusCode).toBe(201)
     expect(second.json().id).not.toBe(first.json().id)
-    const linked = await app.inject({ url: `/v1/estimates/${estimateId}/invoices`, cookies })
+    const linked = await app.inject({ url: `/api/v1/estimates/${estimateId}/invoices`, cookies })
     expect(linked.json()).toHaveLength(2)
-    const issue = await post(`/v1/invoices/${first.json().id}/issue`, { expectedVersion: 1 })
+    const issue = await post(`/api/v1/invoices/${first.json().id}/issue`, { expectedVersion: 1 })
     expect(issue.statusCode, JSON.stringify(issue.json())).toBe(200)
     expect(issue.json().number).toMatch(/^FAC-\d{4}-\d{10}$/)
     const beforeInvoice = (
-      await app.inject({ url: `/v1/invoices/${first.json().id}`, cookies })
+      await app.inject({ url: `/api/v1/invoices/${first.json().id}`, cookies })
     ).json()
-    const invoicePdf = await post(`/v1/documents/invoice/${first.json().id}/regenerate-pdf`, {
+    const invoicePdf = await post(`/api/v1/documents/invoice/${first.json().id}/regenerate-pdf`, {
       design: 'saved',
     })
     expect(invoicePdf.statusCode, invoicePdf.body).toBe(200)
     expect(
       businessFields(
-        (await app.inject({ url: `/v1/invoices/${first.json().id}`, cookies })).json(),
+        (await app.inject({ url: `/api/v1/invoices/${first.json().id}`, cookies })).json(),
       ),
     ).toEqual(businessFields(beforeInvoice))
     const worker = createSalesModule(
@@ -1222,12 +1258,12 @@ describe('Estimates lifecycle', () => {
     expect(await worker.runOne()).toBe(true)
     expect(await worker.runOne()).toBe(true)
     const artifacts = await app.inject({
-      url: `/v1/invoices/${first.json().id}/artifacts`,
+      url: `/api/v1/invoices/${first.json().id}/artifacts`,
       cookies,
     })
     expect(artifacts.json()).toHaveLength(1)
     const download = await app.inject({
-      url: `/v1/artifacts/${artifacts.json()[0].id}/download`,
+      url: `/api/v1/artifacts/${artifacts.json()[0].id}/download`,
       cookies,
     })
     expect(download.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
@@ -1235,7 +1271,7 @@ describe('Estimates lifecycle', () => {
   it('consolidates BLs into one invoice and rejects cross-invoice allocation through API and SQL', async () => {
     const notes = []
     for (let index = 0; index < 2; index++) {
-      const created = await post('/v1/delivery-notes', {
+      const created = await post('/api/v1/delivery-notes', {
         clientId,
         invoiceId: null,
         deliveryDate: '2026-10-01',
@@ -1252,7 +1288,7 @@ describe('Estimates lifecycle', () => {
         ],
       })
       expect(created.statusCode, created.body).toBe(201)
-      const delivered = await post(`/v1/delivery-notes/${created.json().id}/deliver`, {
+      const delivered = await post(`/api/v1/delivery-notes/${created.json().id}/deliver`, {
         expectedVersion: 1,
       })
       expect(delivered.statusCode, delivered.body).toBe(200)
@@ -1272,16 +1308,20 @@ describe('Estimates lifecycle', () => {
         vatRate: null,
       })),
     }
-    const combined = await post('/v1/invoices/from-deliveries', input)
+    const combined = await post('/api/v1/invoices/from-deliveries', input)
     expect(combined.statusCode, combined.body).toBe(201)
     expect(combined.json().deliveryNoteIds.sort()).toEqual(notes.map((note) => note.id).sort())
-    expect((await post('/v1/invoices/from-deliveries', input)).json().id).toBe(combined.json().id)
+    expect((await post('/api/v1/invoices/from-deliveries', input)).json().id).toBe(
+      combined.json().id,
+    )
     for (const note of notes) {
-      const current = (await app.inject({ url: `/v1/delivery-notes/${note.id}`, cookies })).json()
+      const current = (
+        await app.inject({ url: `/api/v1/delivery-notes/${note.id}`, cookies })
+      ).json()
       expect(current.invoiceId).toBe(combined.json().id)
       expect(current.version).toBe(note.version + 1)
     }
-    const competing = await post('/v1/invoices', {
+    const competing = await post('/api/v1/invoices', {
       ...revisionInput(),
       validUntil: undefined,
       dueDate: null,
@@ -1298,14 +1338,14 @@ describe('Estimates lifecycle', () => {
       fixture.client`update invoice_lines set invoice_id=${other.id},position=99 where id=${combined.json().lines[0].id}`,
     ).rejects.toMatchObject({ code: '23514' })
     const attempts = await Promise.all([
-      post('/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
-      post('/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
+      post('/api/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
+      post('/api/v1/invoices/from-deliveries', { ...input, operationId: randomUUID() }),
     ])
     expect(attempts.map((result) => result.statusCode)).toEqual([409, 409])
     expect(
       (await fixture.client`select count(*) from delivery_invoice_allocations`)[0]!.count,
     ).toBe('2')
-    const fresh = await post('/v1/delivery-notes', {
+    const fresh = await post('/api/v1/delivery-notes', {
       clientId,
       invoiceId: null,
       deliveryDate: '2026-10-01',
@@ -1317,12 +1357,12 @@ describe('Estimates lifecycle', () => {
       ],
     })
     expect(fresh.statusCode, fresh.body).toBe(201)
-    const ready = await post(`/v1/delivery-notes/${fresh.json().id}/deliver`, {
+    const ready = await post(`/api/v1/delivery-notes/${fresh.json().id}/deliver`, {
       expectedVersion: 1,
     })
     expect(ready.statusCode, ready.body).toBe(200)
     const claim = () =>
-      post('/v1/invoices/from-deliveries', {
+      post('/api/v1/invoices/from-deliveries', {
         ...input,
         operationId: randomUUID(),
         lines: [
@@ -1338,12 +1378,12 @@ describe('Estimates lifecycle', () => {
     expect(race.map((result) => result.statusCode).sort()).toEqual([201, 409])
     const winning = race.find((result) => result.statusCode === 201)!.json()
     expect(
-      (await app.inject({ url: `/v1/delivery-notes/${fresh.json().id}`, cookies })).json()
+      (await app.inject({ url: `/api/v1/delivery-notes/${fresh.json().id}`, cookies })).json()
         .invoiceId,
     ).toBe(winning.id)
   })
   it('prepares an independent delivery note and prevents over-delivery against an invoice', async () => {
-    const independent = await post('/v1/delivery-notes', {
+    const independent = await post('/api/v1/delivery-notes', {
       clientId,
       invoiceId: null,
       deliveryDate: '2026-09-27',
@@ -1360,7 +1400,7 @@ describe('Estimates lifecycle', () => {
       ],
     })
     expect(independent.statusCode, JSON.stringify(independent.json())).toBe(201)
-    const prepared = await post(`/v1/delivery-notes/${independent.json().id}/deliver`, {
+    const prepared = await post(`/api/v1/delivery-notes/${independent.json().id}/deliver`, {
       expectedVersion: 1,
     })
     expect(prepared.statusCode, JSON.stringify(prepared.json())).toBe(200)
@@ -1372,24 +1412,26 @@ describe('Estimates lifecycle', () => {
     ).worker
     expect(await worker.runOne()).toBe(true)
     const artifacts = await app.inject({
-      url: `/v1/delivery-notes/${independent.json().id}/artifacts`,
+      url: `/api/v1/delivery-notes/${independent.json().id}/artifacts`,
       cookies,
     })
     expect(artifacts.json()).toHaveLength(1)
     const download = await app.inject({
-      url: `/v1/artifacts/${artifacts.json()[0].id}/download`,
+      url: `/api/v1/artifacts/${artifacts.json()[0].id}/download`,
       cookies,
     })
     expect(download.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
     expect(prepared.json().status).toBe('delivered')
     const deliveryPdf = await post(
-      `/v1/documents/delivery_note/${independent.json().id}/regenerate-pdf`,
+      `/api/v1/documents/delivery_note/${independent.json().id}/regenerate-pdf`,
       { design: 'saved' },
     )
     expect(deliveryPdf.statusCode, deliveryPdf.body).toBe(200)
     expect(
       businessFields(
-        (await app.inject({ url: `/v1/delivery-notes/${independent.json().id}`, cookies })).json(),
+        (
+          await app.inject({ url: `/api/v1/delivery-notes/${independent.json().id}`, cookies })
+        ).json(),
       ),
     ).toEqual(businessFields(prepared.json()))
     const deliveryLineId = prepared.json().lines[0].id
@@ -1403,7 +1445,7 @@ describe('Estimates lifecycle', () => {
       lines: [{ deliveryNoteLineId: deliveryLineId, quantity, unitPrice: '25.00', vatRate: null }],
     })
     const request = conversion(2)
-    const deliveryInvoice = await post('/v1/invoices/from-deliveries', request)
+    const deliveryInvoice = await post('/api/v1/invoices/from-deliveries', request)
     expect(deliveryInvoice.statusCode, JSON.stringify(deliveryInvoice.json())).toBe(201)
     expect(deliveryInvoice.json()).toMatchObject({
       status: 'draft',
@@ -1411,21 +1453,21 @@ describe('Estimates lifecycle', () => {
       taxTotal: '0.00',
     })
     expect(deliveryInvoice.json().deliveryNoteIds).toContain(independent.json().id)
-    const retry = await post('/v1/invoices/from-deliveries', request)
+    const retry = await post('/api/v1/invoices/from-deliveries', request)
     expect(retry.json().id).toBe(deliveryInvoice.json().id)
-    expect((await post('/v1/invoices/from-deliveries', conversion(2))).statusCode).toBe(409)
+    expect((await post('/api/v1/invoices/from-deliveries', conversion(2))).statusCode).toBe(409)
     expect(
       (
-        await post(`/v1/delivery-notes/${independent.json().id}/cancel`, {
+        await post(`/api/v1/delivery-notes/${independent.json().id}/cancel`, {
           expectedVersion: prepared.json().version,
           reason: 'Test',
         })
       ).statusCode,
     ).toBe(409)
-    const secondDeliveryInvoice = await post('/v1/invoices/from-deliveries', conversion(1))
+    const secondDeliveryInvoice = await post('/api/v1/invoices/from-deliveries', conversion(1))
     expect(secondDeliveryInvoice.statusCode).toBe(409)
     const independentDetail = await app.inject({
-      url: `/v1/delivery-notes/${independent.json().id}`,
+      url: `/api/v1/delivery-notes/${independent.json().id}`,
       cookies,
     })
     expect(independentDetail.statusCode, JSON.stringify(independentDetail.json())).toBe(200)
@@ -1434,7 +1476,7 @@ describe('Estimates lifecycle', () => {
       { id: deliveryInvoice.json().id, number: null, status: 'draft' },
     ])
 
-    const draft = await post('/v1/invoices', {
+    const draft = await post('/api/v1/invoices', {
       clientId,
       templateId: null,
       issueDate: '2026-09-27',
@@ -1452,7 +1494,7 @@ describe('Estimates lifecycle', () => {
       ],
     })
     expect(draft.statusCode, JSON.stringify(draft.json())).toBe(201)
-    const invoice = await post(`/v1/invoices/${draft.json().id}/issue`, { expectedVersion: 1 })
+    const invoice = await post(`/api/v1/invoices/${draft.json().id}/issue`, { expectedVersion: 1 })
     expect(invoice.statusCode, JSON.stringify(invoice.json())).toBe(200)
     const input = (quantity: number) => ({
       clientId,
@@ -1470,36 +1512,36 @@ describe('Estimates lifecycle', () => {
         },
       ],
     })
-    const first = await post('/v1/delivery-notes', input(3))
+    const first = await post('/api/v1/delivery-notes', input(3))
     expect(first.statusCode, JSON.stringify(first.json())).toBe(201)
     expect(first.json().invoices).toEqual([
       { id: invoice.json().id, number: invoice.json().number, status: 'issued' },
     ])
     expect(
-      (await app.inject({ url: `/v1/invoices/${invoice.json().id}`, cookies })).json()
+      (await app.inject({ url: `/api/v1/invoices/${invoice.json().id}`, cookies })).json()
         .deliveryNoteIds,
     ).toContain(first.json().id)
-    expect((await post('/v1/delivery-notes', input(3))).statusCode).toBe(409)
-    const second = await post('/v1/delivery-notes', input(2))
+    expect((await post('/api/v1/delivery-notes', input(3))).statusCode).toBe(409)
+    const second = await post('/api/v1/delivery-notes', input(2))
     expect(second.statusCode).toBe(201)
     expect(
       (
-        await post(`/v1/invoices/${invoice.json().id}/cancel`, {
+        await post(`/api/v1/invoices/${invoice.json().id}/cancel`, {
           expectedVersion: 2,
           reason: 'Test',
         })
       ).statusCode,
     ).toBe(409)
-    const convertedIssued = await post(`/v1/invoices/${deliveryInvoice.json().id}/issue`, {
+    const convertedIssued = await post(`/api/v1/invoices/${deliveryInvoice.json().id}/issue`, {
       expectedVersion: deliveryInvoice.json().version,
     })
     expect(convertedIssued.statusCode, convertedIssued.body).toBe(200)
     for (const root of [convertedIssued.json(), invoice.json()]) {
       const selection = { invoices: [{ id: root.id, expectedVersion: root.version }] }
-      const impact = await post('/v1/invoices/cancellation/preview', selection)
+      const impact = await post('/api/v1/invoices/cancellation/preview', selection)
       expect(impact.statusCode, impact.body).toBe(200)
       expect(impact.json().deliveryNotes.length).toBe(root.id === invoice.json().id ? 2 : 1)
-      const result = await post('/v1/invoices/cancellation', {
+      const result = await post('/api/v1/invoices/cancellation', {
         ...selection,
         token: impact.json().token,
         reason: 'Order cancelled with its deliveries',

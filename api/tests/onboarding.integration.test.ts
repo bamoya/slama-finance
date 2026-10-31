@@ -23,7 +23,7 @@ describe('temporary credentials and password changes', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'admin-password-123' },
     })
@@ -31,7 +31,7 @@ describe('temporary credentials and password changes', () => {
     const [role] = await fixture.client`select id from roles where key='admin'`
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/staff',
+      url: '/api/v1/staff',
       headers,
       cookies: adminCookies,
       payload: {
@@ -59,7 +59,7 @@ describe('temporary credentials and password changes', () => {
     }
     const response = await app.inject({
       method: 'PATCH',
-      url: '/v1/auth/profile',
+      url: '/api/v1/auth/profile',
       headers,
       cookies: adminCookies,
       payload,
@@ -74,7 +74,7 @@ describe('temporary credentials and password changes', () => {
     expect(response.json().user).not.toHaveProperty('passwordHash')
     const wrong = await app.inject({
       method: 'PATCH',
-      url: '/v1/auth/profile',
+      url: '/api/v1/auth/profile',
       headers,
       cookies: adminCookies,
       payload: { ...payload, currentPassword: 'wrong' },
@@ -82,7 +82,7 @@ describe('temporary credentials and password changes', () => {
     expect(wrong.statusCode).toBe(400)
     const duplicate = await app.inject({
       method: 'PATCH',
-      url: '/v1/auth/profile',
+      url: '/api/v1/auth/profile',
       headers,
       cookies: adminCookies,
       payload: { ...payload, email: 'new@example.test' },
@@ -92,7 +92,7 @@ describe('temporary credentials and password changes', () => {
   const login = (password = created.temporaryPassword) =>
     app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'new@example.test', password },
     })
@@ -111,7 +111,7 @@ describe('temporary credentials and password changes', () => {
       (
         await app.inject({
           method: 'PATCH',
-          url: '/v1/auth/profile',
+          url: '/api/v1/auth/profile',
           headers,
           cookies,
           payload: {
@@ -127,16 +127,16 @@ describe('temporary credentials and password changes', () => {
     expect(reused.statusCode).toBe(401)
     expect(reused.json().code).toBe('INVALID_CREDENTIALS')
     expect(reused.json().message).toContain('Forgot your password?')
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).json().purpose).toBe(
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).json().purpose).toBe(
       'password_change',
     )
-    for (const url of ['/v1/staff', '/v1/rbac/roles', '/v1/rbac/permissions'])
+    for (const url of ['/api/v1/staff', '/api/v1/rbac/roles', '/api/v1/rbac/permissions'])
       expect((await app.inject({ url, cookies })).statusCode).toBe(403)
     expect(
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/auth/change-password',
+          url: '/api/v1/auth/change-password',
           headers,
           cookies,
           payload: { newPassword: created.temporaryPassword },
@@ -145,16 +145,16 @@ describe('temporary credentials and password changes', () => {
     ).toBe('PASSWORD_REUSED')
     const changed = await app.inject({
       method: 'POST',
-      url: '/v1/auth/change-password',
+      url: '/api/v1/auth/change-password',
       headers,
       cookies,
       payload: { newPassword: 'permanent-password-123' },
     })
     expect(changed.statusCode).toBe(200)
     expect(changed.json().purpose).toBe('full')
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(401)
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).statusCode).toBe(401)
     const full = { slama_session: changed.cookies[0]!.value }
-    expect((await app.inject({ url: '/v1/staff', cookies: full })).statusCode).toBe(200)
+    expect((await app.inject({ url: '/api/v1/staff', cookies: full })).statusCode).toBe(200)
     expect((await login('permanent-password-123')).statusCode).toBe(200)
   })
   it('allows only one concurrent temporary login', async () => {
@@ -169,7 +169,7 @@ describe('temporary credentials and password changes', () => {
     expect((await login()).statusCode).toBe(401)
     const reissue = await app.inject({
       method: 'POST',
-      url: `/v1/staff/${created.id}/temporary-password`,
+      url: `/api/v1/staff/${created.id}/temporary-password`,
       headers,
       cookies: adminCookies,
     })
@@ -177,14 +177,14 @@ describe('temporary credentials and password changes', () => {
     expect(reissue.json().temporaryPassword).not.toBe(created.temporaryPassword)
     expect((await login(reissue.json().temporaryPassword)).statusCode).toBe(200)
     expect(
-      (await app.inject({ url: `/v1/staff/${created.id}`, cookies: adminCookies })).json(),
+      (await app.inject({ url: `/api/v1/staff/${created.id}`, cookies: adminCookies })).json(),
     ).not.toHaveProperty('temporaryPassword')
     // An administrator who has not finished onboarding cannot replace the last full administrator.
     expect(
       (
         await app.inject({
           method: 'POST',
-          url: `/v1/staff/${testUserId}/disable`,
+          url: `/api/v1/staff/${testUserId}/disable`,
           headers,
           cookies: adminCookies,
         })
@@ -194,7 +194,7 @@ describe('temporary credentials and password changes', () => {
   it('requires current password for a full session and rotates it atomically', async () => {
     const missing = await app.inject({
       method: 'POST',
-      url: '/v1/auth/change-password',
+      url: '/api/v1/auth/change-password',
       headers,
       cookies: adminCookies,
       payload: { newPassword: 'replacement-admin-123' },
@@ -202,19 +202,19 @@ describe('temporary credentials and password changes', () => {
     expect(missing.statusCode).toBe(400)
     const changed = await app.inject({
       method: 'POST',
-      url: '/v1/auth/change-password',
+      url: '/api/v1/auth/change-password',
       headers,
       cookies: adminCookies,
       payload: { currentPassword: 'admin-password-123', newPassword: 'replacement-admin-123' },
     })
     expect(changed.statusCode).toBe(200)
-    expect((await app.inject({ url: '/v1/auth/session', cookies: adminCookies })).statusCode).toBe(
-      401,
-    )
+    expect(
+      (await app.inject({ url: '/api/v1/auth/session', cookies: adminCookies })).statusCode,
+    ).toBe(401)
     expect(
       (
         await app.inject({
-          url: '/v1/auth/session',
+          url: '/api/v1/auth/session',
           cookies: { slama_session: changed.cookies[0]!.value },
         })
       ).statusCode,

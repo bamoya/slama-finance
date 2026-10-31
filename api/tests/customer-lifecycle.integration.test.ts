@@ -67,7 +67,7 @@ describe('Customer lifecycle administration', () => {
     await fixture.client`insert into users(organization_id,email,password_hash,must_change_password) values (${testOrganizationId},'staff-a@example.test',${hash},false),(${orgB},'staff-b@example.test',${hash},false)`
     const pending = await app.inject({
       method: 'POST',
-      url: '/v1/admin/auth/login',
+      url: '/api/v1/admin/auth/login',
       headers,
       payload: { email: adminEmail, password: adminPassword },
     })
@@ -75,7 +75,7 @@ describe('Customer lifecycle administration', () => {
     const pendingCookie = pending.cookies.find((c) => c.name === 'slama_admin_session')!.value
     const done = await app.inject({
       method: 'POST',
-      url: '/v1/admin/auth/2fa',
+      url: '/api/v1/admin/auth/2fa',
       headers,
       cookies: { slama_admin_session: pendingCookie },
       payload: { code: totp(key, Date.now() - 30_000) },
@@ -99,13 +99,13 @@ describe('Customer lifecycle administration', () => {
   const admin = (url: string, payload: object = {}, method: 'POST' | 'GET' = 'POST') =>
     app.inject({ method, url, headers, cookies: { slama_admin_session: cookie }, payload })
   const detail = async (id = testOwnerId) =>
-    (await admin(`/v1/admin/owners/${id}`, {}, 'GET')).json()
+    (await admin(`/api/v1/admin/owners/${id}`, {}, 'GET')).json()
   const audits = (action: string) =>
     fixture.client`select * from platform_admin_audit where action=${action} order by created_at`
   const staffLogin = (organizationId: string, email: string) =>
     app.inject({
       method: 'POST',
-      url: `/v1/organizations/${organizationId}/auth/login`,
+      url: `/api/v1/organizations/${organizationId}/auth/login`,
       headers,
       payload: { email, password: staffPassword },
     })
@@ -118,14 +118,14 @@ describe('Customer lifecycle administration', () => {
     (
       await app.inject({
         method: 'GET',
-        url: `/v1/organizations/${organizationId}/auth/session`,
+        url: `/api/v1/organizations/${organizationId}/auth/session`,
         cookies: { [c.name]: c.value },
       })
     ).statusCode === 200
   const ownerLogin = () =>
     app.inject({
       method: 'POST',
-      url: '/v1/owner-auth/login',
+      url: '/api/v1/owner-auth/login',
       headers,
       payload: { email: 'fixture-owner@example.test', password: ownerPassword },
     })
@@ -147,7 +147,7 @@ describe('Customer lifecycle administration', () => {
   it('blocks a customer with 2FA and a reason, and payment never lifts it', async () => {
     const owner = await ownerCookie()
     const staff = await staffSession(testOrganizationId, 'staff-a@example.test')
-    const url = `/v1/admin/owners/${testOwnerId}/block`
+    const url = `/api/v1/admin/owners/${testOwnerId}/block`
     expect((await admin(url, { reason: secret })).statusCode).toBe(400)
     expect((await admin(url, { code: await freshCode() })).statusCode).toBe(400)
     const wrong = await admin(url, { reason: secret, code: '000000' })
@@ -162,13 +162,14 @@ describe('Customer lifecycle administration', () => {
     expect(blocked.json().restriction.blockedAt).toBeTruthy()
     // Replayed code is refused.
     expect(
-      (await admin(`/v1/admin/owners/${testOwnerId}/deletion`, { reason: 'x', code })).json().code,
+      (await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, { reason: 'x', code })).json()
+        .code,
     ).toBe('TWO_FACTOR_INVALID')
     const [row] = await audits('customer.block')
     expect(row!.before).toMatchObject({ blockedAt: null })
     expect(row!.after).toMatchObject({ reason: secret })
 
-    expect((await ownerGet('/v1/owner-auth/session', owner)).statusCode).toBe(401)
+    expect((await ownerGet('/api/v1/owner-auth/session', owner)).statusCode).toBe(401)
     const login = await ownerLogin()
     expect(login.statusCode).toBe(401)
     expect(login.json().code).toBe('INVALID_CREDENTIALS')
@@ -178,19 +179,19 @@ describe('Customer lifecycle administration', () => {
 
     const [payment] =
       await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'pro','monthly','renewal','cash','after-block','MAD',100,0,100) returning id`
-    expect((await admin(`/v1/admin/payments/${payment!.id}/confirm`)).statusCode).toBe(200)
+    expect((await admin(`/api/v1/admin/payments/${payment!.id}/confirm`)).statusCode).toBe(200)
     expect((await detail()).restriction.blockedAt).toBeTruthy()
     expect((await ownerLogin()).statusCode).toBe(401)
 
-    expect((await admin(`/v1/admin/owners/${testOwnerId}/unblock`, {})).statusCode).toBe(400)
-    const unblocked = await admin(`/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'paid' })
+    expect((await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {})).statusCode).toBe(400)
+    const unblocked = await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'paid' })
     expect(unblocked.json().restriction.blockedAt).toBeNull()
     expect(await audits('customer.unblock')).toHaveLength(1)
     const again = await ownerCookie()
     for (const path of [
-      '/v1/owner-auth/session',
-      '/v1/owner/organizations',
-      '/v1/owner/subscription',
+      '/api/v1/owner-auth/session',
+      '/api/v1/owner/organizations',
+      '/api/v1/owner/subscription',
     ])
       expect((await ownerGet(path, again)).body).not.toContain(secret)
     expect((await staffLogin(testOrganizationId, 'staff-a@example.test')).statusCode).toBe(200)
@@ -199,7 +200,7 @@ describe('Customer lifecycle administration', () => {
   it('suspends one organization without affecting the others', async () => {
     const staffA = await staffSession(testOrganizationId, 'staff-a@example.test')
     const staffB = await staffSession(orgB, 'staff-b@example.test')
-    const response = await admin(`/v1/admin/organizations/${testOrganizationId}/suspend`, {
+    const response = await admin(`/api/v1/admin/organizations/${testOrganizationId}/suspend`, {
       reason: secret,
       code: await freshCode(),
     })
@@ -215,20 +216,25 @@ describe('Customer lifecycle administration', () => {
     expect(rejected.body).not.toContain(secret)
     expect(await visitedByWorkers()).toEqual([orgB].sort())
     const owner = await ownerCookie()
-    const orgs = await ownerGet('/v1/owner/organizations', owner)
+    const orgs = await ownerGet('/api/v1/owner/organizations', owner)
     expect(orgs.body).toContain('suspended')
     expect(orgs.body).not.toContain(secret)
 
     const [audit] = await audits('organization.suspend')
     expect(audit!.target_id).toBe(testOrganizationId)
     expect(
-      (await admin(`/v1/admin/organizations/${testOrganizationId}/reactivate`, { reason: 'ok' }))
-        .statusCode,
+      (
+        await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
+          reason: 'ok',
+        })
+      ).statusCode,
     ).toBe(200)
     expect((await staffLogin(testOrganizationId, 'staff-a@example.test')).statusCode).toBe(200)
     expect(
       (
-        await admin(`/v1/admin/organizations/${testOrganizationId}/reactivate`, { reason: 'ok' })
+        await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
+          reason: 'ok',
+        })
       ).json().code,
     ).toBe('ORGANIZATION_NOT_SUSPENDED')
   })
@@ -237,25 +243,25 @@ describe('Customer lifecycle administration', () => {
     await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${testOwnerId},'pro','monthly','activation','cash','cov','MAD',100,0,100,'confirmed',now()-interval '15 days',now()+interval '20 days',now())`
     const [before] =
       await fixture.client`select coverage_end from subscription_payments where reference='cov'`
-    const suspended = await admin(`/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
+    const suspended = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
       reason: secret,
       code: await freshCode(),
     })
     expect(suspended.statusCode).toBe(200)
     expect(suspended.json().subscription.status).toBe('suspended')
     expect(await visitedByWorkers()).toEqual([])
-    const filtered = await admin('/v1/admin/owners?status=suspended', {}, 'GET')
+    const filtered = await admin('/api/v1/admin/owners?status=suspended', {}, 'GET')
     expect(filtered.json().items.map((i: { id: string }) => i.id)).toEqual([testOwnerId])
-    expect((await admin('/v1/admin/owners?status=active', {}, 'GET')).json().total).toBe(0)
-    expect((await admin('/v1/admin/overview', {}, 'GET')).json().suspended).toBe(1)
+    expect((await admin('/api/v1/admin/owners?status=active', {}, 'GET')).json().total).toBe(0)
+    expect((await admin('/api/v1/admin/overview', {}, 'GET')).json().suspended).toBe(1)
     const owner = await ownerCookie()
-    const summary = await ownerGet('/v1/owner/subscription', owner)
+    const summary = await ownerGet('/api/v1/owner/subscription', owner)
     expect(summary.json().status).toBe('suspended')
     expect(summary.body).not.toContain(secret)
 
     // Pretend the suspension lasted ten days.
     await fixture.client`update owner_subscriptions set suspended_at=suspended_at-interval '10 days' where owner_id=${testOwnerId}`
-    const resumed = await admin(`/v1/admin/owners/${testOwnerId}/subscription/resume`, {
+    const resumed = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/resume`, {
       reason: 'ok',
     })
     expect(resumed.statusCode).toBe(200)
@@ -273,13 +279,13 @@ describe('Customer lifecycle administration', () => {
   it('schedules deletion and cancellation restores the previous restriction', async () => {
     expect(
       (
-        await admin(`/v1/admin/owners/${testOwnerId}/block`, {
+        await admin(`/api/v1/admin/owners/${testOwnerId}/block`, {
           reason: 'fraud',
           code: await freshCode(),
         })
       ).statusCode,
     ).toBe(200)
-    const scheduled = await admin(`/v1/admin/owners/${testOwnerId}/deletion`, {
+    const scheduled = await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, {
       reason: secret,
       code: await freshCode(),
     })
@@ -290,7 +296,7 @@ describe('Customer lifecycle administration', () => {
         new Date(restriction.deletionRequestedAt).getTime(),
     ).toBe(30 * DAY)
     expect(restriction.deletionReason).toBe(secret)
-    const cancelled = await admin(`/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
+    const cancelled = await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
       reason: 'mistake',
     })
     expect(cancelled.json().restriction).toMatchObject({
@@ -303,21 +309,21 @@ describe('Customer lifecycle administration', () => {
     expect(await audits('customer.delete_cancel')).toHaveLength(1)
 
     // Without an earlier restriction, cancelling restores full access.
-    await admin(`/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'cleared' })
-    await admin(`/v1/admin/owners/${testOwnerId}/deletion`, {
+    await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'cleared' })
+    await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, {
       reason: 'req',
       code: await freshCode(),
     })
     expect((await ownerLogin()).statusCode).toBe(401)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(403)
-    await admin(`/v1/admin/owners/${testOwnerId}/deletion/cancel`, { reason: 'kept' })
+    await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, { reason: 'kept' })
     expect((await ownerLogin()).statusCode).toBe(200)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(200)
   })
 
   it('changes the plan and extends coverage with audited zero-amount adjustments', async () => {
     await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${testOwnerId},'pro','monthly','activation','cash','cov','MAD',100,0,100,'confirmed',now()-interval '5 days',now()+interval '20 days',now())`
-    const url = `/v1/admin/owners/${testOwnerId}/subscription`
+    const url = `/api/v1/admin/owners/${testOwnerId}/subscription`
     expect((await admin(`${url}/plan`, { planCode: 'essential' })).statusCode).toBe(400)
     const changed = await admin(`${url}/plan`, { planCode: 'essential', reason: 'downgrade' })
     expect(changed.statusCode).toBe(200)
@@ -340,14 +346,14 @@ describe('Customer lifecycle administration', () => {
     const [audit] = await audits('subscription.extend')
     expect(audit!.after).toMatchObject({ days: 10, reason: 'goodwill' })
     const owner = await ownerCookie()
-    const payments = await ownerGet('/v1/owner/subscription/payments', owner)
+    const payments = await ownerGet('/api/v1/owner/subscription/payments', owner)
     expect(payments.body).not.toContain('goodwill')
     expect(payments.body).not.toContain('downgrade')
   })
 
   it('creates customers with single-use, expiring invitations and resends', async () => {
     const create = (email: string, subscription: object = { kind: 'trial' }) =>
-      admin('/v1/admin/owners', {
+      admin('/api/v1/admin/owners', {
         firstName: 'Nadia',
         lastName: 'Alaoui',
         email,
@@ -377,13 +383,13 @@ describe('Customer lifecycle administration', () => {
     expect(await audits('customer.create')).toHaveLength(1)
 
     // Resend invalidates the previous link.
-    expect((await admin(`/v1/admin/owners/${id}/invitation`, { reason: 'lost' })).statusCode).toBe(
-      204,
-    )
+    expect(
+      (await admin(`/api/v1/admin/owners/${id}/invitation`, { reason: 'lost' })).statusCode,
+    ).toBe(204)
     const first = tokenOf(messages[0]!)
     const second = tokenOf(messages[1]!)
     const post = (path: string, payload: object) =>
-      app.inject({ method: 'POST', url: `/v1/owner-auth/invitation/${path}`, headers, payload })
+      app.inject({ method: 'POST', url: `/api/v1/owner-auth/invitation/${path}`, headers, payload })
     expect((await post('inspect', { token: first })).json().code).toBe('INVALID_INVITATION_TOKEN')
     expect((await post('inspect', { token: second })).json()).toEqual({
       email: 'new@example.test',
@@ -398,15 +404,15 @@ describe('Customer lifecycle administration', () => {
     ).toBe(400)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/owner-auth/login',
+      url: '/api/v1/owner-auth/login',
       headers,
       payload: { email: 'new@example.test', password: ownerPassword },
     })
     expect(login.statusCode).toBe(200)
     expect((await detail(id)).invitationPending).toBe(false)
-    expect((await admin(`/v1/admin/owners/${id}/invitation`, { reason: 'x' })).json().code).toBe(
-      'INVITATION_NOT_PENDING',
-    )
+    expect(
+      (await admin(`/api/v1/admin/owners/${id}/invitation`, { reason: 'x' })).json().code,
+    ).toBe('INVITATION_NOT_PENDING')
 
     // Expired links are refused.
     const paid = await create('paid@example.test', {

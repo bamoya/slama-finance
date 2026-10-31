@@ -1,5 +1,5 @@
 paths:
-  /v1/delivery-notes/{id}/send:
+  /api/v1/delivery-notes/{id}/send:
     post:
       operationId: sendDeliveryNote
       tags: [sales]
@@ -13,22 +13,22 @@ paths:
             schema: { $ref: '#/components/schemas/SendDocumentInput' }
       responses:
         '202':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/202'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/202'
         '400':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/400'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/400'
         '401':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/401'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/401'
         '403':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/403'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/403'
         '404':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/404'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/404'
         '409':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/409'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/409'
         '429':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/429'
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/429'
         '503':
-          $ref: '#/paths/~1v1~1invoices~1{id}~1send/post/responses/503'
-  /v1/invoices/{id}/send:
+          $ref: '#/paths/~1api~1v1~1invoices~1{id}~1send/post/responses/503'
+  /api/v1/invoices/{id}/send:
     post:
       operationId: sendInvoice
       tags: [sales]
@@ -81,7 +81,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/estimates/{id}/send:
+  /api/v1/estimates/{id}/send:
     post:
       operationId: sendEstimate
       tags: [sales]
@@ -134,7 +134,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/documents/{documentType}/{id}/notifications:
+  /api/v1/documents/{documentType}/{id}/notifications:
     get:
       operationId: listDocumentNotifications
       tags: [sales]
@@ -185,7 +185,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/retry:
+  /api/v1/documents/{documentType}/{id}/notifications/{dispatchId}/retry:
     post:
       operationId: retryDocumentNotification
       tags: [sales]
@@ -235,7 +235,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/documents/{documentType}/{id}/notifications/{dispatchId}/cancel:
+  /api/v1/documents/{documentType}/{id}/notifications/{dispatchId}/cancel:
     post:
       operationId: cancelDocumentNotification
       tags: [sales]
@@ -285,7 +285,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/retry:
+  /api/v1/documents/{documentType}/{id}/notification-preparations/{jobId}/retry:
     post:
       operationId: retryNotificationPreparation
       tags: [sales]
@@ -335,7 +335,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/documents/{documentType}/{id}/notification-preparations/{jobId}/cancel:
+  /api/v1/documents/{documentType}/{id}/notification-preparations/{jobId}/cancel:
     post:
       operationId: cancelNotificationPreparation
       tags: [sales]

@@ -232,13 +232,13 @@ export function createIdentityModule(options: {
                         .transaction((tx) => options.subscriptions!.assertAccess(tx))
                   : undefined,
                 cookieName: 'slama_staff_session',
-                cookiePath: '/v1',
+                cookiePath: '/api/v1',
               },
               scopedRbac.permissionKeys,
             )
           })
         },
-        { prefix: '/v1/organizations/:organizationId/auth' },
+        { prefix: '/api/v1/organizations/:organizationId/auth' },
       )
       await app.register(
         async (scope) => {
@@ -260,19 +260,19 @@ export function createIdentityModule(options: {
             ),
           )
         },
-        { prefix: '/v1/auth' },
+        { prefix: '/api/v1/auth' },
       )
       await app.register(
         async (scope) => {
           registerRbacRoutes(scope, createRbacController(rbac), requirePermission)
         },
-        { prefix: '/v1/rbac' },
+        { prefix: '/api/v1/rbac' },
       )
       await app.register(
         async (scope) => {
           registerStaffRoutes(scope, createStaffController(staff), requirePermission)
         },
-        { prefix: '/v1/staff' },
+        { prefix: '/api/v1/staff' },
       )
     },
   }

@@ -66,7 +66,7 @@ describe('Organization staff invitations', () => {
   const post = (path: string, payload?: object) =>
     app.inject({
       method: 'POST',
-      url: `/v1/staff/invitations${path}`,
+      url: `/api/v1/staff/invitations${path}`,
       headers: { origin },
       cookies: { slama_staff_session: sessionToken },
       payload,
@@ -74,7 +74,7 @@ describe('Organization staff invitations', () => {
   const publicPost = (action: string, token: string, extra = {}, org = testOrganizationId) =>
     app.inject({
       method: 'POST',
-      url: `/v1/organizations/${org}/auth/invitations/${action}`,
+      url: `/api/v1/organizations/${org}/auth/invitations/${action}`,
       headers: { origin },
       payload: { token, ...extra },
     })
@@ -112,7 +112,7 @@ describe('Organization staff invitations', () => {
     expect((await publicPost('accept', token, details)).json().code).toBe('INVITATION_ALREADY_USED')
     const login = await app.inject({
       method: 'POST',
-      url: `/v1/organizations/${testOrganizationId}/auth/login`,
+      url: `/api/v1/organizations/${testOrganizationId}/auth/login`,
       headers: { origin },
       payload: { email: invitation.email, password: details.password },
     })
@@ -190,7 +190,7 @@ describe('Organization staff invitations', () => {
     expect((await publicPost('inspect', rawToken(), {}, other)).statusCode).toBe(400)
     const response = await app.inject({
       method: 'POST',
-      url: `/v1/staff/invitations/${row.id}/revoke`,
+      url: `/api/v1/staff/invitations/${row.id}/revoke`,
       headers: { origin, 'x-organization-id': other },
       cookies: { slama_staff_session: sessionToken },
     })
@@ -201,7 +201,7 @@ describe('Organization staff invitations', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/staff/invitations',
+          url: '/api/v1/staff/invitations',
           cookies: { slama_owner_session: ownerToken },
         })
       ).statusCode,
@@ -260,7 +260,7 @@ describe('Organization staff invitations', () => {
     const send = (roleIds: string[]) =>
       app.inject({
         method: 'POST',
-        url: '/v1/staff/invitations',
+        url: '/api/v1/staff/invitations',
         headers: { origin },
         cookies: { slama_staff_session: cookie },
         payload: { email: 'delegated@example.test', roleIds },

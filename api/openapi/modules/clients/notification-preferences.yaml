@@ -1,5 +1,5 @@
 paths:
-  /v1/clients/{id}/notification-preferences:
+  /api/v1/clients/{id}/notification-preferences:
     get:
       operationId: listClientNotificationPreferences
       tags: [clients]
@@ -47,7 +47,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/clients/{id}/notification-preferences/{ruleId}:
+  /api/v1/clients/{id}/notification-preferences/{ruleId}:
     put:
       operationId: updateClientNotificationPreference
       tags: [clients]

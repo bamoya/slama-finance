@@ -62,7 +62,7 @@ describe('media lifecycle and settings attachments', () => {
     attachTestDatabase(app, fixture)
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'media-password-123' },
     })
@@ -75,7 +75,7 @@ describe('media lifecycle and settings attachments', () => {
   const upload = (purpose = 'company_logo') =>
     app.inject({
       method: 'POST',
-      url: '/v1/media/uploads',
+      url: '/api/v1/media/uploads',
       headers,
       cookies,
       payload: {
@@ -88,7 +88,7 @@ describe('media lifecycle and settings attachments', () => {
   const remove = (id: string, version: number) =>
     app.inject({
       method: 'DELETE',
-      url: `/v1/media/${id}`,
+      url: `/api/v1/media/${id}`,
       headers,
       cookies,
       payload: { expectedVersion: version },
@@ -102,10 +102,10 @@ describe('media lifecycle and settings attachments', () => {
       createdByActorId: _cb,
       updatedByActorId: _ub,
       ...fields
-    } = (await app.inject({ url: '/v1/company-settings', cookies })).json()
+    } = (await app.inject({ url: '/api/v1/company-settings', cookies })).json()
     return app.inject({
       method: 'PATCH',
-      url: '/v1/company-settings',
+      url: '/api/v1/company-settings',
       headers,
       cookies,
       payload: { ...fields, logoAssetId: id, expectedVersion: version },
@@ -123,24 +123,24 @@ describe('media lifecycle and settings attachments', () => {
     })
     expect(asset).not.toHaveProperty('objectKey')
     expect(asset).not.toHaveProperty('sha256')
-    expect((await app.inject({ url: `/v1/media/${asset.id}/download` })).statusCode).toBe(403)
-    expect((await app.inject({ url: `/v1/media/${asset.id}/download`, cookies })).statusCode).toBe(
-      200,
-    )
+    expect((await app.inject({ url: `/api/v1/media/${asset.id}/download` })).statusCode).toBe(403)
+    expect(
+      (await app.inject({ url: `/api/v1/media/${asset.id}/download`, cookies })).statusCode,
+    ).toBe(200)
     expect((await remove(asset.id, 1)).statusCode).toBe(409)
     expect((await remove(asset.id, asset.version)).statusCode).toBe(204)
     expect(objects.size).toBe(0)
-    expect((await app.inject({ url: `/v1/media/${asset.id}`, cookies })).statusCode).toBe(404)
+    expect((await app.inject({ url: `/api/v1/media/${asset.id}`, cookies })).statusCode).toBe(404)
   })
   it('protects references, uses foreign keys and gives detached media a new grace period', async () => {
     const asset = (await upload()).json()
     expect((await companyPatch(asset.id)).statusCode).toBe(200)
-    const attached = (await app.inject({ url: `/v1/media/${asset.id}`, cookies })).json()
+    const attached = (await app.inject({ url: `/api/v1/media/${asset.id}`, cookies })).json()
     expect(attached.expiresAt).toBeNull()
     expect((await remove(asset.id, attached.version)).statusCode).toBe(409)
     await expect(fixture.client`delete from media_assets where id=${asset.id}`).rejects.toThrow()
     expect((await companyPatch(null)).statusCode).toBe(200)
-    const detached = (await app.inject({ url: `/v1/media/${asset.id}`, cookies })).json()
+    const detached = (await app.inject({ url: `/api/v1/media/${asset.id}`, cookies })).json()
     expect(new Date(detached.expiresAt).getTime()).toBeGreaterThan(Date.now())
     expect((await remove(asset.id, detached.version)).statusCode).toBe(204)
   })
@@ -149,7 +149,7 @@ describe('media lifecycle and settings attachments', () => {
     const other = randomUUID()
     await fixture.client`insert into users (id,email,password_hash) values (${other},'other@example.test','unused')`
     await fixture.client`update media_assets set uploaded_by=${other} where id=${asset.id}`
-    expect((await app.inject({ url: `/v1/media/${asset.id}`, cookies })).statusCode).toBe(403)
+    expect((await app.inject({ url: `/api/v1/media/${asset.id}`, cookies })).statusCode).toBe(403)
     expect((await companyPatch(asset.id)).statusCode).toBe(403)
     expect((await remove(asset.id, asset.version)).statusCode).toBe(403)
     const signature = (await upload('company_signature')).json()
@@ -162,7 +162,7 @@ describe('media lifecycle and settings attachments', () => {
     const signature = (await upload('company_signature')).json()
     const created = await app.inject({
       method: 'POST',
-      url: '/v1/document-templates',
+      url: '/api/v1/document-templates',
       headers,
       cookies,
       payload: {
@@ -184,11 +184,11 @@ describe('media lifecycle and settings attachments', () => {
       await fixture.client`insert into roles (key,name) values ('viewer','Viewer') returning id`
     await fixture.client`insert into user_roles (user_id,role_id) values (${testUserId},${role!.id})`
     expect(
-      (await app.inject({ url: `/v1/media/${signature.id}/download`, cookies })).statusCode,
+      (await app.inject({ url: `/api/v1/media/${signature.id}/download`, cookies })).statusCode,
     ).toBe(403)
     await fixture.client`insert into role_permissions (role_id,permission_id) select ${role!.id},id from permissions where key='templates.read'`
     expect(
-      (await app.inject({ url: `/v1/media/${signature.id}/download`, cookies })).statusCode,
+      (await app.inject({ url: `/api/v1/media/${signature.id}/download`, cookies })).statusCode,
     ).toBe(200)
   })
   it('cleans expired unattached assets and retries ambiguous storage failures', async () => {
@@ -266,12 +266,12 @@ describe('media lifecycle and settings attachments', () => {
       expect(result.statusCode).toBe(201)
       const asset = result.json()
       try {
-        const download = await app.inject({ url: `/v1/media/${asset.id}/download`, cookies })
+        const download = await app.inject({ url: `/api/v1/media/${asset.id}/download`, cookies })
         expect(download.statusCode).toBe(200)
         expect((await sharp(download.rawPayload).metadata()).format).toBe('png')
         expect((await companyPatch(asset.id)).statusCode).toBe(200)
         expect((await companyPatch(null)).statusCode).toBe(200)
-        const metadata = (await app.inject({ url: `/v1/media/${asset.id}`, cookies })).json()
+        const metadata = (await app.inject({ url: `/api/v1/media/${asset.id}`, cookies })).json()
         expect((await remove(asset.id, metadata.version)).statusCode).toBe(204)
       } finally {
         // Only the unique object created by this test is removed.

@@ -1,7 +1,7 @@
 {
   'paths':
     {
-      '/v1/report-schedules/{id}/test-email':
+      '/api/v1/report-schedules/{id}/test-email':
         {
           'post':
             {
@@ -47,7 +47,7 @@
                 }
             }
         },
-      '/v1/dashboard':
+      '/api/v1/dashboard':
         {
           'get':
             {
@@ -236,7 +236,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/reports/analysis':
+      '/api/v1/reports/analysis':
         {
           'get':
             {
@@ -425,7 +425,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/reports/sections':
+      '/api/v1/reports/sections':
         {
           'get':
             {
@@ -505,7 +505,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/reports/exports':
+      '/api/v1/reports/exports':
         {
           'post':
             {
@@ -602,7 +602,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules':
+      '/api/v1/report-schedules':
         {
           'get':
             {
@@ -791,7 +791,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/eligible-recipients':
+      '/api/v1/report-schedules/eligible-recipients':
         {
           'get':
             {
@@ -899,7 +899,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}':
+      '/api/v1/report-schedules/{id}':
         {
           'get':
             {
@@ -1164,7 +1164,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}/enable':
+      '/api/v1/report-schedules/{id}/enable':
         {
           'post':
             {
@@ -1257,7 +1257,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}/disable':
+      '/api/v1/report-schedules/{id}/disable':
         {
           'post':
             {
@@ -1350,7 +1350,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}/archive':
+      '/api/v1/report-schedules/{id}/archive':
         {
           'post':
             {
@@ -1443,7 +1443,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}/restore':
+      '/api/v1/report-schedules/{id}/restore':
         {
           'post':
             {
@@ -1536,7 +1536,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-schedules/{id}/runs':
+      '/api/v1/report-schedules/{id}/runs':
         {
           'get':
             {
@@ -1659,7 +1659,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-runs/{id}':
+      '/api/v1/report-runs/{id}':
         {
           'get':
             {
@@ -1747,7 +1747,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-runs/{id}/retry':
+      '/api/v1/report-runs/{id}/retry':
         {
           'post':
             {
@@ -1835,7 +1835,7 @@
                 schedule, run and report recipient. '
             }
         },
-      '/v1/report-runs/{id}/artifacts':
+      '/api/v1/report-runs/{id}/artifacts':
         {
           'get':
             {

@@ -52,36 +52,38 @@ describe('Owner organization portal and shared authorization', () => {
 
   it('lists only owned organizations with real search, pagination and staff counts', async () => {
     await fixture.client`insert into users(organization_id,email,password_hash,archived_at) values (${orgA},'current@example.test','test',null),(${orgA},'archived@example.test','test',now())`
-    const result = await get('/v1/owner/organizations?pageSize=1')
+    const result = await get('/api/v1/owner/organizations?pageSize=1')
     expect(result.statusCode).toBe(200)
     expect(result.json()).toMatchObject({ total: 2, page: 1, pageSize: 1 })
     expect(result.json().items).toHaveLength(1)
-    const filtered = await get('/v1/owner/organizations?q=Slama')
+    const filtered = await get('/api/v1/owner/organizations?q=Slama')
     expect(filtered.json()).toMatchObject({
       total: 1,
       items: [{ id: orgA, name: 'Slama Agricole', status: 'active', staffCount: 1 }],
     })
-    expect((await get('/v1/owner/organizations?q=Private')).json().total).toBe(0)
-    expect((await get(`/v1/owner/organizations/${orgC}`)).statusCode).toBe(404)
-    expect((await get(`/v1/owner/organizations/${randomUUID()}`)).statusCode).toBe(404)
-    expect((await get(`/v1/owner/organizations/${orgA}`)).body).not.toMatch(
+    expect((await get('/api/v1/owner/organizations?q=Private')).json().total).toBe(0)
+    expect((await get(`/api/v1/owner/organizations/${orgC}`)).statusCode).toBe(404)
+    expect((await get(`/api/v1/owner/organizations/${randomUUID()}`)).statusCode).toBe(404)
+    expect((await get(`/api/v1/owner/organizations/${orgA}`)).body).not.toMatch(
       /ownerId|passwordHash|tokenHash/,
     )
   })
 
   it('keeps blocked metadata manageable while reporting the correct status', async () => {
     await fixture.client`update organizations set paused_at=now(),suspended_at=now(),deletion_requested_at=now(),deletion_due_at=now()+interval '30 days' where id=${orgA}`
-    expect((await get(`/v1/owner/organizations/${orgA}`)).json().status).toBe('pending_deletion')
-    expect((await get('/v1/owner/organizations?status=pending_deletion')).json().total).toBe(1)
+    expect((await get(`/api/v1/owner/organizations/${orgA}`)).json().status).toBe(
+      'pending_deletion',
+    )
+    expect((await get('/api/v1/owner/organizations?status=pending_deletion')).json().total).toBe(1)
     await fixture.client`update organizations set deletion_requested_at=null,deletion_due_at=null where id=${orgA}`
-    expect((await get(`/v1/owner/organizations/${orgA}`)).json().status).toBe('suspended')
+    expect((await get(`/api/v1/owner/organizations/${orgA}`)).json().status).toBe('suspended')
   })
 
   it('requires owner authentication and rejects another tenant origin', async () => {
-    expect((await get('/v1/owner/organizations', 'invalid')).statusCode).toBe(401)
+    expect((await get('/api/v1/owner/organizations', 'invalid')).statusCode).toBe(401)
     const foreign = await app.inject({
       method: 'GET',
-      url: '/v1/owner/organizations',
+      url: '/api/v1/owner/organizations',
       headers: { origin: 'http://localhost:5174' },
       cookies: { slama_owner_session: ownerToken },
     })
@@ -123,7 +125,7 @@ describe('Owner organization portal and shared authorization', () => {
         permission: 'invoices.read',
       }),
     ).toBeNull()
-    expect((await get('/v1/owner/organizations')).statusCode).toBe(200)
+    expect((await get('/api/v1/owner/organizations')).statusCode).toBe(200)
   })
 
   it('checks staff role grants and organization-bound sessions without owner fallback', async () => {

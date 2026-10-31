@@ -65,7 +65,7 @@ describe('Live and frozen reporting', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'reporting-password-123' },
     })
@@ -154,22 +154,22 @@ describe('Live and frozen reporting', () => {
       recipientIds: [testUserId],
       enabled: false,
     }
-    const response = await post('/v1/report-schedules', input)
+    const response = await post('/api/v1/report-schedules', input)
     expect(response.statusCode, response.body).toBe(201)
     const saved = response.json()
     expect(saved.language).toBe('company')
-    const run = await post(`/v1/report-schedules/${saved.id}/test-email`, {
+    const run = await post(`/api/v1/report-schedules/${saved.id}/test-email`, {
       expectedVersion: saved.version,
     })
     expect(run.statusCode, run.body).toBe(202)
     expect(run.json().configurationSnapshot.language).toBe('en')
     await fixture.client`update company_settings set locale='fr-MA' where id=1`
-    const frozen = await get(`/v1/report-runs/${run.json().id}`)
+    const frozen = await get(`/api/v1/report-runs/${run.json().id}`)
     expect(frozen.statusCode, frozen.body).toBe(200)
     expect(frozen.json().configurationSnapshot.language).toBe('en')
-    const override = await post('/v1/report-schedules', { ...input, language: 'en' })
+    const override = await post('/api/v1/report-schedules', { ...input, language: 'en' })
     expect(override.statusCode, override.body).toBe(201)
-    const explicitRun = await post(`/v1/report-schedules/${override.json().id}/test-email`, {
+    const explicitRun = await post(`/api/v1/report-schedules/${override.json().id}/test-email`, {
       expectedVersion: override.json().version,
     })
     expect(explicitRun.json().configurationSnapshot.language).toBe('en')
@@ -188,10 +188,10 @@ describe('Live and frozen reporting', () => {
       recipientIds: [testUserId],
       enabled: false,
     }
-    const created = await post('/v1/report-schedules', input)
+    const created = await post('/api/v1/report-schedules', input)
     expect(created.statusCode, created.body).toBe(201)
     const schedule = created.json()
-    const url = `/v1/report-schedules/${schedule.id}/test-email`
+    const url = `/api/v1/report-schedules/${schedule.id}/test-email`
     const [first, repeated] = await Promise.all([
       post(url, { expectedVersion: schedule.version }),
       post(url, { expectedVersion: schedule.version }),
@@ -204,7 +204,7 @@ describe('Live and frozen reporting', () => {
       configurationSnapshot: { language: 'fr', recipientIds: [testUserId] },
     })
     expect(repeated.json().id).toBe(first.json().id)
-    const saved = (await get(`/v1/report-schedules/${schedule.id}`)).json()
+    const saved = (await get(`/api/v1/report-schedules/${schedule.id}`)).json()
     expect(saved).toEqual(schedule)
     expect((await post(url, { expectedVersion: 999 })).statusCode).toBe(409)
     expect((await post(url, { expectedVersion: schedule.version })).statusCode).toBe(429)
@@ -240,7 +240,7 @@ describe('Live and frozen reporting', () => {
         sender: { email: 'reports@example.test', name: 'Slama' },
         uiOrigin: 'http://localhost:5173',
       })
-      const created = await post('/v1/report-schedules', {
+      const created = await post('/api/v1/report-schedules', {
         name: 'Disabled weekly test',
         output,
         language: 'en',
@@ -255,14 +255,14 @@ describe('Live and frozen reporting', () => {
         enabled: false,
       })
       const schedule = created.json()
-      const accepted = await post(`/v1/report-schedules/${schedule.id}/test-email`, {
+      const accepted = await post(`/api/v1/report-schedules/${schedule.id}/test-email`, {
         expectedVersion: schedule.version,
       })
       expect(accepted.statusCode, accepted.body).toBe(202)
       await fixture.client`update report_schedules set language='fr',output='pdf' where id=${schedule.id}`
       expect(await reporting.worker.runOne()).toBe(true)
       expect(await reporting.worker.runOne()).toBe(false)
-      const result = (await get(`/v1/report-runs/${accepted.json().id}`)).json()
+      const result = (await get(`/api/v1/report-runs/${accepted.json().id}`)).json()
       expect(result).toMatchObject({
         trigger: 'test',
         status: 'succeeded',
@@ -285,14 +285,14 @@ describe('Live and frozen reporting', () => {
         output === 'both' ? ['pdf', 'xlsx'] : [output === 'excel' ? 'xlsx' : 'pdf'],
       )
       for (const attachment of attachments) expect(objects.get(attachment.object_key)).toBeTruthy()
-      expect((await get(`/v1/report-schedules/${schedule.id}`)).json().nextRunAt).toBeNull()
-      const archived = await post(`/v1/report-schedules/${schedule.id}/archive`, {
+      expect((await get(`/api/v1/report-schedules/${schedule.id}`)).json().nextRunAt).toBeNull()
+      const archived = await post(`/api/v1/report-schedules/${schedule.id}/archive`, {
         expectedVersion: schedule.version,
       })
       expect(archived.statusCode).toBe(200)
       expect(
         (
-          await post(`/v1/report-schedules/${schedule.id}/test-email`, {
+          await post(`/api/v1/report-schedules/${schedule.id}/test-email`, {
             expectedVersion: archived.json().version,
           })
         ).statusCode,
@@ -300,7 +300,7 @@ describe('Live and frozen reporting', () => {
       await fixture.client`delete from user_roles where user_id=${testUserId}`
       expect(
         (
-          await post(`/v1/report-schedules/${schedule.id}/test-email`, {
+          await post(`/api/v1/report-schedules/${schedule.id}/test-email`, {
             expectedVersion: archived.json().version,
           })
         ).statusCode,
@@ -325,10 +325,10 @@ describe('Live and frozen reporting', () => {
         '2026-10-03',
       ),
     )
-    const analysis = await get(`/v1/reports/analysis?${criteria}&sections=${sections}&limit=1`)
+    const analysis = await get(`/api/v1/reports/analysis?${criteria}&sections=${sections}&limit=1`)
     expect(analysis.statusCode, analysis.body).toBe(200)
     const data = ReportAnalysisSchema.parse(analysis.json())
-    const dashboard = await get(`/v1/dashboard?${criteria}&sections=${sections}&limit=1`)
+    const dashboard = await get(`/api/v1/dashboard?${criteria}&sections=${sections}&limit=1`)
     expect(dashboard.statusCode, dashboard.body).toBe(200)
     expect(dashboard.json().sections).toEqual(data.sections)
     const section = (key: string) => data.sections.find((item) => item.key === key)!
@@ -385,20 +385,20 @@ describe('Live and frozen reporting', () => {
     await fixture.client`insert into role_permissions(role_id,permission_id) select ${role!.id},id from permissions where key='reports.read'`
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'limited@example.test', password: 'reporting-password-123' },
     })
     const limited = { slama_session: login.cookies[0]!.value }
     const denied = await app.inject({
       method: 'GET',
-      url: `/v1/reports/analysis?${criteria}&sections=summary`,
+      url: `/api/v1/reports/analysis?${criteria}&sections=summary`,
       cookies: limited,
     })
     expect(denied.statusCode).toBe(200)
     const empty = await app.inject({
       method: 'GET',
-      url: `/v1/dashboard?${criteria}`,
+      url: `/api/v1/dashboard?${criteria}`,
       cookies: limited,
     })
     expect(empty.statusCode, empty.body).toBe(200)
@@ -406,19 +406,19 @@ describe('Live and frozen reporting', () => {
     await fixture.client`delete from role_permissions where role_id=${role!.id}`
     const revoked = await app.inject({
       method: 'GET',
-      url: `/v1/dashboard?${criteria}`,
+      url: `/api/v1/dashboard?${criteria}`,
       cookies: limited,
     })
     expect(revoked.statusCode).toBe(403)
     const unsupported = await get(
-      `/v1/reports/analysis?${criteria}&sections=collections&productId=${randomUUID()}`,
+      `/api/v1/reports/analysis?${criteria}&sections=collections&productId=${randomUUID()}`,
     )
     expect(unsupported.statusCode).toBe(400)
     expect(unsupported.json().code).toBe('UNSUPPORTED_REPORT_FILTER')
   })
   it('captures comparisons consistently and resolves chart segments to supporting records', async () => {
     const comparison = await get(
-      `/v1/reports/analysis?${criteria}&sections=revenue&comparePrevious=true`,
+      `/api/v1/reports/analysis?${criteria}&sections=revenue&comparePrevious=true`,
     )
     expect(comparison.statusCode, comparison.body).toBe(200)
     expect(comparison.json().comparison).toMatchObject({ from: '2026-08-02', to: '2026-08-31' })
@@ -426,7 +426,7 @@ describe('Live and frozen reporting', () => {
       expect.objectContaining({ key: 'gross', currency: 'MAD', value: '40.00' }),
     )
     const cohort = await get(
-      `/v1/reports/analysis?${criteria}&sections=estimates&detailSection=estimates&segment=cohort:invoiced`,
+      `/api/v1/reports/analysis?${criteria}&sections=estimates&detailSection=estimates&segment=cohort:invoiced`,
     )
     expect(cohort.statusCode, cohort.body).toBe(200)
     expect(cohort.json().sections[0].total).toBe(1)
@@ -435,7 +435,7 @@ describe('Live and frozen reporting', () => {
       resource: 'estimates',
     })
     const cash = await get(
-      `/v1/reports/analysis?${criteria}&sections=payment_methods&detailSection=payment_methods&segment=cash`,
+      `/api/v1/reports/analysis?${criteria}&sections=payment_methods&detailSection=payment_methods&segment=cash`,
     )
     expect(cash.statusCode, cash.body).toBe(200)
     expect(cash.json().sections[0].rows).toHaveLength(2)
@@ -445,13 +445,13 @@ describe('Live and frozen reporting', () => {
         .sections[0].rows.every((row: { resource: string }) => row.resource === 'payments'),
     ).toBe(true)
     const invalid = await get(
-      `/v1/reports/analysis?${criteria}&sections=outstanding&detailSection=outstanding&segment=unknown`,
+      `/api/v1/reports/analysis?${criteria}&sections=outstanding&detailSection=outstanding&segment=unknown`,
     )
     expect(invalid.statusCode).toBe(400)
   })
   it('downloads complete CSV and PDF snapshots without scheduling or email side effects', async () => {
     for (const format of ['csv', 'pdf']) {
-      const response = await post('/v1/reports/exports', {
+      const response = await post('/api/v1/reports/exports', {
         from: '2026-09-01',
         to: '2026-09-30',
         timezone: 'Africa/Casablanca',
@@ -491,7 +491,7 @@ describe('Live and frozen reporting', () => {
       storage,
       clock: () => clock,
     })
-    const response = await post('/v1/report-schedules', {
+    const response = await post('/api/v1/report-schedules', {
       name: 'Daily revenue',
       frequency: 'daily',
       weekday: null,
@@ -507,7 +507,7 @@ describe('Live and frozen reporting', () => {
     const schedule = response.json()
     expect(schedule.language).toBe('company')
     await fixture.client`update report_schedules set next_run_at='2026-10-01T09:00:00Z' where id=${schedule.id}`
-    const repeatedEnable = await post(`/v1/report-schedules/${schedule.id}/enable`, {
+    const repeatedEnable = await post(`/api/v1/report-schedules/${schedule.id}/enable`, {
       expectedVersion: schedule.version,
     })
     expect(repeatedEnable.statusCode, repeatedEnable.body).toBe(409)
@@ -517,7 +517,7 @@ describe('Live and frozen reporting', () => {
           .next_run_at,
       ).toISOString(),
     ).toBe('2026-10-01T09:00:00.000Z')
-    const list = await get('/v1/report-schedules?status=all')
+    const list = await get('/api/v1/report-schedules?status=all')
     expect(list.statusCode, list.body).toBe(200)
     expect(list.json().items).toHaveLength(1)
     await fixture.client`update report_schedules set next_run_at='2026-10-04T09:00:00Z' where id=${schedule.id}`
@@ -544,14 +544,14 @@ describe('Live and frozen reporting', () => {
     ).toBeTruthy()
     const snapshot = run!.data_snapshot
     await fixture.client`update payments set amount='40.00' where number='PAY-REPORT-1'`
-    const saved = await get(`/v1/report-runs/${run!.id}`)
+    const saved = await get(`/api/v1/report-runs/${run!.id}`)
     expect(saved.statusCode, saved.body).toBe(200)
     expect(saved.json().dataSnapshot).toEqual(snapshot)
     expect(saved.json().artifacts).toHaveLength(1)
     expect(saved.json().deliveries).toEqual([
       expect.objectContaining({ status: 'skipped', reason: 'EMAIL_UNAVAILABLE' }),
     ])
-    const disabled = await post(`/v1/report-schedules/${schedule.id}/disable`, {
+    const disabled = await post(`/api/v1/report-schedules/${schedule.id}/disable`, {
       expectedVersion: schedule.version,
     })
     expect(disabled.statusCode, disabled.body).toBe(200)
@@ -562,7 +562,7 @@ describe('Live and frozen reporting', () => {
     ).toBe(8)
     const blocked = await app.inject({
       method: 'DELETE',
-      url: `/v1/report-schedules/${schedule.id}`,
+      url: `/api/v1/report-schedules/${schedule.id}`,
       cookies,
       headers,
       payload: { expectedVersion: schedule.version },
@@ -603,7 +603,7 @@ describe('Live and frozen reporting', () => {
       sender: { email: 'reports@example.test', name: 'B-Finance' },
       uiOrigin: 'http://localhost:5173',
     })
-    const response = await post('/v1/report-schedules', {
+    const response = await post('/api/v1/report-schedules', {
       name: 'Neutral report notice',
       language: 'en',
       frequency: 'daily',
@@ -645,7 +645,7 @@ describe('Live and frozen reporting', () => {
     const bytes = objects.get(attachment!.object_key)!
     expect(bytes.length).toBe(Number(attachment!.byte_size))
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(attachment!.sha256)
-    const disabled = await post(`/v1/staff/${recipientId}/disable`, {})
+    const disabled = await post(`/api/v1/staff/${recipientId}/disable`, {})
     expect(disabled.statusCode, disabled.body).toBe(204)
     expect(
       (await fixture.client`select status from outbound_messages where id=${message!.id}`)[0]!
@@ -653,7 +653,7 @@ describe('Live and frozen reporting', () => {
     ).toBe('cancelled')
   }, 20000)
   async function cleanupFixture() {
-    const created = await post('/v1/report-schedules', {
+    const created = await post('/api/v1/report-schedules', {
       name: 'Cleanup fixture',
       output: 'both',
       language: 'fr',
@@ -686,15 +686,15 @@ describe('Live and frozen reporting', () => {
     const { run, reporting } = await cleanupFixture()
     await fixture.client`update report_runs set configuration_snapshot=configuration_snapshot-'output' where id=${run.id}`
     await reporting.worker.runOne()
-    const before = (await get(`/v1/report-runs/${run.id}`)).json()
+    const before = (await get(`/api/v1/report-runs/${run.id}`)).json()
     expect(before.artifacts.map((file: { format: string }) => file.format).sort()).toEqual([
       'csv',
       'pdf',
     ])
-    expect((await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode).toBe(
-      200,
-    )
-    const restored = await post(`/v1/report-runs/${run.id}/regenerate-files`, {})
+    expect(
+      (await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode,
+    ).toBe(200)
+    const restored = await post(`/api/v1/report-runs/${run.id}/regenerate-files`, {})
     expect(restored.statusCode, restored.body).toBe(200)
     expect(
       restored
@@ -706,7 +706,7 @@ describe('Live and frozen reporting', () => {
   it('does not publish a partial set when a both-output snapshot exceeds PDF limits', async () => {
     const { run, reporting } = await cleanupFixture()
     const snapshot = (
-      await get('/v1/reports/analysis?from=2026-09-01&to=2026-09-30&sections=revenue')
+      await get('/api/v1/reports/analysis?from=2026-09-01&to=2026-09-30&sections=revenue')
     ).json()
     snapshot.sections[0].total = 2001
     await fixture.client`update report_runs set data_snapshot=${JSON.stringify(snapshot)}::jsonb,data_captured_at=now() where id=${run.id}`
@@ -720,26 +720,28 @@ describe('Live and frozen reporting', () => {
   })
   it('cleans files, restores frozen figures without email, filters storage totals and permanently deletes a run', async () => {
     const { schedule, run, reporting } = await cleanupFixture()
-    expect((await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'run' })).statusCode).toBe(409)
+    expect((await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'run' })).statusCode).toBe(
+      409,
+    )
     await reporting.worker.runOne()
-    const before = (await get(`/v1/report-runs/${run.id}`)).json()
+    const before = (await get(`/api/v1/report-runs/${run.id}`)).json()
     expect(before.status).toBe('succeeded')
     const bytes = before.artifacts.reduce(
       (sum: number, file: { byteSize: number }) => sum + file.byteSize,
       0,
     )
     const list = await get(
-      `/v1/report-schedules/${schedule.id}/runs?search=Cleanup&status=succeeded&trigger=scheduled&from=2026-09-01&to=2026-09-30`,
+      `/api/v1/report-schedules/${schedule.id}/runs?search=Cleanup&status=succeeded&trigger=scheduled&from=2026-09-01&to=2026-09-30`,
     )
     expect(list.json()).toMatchObject({ total: 1, storageBytes: bytes })
     expect(
-      (await get(`/v1/report-schedules/${schedule.id}/runs?search=missing`)).json(),
+      (await get(`/api/v1/report-schedules/${schedule.id}/runs?search=missing`)).json(),
     ).toMatchObject({ total: 0, storageBytes: 0 })
     expect(
-      (await get(`/v1/report-schedules/${schedule.id}/runs?from=2026-10-01&to=2026-09-01`))
+      (await get(`/api/v1/report-schedules/${schedule.id}/runs?from=2026-10-01&to=2026-09-01`))
         .statusCode,
     ).toBe(400)
-    const cleaned = await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })
+    const cleaned = await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })
     expect(cleaned.json()).toEqual({
       removedFiles: 2,
       freedBytes: bytes,
@@ -747,12 +749,12 @@ describe('Live and frozen reporting', () => {
       pendingFiles: 0,
     })
     expect(objects.size).toBe(0)
-    expect((await get(`/v1/report-runs/${run.id}`)).json()).toMatchObject({
+    expect((await get(`/api/v1/report-runs/${run.id}`)).json()).toMatchObject({
       dataSnapshot: before.dataSnapshot,
       artifacts: [],
     })
     await fixture.client`update invoices set total='999.00',subtotal='979.00' where id=${invoiceId}`
-    const restored = await post(`/v1/report-runs/${run.id}/regenerate-files`, {})
+    const restored = await post(`/api/v1/report-runs/${run.id}/regenerate-files`, {})
     expect(restored.statusCode, restored.body).toBe(200)
     expect(restored.json().dataSnapshot).toEqual(before.dataSnapshot)
     expect(restored.json().artifacts).toHaveLength(2)
@@ -760,9 +762,11 @@ describe('Live and frozen reporting', () => {
       await fixture.client`select object_key from document_artifacts where document_id=${run.id} and format='xlsx'`
     expect(objects.get(excel!.object_key)).toBeTruthy()
     expect(await fixture.client`select * from outbound_messages`).toHaveLength(0)
-    expect((await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'run' })).statusCode).toBe(200)
-    expect((await get(`/v1/report-runs/${run.id}`)).statusCode).toBe(404)
-    expect((await get(`/v1/report-schedules/${schedule.id}`)).statusCode).toBe(200)
+    expect((await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'run' })).statusCode).toBe(
+      200,
+    )
+    expect((await get(`/api/v1/report-runs/${run.id}`)).statusCode).toBe(404)
+    expect((await get(`/api/v1/report-schedules/${schedule.id}`)).statusCode).toBe(200)
     expect(await fixture.client`select * from invoices where id=${invoiceId}`).toHaveLength(1)
     expect(
       await fixture.client`select * from audit_events where entity_table='report_runs' and action in ('delete_files','regenerate_files','delete')`,
@@ -781,26 +785,26 @@ describe('Live and frozen reporting', () => {
     const removeSchedule = () =>
       app.inject({
         method: 'DELETE',
-        url: `/v1/report-schedules/${schedule.id}`,
+        url: `/api/v1/report-schedules/${schedule.id}`,
         headers,
         cookies,
         payload: { expectedVersion: schedule.version },
       })
     expect((await removeSchedule()).statusCode).toBe(409)
-    expect((await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode).toBe(
-      409,
-    )
+    expect(
+      (await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode,
+    ).toBe(409)
     expect(objects.size).toBe(2)
     await fixture.client`update outbound_messages set status='failed' where id=${messageId}`
-    expect((await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode).toBe(
-      200,
-    )
+    expect(
+      (await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })).statusCode,
+    ).toBe(200)
     await expect(
       fixture.db.transaction((tx) =>
         reporting.reportOwner.assertRetryable(tx, run.id, testUserId, messageId),
       ),
     ).rejects.toMatchObject({ code: 'REPORT_FILES_REMOVED' })
-    await post(`/v1/report-runs/${run.id}/regenerate-files`, {})
+    await post(`/api/v1/report-runs/${run.id}/regenerate-files`, {})
     const deleted = await removeSchedule()
     expect(deleted.statusCode, deleted.body).toBe(204)
     expect(objects.size).toBe(0)
@@ -824,7 +828,7 @@ describe('Live and frozen reporting', () => {
     await fixture.client`insert into outbound_messages(id,to_address,from_email,from_name,subject,html,text_body,idempotency_key,payload_hash) values(${messageId},'other@example.test','reports@example.test','Slama','Other','Other','Other',${randomUUID()},${'b'.repeat(64)})`
     await fixture.client`insert into outbound_message_attachments(message_id,object_key,filename,content_type,byte_size,position) values(${messageId},${pdf!.object_key},'shared.pdf','application/pdf',${pdf!.byte_size},0)`
     failDeletion = true
-    const result = await post(`/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })
+    const result = await post(`/api/v1/report-runs/${run.id}/cleanup`, { mode: 'files' })
     expect(result.json()).toEqual({
       removedFiles: 0,
       freedBytes: 0,
@@ -835,7 +839,7 @@ describe('Live and frozen reporting', () => {
   })
   it('rejects oversized PDF details but captures all rows for an Excel-only schedule', async () => {
     await fixture.client`insert into invoices(number,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) select 'INV-SYNTH-'||n,'issued',${clientId},'2026-09-10','2026-10-30','MAD','{}','{}','{}','1.00','0.00','1.00',now() from generate_series(1,2500) n`
-    const result = await get(`/v1/reports/analysis?${criteria}&sections=revenue&limit=25`)
+    const result = await get(`/api/v1/reports/analysis?${criteria}&sections=revenue&limit=25`)
     expect(result.statusCode, result.body).toBe(200)
     expect(result.json().sections[0]).toMatchObject({ total: 2502, rows: expect.any(Array) })
     expect(result.json().sections[0].rows).toHaveLength(25)
@@ -845,7 +849,7 @@ describe('Live and frozen reporting', () => {
     const [plan] =
       await fixture.client`explain(analyze,buffers,format json) select currency,sum(total) from invoices where status in ('issued','sent') and issue_date >= '2026-09-01' and issue_date <= '2026-09-30' group by currency`
     expect(plan!['QUERY PLAN'][0].Plan['Actual Rows']).toBe(2)
-    const denied = await post('/v1/reports/exports', {
+    const denied = await post('/api/v1/reports/exports', {
       from: '2026-09-01',
       to: '2026-09-30',
       sections: ['revenue'],
@@ -853,7 +857,7 @@ describe('Live and frozen reporting', () => {
     })
     expect(denied.statusCode).toBe(400)
     expect(denied.json().code).toBe('EXPORT_TOO_LARGE')
-    const scheduleResponse = await post('/v1/report-schedules', {
+    const scheduleResponse = await post('/api/v1/report-schedules', {
       name: 'Complete CSV capture',
       output: 'excel',
       frequency: 'daily',

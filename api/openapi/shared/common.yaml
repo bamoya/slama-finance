@@ -17,6 +17,24 @@ paths:
             application/json:
               schema:
                 $ref: ../openapi.yaml#/components/schemas/Error
+  /api/v1/health:
+    get:
+      operationId: apiHealthCheck
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Health
+        default:
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../openapi.yaml#/components/schemas/Error
   /ready:
     get:
       operationId: readinessCheck

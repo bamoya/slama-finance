@@ -1,5 +1,5 @@
 paths:
-  /v1/organizations/{organizationId}/auth/login:
+  /api/v1/organizations/{organizationId}/auth/login:
     parameters:
       - name: organizationId
         in: path
@@ -29,7 +29,7 @@ paths:
           application/json:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/Login
-  /v1/organizations/{organizationId}/auth/session:
+  /api/v1/organizations/{organizationId}/auth/session:
     parameters:
       - name: organizationId
         in: path
@@ -54,7 +54,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/organizations/{organizationId}/auth/logout:
+  /api/v1/organizations/{organizationId}/auth/logout:
     parameters:
       - name: organizationId
         in: path
@@ -75,7 +75,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/organizations/{organizationId}/auth/profile:
+  /api/v1/organizations/{organizationId}/auth/profile:
     parameters:
       - name: organizationId
         in: path
@@ -106,7 +106,7 @@ paths:
           application/json:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/UpdateProfile
-  /v1/organizations/{organizationId}/auth/change-password:
+  /api/v1/organizations/{organizationId}/auth/change-password:
     parameters:
       - name: organizationId
         in: path
@@ -137,7 +137,7 @@ paths:
           application/json:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/ChangePassword
-  /v1/organizations/{organizationId}/auth/password-reset/request:
+  /api/v1/organizations/{organizationId}/auth/password-reset/request:
     parameters:
       - name: organizationId
         in: path
@@ -167,7 +167,7 @@ paths:
           application/json:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/PasswordResetRequest
-  /v1/organizations/{organizationId}/auth/password-reset/confirm:
+  /api/v1/organizations/{organizationId}/auth/password-reset/confirm:
     parameters:
       - name: organizationId
         in: path

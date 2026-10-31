@@ -63,7 +63,7 @@ export function createReportingModule(options: {
             ),
             permission,
           ),
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       )
     },
   }

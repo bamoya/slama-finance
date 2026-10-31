@@ -1,5 +1,5 @@
 paths:
-  /v1/invoices/from-deliveries:
+  /api/v1/invoices/from-deliveries:
     post:
       operationId: createInvoiceFromDeliveries
       description: Create one draft invoice from delivered independent notes belonging to one client. Each selected BL is linked exclusively to this invoice; no second invoice can claim it. The same operationId retries idempotently. Line allocations trace quantities only within the owning invoice.
@@ -19,7 +19,7 @@ paths:
             description: New draft invoice with reserved delivery lines,
             content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
           }
-  /v1/invoices:
+  /api/v1/invoices:
     get:
       operationId: listInvoices
       x-permissions: [invoices.read]
@@ -93,7 +93,7 @@ paths:
             description: Draft invoice,
             content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
           }
-  /v1/invoices/{id}:
+  /api/v1/invoices/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
       operationId: getInvoice
@@ -129,7 +129,7 @@ paths:
         }
       responses:
         '204': { description: Deleted draft }
-  /v1/invoices/{id}/issue:
+  /api/v1/invoices/{id}/issue:
     post:
       operationId: issueInvoice
       x-permissions: [invoices.update]
@@ -147,7 +147,7 @@ paths:
             description: Issued invoice,
             content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
           }
-  /v1/invoices/{id}/cancel:
+  /api/v1/invoices/{id}/cancel:
     post:
       deprecated: true
       description: Legacy non-cascading cancellation, restricted when related records exist. New clients must use the impact-confirmed cancellation endpoints for both single and bulk actions.
@@ -166,7 +166,7 @@ paths:
             description: Cancelled invoice,
             content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } },
           }
-  /v1/invoices/{id}/pdf:
+  /api/v1/invoices/{id}/pdf:
     post:
       operationId: prepareInvoicePdf
       x-permissions: [invoices.read]
@@ -178,7 +178,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/InvoicePdfJob' } } },
           }
-  /v1/invoices/{id}/artifacts:
+  /api/v1/invoices/{id}/artifacts:
     get:
       operationId: listInvoiceArtifacts
       x-permissions: [invoices.read]
@@ -196,7 +196,7 @@ paths:
                   },
               },
           }
-  /v1/estimates/{id}/invoices:
+  /api/v1/estimates/{id}/invoices:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
       operationId: listInvoicesFromEstimate

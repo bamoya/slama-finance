@@ -1,5 +1,5 @@
 paths:
-  /v1/staff/invitations:
+  /api/v1/staff/invitations:
     get:
       operationId: listStaffInvitations
       tags: [identity]
@@ -102,7 +102,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/staff/invitations/{invitationId}/resend":
+  "/api/v1/staff/invitations/{invitationId}/resend":
     post:
       operationId: resendStaffInvitation
       tags: [identity]
@@ -134,7 +134,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/staff/invitations/{invitationId}/revoke":
+  "/api/v1/staff/invitations/{invitationId}/revoke":
     post:
       operationId: revokeStaffInvitation
       tags: [identity]
@@ -156,7 +156,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/organizations/{organizationId}/auth/invitations/inspect":
+  "/api/v1/organizations/{organizationId}/auth/invitations/inspect":
     parameters:
       - name: organizationId
         in: path
@@ -191,7 +191,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPreview
         default: *standardError
-  "/v1/organizations/{organizationId}/auth/invitations/accept":
+  "/api/v1/organizations/{organizationId}/auth/invitations/accept":
     parameters:
       - name: organizationId
         in: path

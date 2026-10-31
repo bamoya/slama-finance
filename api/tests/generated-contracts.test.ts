@@ -62,7 +62,7 @@ describe('generated transport validation', () => {
     }
     expect(StaffInvitationSchema.safeParse(row).success).toBe(true)
     expect(
-      validateResponse('GET', '/v1/staff/invitations?page=1', 200, {
+      validateResponse('GET', '/api/v1/staff/invitations?page=1', 200, {
         items: [row],
         total: 1,
         page: 1,

@@ -85,7 +85,7 @@ describe('Independent remaining-feature regression QA', () => {
   ) => app.inject({ method, url, headers, cookies: session, ...(payload ? { payload } : {}) })
 
   async function login(email: string) {
-    const response = await request('POST', '/v1/auth/login', { email, password })
+    const response = await request('POST', '/api/v1/auth/login', { email, password })
     expect(response.statusCode, response.body).toBe(200)
     return { slama_session: response.cookies[0]!.value }
   }
@@ -184,12 +184,12 @@ describe('Independent remaining-feature regression QA', () => {
     return { reporting, notifications }
   }
   async function enableInvoiceRule() {
-    const list = await request('GET', '/v1/notification-rules')
+    const list = await request('GET', '/api/v1/notification-rules')
     expect(list.statusCode, list.body).toBe(200)
     const rule = list
       .json()
       .items.find((item: { eventKey: string }) => item.eventKey === 'invoice_sent')
-    const response = await request('PATCH', `/v1/notification-rules/${rule.id}`, {
+    const response = await request('PATCH', `/api/v1/notification-rules/${rule.id}`, {
       expectedVersion: rule.version,
       enabled: true,
       offsetDays: 0,
@@ -207,7 +207,7 @@ describe('Independent remaining-feature regression QA', () => {
     // These scenarios exercise explicit sends, not issue-time automatic notifications.
     await fixture.client`update clients set email=null where id=${clientId}`
     const date = companyDate(new Date())
-    const draft = await request('POST', '/v1/invoices', {
+    const draft = await request('POST', '/api/v1/invoices', {
       clientId,
       templateId: null,
       issueDate: date,
@@ -225,7 +225,7 @@ describe('Independent remaining-feature regression QA', () => {
       ],
     })
     expect(draft.statusCode, draft.body).toBe(201)
-    const issued = await request('POST', `/v1/invoices/${draft.json().id}/issue`, {
+    const issued = await request('POST', `/api/v1/invoices/${draft.json().id}/issue`, {
       expectedVersion: 1,
     })
     expect(issued.statusCode, issued.body).toBe(200)
@@ -235,7 +235,7 @@ describe('Independent remaining-feature regression QA', () => {
   async function setCc(ruleId: string, cc: string[], expectedVersion = 0) {
     const response = await request(
       'PUT',
-      `/v1/clients/${clientId}/notification-preferences/${ruleId}`,
+      `/api/v1/clients/${clientId}/notification-preferences/${ruleId}`,
       {
         expectedVersion,
         enabled: true,
@@ -257,7 +257,7 @@ describe('Independent remaining-feature regression QA', () => {
     const ruleId = await enableInvoiceRule()
     const version = await setCc(ruleId, ['former-recipient@example.test'])
     const doc = await invoice()
-    const accepted = await request('POST', `/v1/invoices/${doc.id}/send`, {
+    const accepted = await request('POST', `/api/v1/invoices/${doc.id}/send`, {
       expectedVersion: doc.version,
       requestId: randomUUID(),
     })
@@ -282,7 +282,7 @@ describe('Independent remaining-feature regression QA', () => {
     else {
       const reset = await request(
         'DELETE',
-        `/v1/clients/${clientId}/notification-preferences/${ruleId}`,
+        `/api/v1/clients/${clientId}/notification-preferences/${ruleId}`,
         { expectedVersion: version },
       )
       expect(reset.statusCode, reset.body).toBe(204)
@@ -301,7 +301,7 @@ describe('Independent remaining-feature regression QA', () => {
     } else {
       const retry = await request(
         'POST',
-        `/v1/documents/invoice/${doc.id}/notifications/${dispatchId}/retry`,
+        `/api/v1/documents/invoice/${doc.id}/notifications/${dispatchId}/retry`,
         {},
       )
       expect(retry.statusCode, retry.body).toBe(409)
@@ -338,7 +338,7 @@ describe('Independent remaining-feature regression QA', () => {
       const doc = await invoice()
       const accepted = await request(
         'POST',
-        `/v1/invoices/${doc.id}/send`,
+        `/api/v1/invoices/${doc.id}/send`,
         {
           expectedVersion: doc.version,
           requestId: randomUUID(),
@@ -350,10 +350,10 @@ describe('Independent remaining-feature regression QA', () => {
       if (stage === 'queued') expect(await workers.producer.worker.runOne()).toBe(true)
       const revoke =
         mode === 'permissions'
-          ? await request('PUT', `/v1/rbac/roles/${sender.roleId}/permissions`, {
+          ? await request('PUT', `/api/v1/rbac/roles/${sender.roleId}/permissions`, {
               permissionKeys: ['invoices.read'],
             })
-          : await request('PUT', `/v1/staff/${sender.id}/roles`, { roleIds: [] })
+          : await request('PUT', `/api/v1/staff/${sender.id}/roles`, { roleIds: [] })
       expect(revoke.statusCode, revoke.body).toBe(204)
       if (stage === 'preparation') {
         const [job] =
@@ -374,7 +374,7 @@ describe('Independent remaining-feature regression QA', () => {
   async function schedule(recipientId: string, session = cookies) {
     const response = await request(
       'POST',
-      '/v1/report-schedules',
+      '/api/v1/report-schedules',
       {
         name: 'Independent QA schedule',
         frequency: 'daily',
@@ -420,12 +420,12 @@ describe('Independent remaining-feature regression QA', () => {
       recipientIds: [testUserId],
       enabled: true,
     }
-    const denied = await request('POST', '/v1/report-schedules', input, outsider.cookies)
+    const denied = await request('POST', '/api/v1/report-schedules', input, outsider.cookies)
     expect(denied.statusCode, denied.body).toBe(403)
     expect(await fixture.client`select id from report_schedules`).toHaveLength(0)
     const draft = await request(
       'POST',
-      '/v1/report-schedules',
+      '/api/v1/report-schedules',
       { ...input, enabled: false },
       author.cookies,
     )
@@ -433,13 +433,13 @@ describe('Independent remaining-feature regression QA', () => {
     expect(draft.json()).toMatchObject({ enabled: false, nextRunAt: null })
     const activation = await request(
       'POST',
-      `/v1/report-schedules/${draft.json().id}/enable`,
+      `/api/v1/report-schedules/${draft.json().id}/enable`,
       { expectedVersion: draft.json().version },
       author.cookies,
     )
     expect(activation.statusCode, activation.body).toBe(200)
     expect(activation.json().enabled).toBe(true)
-    const enabled = await request('POST', '/v1/report-schedules', input, author.cookies)
+    const enabled = await request('POST', '/api/v1/report-schedules', input, author.cookies)
     expect(enabled.statusCode, enabled.body).toBe(201)
   })
 
@@ -463,7 +463,7 @@ describe('Independent remaining-feature regression QA', () => {
       const before = Date.now()
       const response = await request(
         'POST',
-        '/v1/report-schedules/preview',
+        '/api/v1/report-schedules/preview',
         input,
         previewer.cookies,
       )
@@ -514,13 +514,18 @@ describe('Independent remaining-feature regression QA', () => {
       { ...base, frequency: 'monthly' },
       { ...base, frequency: 'monthly', weekday: 1, monthDay: 1 },
     ]) {
-      const denied = await request('POST', '/v1/report-schedules/preview', input, previewer.cookies)
+      const denied = await request(
+        'POST',
+        '/api/v1/report-schedules/preview',
+        input,
+        previewer.cookies,
+      )
       expect(denied.statusCode, denied.body).toBe(400)
       expect(denied.json().code).toBe('INVALID_REPORT_CADENCE')
     }
     const timezone = await request(
       'POST',
-      '/v1/report-schedules/preview',
+      '/api/v1/report-schedules/preview',
       { ...base, timezone: 'Invalid/QA' },
       previewer.cookies,
     )
@@ -528,7 +533,12 @@ describe('Independent remaining-feature regression QA', () => {
     expect(timezone.json().code).toBe('INVALID_TIMEZONE')
     for (const grants of [[], ['report_schedules.read']]) {
       const limited = await staff(grants)
-      const denied = await request('POST', '/v1/report-schedules/preview', base, limited.cookies)
+      const denied = await request(
+        'POST',
+        '/api/v1/report-schedules/preview',
+        base,
+        limited.cookies,
+      )
       expect(denied.statusCode, denied.body).toBe(403)
     }
     for (const table of [
@@ -666,10 +676,10 @@ describe('Independent remaining-feature regression QA', () => {
   async function revoke(target: Awaited<ReturnType<typeof staff>>, mode: 'permissions' | 'roles') {
     const response =
       mode === 'permissions'
-        ? await request('PUT', `/v1/rbac/roles/${target.roleId}/permissions`, {
+        ? await request('PUT', `/api/v1/rbac/roles/${target.roleId}/permissions`, {
             permissionKeys: [],
           })
-        : await request('PUT', `/v1/staff/${target.id}/roles`, { roleIds: [] })
+        : await request('PUT', `/api/v1/staff/${target.id}/roles`, { roleIds: [] })
     expect(response.statusCode, response.body).toBe(204)
   }
 
@@ -711,12 +721,17 @@ describe('Independent remaining-feature regression QA', () => {
       const { reporting, notifications } = reportWorkers()
       const runId = await materialize(id, reporting)
       expect(await reporting.worker.runOne()).toBe(true)
-      const view = await request('GET', `/v1/report-runs/${runId}`, undefined, recipient.cookies)
+      const view = await request(
+        'GET',
+        `/api/v1/report-runs/${runId}`,
+        undefined,
+        recipient.cookies,
+      )
       expect(view.statusCode, view.body).toBe(200)
       const artifactId = view.json().artifacts[0].id as string
       const before = await request(
         'GET',
-        `/v1/artifacts/${artifactId}/download`,
+        `/api/v1/artifacts/${artifactId}/download`,
         undefined,
         recipient.cookies,
       )
@@ -726,7 +741,7 @@ describe('Independent remaining-feature regression QA', () => {
         .artifacts.find((item: { format: string }) => item.format === 'xlsx').id as string
       const excelDownload = await request(
         'GET',
-        `/v1/artifacts/${excelId}/download`,
+        `/api/v1/artifacts/${excelId}/download`,
         undefined,
         recipient.cookies,
       )
@@ -738,13 +753,14 @@ describe('Independent remaining-feature regression QA', () => {
       await revoke(recipient, mode)
       const denied = await request(
         'GET',
-        `/v1/artifacts/${artifactId}/download`,
+        `/api/v1/artifacts/${artifactId}/download`,
         undefined,
         recipient.cookies,
       )
       expect(denied.statusCode, denied.body).toBe(403)
       expect(
-        (await request('GET', `/v1/report-runs/${runId}`, undefined, recipient.cookies)).statusCode,
+        (await request('GET', `/api/v1/report-runs/${runId}`, undefined, recipient.cookies))
+          .statusCode,
       ).toBe(403)
       const [message] = await fixture.client`select id from outbound_messages`
       expect(await notifications.status(message!.id)).toMatchObject({ status: 'cancelled' })
@@ -773,7 +789,7 @@ describe('Independent remaining-feature regression QA', () => {
     const pdfBytes = files.get(before[0]!.object_key)!
     await fixture.client`update invoices set total='900',subtotal='900' where number='QA-FROZEN'`
     failExcelUpload = false
-    const retry = await request('POST', `/v1/report-runs/${runId}/retry`, {})
+    const retry = await request('POST', `/api/v1/report-runs/${runId}/retry`, {})
     expect(retry.statusCode, retry.body).toBe(200)
     expect(await reporting.worker.runOne()).toBe(true)
     const [saved] =
@@ -810,7 +826,7 @@ describe('Independent remaining-feature regression QA', () => {
       locked_until: null,
       attempts: 5,
     })
-    const retry = await request('POST', `/v1/report-runs/${runId}/retry`, {})
+    const retry = await request('POST', `/api/v1/report-runs/${runId}/retry`, {})
     expect(retry.statusCode, retry.body).toBe(200)
     expect(retry.json()).toMatchObject({ attempts: 5, maxAttempts: 10 })
     expect(await reporting.worker.runOne()).toBe(true)
@@ -880,7 +896,7 @@ describe('Independent remaining-feature regression QA', () => {
     }
     const response = await request(
       'GET',
-      '/v1/reports/analysis?from=2026-09-01&to=2026-09-30&timezone=UTC&sections=sales_by_client',
+      '/api/v1/reports/analysis?from=2026-09-01&to=2026-09-30&timezone=UTC&sections=sales_by_client',
     )
     expect(response.statusCode, response.body).toBe(200)
     const section = ReportAnalysisSchema.parse(response.json()).sections[0]!

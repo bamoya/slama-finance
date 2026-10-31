@@ -1,5 +1,5 @@
 paths:
-  /v1/owner/subscription:
+  /api/v1/owner/subscription:
     get:
       operationId: getOwnerSubscription
       tags: [subscriptions]
@@ -15,7 +15,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/owner/subscription/billing:
+  /api/v1/owner/subscription/billing:
     get:
       operationId: getOwnerBilling
       tags: [subscriptions]
@@ -31,7 +31,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/owner/subscription/quote:
+  /api/v1/owner/subscription/quote:
     post:
       operationId: quoteOwnerSubscription
       tags: [subscriptions]
@@ -52,7 +52,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/owner/subscription/payments:
+  /api/v1/owner/subscription/payments:
     get:
       operationId: listOwnerSubscriptionPayments
       tags: [subscriptions]
@@ -95,7 +95,7 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
-  /v1/owner/subscription/cancellation:
+  /api/v1/owner/subscription/cancellation:
     put:
       operationId: setOwnerSubscriptionCancellation
       tags: [subscriptions]

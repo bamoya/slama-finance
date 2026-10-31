@@ -1,5 +1,5 @@
 paths:
-  /v1/estimates:
+  /api/v1/estimates:
     get:
       operationId: listEstimates
       x-permissions: [estimates.read]
@@ -68,7 +68,7 @@ paths:
             description: Draft estimate,
             content: { application/json: { schema: { $ref: '#/components/schemas/Estimate' } } },
           }
-  /v1/estimates/{id}:
+  /api/v1/estimates/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
       operationId: getEstimate
@@ -105,7 +105,7 @@ paths:
         }
       responses:
         '204': { description: Deleted draft }
-  /v1/estimates/{id}/revisions:
+  /api/v1/estimates/{id}/revisions:
     post:
       operationId: createEstimateRevision
       x-permissions: [estimates.create, estimates.read]
@@ -124,7 +124,7 @@ paths:
               schema: { $ref: '#/components/schemas/Estimate' }
         '403': { description: Missing read or create permission }
         '409': { description: Estimate changed or cannot be revised }
-  /v1/estimates/{id}/issue:
+  /api/v1/estimates/{id}/issue:
     post:
       operationId: issueEstimate
       x-permissions: [estimates.update]
@@ -142,7 +142,7 @@ paths:
             description: Issued estimate,
             content: { application/json: { schema: { $ref: '#/components/schemas/Estimate' } } },
           }
-  /v1/estimates/{id}/accept:
+  /api/v1/estimates/{id}/accept:
     post:
       operationId: acceptEstimate
       x-permissions: [estimates.update]
@@ -159,7 +159,7 @@ paths:
             description: Accepted estimate,
             content: { application/json: { schema: { $ref: '#/components/schemas/Estimate' } } },
           }
-  /v1/estimates/{id}/reject:
+  /api/v1/estimates/{id}/reject:
     post:
       operationId: rejectEstimate
       x-permissions: [estimates.update]
@@ -176,7 +176,7 @@ paths:
             description: Rejected estimate,
             content: { application/json: { schema: { $ref: '#/components/schemas/Estimate' } } },
           }
-  /v1/estimates/{id}/cancel:
+  /api/v1/estimates/{id}/cancel:
     post:
       operationId: cancelEstimate
       x-permissions: [estimates.update]
@@ -193,7 +193,7 @@ paths:
             description: Cancelled estimate,
             content: { application/json: { schema: { $ref: '#/components/schemas/Estimate' } } },
           }
-  /v1/estimates/{id}/pdf:
+  /api/v1/estimates/{id}/pdf:
     post:
       operationId: prepareEstimatePdf
       x-permissions: [estimates.read]
@@ -205,7 +205,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/EstimatePdfJob' } } },
           }
-  /v1/estimates/{id}/artifacts:
+  /api/v1/estimates/{id}/artifacts:
     get:
       operationId: listEstimateArtifacts
       x-permissions: [estimates.read]

@@ -86,7 +86,7 @@ describe('Company settings module', () => {
     attachTestDatabase(app, fixture)
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'settings-password-123' },
     })
@@ -96,9 +96,10 @@ describe('Company settings module', () => {
     await app?.close()
     await fixture?.cleanup()
   })
-  const company = async () => (await app.inject({ url: '/v1/company-settings', cookies })).json()
+  const company = async () =>
+    (await app.inject({ url: '/api/v1/company-settings', cookies })).json()
   const patch = (payload: object) =>
-    app.inject({ method: 'PATCH', url: '/v1/company-settings', headers, cookies, payload })
+    app.inject({ method: 'PATCH', url: '/api/v1/company-settings', headers, cookies, payload })
   it('seeds only incomplete defaults, enforces singleton, validates Moroccan fields and audits updates', async () => {
     const initial = await company()
     expect(initial).toMatchObject({
@@ -139,20 +140,20 @@ describe('Company settings module', () => {
     expect((await company()).version).toBe(2)
   })
   it('rejects anonymous/read-only updates and uploads, including private signature reads', async () => {
-    expect((await app.inject({ url: '/v1/company-settings' })).statusCode).toBe(403)
+    expect((await app.inject({ url: '/api/v1/company-settings' })).statusCode).toBe(403)
     const initial = await company()
     await fixture.client`delete from user_roles where user_id=${testUserId}`
     const [role] =
       await fixture.client`insert into roles (key,name) values ('settings-viewer','Viewer') returning id`
     await fixture.client`insert into user_roles (user_id,role_id) values (${testUserId},${role!.id})`
     await fixture.client`insert into role_permissions (role_id,permission_id) select ${role!.id},id from permissions where key in ('company_settings.read','templates.read')`
-    expect((await app.inject({ url: '/v1/company-settings', cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: '/api/v1/company-settings', cookies })).statusCode).toBe(200)
     expect((await patch(editable(initial))).statusCode).toBe(403)
     expect(
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/media/uploads',
+          url: '/api/v1/media/uploads',
           headers,
           cookies,
           payload: {
@@ -167,7 +168,7 @@ describe('Company settings module', () => {
     expect(
       (
         await app.inject({
-          url: '/v1/media/11111111-1111-4111-8111-111111111111/download',
+          url: '/api/v1/media/11111111-1111-4111-8111-111111111111/download',
           cookies,
         })
       ).statusCode,
@@ -177,7 +178,7 @@ describe('Company settings module', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/media/uploads',
+          url: '/api/v1/media/uploads',
           headers,
           cookies,
           payload: {
@@ -194,17 +195,21 @@ describe('Company settings module', () => {
     const initial = await company()
     await fixture.client`update users set must_change_password=true, temporary_password_consumed_at=now() where id=${testUserId}`
     await fixture.client`update sessions set purpose='password_change' where user_id=${testUserId}`
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).json().purpose).toBe(
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).json().purpose).toBe(
       'password_change',
     )
-    for (const url of ['/v1/company-settings', '/v1/bank-accounts', '/v1/document-templates'])
+    for (const url of [
+      '/api/v1/company-settings',
+      '/api/v1/bank-accounts',
+      '/api/v1/document-templates',
+    ])
       expect((await app.inject({ url, cookies })).statusCode).toBe(403)
     expect((await patch(editable(initial))).statusCode).toBe(403)
   })
   it('manages and archives bank accounts with version checks and valid identifiers', async () => {
     const created = await app.inject({
       method: 'POST',
-      url: '/v1/bank-accounts',
+      url: '/api/v1/bank-accounts',
       headers,
       cookies,
       payload: bank,
@@ -215,7 +220,7 @@ describe('Company settings module', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/bank-accounts',
+          url: '/api/v1/bank-accounts',
           headers,
           cookies,
           payload: { ...bank, rib: null, iban: 'FR0020041010050500013M02606' },
@@ -226,7 +231,7 @@ describe('Company settings module', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/bank-accounts',
+          url: '/api/v1/bank-accounts',
           headers,
           cookies,
           payload: { ...bank, rib: null, iban: null },
@@ -235,7 +240,7 @@ describe('Company settings module', () => {
     ).toBe(400)
     const updated = await app.inject({
       method: 'PATCH',
-      url: `/v1/bank-accounts/${row.id}`,
+      url: `/api/v1/bank-accounts/${row.id}`,
       headers,
       cookies,
       payload: { ...bank, name: 'Updated account', expectedVersion: row.version },
@@ -243,7 +248,7 @@ describe('Company settings module', () => {
     expect(updated.statusCode).toBe(200)
     const archived = await app.inject({
       method: 'POST',
-      url: `/v1/bank-accounts/${row.id}/archive`,
+      url: `/api/v1/bank-accounts/${row.id}/archive`,
       headers,
       cookies,
       payload: { expectedVersion: 2 },
@@ -254,14 +259,16 @@ describe('Company settings module', () => {
       (
         await app.inject({
           method: 'PATCH',
-          url: `/v1/bank-accounts/${row.id}`,
+          url: `/api/v1/bank-accounts/${row.id}`,
           headers,
           cookies,
           payload: { ...bank, expectedVersion: 3 },
         })
       ).statusCode,
     ).toBe(409)
-    expect((await app.inject({ url: `/v1/bank-accounts/${row.id}`, cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: `/api/v1/bank-accounts/${row.id}`, cookies })).statusCode).toBe(
+      200,
+    )
   })
   it('rolls back company changes when audit insertion fails', async () => {
     const initial = await company()
@@ -275,7 +282,7 @@ describe('Company settings module', () => {
   })
   it('updates templates with version checks and rejects unsafe colors/layouts', async () => {
     const create = (payload: object) =>
-      app.inject({ method: 'POST', url: '/v1/document-templates', headers, cookies, payload })
+      app.inject({ method: 'POST', url: '/api/v1/document-templates', headers, cookies, payload })
     expect(
       (await create({ ...template, accentColor: 'red; background:url(https://evil.test)' }))
         .statusCode,
@@ -287,7 +294,7 @@ describe('Company settings module', () => {
     const update = (payload: object) =>
       app.inject({
         method: 'PATCH',
-        url: `/v1/document-templates/${row.id}`,
+        url: `/api/v1/document-templates/${row.id}`,
         headers,
         cookies,
         payload,
@@ -298,12 +305,12 @@ describe('Company settings module', () => {
     ).toBe(200)
     expect((await update({ ...template, expectedVersion: 1 })).statusCode).toBe(409)
     expect(
-      (await app.inject({ url: `/v1/document-templates/${row.id}`, cookies })).json(),
+      (await app.inject({ url: `/api/v1/document-templates/${row.id}`, cookies })).json(),
     ).toMatchObject({ name: 'Modern', version: 2 })
     expect(
       (
         await app.inject({
-          url: '/v1/document-templates/22222222-2222-4222-8222-222222222222',
+          url: '/api/v1/document-templates/22222222-2222-4222-8222-222222222222',
           cookies,
         })
       ).statusCode,
@@ -313,18 +320,20 @@ describe('Company settings module', () => {
     for (const layout of ['signature', 'atelier', 'ledger', 'essential']) {
       const created = await app.inject({
         method: 'POST',
-        url: '/v1/document-templates',
+        url: '/api/v1/document-templates',
         headers,
         cookies,
         payload: { ...template, layout, density: 'compact' },
       })
       expect(created.statusCode).toBe(201)
       const row = created.json()
-      const saved = (await app.inject({ url: `/v1/document-templates/${row.id}`, cookies })).json()
+      const saved = (
+        await app.inject({ url: `/api/v1/document-templates/${row.id}`, cookies })
+      ).json()
       expect(saved).toMatchObject({ layout, density: 'compact', accentColor: template.accentColor })
       const preview = await app.inject({
         method: 'POST',
-        url: '/v1/document-templates/preview?documentType=invoice&sampleSize=many',
+        url: '/api/v1/document-templates/preview?documentType=invoice&sampleSize=many',
         headers,
         cookies,
         payload: { ...template, layout, density: 'compact' },
@@ -334,7 +343,7 @@ describe('Company settings module', () => {
       expect(preview.json().html).toContain('Item 45')
       const updated = await app.inject({
         method: 'PATCH',
-        url: `/v1/document-templates/${row.id}`,
+        url: `/api/v1/document-templates/${row.id}`,
         headers,
         cookies,
         payload: { ...template, layout, density: 'standard', expectedVersion: 1 },
@@ -346,7 +355,7 @@ describe('Company settings module', () => {
   it('archives the default template atomically and prevents selecting archived templates', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/document-templates',
+      url: '/api/v1/document-templates',
       headers,
       cookies,
       payload: template,
@@ -360,7 +369,7 @@ describe('Company settings module', () => {
       [1, 2].map(() =>
         app.inject({
           method: 'POST',
-          url: `/v1/document-templates/${row.id}/archive`,
+          url: `/api/v1/document-templates/${row.id}/archive`,
           headers,
           cookies,
           payload: { expectedVersion: 1 },
@@ -386,7 +395,7 @@ describe('Company settings module', () => {
     const upload = (data: string, contentType = 'image/png') =>
       app.inject({
         method: 'POST',
-        url: '/v1/media/uploads',
+        url: '/api/v1/media/uploads',
         headers,
         cookies,
         payload: { purpose: 'company_logo', originalFilename: 'logo.png', contentType, data },
@@ -406,12 +415,12 @@ describe('Company settings module', () => {
     expect(objects.has(`organizations/10000000-0000-4000-8000-000000000001/media/${key}.png`)).toBe(
       true,
     )
-    const get = await app.inject({ url: `/v1/media/${key}/download`, cookies })
+    const get = await app.inject({ url: `/api/v1/media/${key}/download`, cookies })
     expect(get.statusCode).toBe(200)
     expect(get.headers['content-type']).toContain('image/png')
     const signature = await app.inject({
       method: 'POST',
-      url: '/v1/media/uploads',
+      url: '/api/v1/media/uploads',
       headers,
       cookies,
       payload: {
@@ -423,14 +432,15 @@ describe('Company settings module', () => {
     })
     expect(signature.statusCode).toBe(201)
     expect(
-      (await app.inject({ url: `/v1/media/${signature.json().id}/download`, cookies })).statusCode,
+      (await app.inject({ url: `/api/v1/media/${signature.json().id}/download`, cookies }))
+        .statusCode,
     ).toBe(200)
     expect(
       (await patch({ ...editable(await company()), logoAssetId: signature.json().id })).statusCode,
     ).toBe(400)
     const preview = await app.inject({
       method: 'POST',
-      url: '/v1/document-templates/preview',
+      url: '/api/v1/document-templates/preview',
       headers,
       cookies,
       payload: { ...template, logoAssetId: key, footerText: '<script>alert(1)</script>' },
@@ -441,7 +451,7 @@ describe('Company settings module', () => {
     expect(preview.json().html).toContain('Nom du produit')
     const receiptPreview = await app.inject({
       method: 'POST',
-      url: '/v1/document-templates/preview?documentType=payment_receipt',
+      url: '/api/v1/document-templates/preview?documentType=payment_receipt',
       headers,
       cookies,
       payload: {
@@ -466,13 +476,13 @@ describe('Company settings module', () => {
     const created = (
       await app.inject({
         method: 'POST',
-        url: '/v1/bank-accounts',
+        url: '/api/v1/bank-accounts',
         cookies,
         headers,
         payload: bank,
       })
     ).json()
-    const url = `/v1/bank-accounts/${created.id}`
+    const url = `/api/v1/bank-accounts/${created.id}`
     expect(
       (
         await app.inject({
@@ -532,7 +542,7 @@ describe('Company settings module', () => {
     const account = (
       await app.inject({
         method: 'POST',
-        url: '/v1/bank-accounts',
+        url: '/api/v1/bank-accounts',
         cookies,
         headers,
         payload: bank,
@@ -541,7 +551,7 @@ describe('Company settings module', () => {
     const design = (
       await app.inject({
         method: 'POST',
-        url: '/v1/document-templates',
+        url: '/api/v1/document-templates',
         cookies,
         headers,
         payload: template,
@@ -550,7 +560,7 @@ describe('Company settings module', () => {
     const remove = (kind: string, id: string, expectedVersion = 1) =>
       app.inject({
         method: 'DELETE',
-        url: `/v1/${kind}/${id}`,
+        url: `/api/v1/${kind}/${id}`,
         cookies,
         headers,
         payload: { expectedVersion },
@@ -572,11 +582,11 @@ describe('Company settings module', () => {
     ).toBe(200)
     expect((await remove('bank-accounts', account.id)).statusCode).toBe(204)
     expect((await remove('document-templates', design.id)).statusCode).toBe(204)
-    expect((await app.inject({ url: `/v1/bank-accounts/${account.id}`, cookies })).statusCode).toBe(
-      404,
-    )
     expect(
-      (await app.inject({ url: `/v1/document-templates/${design.id}`, cookies })).statusCode,
+      (await app.inject({ url: `/api/v1/bank-accounts/${account.id}`, cookies })).statusCode,
+    ).toBe(404)
+    expect(
+      (await app.inject({ url: `/api/v1/document-templates/${design.id}`, cookies })).statusCode,
     ).toBe(404)
     const audit =
       await fixture.client`select before_values, after_values from audit_events where action='delete'`
@@ -587,7 +597,7 @@ describe('Company settings module', () => {
     const account = (
       await app.inject({
         method: 'POST',
-        url: '/v1/bank-accounts',
+        url: '/api/v1/bank-accounts',
         cookies,
         headers,
         payload: bank,
@@ -595,7 +605,7 @@ describe('Company settings module', () => {
     ).json()
     await app.inject({
       method: 'POST',
-      url: `/v1/bank-accounts/${account.id}/archive`,
+      url: `/api/v1/bank-accounts/${account.id}/archive`,
       cookies,
       headers,
       payload: { expectedVersion: 1 },
@@ -606,13 +616,15 @@ describe('Company settings module', () => {
     for (const action of ['restore', 'delete']) {
       const response = await app.inject({
         method: action === 'restore' ? 'POST' : 'DELETE',
-        url: `/v1/bank-accounts/${account.id}${action === 'restore' ? '/restore' : ''}`,
+        url: `/api/v1/bank-accounts/${account.id}${action === 'restore' ? '/restore' : ''}`,
         cookies,
         headers,
         payload: { expectedVersion: 2 },
       })
       expect(response.statusCode).toBe(500)
-      const current = (await app.inject({ url: `/v1/bank-accounts/${account.id}`, cookies })).json()
+      const current = (
+        await app.inject({ url: `/api/v1/bank-accounts/${account.id}`, cookies })
+      ).json()
       expect(current.version).toBe(2)
       expect(current.archivedAt).toBeTruthy()
     }

@@ -12,7 +12,7 @@ describe('login rate limit', () => {
     const attempt = (client: string, peer = '10.0.0.10') =>
       app.inject({
         method: 'POST',
-        url: '/v1/auth/login',
+        url: '/api/v1/auth/login',
         remoteAddress: peer,
         headers: {
           origin: 'http://localhost:5173',
@@ -47,7 +47,7 @@ describe('login rate limit', () => {
       for (let attempt = 0; attempt < 5; attempt++) {
         const response = await app.inject({
           method: 'POST',
-          url: '/v1/auth/login',
+          url: '/api/v1/auth/login',
           remoteAddress: '192.0.2.1',
           headers,
           payload: { email: 'invalid', password: 'short' },
@@ -56,7 +56,7 @@ describe('login rate limit', () => {
       }
       const blocked = await app.inject({
         method: 'POST',
-        url: '/v1/auth/login',
+        url: '/api/v1/auth/login',
         remoteAddress: '192.0.2.1',
         headers: { ...headers, 'x-forwarded-for': '192.0.2.99' },
         payload: { email: 'another@example.test', password: 'valid-length-password' },
@@ -68,7 +68,7 @@ describe('login rate limit', () => {
         (
           await app.inject({
             method: 'POST',
-            url: '/v1/auth/login',
+            url: '/api/v1/auth/login',
             remoteAddress: '192.0.2.2',
             headers,
             payload: { email: 'invalid', password: 'short' },
@@ -76,14 +76,14 @@ describe('login rate limit', () => {
         ).statusCode,
       ).toBe(400)
       expect(
-        (await app.inject({ url: '/v1/auth/session', headers, remoteAddress: '192.0.2.1' }))
+        (await app.inject({ url: '/api/v1/auth/session', headers, remoteAddress: '192.0.2.1' }))
           .statusCode,
       ).toBe(401)
       expect(
         (
           await app.inject({
             method: 'POST',
-            url: '/v1/auth/logout',
+            url: '/api/v1/auth/logout',
             remoteAddress: '192.0.2.1',
             headers,
           })

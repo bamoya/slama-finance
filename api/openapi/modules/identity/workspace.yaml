@@ -1,5 +1,5 @@
 paths:
-  /v1/workspace/session:
+  /api/v1/workspace/session:
     get:
       operationId: getWorkspaceSession
       tags: [ identity ]

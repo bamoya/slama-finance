@@ -43,7 +43,7 @@ describe('Independent platform-owner authentication', () => {
   })
   const names = { firstName: 'Amel', lastName: 'Ben Salah' }
   const post = (path: string, payload: object) =>
-    app.inject({ method: 'POST', url: `/v1/owner-auth/${path}`, headers, payload })
+    app.inject({ method: 'POST', url: `/api/v1/owner-auth/${path}`, headers, payload })
   it('requires trimmed first and last names at registration', async () => {
     for (const payload of [
       { email, password },
@@ -113,7 +113,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_owner_session: cookie.value },
         })
       ).statusCode,
@@ -122,7 +122,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/auth/session',
+          url: '/api/v1/auth/session',
           cookies: { slama_owner_session: cookie.value },
         })
       ).statusCode,
@@ -131,7 +131,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/staff',
+          url: '/api/v1/staff',
           cookies: { slama_owner_session: cookie.value },
         })
       ).statusCode,
@@ -140,7 +140,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/owner-auth/logout',
+          url: '/api/v1/owner-auth/logout',
           headers,
           cookies: { slama_owner_session: cookie.value },
         })
@@ -150,7 +150,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_owner_session: cookie.value },
         })
       ).statusCode,
@@ -190,7 +190,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_owner_session: cookie },
         })
       ).statusCode,
@@ -222,7 +222,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_owner_session: cookie },
         })
       ).statusCode,
@@ -231,7 +231,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/owner-auth/login',
+          url: '/api/v1/owner-auth/login',
           payload: { email, password },
         })
       ).statusCode,
@@ -246,7 +246,7 @@ describe('Independent platform-owner authentication', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_session: 'staff-token' },
         })
       ).statusCode,
@@ -256,7 +256,7 @@ describe('Independent platform-owner authentication', () => {
   it('rejects another trusted tenant origin for owner endpoints', async () => {
     const result = await app.inject({
       method: 'GET',
-      url: '/v1/owner-auth/session',
+      url: '/api/v1/owner-auth/session',
       headers: { origin: 'http://localhost:5174' },
     })
     expect(result.statusCode).toBe(403)
@@ -271,7 +271,7 @@ describe('Independent platform-owner authentication', () => {
     try {
       const result = await disabled.inject({
         method: 'POST',
-        url: '/v1/owner-auth/register',
+        url: '/api/v1/owner-auth/register',
         headers,
         payload: { email, password, ...names },
       })

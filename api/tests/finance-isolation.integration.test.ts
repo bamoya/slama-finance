@@ -159,7 +159,7 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
     try {
       const login = await app.inject({
         method: 'POST',
-        url: `/v1/organizations/${orgA}/auth/login`,
+        url: `/api/v1/organizations/${orgA}/auth/login`,
         headers: { origin: 'http://localhost:5173' },
         payload: { email: 'operator@example.test', password },
       })
@@ -167,7 +167,7 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
       const cookies = { slama_staff_session: login.cookies[0]!.value }
       const get = (organizationId?: string) =>
         app.inject({
-          url: '/v1/clients',
+          url: '/api/v1/clients',
           cookies,
           headers: organizationId ? { 'x-organization-id': organizationId } : {},
         })
@@ -177,7 +177,7 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
       expect((await get(orgB)).statusCode).toBe(403)
       expect((await get()).statusCode).toBe(400)
       const foreign = await app.inject({
-        url: `/v1/clients/${clientB}`,
+        url: `/api/v1/clients/${clientB}`,
         cookies,
         headers: { 'x-organization-id': orgA },
       })
@@ -191,19 +191,19 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
       await fixture.client`insert into document_artifacts(id,organization_id,document_type,document_id,source_version,format,object_key,mime_type,byte_size,sha256)
         values (${artifactB},${orgB},'invoice',${invoiceB},1,'pdf',${`organizations/${orgB}/artifacts/invoice/${randomUUID()}.pdf`},'application/pdf',1,${'a'.repeat(64)})`
       const headers = { 'x-organization-id': orgA, origin: 'http://localhost:5173' }
-      const invoices = await app.inject({ url: '/v1/invoices', headers, cookies })
+      const invoices = await app.inject({ url: '/api/v1/invoices', headers, cookies })
       expect(invoices.statusCode, invoices.body).toBe(200)
       expect(invoices.json().items.map((row: { id: string }) => row.id)).toEqual([invoiceA])
       expect(
-        (await app.inject({ url: `/v1/invoices/${invoiceB}`, headers, cookies })).statusCode,
+        (await app.inject({ url: `/api/v1/invoices/${invoiceB}`, headers, cookies })).statusCode,
       ).toBe(404)
       expect(
-        (await app.inject({ url: `/v1/artifacts/${artifactB}/download`, headers, cookies }))
+        (await app.inject({ url: `/api/v1/artifacts/${artifactB}/download`, headers, cookies }))
           .statusCode,
       ).toBe(404)
       const mixed = await app.inject({
         method: 'POST',
-        url: '/v1/sales/deletion/preview',
+        url: '/api/v1/sales/deletion/preview',
         headers,
         cookies,
         payload: {

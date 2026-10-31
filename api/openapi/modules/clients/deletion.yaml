@@ -1,5 +1,5 @@
 paths:
-  /v1/clients/deletion/preview:
+  /api/v1/clients/deletion/preview:
     post:
       operationId: previewClientDeletion
       tags: [clients]
@@ -20,7 +20,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/clients/deletion:
+  /api/v1/clients/deletion:
     post:
       operationId: confirmClientDeletion
       tags: [clients]

@@ -34,7 +34,7 @@ describe('role deletion and staff role filters', () => {
   async function login(email: string) {
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email, password: 'test-password-123' },
     })
@@ -50,7 +50,7 @@ describe('role deletion and staff role filters', () => {
   }
   it('generates stable unique keys from free-text role names, including accents and separators', async () => {
     const create = (name: string) =>
-      app.inject({ method: 'POST', url: '/v1/rbac/roles', headers, cookies, payload: { name } })
+      app.inject({ method: 'POST', url: '/api/v1/rbac/roles', headers, cookies, payload: { name } })
     const first = await create('Équipe - vente_interne')
     expect(first.statusCode, first.body).toBe(201)
     expect(first.json()).toMatchObject({
@@ -70,7 +70,7 @@ describe('role deletion and staff role filters', () => {
   it('accepts explicit hyphen/underscore keys and keeps duplicate-key protection', async () => {
     const payload = { name: 'Back-office_team', key: 'back_office-team' }
     const create = () =>
-      app.inject({ method: 'POST', url: '/v1/rbac/roles', headers, cookies, payload })
+      app.inject({ method: 'POST', url: '/api/v1/rbac/roles', headers, cookies, payload })
     expect((await create()).statusCode).toBe(201)
     expect((await create()).statusCode).toBe(409)
     expect((await fixture.client`select key from roles where key='admin'`)[0]!.key).toBe('admin')
@@ -79,7 +79,7 @@ describe('role deletion and staff role filters', () => {
     const create = () =>
       app.inject({
         method: 'POST',
-        url: '/v1/rbac/roles',
+        url: '/api/v1/rbac/roles',
         headers,
         cookies,
         payload: { name: 'Sales team' },
@@ -104,8 +104,14 @@ describe('role deletion and staff role filters', () => {
     const multiCookies = await login('multi@example.test')
     const singleCookies = await login('single@example.test')
     expect(
-      (await app.inject({ method: 'DELETE', url: '/v1/rbac/roles/' + removed, cookies, headers }))
-        .statusCode,
+      (
+        await app.inject({
+          method: 'DELETE',
+          url: '/api/v1/rbac/roles/' + removed,
+          cookies,
+          headers,
+        })
+      ).statusCode,
     ).toBe(204)
     expect(await fixture.client`SELECT * FROM user_roles WHERE role_id=${removed}`).toHaveLength(0)
     expect(
@@ -118,15 +124,17 @@ describe('role deletion and staff role filters', () => {
       await fixture.client`SELECT user_id FROM user_settings WHERE user_id IN (${multi},${single})`,
     ).toHaveLength(2)
     expect(
-      (await app.inject({ url: '/v1/auth/session', cookies: multiCookies })).json().permissionKeys,
+      (await app.inject({ url: '/api/v1/auth/session', cookies: multiCookies })).json()
+        .permissionKeys,
     ).toEqual(['roles.read'])
     expect(
-      (await app.inject({ url: '/v1/auth/session', cookies: singleCookies })).json().permissionKeys,
+      (await app.inject({ url: '/api/v1/auth/session', cookies: singleCookies })).json()
+        .permissionKeys,
     ).toEqual([])
-    expect((await app.inject({ url: '/v1/staff', cookies: multiCookies })).statusCode).toBe(403)
-    expect((await app.inject({ url: '/v1/rbac/roles', cookies: multiCookies })).statusCode).toBe(
-      200,
-    )
+    expect((await app.inject({ url: '/api/v1/staff', cookies: multiCookies })).statusCode).toBe(403)
+    expect(
+      (await app.inject({ url: '/api/v1/rbac/roles', cookies: multiCookies })).statusCode,
+    ).toBe(200)
   })
   it('protects all system roles and validates missing and malformed IDs', async () => {
     const [admin] = await fixture.client`SELECT id FROM roles WHERE key='admin'`
@@ -135,7 +143,7 @@ describe('role deletion and staff role filters', () => {
     for (const id of [admin!.id, system]) {
       const response = await app.inject({
         method: 'DELETE',
-        url: '/v1/rbac/roles/' + id,
+        url: '/api/v1/rbac/roles/' + id,
         cookies,
         headers,
       })
@@ -146,18 +154,25 @@ describe('role deletion and staff role filters', () => {
       (
         await app.inject({
           method: 'DELETE',
-          url: '/v1/rbac/roles/' + randomUUID(),
+          url: '/api/v1/rbac/roles/' + randomUUID(),
           cookies,
           headers,
         })
       ).statusCode,
     ).toBe(404)
     expect(
-      (await app.inject({ method: 'DELETE', url: '/v1/rbac/roles/not-a-uuid', cookies, headers }))
-        .statusCode,
+      (
+        await app.inject({
+          method: 'DELETE',
+          url: '/api/v1/rbac/roles/not-a-uuid',
+          cookies,
+          headers,
+        })
+      ).statusCode,
     ).toBe(400)
     expect(
-      (await app.inject({ method: 'DELETE', url: '/v1/rbac/roles/' + system, headers })).statusCode,
+      (await app.inject({ method: 'DELETE', url: '/api/v1/rbac/roles/' + system, headers }))
+        .statusCode,
     ).toBe(403)
   })
   it('prevents a delegated manager deleting a higher-privilege role', async () => {
@@ -167,7 +182,7 @@ describe('role deletion and staff role filters', () => {
     const delegatedCookies = await login('delegate@example.test')
     const result = await app.inject({
       method: 'DELETE',
-      url: '/v1/rbac/roles/' + higher,
+      url: '/api/v1/rbac/roles/' + higher,
       cookies: delegatedCookies,
       headers,
     })
@@ -183,7 +198,7 @@ describe('role deletion and staff role filters', () => {
     await user('unrelated', [b])
     await fixture.client`UPDATE users SET disabled_at=now() WHERE id=${disabled}`
     await fixture.client`UPDATE users SET archived_at=now(),disabled_at=now() WHERE id=${archived}`
-    const page = (query: string) => app.inject({ url: '/v1/staff?' + query, cookies })
+    const page = (query: string) => app.inject({ url: '/api/v1/staff?' + query, cookies })
     const first = (
       await page('roleId=' + a + '&q=needle&status=current&pageSize=1&sort=firstName')
     ).json()
@@ -206,12 +221,12 @@ describe('role deletion and staff role filters', () => {
     const [assignment, deletion] = await Promise.all([
       app.inject({
         method: 'PUT',
-        url: '/v1/staff/' + targetUser + '/roles',
+        url: '/api/v1/staff/' + targetUser + '/roles',
         cookies,
         headers,
         payload: { roleIds: [targetRole] },
       }),
-      app.inject({ method: 'DELETE', url: '/v1/rbac/roles/' + targetRole, cookies, headers }),
+      app.inject({ method: 'DELETE', url: '/api/v1/rbac/roles/' + targetRole, cookies, headers }),
     ])
     expect(deletion.statusCode).toBe(204)
     expect([204, 400]).toContain(assignment.statusCode)

@@ -75,7 +75,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       },
     })
   const create = async () => {
-    const r = await request('POST', '/v1/owner/organizations', {
+    const r = await request('POST', '/api/v1/owner/organizations', {
       name: 'Atelier Atlas',
       requestId: randomUUID(),
     })
@@ -99,13 +99,13 @@ describe('Owner activation, workspace access and admission limits', () => {
     }
     const saved = await request(
       'PUT',
-      `/v1/owner/organizations/${draft.organization.id}/onboarding`,
+      `/api/v1/owner/organizations/${draft.organization.id}/onboarding`,
       { configuration: draft.configuration, currentStep: 6, expectedVersion: draft.version },
     )
     expect(saved.statusCode, saved.body).toBe(200)
     const complete = await request(
       'POST',
-      `/v1/owner/organizations/${draft.organization.id}/onboarding/complete`,
+      `/api/v1/owner/organizations/${draft.organization.id}/onboarding/complete`,
       { expectedVersion: saved.json().version },
     )
     expect(complete.statusCode, complete.body).toBe(200)
@@ -129,7 +129,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(deliveries).toHaveLength(1)
     const login = await app.inject({
       method: 'POST',
-      url: `/v1/organizations/${id}/auth/login`,
+      url: `/api/v1/organizations/${id}/auth/login`,
       headers: { origin },
       payload: { email: 'owner@company.test', password: deliveries[0]!.temporaryPassword },
     })
@@ -138,7 +138,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     const restricted = login.cookies.find((c) => c.name === 'slama_staff_session')!.value
     const change = await app.inject({
       method: 'POST',
-      url: `/v1/organizations/${id}/auth/change-password`,
+      url: `/api/v1/organizations/${id}/auth/change-password`,
       headers: { origin },
       cookies: { slama_staff_session: restricted },
       payload: {
@@ -218,7 +218,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(admin!.id).not.toBe(ownerId)
     expect(admin!.must_change_password).toBe(true)
     expect(admin!.temporary_password_expires_at).toBeNull()
-    const retry = await request('POST', '/v1/owner/organizations', {
+    const retry = await request('POST', '/api/v1/owner/organizations', {
       name: 'Retry',
       requestId: draft.organization.id,
     })
@@ -228,7 +228,10 @@ describe('Owner activation, workspace access and admission limits', () => {
     ).toHaveLength(1)
     expect(
       (
-        await request('POST', '/v1/owner/organizations', { name: 'Extra', requestId: randomUUID() })
+        await request('POST', '/api/v1/owner/organizations', {
+          name: 'Extra',
+          requestId: randomUUID(),
+        })
       ).json().code,
     ).toBe('ORGANIZATION_LIMIT')
     const [subscription] =
@@ -247,24 +250,24 @@ describe('Owner activation, workspace access and admission limits', () => {
       layout: 'atelier',
       density: 'compact',
     })
-    expect((await request('GET', '/v1/workspace/session', undefined, id)).statusCode).toBe(401)
+    expect((await request('GET', '/api/v1/workspace/session', undefined, id)).statusCode).toBe(401)
     expect(
-      (await request('POST', '/v1/clients', { type: 'company', legalName: 'Forbidden' }, id))
+      (await request('POST', '/api/v1/clients', { type: 'company', legalName: 'Forbidden' }, id))
         .statusCode,
     ).toBe(403)
     const admin = await enter(id)
-    const workspace = await staff('GET', '/v1/workspace/session', id, admin.token)
+    const workspace = await staff('GET', '/api/v1/workspace/session', id, admin.token)
     expect(workspace.statusCode, workspace.body).toBe(200)
     expect(workspace.json().identityType).toBe('staff')
     expect(Object.keys(workspace.json().subscription)).toEqual(['entitlements'])
-    const client = await staff('POST', '/v1/clients', id, admin.token, {
+    const client = await staff('POST', '/api/v1/clients', id, admin.token, {
       type: 'company',
       legalName: 'Moroccan client',
     })
     expect(client.statusCode, client.body).toBe(201)
     const replay = await app.inject({
       method: 'POST',
-      url: `/v1/organizations/${id}/auth/login`,
+      url: `/api/v1/organizations/${id}/auth/login`,
       headers: { origin },
       payload: { email: admin.initial.to, password: admin.initial.temporaryPassword },
     })
@@ -276,7 +279,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(
       await fixture.client`select id from audit_events where organization_id=${id} and actor_id=${user!.id}`,
     ).not.toHaveLength(0)
-    const repeat = await request('POST', `/v1/owner/organizations/${id}/onboarding/complete`, {
+    const repeat = await request('POST', `/api/v1/owner/organizations/${id}/onboarding/complete`, {
       expectedVersion: done.version,
     })
     expect(repeat.statusCode, repeat.body).toBe(200)
@@ -290,7 +293,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       admin = await enter(id)
     const results = await Promise.all(
       [1, 2].map((n) =>
-        staff('POST', '/v1/staff', id, admin.token, {
+        staff('POST', '/api/v1/staff', id, admin.token, {
           email: `staff${n}@company.test`,
           firstName: 'Staff',
           lastName: 'User',
@@ -303,7 +306,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     await fixture.client`update owner_subscriptions set plan_code='essential',paid_through_at=now()+interval '30 days' where owner_id=${ownerId}`
     expect(
       (
-        await staff('POST', '/v1/staff', id, admin.token, {
+        await staff('POST', '/api/v1/staff', id, admin.token, {
           email: 'third@company.test',
           firstName: 'Staff',
           lastName: 'User',
@@ -311,18 +314,18 @@ describe('Owner activation, workspace access and admission limits', () => {
         })
       ).json().code,
     ).toBe('STAFF_LIMIT')
-    const me = (await staff('GET', '/v1/workspace/session', id, admin.token)).json()
+    const me = (await staff('GET', '/api/v1/workspace/session', id, admin.token)).json()
     expect(me.subscription.entitlements.staffPerOrganization).toBe(1)
   })
   it('allows ownership-scoped read-only platform analytics but never staff impersonation or foreign organization reads', async () => {
     const done = await activate(await create()),
       id = done.organization.id,
       admin = await enter(id)
-    const customer = await staff('POST', '/v1/clients', id, admin.token, {
+    const customer = await staff('POST', '/api/v1/clients', id, admin.token, {
       type: 'company',
       legalName: 'Reporting client',
     })
-    const invoice = await staff('POST', '/v1/invoices', id, admin.token, {
+    const invoice = await staff('POST', '/api/v1/invoices', id, admin.token, {
       clientId: customer.json().id,
       templateId: null,
       issueDate: '2026-10-01',
@@ -340,13 +343,19 @@ describe('Owner activation, workspace access and admission limits', () => {
       ],
     })
     expect(invoice.statusCode, invoice.body).toBe(201)
-    const issued = await staff('POST', `/v1/invoices/${invoice.json().id}/issue`, id, admin.token, {
-      expectedVersion: invoice.json().version,
-    })
+    const issued = await staff(
+      'POST',
+      `/api/v1/invoices/${invoice.json().id}/issue`,
+      id,
+      admin.token,
+      {
+        expectedVersion: invoice.json().version,
+      },
+    )
     expect(issued.statusCode, issued.body).toBe(200)
     const result = await request(
       'GET',
-      `/v1/owner/analytics/financial-summary?start=2026-10-01&end=2026-10-31`,
+      `/api/v1/owner/analytics/financial-summary?start=2026-10-01&end=2026-10-31`,
     )
     expect(result.statusCode, result.body).toBe(200)
     expect(result.json()).toMatchObject({
@@ -359,7 +368,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       (
         await request(
           'GET',
-          `/v1/owner/analytics/financial-summary?start=2026-10-01&end=2026-10-31&organizationId=${randomUUID()}`,
+          `/api/v1/owner/analytics/financial-summary?start=2026-10-01&end=2026-10-31&organizationId=${randomUUID()}`,
         )
       ).statusCode,
     ).toBe(404)
@@ -367,15 +376,15 @@ describe('Owner activation, workspace access and admission limits', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/owner-auth/session',
+          url: '/api/v1/owner-auth/session',
           cookies: { slama_staff_session: admin.token },
           headers: { origin },
         })
       ).statusCode,
     ).toBe(401)
     await fixture.client`update organizations set paused_at=now() where id=${id}`
-    expect((await staff('GET', '/v1/workspace/session', id, admin.token)).statusCode).toBe(403)
-    expect((await request('GET', `/v1/owner/organizations/${id}`)).statusCode).toBe(200)
+    expect((await staff('GET', '/api/v1/workspace/session', id, admin.token)).statusCode).toBe(403)
+    expect((await request('GET', `/api/v1/owner/organizations/${id}`)).statusCode).toBe(200)
   })
   it('retries administrator delivery without persisting cleartext credentials and claims a job only once', async () => {
     const done = await activate(await create()),

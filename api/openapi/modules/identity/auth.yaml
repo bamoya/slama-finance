@@ -1,5 +1,5 @@
 paths:
-  /v1/auth/profile:
+  /api/v1/auth/profile:
     patch:
       operationId: updateProfile
       description: Update the signed-in user's personal details. Full session and current password
@@ -25,7 +25,7 @@ paths:
           description: Password replacement required
         '409':
           description: Email already in use
-  /v1/auth/login:
+  /api/v1/auth/login:
     post:
       operationId: login
       description: Limited to five attempts per minute per client IP per API instance. Excess attempts
@@ -53,7 +53,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/auth/session:
+  /api/v1/auth/session:
     get:
       operationId: getSession
       responses:
@@ -70,7 +70,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/auth/logout:
+  /api/v1/auth/logout:
     post:
       operationId: logout
       responses:
@@ -83,7 +83,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/auth/password-reset/request:
+  /api/v1/auth/password-reset/request:
     post:
       operationId: requestPasswordReset
       security:
@@ -110,7 +110,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/auth/password-reset/confirm:
+  /api/v1/auth/password-reset/confirm:
     post:
       operationId: confirmPasswordReset
       security:
@@ -126,7 +126,7 @@ paths:
         "204":
           description: Password changed; sign in again
         default: *a1
-  /v1/auth/change-password:
+  /api/v1/auth/change-password:
     post:
       operationId: changePassword
       description: Requires an active full or password_change session. Rotates all sessions; returns a new

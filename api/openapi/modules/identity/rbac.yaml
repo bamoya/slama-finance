@@ -1,5 +1,5 @@
 paths:
-  /v1/rbac/roles/{roleId}:
+  /api/v1/rbac/roles/{roleId}:
     delete:
       operationId: deleteRole
       x-permissions: [roles.delete]
@@ -20,7 +20,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/rbac/permissions:
+  /api/v1/rbac/permissions:
     get:
       operationId: listPermissions
       description: Canonical resource permissions use read (View), create, update (Edit, including state changes) and delete (permanent deletion only). Unsupported operations are omitted. Reports keeps its single reports.read access grant. Legacy granular slugs are no longer accepted for role assignments.
@@ -41,7 +41,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/rbac/roles:
+  /api/v1/rbac/roles:
     get:
       operationId: listRoles
       x-permissions: [roles.read]
@@ -84,7 +84,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/rbac/roles/{roleId}/permissions:
+  /api/v1/rbac/roles/{roleId}/permissions:
     put:
       operationId: replaceRolePermissions
       x-permissions: [roles.update]

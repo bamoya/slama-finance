@@ -1,5 +1,5 @@
 paths:
-  /v1/staff/deletion/preview:
+  /api/v1/staff/deletion/preview:
     post:
       operationId: previewStaffDeletion
       tags: [identity]
@@ -20,7 +20,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/staff/deletion:
+  /api/v1/staff/deletion:
     post:
       operationId: confirmStaffDeletion
       tags: [identity]

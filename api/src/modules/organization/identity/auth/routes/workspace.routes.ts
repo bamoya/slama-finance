@@ -5,5 +5,5 @@ export function registerWorkspaceRoutes(
   app: FastifyInstance,
   controller: ReturnType<typeof createWorkspaceController>,
 ) {
-  app.get('/v1/workspace/session', controller.session)
+  app.get('/api/v1/workspace/session', controller.session)
 }

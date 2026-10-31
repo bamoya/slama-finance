@@ -50,7 +50,7 @@ export function createSettingsModule(
             permission,
           )
         },
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       )
     },
   }
@@ -83,7 +83,7 @@ export function createNotificationSettingsModule(
             createNotificationRuleController(service),
             permission,
           ),
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       ),
   }
 }

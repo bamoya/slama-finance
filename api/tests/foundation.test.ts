@@ -128,7 +128,7 @@ describe('HTTP boundaries', () => {
     ]) {
       const response = await app.inject({
         method: 'POST',
-        url: '/v1/auth/logout',
+        url: '/api/v1/auth/logout',
         headers: {
           ...(origin ? { origin } : {}),
           'x-organization-id': '10000000-0000-4000-8000-000000000001',
@@ -138,11 +138,12 @@ describe('HTTP boundaries', () => {
       expect(response.json().code).toBe('UNTRUSTED_ORIGIN')
     }
     expect(
-      (await app.inject({ method: 'POST', url: '/v1/auth/logout', headers: trusted })).statusCode,
+      (await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: trusted }))
+        .statusCode,
     ).toBe(204)
     const preflight = await app.inject({
       method: 'OPTIONS',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers: { ...trusted, 'access-control-request-method': 'POST' },
     })
     expect(preflight.statusCode).toBe(204)
@@ -154,7 +155,7 @@ describe('HTTP boundaries', () => {
     const app = await appFor({ BODY_LIMIT_BYTES: '128' })
     const invalid = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers: trusted,
       payload: { email: 'bad', password: 'x' },
     })
@@ -162,14 +163,14 @@ describe('HTTP boundaries', () => {
     expect(invalid.json().fieldErrors.email).toBeDefined()
     const malformed = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers: { ...trusted, 'content-type': 'application/json' },
       payload: '{',
     })
     expect(malformed.statusCode).toBe(400)
     const large = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers: trusted,
       payload: { password: 'x'.repeat(200) },
     })

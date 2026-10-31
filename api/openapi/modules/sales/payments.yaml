@@ -1,5 +1,5 @@
 paths:
-  /v1/payments/{id}/receipt:
+  /api/v1/payments/{id}/receipt:
     post:
       operationId: preparePaymentReceipt
       description: Prepare a receipt on demand or reuse its current PDF. Requires payments.read; issuing the first receipt additionally requires payments.update. Previously issued receipts remain downloadable with read access. Successful publication prevents permanent payment deletion. Historical balances are captured at recording; legacy payments explicitly have no historical balance. Pending cheques are acknowledged as received, not collected.
@@ -15,7 +15,7 @@ paths:
         '404': { description: Payment not found }
         '409': { description: Payment changed during rendering; retry }
         '503': { description: PDF rendering or storage unavailable }
-  /v1/payments:
+  /api/v1/payments:
     get:
       operationId: listPayments
       x-permissions: [payments.read]
@@ -82,7 +82,7 @@ paths:
                   { schema: { $ref: '../../openapi.yaml#/components/schemas/Error' } },
               },
           }
-  /v1/payments/{id}:
+  /api/v1/payments/{id}:
     get:
       operationId: getPayment
       x-permissions: [payments.read]
@@ -124,7 +124,7 @@ paths:
                   { schema: { $ref: '../../openapi.yaml#/components/schemas/Error' } },
               },
           }
-  /v1/payments/{id}/confirm:
+  /api/v1/payments/{id}/confirm:
     post:
       operationId: confirmPayment
       x-permissions: [payments.update]
@@ -150,7 +150,7 @@ paths:
                   { schema: { $ref: '../../openapi.yaml#/components/schemas/Error' } },
               },
           }
-  /v1/payments/{id}/cancel:
+  /api/v1/payments/{id}/cancel:
     post:
       operationId: cancelPayment
       x-permissions: [payments.update]
@@ -176,7 +176,7 @@ paths:
                   { schema: { $ref: '../../openapi.yaml#/components/schemas/Error' } },
               },
           }
-  /v1/payments/{id}/restore:
+  /api/v1/payments/{id}/restore:
     post:
       operationId: restorePayment
       description: Restores a cancelled payment to its prior pending or confirmed state if its invoice is payable and balance remains available.

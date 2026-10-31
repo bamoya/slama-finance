@@ -39,7 +39,7 @@ export function createCatalogModule(
             permission,
           )
         },
-        { prefix: '/v1' },
+        { prefix: '/api/v1' },
       )
     },
   }

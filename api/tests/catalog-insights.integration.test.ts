@@ -32,7 +32,7 @@ describe('Catalog insights', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'insights-password-123' },
     })
@@ -47,9 +47,11 @@ describe('Catalog insights', () => {
     app.inject({ method: 'POST', url, cookies, headers, payload })
 
   async function seedSales() {
-    const category = (await post('/v1/categories', { name: 'Grains', description: null })).json()
-    const wheat = (await post('/v1/products', productInput('WHT-1', category.id))).json()
-    const barley = (await post('/v1/products', productInput('BRL-1', category.id))).json()
+    const category = (
+      await post('/api/v1/categories', { name: 'Grains', description: null })
+    ).json()
+    const wheat = (await post('/api/v1/products', productInput('WHT-1', category.id))).json()
+    const barley = (await post('/api/v1/products', productInput('BRL-1', category.id))).json()
     const [client] = await fixture.client`
       insert into clients(type, legal_name, address_line1, city)
       values('company', 'Buyer SARL', '12 Atlas', 'Casablanca') returning id
@@ -111,7 +113,7 @@ describe('Catalog insights', () => {
   it('aggregates VAT-exclusive issued sales, unique invoices, snapshot weight, and one currency', async () => {
     const { category, wheat, invoice } = await seedSales()
     const products = await get(
-      '/v1/products/insights?includeFinancial=true&period=all&currency=MAD&sortBy=revenue&sortOrder=desc',
+      '/api/v1/products/insights?includeFinancial=true&period=all&currency=MAD&sortBy=revenue&sortOrder=desc',
     )
     expect(products.statusCode).toBe(200)
     expect(products.json()).toMatchObject({
@@ -127,7 +129,7 @@ describe('Catalog insights', () => {
       products.json().items.map((item: { product: { id: string } }) => item.product.id),
     ).toEqual([expect.any(String), wheat.id])
     const detail = await get(
-      `/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all&currency=MAD&recentInvoiceLimit=1`,
+      `/api/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all&currency=MAD&recentInvoiceLimit=1`,
     )
     expect(detail.statusCode).toBe(200)
     expect(detail.json()).toMatchObject({
@@ -137,7 +139,7 @@ describe('Catalog insights', () => {
       recentInvoices: [{ id: invoice, quantity: 2, weightSoldG: 1500, netRevenue: '20.00' }],
     })
     const categories = await get(
-      '/v1/categories/insights?includeFinancial=true&period=all&currency=MAD',
+      '/api/v1/categories/insights?includeFinancial=true&period=all&currency=MAD',
     )
     expect(categories.statusCode).toBe(200)
     expect(categories.json()).toMatchObject({
@@ -148,7 +150,7 @@ describe('Catalog insights', () => {
       items: [{ productCount: 2, financial: { netRevenue: '50.00', invoiceCount: 1 } }],
     })
     const categoryDetail = await get(
-      `/v1/categories/${category.id}/insights?includeFinancial=true&period=all&sortBy=revenue&sortOrder=desc&pageSize=1`,
+      `/api/v1/categories/${category.id}/insights?includeFinancial=true&period=all&sortBy=revenue&sortOrder=desc&pageSize=1`,
     )
     expect(categoryDetail.statusCode).toBe(200)
     expect(categoryDetail.json()).toMatchObject({
@@ -157,7 +159,7 @@ describe('Catalog insights', () => {
       products: { total: 2, pageSize: 1, items: [{ product: { reference: 'BRL-1' } }] },
     })
     const euros = await get(
-      `/v1/products/${wheat.id}/insights?includeFinancial=true&period=all&currency=EUR`,
+      `/api/v1/products/${wheat.id}/insights?includeFinancial=true&period=all&currency=EUR`,
     )
     expect(euros.json().financial).toMatchObject({
       unitsSold: 4,
@@ -165,15 +167,15 @@ describe('Catalog insights', () => {
       currency: 'EUR',
     })
     const dates = await get(
-      `/v1/products/${wheat.id}/insights?includeFinancial=true&period=custom&dateFrom=2026-09-16&dateTo=2026-09-20&currency=MAD`,
+      `/api/v1/products/${wheat.id}/insights?includeFinancial=true&period=custom&dateFrom=2026-09-16&dateTo=2026-09-20&currency=MAD`,
     )
     expect(dates.json().financial).toMatchObject({ unitsSold: 0, netRevenue: '0.00' })
     const otherCategory = (
-      await post('/v1/categories', { name: 'Other grains', description: null })
+      await post('/api/v1/categories', { name: 'Other grains', description: null })
     ).json()
     await fixture.client`update products set category_id=${otherCategory.id} where id=${wheat.id}`
     const reassigned = await get(
-      '/v1/categories/insights?includeFinancial=true&period=all&currency=MAD',
+      '/api/v1/categories/insights?includeFinancial=true&period=all&currency=MAD',
     )
     expect(reassigned.json().items).toEqual(
       expect.arrayContaining([
@@ -201,7 +203,7 @@ describe('Catalog insights', () => {
         1, '10.00', '10.00', '0.00', '10.00')
     `
     const nextRecent = await get(
-      `/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all&recentInvoiceLimit=1&recentInvoiceOffset=1`,
+      `/api/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all&recentInvoiceLimit=1&recentInvoiceOffset=1`,
     )
     expect(nextRecent.json()).toMatchObject({
       recentInvoiceTotal: 2,
@@ -216,7 +218,7 @@ describe('Catalog insights', () => {
       where rp.role_id=r.id and rp.permission_id=p.id and r.key='admin'
         and p.key in ('reports.read','reports.sections.revenue','categories.read')
     `
-    const counts = await get('/v1/products/insights?period=all')
+    const counts = await get('/api/v1/products/insights?period=all')
     expect(counts.statusCode).toBe(200)
     expect(counts.json().summary).toMatchObject({ productCount: 2, financial: null })
     expect(
@@ -226,11 +228,11 @@ describe('Catalog insights', () => {
       categoryName: null,
       financial: null,
     })
-    expect((await get('/v1/products/insights?includeFinancial=true&period=all')).statusCode).toBe(
-      403,
-    )
-    expect((await get('/v1/products/insights?sortBy=revenue')).statusCode).toBe(403)
-    expect((await get(`/v1/categories/${category.id}/insights`)).statusCode).toBe(403)
+    expect(
+      (await get('/api/v1/products/insights?includeFinancial=true&period=all')).statusCode,
+    ).toBe(403)
+    expect((await get('/api/v1/products/insights?sortBy=revenue')).statusCode).toBe(403)
+    expect((await get(`/api/v1/categories/${category.id}/insights`)).statusCode).toBe(403)
   })
 
   it('requires invoice read permission for paginated recent invoices and validates filters', async () => {
@@ -242,23 +244,25 @@ describe('Catalog insights', () => {
     expect(
       (
         await get(
-          `/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all`,
+          `/api/v1/products/${wheat.id}/insights?includeFinancial=true&includeRecentInvoices=true&period=all`,
         )
       ).statusCode,
     ).toBe(403)
     expect(
-      (await get(`/v1/products/${wheat.id}/insights?includeRecentInvoices=true`)).statusCode,
+      (await get(`/api/v1/products/${wheat.id}/insights?includeRecentInvoices=true`)).statusCode,
     ).toBe(400)
     expect(
-      (await get('/v1/products/insights?categoryId=' + category.id + '&uncategorized=true'))
+      (await get('/api/v1/products/insights?categoryId=' + category.id + '&uncategorized=true'))
         .statusCode,
     ).toBe(400)
     expect(
-      (await get('/v1/products/insights?period=custom&dateFrom=2026-10-01&dateTo=2026-09-01'))
+      (await get('/api/v1/products/insights?period=custom&dateFrom=2026-10-01&dateTo=2026-09-01'))
         .statusCode,
     ).toBe(400)
-    expect((await get('/v1/products/insights?period=all&dateFrom=2026-09-01')).statusCode).toBe(400)
-    const detail = await get(`/v1/products/${wheat.id}/insights?period=all`)
+    expect((await get('/api/v1/products/insights?period=all&dateFrom=2026-09-01')).statusCode).toBe(
+      400,
+    )
+    const detail = await get(`/api/v1/products/${wheat.id}/insights?period=all`)
     expect(detail.statusCode).toBe(200)
     expect(detail.json()).toMatchObject({
       recentInvoices: [],

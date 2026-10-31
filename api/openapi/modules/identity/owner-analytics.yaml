@@ -1,5 +1,5 @@
 paths:
-  /v1/owner/analytics/financial-summary:
+  /api/v1/owner/analytics/financial-summary:
     get:
       operationId: getOwnerFinancialSummary
       tags: [identity]

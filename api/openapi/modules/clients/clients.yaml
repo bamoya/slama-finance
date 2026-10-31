@@ -1,5 +1,5 @@
 paths:
-  /v1/clients:
+  /api/v1/clients:
     get:
       operationId: listClients
       parameters:
@@ -66,7 +66,7 @@ paths:
             description: Created client,
             content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
           }
-  /v1/clients/{id}:
+  /api/v1/clients/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
     get:
       operationId: getClient
@@ -98,7 +98,7 @@ paths:
         }
       responses:
         '204': { description: Deleted unreferenced client }
-  /v1/clients/{id}/overview:
+  /api/v1/clients/{id}/overview:
     get:
       operationId: getClientOverview
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
@@ -109,7 +109,7 @@ paths:
             content:
               { application/json: { schema: { $ref: '#/components/schemas/ClientOverview' } } },
           }
-  /v1/clients/{id}/archive:
+  /api/v1/clients/{id}/archive:
     post:
       operationId: archiveClient
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
@@ -124,7 +124,7 @@ paths:
             description: Archived client,
             content: { application/json: { schema: { $ref: '#/components/schemas/Client' } } },
           }
-  /v1/clients/{id}/restore:
+  /api/v1/clients/{id}/restore:
     post:
       operationId: restoreClient
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]

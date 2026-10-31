@@ -8,7 +8,7 @@ export function registerOwnerFinancialSummaryRoutes(
   origin?: string,
 ) {
   app.get(
-    '/v1/owner/analytics/financial-summary',
+    '/api/v1/owner/analytics/financial-summary',
     { preHandler: createRequirePortalOrigin(origin) },
     controller.get,
   )

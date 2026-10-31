@@ -47,7 +47,7 @@ describe('Organization-scoped staff identities', () => {
   const post = (id: string, path: string, body: object, cookies?: Record<string, string>) =>
     app.inject({
       method: 'POST',
-      url: `/v1/organizations/${id}/auth/${path}`,
+      url: `/api/v1/organizations/${id}/auth/${path}`,
       headers,
       payload: body,
       cookies,
@@ -55,7 +55,7 @@ describe('Organization-scoped staff identities', () => {
   const session = (id: string, cookie: string) =>
     app.inject({
       method: 'GET',
-      url: `/v1/organizations/${id}/auth/session`,
+      url: `/api/v1/organizations/${id}/auth/session`,
       cookies: { slama_staff_session: cookie },
     })
 
@@ -66,14 +66,14 @@ describe('Organization-scoped staff identities', () => {
     expect(loginA.statusCode).toBe(200)
     expect(loginB.statusCode).toBe(200)
     const cookie = loginA.cookies.find((c) => c.name === 'slama_staff_session')!
-    expect(cookie.path).toBe('/v1')
+    expect(cookie.path).toBe('/api/v1')
     expect((await session(orgA, cookie.value)).statusCode).toBe(200)
     expect((await session(orgB, cookie.value)).statusCode).toBe(401)
     expect(
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/auth/session',
+          url: '/api/v1/auth/session',
           cookies: { slama_session: cookie.value },
         })
       ).statusCode,
@@ -82,7 +82,7 @@ describe('Organization-scoped staff identities', () => {
       (
         await app.inject({
           method: 'GET',
-          url: '/v1/staff',
+          url: '/api/v1/staff',
           cookies: { slama_session: cookie.value },
         })
       ).statusCode,
@@ -91,7 +91,7 @@ describe('Organization-scoped staff identities', () => {
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/auth/login',
+          url: '/api/v1/auth/login',
           headers,
           payload: { email: shared, password: passwordA },
         })

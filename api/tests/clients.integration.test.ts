@@ -67,7 +67,7 @@ describe('Clients module', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'clients-password-123' },
     })
@@ -81,7 +81,7 @@ describe('Clients module', () => {
     app.inject({ method, url, headers, cookies, payload })
 
   it('creates both types, normalizes fields, and paginates searchable active clients', async () => {
-    const person = await request('POST', '/v1/clients', individual())
+    const person = await request('POST', '/api/v1/clients', individual())
     expect(person.statusCode).toBe(201)
     expect(person.json()).toMatchObject({
       displayName: 'Sara Amrani',
@@ -89,7 +89,7 @@ describe('Clients module', () => {
       city: 'Rabat',
       deliveryAddressLine1: null,
     })
-    const business = await request('POST', '/v1/clients', company({ email: 'office@atlas.ma' }))
+    const business = await request('POST', '/api/v1/clients', company({ email: 'office@atlas.ma' }))
     expect(business.statusCode).toBe(201)
     expect(business.json()).toMatchObject({
       displayName: 'Atlas SARL',
@@ -97,7 +97,7 @@ describe('Clients module', () => {
       email: 'office@atlas.ma',
     })
     const page = await app.inject({
-      url: '/v1/clients?limit=1&offset=0&type=company&q=000123',
+      url: '/api/v1/clients?limit=1&offset=0&type=company&q=000123',
       cookies,
     })
     expect(page.json()).toMatchObject({
@@ -106,26 +106,26 @@ describe('Clients module', () => {
       offset: 0,
       items: [{ id: business.json().id }],
     })
-    expect((await app.inject({ url: '/v1/clients?q=%25', cookies })).json().total).toBe(0)
+    expect((await app.inject({ url: '/api/v1/clients?q=%25', cookies })).json().total).toBe(0)
   })
 
   it('rejects incompatible identities but accepts partial contact, RC and address data', async () => {
     expect(
-      (await request('POST', '/v1/clients', individual({ ice: '000123456789012' }))).statusCode,
+      (await request('POST', '/api/v1/clients', individual({ ice: '000123456789012' }))).statusCode,
     ).toBe(400)
     expect(
-      (await request('POST', '/v1/clients', company({ registrationCity: null }))).statusCode,
+      (await request('POST', '/api/v1/clients', company({ registrationCity: null }))).statusCode,
     ).toBe(201)
     expect(
-      (await request('POST', '/v1/clients', company({ deliveryAddressLine1: 'Warehouse' })))
+      (await request('POST', '/api/v1/clients', company({ deliveryAddressLine1: 'Warehouse' })))
         .statusCode,
     ).toBe(201)
     const phone = '06 12 34 56 78 05 22 33 44 55 ext 12'
-    const client = await request('POST', '/v1/clients', individual({ phone }))
+    const client = await request('POST', '/api/v1/clients', individual({ phone }))
     expect(client.statusCode).toBe(201)
     expect(client.json().phone).toBe(phone)
     expect(
-      (await request('POST', '/v1/clients', individual({ email: 'not-email' }))).statusCode,
+      (await request('POST', '/api/v1/clients', individual({ email: 'not-email' }))).statusCode,
     ).toBe(400)
     await expect(
       fixture.client`insert into clients (type, first_name, last_name) values ('individual', null, null)`,
@@ -138,7 +138,7 @@ describe('Clients module', () => {
       { type: 'individual', firstName: 'Sara' },
       { type: 'individual', lastName: 'Amrani' },
     ]) {
-      const created = await request('POST', '/v1/clients', input)
+      const created = await request('POST', '/api/v1/clients', input)
       expect(created.statusCode, created.body).toBe(201)
       expect(created.json()).toMatchObject({
         addressLine1: null,
@@ -150,8 +150,8 @@ describe('Clients module', () => {
       })
       expect(created.json().displayName).not.toContain('null')
     }
-    const created = (await request('POST', '/v1/clients', company())).json()
-    const updated = await request('PATCH', `/v1/clients/${created.id}`, {
+    const created = (await request('POST', '/api/v1/clients', company())).json()
+    const updated = await request('PATCH', `/api/v1/clients/${created.id}`, {
       expectedVersion: created.version,
       addressLine1: null,
       city: null,
@@ -170,8 +170,8 @@ describe('Clients module', () => {
   })
 
   it('updates full identity atomically, preserves versions, and archives without deleting', async () => {
-    const created = (await request('POST', '/v1/clients', individual())).json()
-    const changed = await request('PATCH', `/v1/clients/${created.id}`, {
+    const created = (await request('POST', '/api/v1/clients', individual())).json()
+    const changed = await request('PATCH', `/api/v1/clients/${created.id}`, {
       ...company({
         email: 'billing@atlas.ma',
         deliveryAddressLine1: 'Warehouse',
@@ -189,54 +189,67 @@ describe('Clients module', () => {
       version: 2,
     })
     expect(
-      (await request('PATCH', `/v1/clients/${created.id}`, { notes: 'stale', expectedVersion: 1 }))
-        .statusCode,
+      (
+        await request('PATCH', `/api/v1/clients/${created.id}`, {
+          notes: 'stale',
+          expectedVersion: 1,
+        })
+      ).statusCode,
     ).toBe(409)
-    const archived = await request('POST', `/v1/clients/${created.id}/archive`, {
+    const archived = await request('POST', `/api/v1/clients/${created.id}/archive`, {
       expectedVersion: 2,
     })
     expect(archived.statusCode).toBe(200)
-    expect((await app.inject({ url: '/v1/clients', cookies })).json().total).toBe(0)
-    expect((await app.inject({ url: `/v1/clients/${created.id}`, cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: '/api/v1/clients', cookies })).json().total).toBe(0)
+    expect((await app.inject({ url: `/api/v1/clients/${created.id}`, cookies })).statusCode).toBe(
+      200,
+    )
     expect(
-      (await request('PATCH', `/v1/clients/${created.id}`, { notes: 'no', expectedVersion: 3 }))
+      (await request('PATCH', `/api/v1/clients/${created.id}`, { notes: 'no', expectedVersion: 3 }))
         .statusCode,
     ).toBe(409)
     expect(
-      (await request('POST', `/v1/clients/${created.id}/restore`, { expectedVersion: 3 }))
+      (await request('POST', `/api/v1/clients/${created.id}/restore`, { expectedVersion: 3 }))
         .statusCode,
     ).toBe(200)
   })
 
   it('enforces granular permissions', async () => {
     await fixture.client`delete from user_roles where user_id=${testUserId}`
-    expect((await app.inject({ url: '/v1/clients', cookies })).statusCode).toBe(403)
-    expect((await request('POST', '/v1/clients', individual())).statusCode).toBe(403)
+    expect((await app.inject({ url: '/api/v1/clients', cookies })).statusCode).toBe(403)
+    expect((await request('POST', '/api/v1/clients', individual())).statusCode).toBe(403)
     await fixture.client`insert into roles (key,name) values ('client_reader','Client reader')`
     await fixture.client`insert into role_permissions (role_id,permission_id) select r.id,p.id from roles r cross join permissions p where r.key='client_reader' and p.key='clients.read'`
     await fixture.client`insert into user_roles (user_id,role_id) select ${testUserId},id from roles where key='client_reader'`
-    expect((await app.inject({ url: '/v1/clients', cookies })).statusCode).toBe(200)
-    expect((await request('POST', '/v1/clients', individual())).statusCode).toBe(403)
+    expect((await app.inject({ url: '/api/v1/clients', cookies })).statusCode).toBe(200)
+    expect((await request('POST', '/api/v1/clients', individual())).statusCode).toBe(403)
   })
   it('deletes unattached clients but rejects stale versions and attached records', async () => {
-    const unused = (await request('POST', '/v1/clients', individual())).json()
+    const unused = (await request('POST', '/api/v1/clients', individual())).json()
     expect(
-      (await request('DELETE', `/v1/clients/${unused.id}`, { expectedVersion: 99 })).statusCode,
+      (await request('DELETE', `/api/v1/clients/${unused.id}`, { expectedVersion: 99 })).statusCode,
     ).toBe(409)
     expect(
-      (await request('DELETE', `/v1/clients/${unused.id}`, { expectedVersion: unused.version }))
+      (await request('DELETE', `/api/v1/clients/${unused.id}`, { expectedVersion: unused.version }))
         .statusCode,
     ).toBe(204)
-    expect((await app.inject({ url: `/v1/clients/${unused.id}`, cookies })).statusCode).toBe(404)
+    expect((await app.inject({ url: `/api/v1/clients/${unused.id}`, cookies })).statusCode).toBe(
+      404,
+    )
     const attached = (
-      await request('POST', '/v1/clients', company({ email: 'office@atlas.ma' }))
+      await request('POST', '/api/v1/clients', company({ email: 'office@atlas.ma' }))
     ).json()
     await fixture.client`create table client_document_links (id uuid primary key default gen_random_uuid(), client_id uuid not null references clients(id) on delete restrict)`
     await fixture.client`insert into client_document_links (client_id) values (${attached.id})`
     expect(
-      (await request('DELETE', `/v1/clients/${attached.id}`, { expectedVersion: attached.version }))
-        .statusCode,
+      (
+        await request('DELETE', `/api/v1/clients/${attached.id}`, {
+          expectedVersion: attached.version,
+        })
+      ).statusCode,
     ).toBe(409)
-    expect((await app.inject({ url: `/v1/clients/${attached.id}`, cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: `/api/v1/clients/${attached.id}`, cookies })).statusCode).toBe(
+      200,
+    )
   })
 })

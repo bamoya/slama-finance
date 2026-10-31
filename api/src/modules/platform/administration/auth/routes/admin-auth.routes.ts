@@ -4,7 +4,7 @@ import type { createAdminAuthController } from '../controllers/admin-auth.contro
 
 type Controller = ReturnType<typeof createAdminAuthController>
 
-/** Unauthenticated sign-in endpoints, mounted at /v1/admin. */
+/** Unauthenticated sign-in endpoints, mounted at /api/v1/admin. */
 export function registerAdminSignInRoutes(app: FastifyInstance, controller: Controller) {
   const limited = { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }
   app.post('/auth/login', limited, controller.login)

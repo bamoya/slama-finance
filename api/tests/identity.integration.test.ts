@@ -30,7 +30,7 @@ describe('identity HTTP and persistence regression', () => {
   async function login() {
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'OPERATOR@example.test', password: 'test-password-123' },
     })
@@ -45,21 +45,26 @@ describe('identity HTTP and persistence regression', () => {
     return response.cookies[0]!.value
   }
   it('preserves login, session, permission checks and logout routes', async () => {
-    expect((await app.inject('/v1/auth/session')).statusCode).toBe(401)
-    expect((await app.inject('/v1/rbac/roles')).statusCode).toBe(403)
+    expect((await app.inject('/api/v1/auth/session')).statusCode).toBe(401)
+    expect((await app.inject('/api/v1/rbac/roles')).statusCode).toBe(403)
     const token = await login()
     const cookies = { slama_session: token }
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(200)
-    expect((await app.inject({ url: '/v1/rbac/roles', cookies })).statusCode).toBe(200)
-    const logout = await app.inject({ method: 'POST', url: '/v1/auth/logout', cookies, headers })
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: '/api/v1/rbac/roles', cookies })).statusCode).toBe(200)
+    const logout = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      cookies,
+      headers,
+    })
     expect(logout.statusCode).toBe(204)
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(401)
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).statusCode).toBe(401)
   })
   it('creates staff atomically, maps fields and retains role/permission operations', async () => {
     const cookies = { slama_session: await login() }
     const roleResponse = await app.inject({
       method: 'POST',
-      url: '/v1/rbac/roles',
+      url: '/api/v1/rbac/roles',
       headers,
       cookies,
       payload: { key: 'test-sales', name: 'Sales' },
@@ -67,12 +72,12 @@ describe('identity HTTP and persistence regression', () => {
     expect(roleResponse.statusCode).toBe(201)
     expect(roleResponse.json().permissionKeys).toEqual([])
     const roleId = roleResponse.json().id
-    const permission = (await app.inject({ url: '/v1/rbac/permissions', cookies })).json()[0]
+    const permission = (await app.inject({ url: '/api/v1/rbac/permissions', cookies })).json()[0]
     expect(
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/rbac/roles/${roleId}/permissions`,
+          url: `/api/v1/rbac/roles/${roleId}/permissions`,
           headers,
           cookies,
           payload: { permissionKeys: [permission.key, permission.key] },
@@ -82,13 +87,13 @@ describe('identity HTTP and persistence regression', () => {
     const assignments = () =>
       fixture.client`select permission_id from role_permissions where role_id=${roleId}`
     expect(await assignments()).toEqual([{ permission_id: permission.id }])
-    const listed = await app.inject({ url: '/v1/rbac/roles', cookies })
+    const listed = await app.inject({ url: '/api/v1/rbac/roles', cookies })
     expect(listed.json().find((role: { id: string }) => role.id === roleId).permissionKeys).toEqual(
       [permission.key],
     )
     const unknown = await app.inject({
       method: 'PUT',
-      url: `/v1/rbac/roles/${roleId}/permissions`,
+      url: `/api/v1/rbac/roles/${roleId}/permissions`,
       headers,
       cookies,
       payload: { permissionKeys: [permission.key, 'unknown.permission'] },
@@ -102,7 +107,7 @@ describe('identity HTTP and persistence regression', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/rbac/roles/${roleId}/permissions`,
+          url: `/api/v1/rbac/roles/${roleId}/permissions`,
           headers,
           cookies,
           payload: { permissionIds: [permission.id] },
@@ -113,7 +118,7 @@ describe('identity HTTP and persistence regression', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: '/v1/rbac/roles/22222222-2222-4222-8222-222222222222/permissions',
+          url: '/api/v1/rbac/roles/22222222-2222-4222-8222-222222222222/permissions',
           headers,
           cookies,
           payload: { permissionKeys: [] },
@@ -124,7 +129,7 @@ describe('identity HTTP and persistence regression', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/rbac/roles/${roleId}/permissions`,
+          url: `/api/v1/rbac/roles/${roleId}/permissions`,
           headers,
           cookies,
           payload: { permissionKeys: [] },
@@ -134,7 +139,7 @@ describe('identity HTTP and persistence regression', () => {
     expect(await assignments()).toHaveLength(0)
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/staff',
+      url: '/api/v1/staff',
       headers,
       cookies,
       payload: {
@@ -161,7 +166,7 @@ describe('identity HTTP and persistence regression', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/staff/${userId}/roles`,
+          url: `/api/v1/staff/${userId}/roles`,
           headers,
           cookies,
           payload: { roleIds: [] },
@@ -171,7 +176,7 @@ describe('identity HTTP and persistence regression', () => {
     expect(await fixture.client`select * from user_roles where user_id=${userId}`).toHaveLength(0)
     const failed = await app.inject({
       method: 'POST',
-      url: '/v1/staff',
+      url: '/api/v1/staff',
       headers,
       cookies,
       payload: {
@@ -189,7 +194,7 @@ describe('identity HTTP and persistence regression', () => {
   it('rejects wrong passwords, expired sessions and disabled accounts', async () => {
     const wrong = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'wrong-password' },
     })
@@ -197,17 +202,18 @@ describe('identity HTTP and persistence regression', () => {
     const token = await login()
     await fixture.client`update sessions set expires_at=now() - interval '1 minute' where user_id=${testUserId}`
     expect(
-      (await app.inject({ url: '/v1/auth/session', cookies: { slama_session: token } })).statusCode,
+      (await app.inject({ url: '/api/v1/auth/session', cookies: { slama_session: token } }))
+        .statusCode,
     ).toBe(401)
     const active = await login()
     await fixture.client`update users set disabled_at=now() where id=${testUserId}`
     try {
       expect(
-        (await app.inject({ url: '/v1/auth/session', cookies: { slama_session: active } }))
+        (await app.inject({ url: '/api/v1/auth/session', cookies: { slama_session: active } }))
           .statusCode,
       ).toBe(401)
       expect(
-        (await app.inject({ url: '/v1/rbac/roles', cookies: { slama_session: active } }))
+        (await app.inject({ url: '/api/v1/rbac/roles', cookies: { slama_session: active } }))
           .statusCode,
       ).toBe(403)
     } finally {

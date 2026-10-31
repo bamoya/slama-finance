@@ -63,14 +63,14 @@ describe('Sales search and client overview', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'queries-password-123' },
     })
     expect(login.statusCode).toBe(200)
     cookies = { slama_session: login.cookies[0]!.value }
     today = companyDate(new Date())
-    const draft = await post('/v1/invoices', {
+    const draft = await post('/api/v1/invoices', {
       clientId: atlasId,
       templateId: null,
       issueDate: shift(today, -2),
@@ -89,7 +89,7 @@ describe('Sales search and client overview', () => {
     })
     expect(draft.statusCode, JSON.stringify(draft.json())).toBe(201)
     invoiceId = draft.json().id
-    const issued = await post(`/v1/invoices/${invoiceId}/issue`, { expectedVersion: 1 })
+    const issued = await post(`/api/v1/invoices/${invoiceId}/issue`, { expectedVersion: 1 })
     expect(issued.statusCode, JSON.stringify(issued.json())).toBe(200)
     invoiceNumber = issued.json().number
   })
@@ -100,8 +100,8 @@ describe('Sales search and client overview', () => {
   })
 
   it('creates a linked delivery draft with full invoice quantities and prevents duplicates', async () => {
-    const invoice = (await get(`/v1/invoices/${invoiceId}`)).json()
-    const response = await post(`/v1/invoices/${invoiceId}/delivery-note`, {})
+    const invoice = (await get(`/api/v1/invoices/${invoiceId}`)).json()
+    const response = await post(`/api/v1/invoices/${invoiceId}/delivery-note`, {})
     expect(response.statusCode, response.body).toBe(201)
     const draft = response.json()
     expect(draft).toMatchObject({
@@ -117,15 +117,15 @@ describe('Sales search and client overview', () => {
       productName: 'Wheat',
       quantity: invoice.lines[0].quantity,
     })
-    const linked = (await get(`/v1/invoices/${invoiceId}`)).json()
+    const linked = (await get(`/api/v1/invoices/${invoiceId}`)).json()
     expect(linked.deliveryNoteIds).toContain(draft.id)
     expect(linked.version).toBe(invoice.version)
-    const duplicate = await post(`/v1/invoices/${invoiceId}/delivery-note`, {})
+    const duplicate = await post(`/api/v1/invoices/${invoiceId}/delivery-note`, {})
     expect(duplicate.statusCode, duplicate.body).toBe(409)
   })
 
   it('copies multiple lines with their full quantities only after invoice issuance', async () => {
-    const created = await post('/v1/invoices', {
+    const created = await post('/api/v1/invoices', {
       clientId: atlasId,
       templateId: null,
       issueDate: today,
@@ -151,11 +151,13 @@ describe('Sales search and client overview', () => {
     })
     expect(created.statusCode, created.body).toBe(201)
     const id = created.json().id
-    expect((await post(`/v1/invoices/${id}/delivery-note`, {})).statusCode).toBe(409)
-    expect((await post(`/v1/invoices/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(200)
+    expect((await post(`/api/v1/invoices/${id}/delivery-note`, {})).statusCode).toBe(409)
+    expect((await post(`/api/v1/invoices/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(
+      200,
+    )
     const results = await Promise.all([
-      post(`/v1/invoices/${id}/delivery-note`, {}),
-      post(`/v1/invoices/${id}/delivery-note`, {}),
+      post(`/api/v1/invoices/${id}/delivery-note`, {}),
+      post(`/api/v1/invoices/${id}/delivery-note`, {}),
     ])
     expect(results.map((result) => result.statusCode).sort()).toEqual([201, 409])
     expect(results.find((result) => result.statusCode === 201)!.json().lines).toMatchObject([
@@ -165,8 +167,8 @@ describe('Sales search and client overview', () => {
   })
 
   it('delivers a draft directly with an optional receiver, freezes it and prevents repeated delivery', async () => {
-    const draft = (await post(`/v1/invoices/${invoiceId}/delivery-note`, {})).json()
-    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+    const draft = (await post(`/api/v1/invoices/${invoiceId}/delivery-note`, {})).json()
+    const delivered = await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
       expectedVersion: draft.version,
     })
     expect(delivered.statusCode, delivered.body).toBe(200)
@@ -177,23 +179,23 @@ describe('Sales search and client overview', () => {
     expect(stored!.delivered_at).toBeTruthy()
     expect(
       (
-        await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+        await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
           expectedVersion: delivered.json().version,
         })
       ).statusCode,
     ).toBe(409)
-    const acknowledged = await post(`/v1/delivery-notes/${draft.id}/acknowledge`, {
+    const acknowledged = await post(`/api/v1/delivery-notes/${draft.id}/acknowledge`, {
       expectedVersion: delivered.json().version,
     })
     expect(acknowledged.statusCode, acknowledged.body).toBe(404)
     expect(
-      (await post(`/v1/delivery-notes/${draft.id}/prepare`, { expectedVersion: 1 })).statusCode,
+      (await post(`/api/v1/delivery-notes/${draft.id}/prepare`, { expectedVersion: 1 })).statusCode,
     ).toBe(404)
   })
 
   it('stores an optional receiver when delivering a draft', async () => {
-    const draft = (await post(`/v1/invoices/${invoiceId}/delivery-note`, {})).json()
-    const delivered = await post(`/v1/delivery-notes/${draft.id}/deliver`, {
+    const draft = (await post(`/api/v1/invoices/${invoiceId}/delivery-note`, {})).json()
+    const delivered = await post(`/api/v1/delivery-notes/${draft.id}/deliver`, {
       expectedVersion: draft.version,
       receivedByName: '  Yassine  ',
     })
@@ -220,7 +222,7 @@ describe('Sales search and client overview', () => {
     'refreshes %s client identity at draft save/finalization and freezes it afterward',
     async (resource) => {
       const table = resource === 'delivery-notes' ? 'delivery_notes' : resource
-      const source = (await get(`/v1/invoices/${invoiceId}`)).json()
+      const source = (await get(`/api/v1/invoices/${invoiceId}`)).json()
       const input =
         resource === 'delivery-notes'
           ? {
@@ -259,7 +261,7 @@ describe('Sales search and client overview', () => {
               ],
             }
       await fixture.client`update clients set legal_name='Name at creation', trade_name=null where id=${atlasId}`
-      const created = await post(`/v1/${resource}`, input)
+      const created = await post(`/api/v1/${resource}`, input)
       expect(created.statusCode, created.body).toBe(201)
       const id = created.json().id
       const snapshot = async () =>
@@ -270,7 +272,7 @@ describe('Sales search and client overview', () => {
       await fixture.client`update clients set legal_name='Name at draft save' where id=${atlasId}`
       const saved = await app.inject({
         method: 'PATCH',
-        url: `/v1/${resource}/${id}`,
+        url: `/api/v1/${resource}/${id}`,
         headers,
         cookies,
         payload: { ...input, expectedVersion: created.json().version },
@@ -279,7 +281,7 @@ describe('Sales search and client overview', () => {
       expect((await snapshot()).legalName).toBe('Name at draft save')
       await fixture.client`update clients set legal_name='Name at finalization', email='current@example.test' where id=${atlasId}`
       const finalized = await post(
-        `/v1/${resource}/${id}/${resource === 'delivery-notes' ? 'deliver' : 'issue'}`,
+        `/api/v1/${resource}/${id}/${resource === 'delivery-notes' ? 'deliver' : 'issue'}`,
         { expectedVersion: saved.json().version },
       )
       expect(finalized.statusCode, finalized.body).toBe(200)
@@ -291,11 +293,11 @@ describe('Sales search and client overview', () => {
         expect(finalized.json().deliveryAddress).toBe('Custom delivery destination')
       else expect(finalized.json().total).toBe(saved.json().total)
       await fixture.client`update clients set legal_name='Later profile rename' where id=${atlasId}`
-      await get(`/v1/${resource}/${id}`)
+      await get(`/api/v1/${resource}/${id}`)
       expect((await snapshot()).legalName).toBe('Name at finalization')
       const forbidden = await app.inject({
         method: 'PATCH',
-        url: `/v1/${resource}/${id}`,
+        url: `/api/v1/${resource}/${id}`,
         headers,
         cookies,
         payload: { ...input, expectedVersion: finalized.json().version },
@@ -310,7 +312,7 @@ describe('Sales search and client overview', () => {
   )
 
   it('filters matching counts and returns real financial and related activity', async () => {
-    const estimate = await post('/v1/estimates', {
+    const estimate = await post('/api/v1/estimates', {
       clientId: atlasId,
       templateId: null,
       issueDate: today,
@@ -328,7 +330,7 @@ describe('Sales search and client overview', () => {
       ],
     })
     expect(estimate.statusCode).toBe(201)
-    const delivery = await post('/v1/delivery-notes', {
+    const delivery = await post('/api/v1/delivery-notes', {
       clientId: atlasId,
       invoiceId: null,
       deliveryDate: today,
@@ -340,11 +342,11 @@ describe('Sales search and client overview', () => {
       ],
     })
     expect(delivery.statusCode, JSON.stringify(delivery.json())).toBe(201)
-    const pending = await post('/v1/payments', cheque())
+    const pending = await post('/api/v1/payments', cheque())
     expect(pending.statusCode, JSON.stringify(pending.json())).toBe(201)
     expect(
       (
-        await post(`/v1/payments/${pending.json().id}/confirm`, {
+        await post(`/api/v1/payments/${pending.json().id}/confirm`, {
           expectedVersion: 1,
           collectedOn: today,
         })
@@ -352,7 +354,7 @@ describe('Sales search and client overview', () => {
     ).toBe(200)
 
     const invoicePage = await get(
-      `/v1/invoices?search=Atlas%20Trade&paymentStatus=partial&overdue=true&amountMin=90&dateTo=${today}&sortBy=outstandingAmount&page=1&pageSize=1`,
+      `/api/v1/invoices?search=Atlas%20Trade&paymentStatus=partial&overdue=true&amountMin=90&dateTo=${today}&sortBy=outstandingAmount&page=1&pageSize=1`,
     )
     expect(invoicePage.statusCode, JSON.stringify(invoicePage.json())).toBe(200)
     expect(invoicePage.json()).toMatchObject({
@@ -371,23 +373,25 @@ describe('Sales search and client overview', () => {
       ],
     })
     expect(
-      (await get(`/v1/invoices?search=${invoiceNumber}&paymentStatus=paid`)).json().total,
+      (await get(`/api/v1/invoices?search=${invoiceNumber}&paymentStatus=paid`)).json().total,
     ).toBe(0)
     expect(
-      (await get(`/v1/estimates?search=Atlas&dateFrom=${today}&amountMax=80&sortBy=total`)).json(),
+      (
+        await get(`/api/v1/estimates?search=Atlas&dateFrom=${today}&amountMax=80&sortBy=total`)
+      ).json(),
     ).toMatchObject({
       total: 1,
       items: [{ id: estimate.json().id, clientDisplayName: 'Atlas SARL' }],
     })
     expect(
       (
-        await get(`/v1/delivery-notes?search=Atlas&billingStatus=unbilled&dateFrom=${today}`)
+        await get(`/api/v1/delivery-notes?search=Atlas&billingStatus=unbilled&dateFrom=${today}`)
       ).json(),
     ).toMatchObject({
       total: 1,
       items: [{ id: delivery.json().id, clientDisplayName: 'Atlas SARL' }],
     })
-    const overview = await get(`/v1/clients/${atlasId}/overview`)
+    const overview = await get(`/api/v1/clients/${atlasId}/overview`)
     expect(overview.statusCode, JSON.stringify(overview.json())).toBe(200)
     expect(overview.json().financialSummary).toEqual({
       currencies: [
@@ -407,7 +411,7 @@ describe('Sales search and client overview', () => {
       ]),
     )
     const clients = await get(
-      '/v1/clients?balanceMin=70&balanceMax=70&overdueOnly=true&sortBy=outstanding&page=1&pageSize=1',
+      '/api/v1/clients?balanceMin=70&balanceMax=70&overdueOnly=true&sortBy=outstanding&page=1&pageSize=1',
     )
     expect(clients.statusCode, JSON.stringify(clients.json())).toBe(200)
     expect(clients.json()).toMatchObject({
@@ -418,14 +422,14 @@ describe('Sales search and client overview', () => {
   })
 
   it('protects invoice cancellation and hides finance from client-only readers', async () => {
-    const pending = await post('/v1/payments', cheque())
+    const pending = await post('/api/v1/payments', cheque())
     expect(pending.statusCode).toBe(201)
     const cancel = () =>
-      post(`/v1/invoices/${invoiceId}/cancel`, { expectedVersion: 2, reason: 'Void invoice' })
+      post(`/api/v1/invoices/${invoiceId}/cancel`, { expectedVersion: 2, reason: 'Void invoice' })
     expect((await cancel()).json().code).toBe('INVOICE_HAS_PAYMENTS')
     expect(
       (
-        await post(`/v1/payments/${pending.json().id}/confirm`, {
+        await post(`/api/v1/payments/${pending.json().id}/confirm`, {
           expectedVersion: 1,
           collectedOn: today,
         })
@@ -437,12 +441,12 @@ describe('Sales search and client overview', () => {
     await fixture.client`insert into roles (key,name) values ('overview_reader','Overview reader')`
     await fixture.client`insert into role_permissions (role_id,permission_id) select r.id,p.id from roles r cross join permissions p where r.key='overview_reader' and p.key='clients.read'`
     await fixture.client`insert into user_roles (user_id,role_id) select ${testUserId},id from roles where key='overview_reader'`
-    const overview = await get(`/v1/clients/${atlasId}/overview`)
+    const overview = await get(`/api/v1/clients/${atlasId}/overview`)
     expect(overview.statusCode, JSON.stringify(overview.json())).toBe(200)
     expect(overview.json()).toMatchObject({ financialSummary: null, recentActivity: [] })
-    expect((await get('/v1/clients?balanceMin=1')).statusCode).toBe(403)
-    expect((await get('/v1/clients?sortBy=lastActivity')).statusCode).toBe(403)
-    const clients = await get('/v1/clients')
+    expect((await get('/api/v1/clients?balanceMin=1')).statusCode).toBe(403)
+    expect((await get('/api/v1/clients?sortBy=lastActivity')).statusCode).toBe(403)
+    const clients = await get('/api/v1/clients')
     expect(clients.statusCode).toBe(200)
     expect(clients.json().items[0]).toMatchObject({ financialSummary: null, lastActivityAt: null })
   })

@@ -1,5 +1,5 @@
 paths:
-  /v1/categories/insights:
+  /api/v1/categories/insights:
     get:
       operationId: listCategoryInsights
       description: Catalog counts are available with categories.read. includeFinancial requires reports.read. Financial values use issued/sent invoice lines, issue date, and one currency.
@@ -17,7 +17,7 @@ paths:
         - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
       responses:
         '200': { description: Paginated category insights, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInsightsPage' } } } }
-  /v1/categories/{id}/insights:
+  /api/v1/categories/{id}/insights:
     get:
       operationId: getCategoryInsights
       description: Category details and paginated product ranking require categories.read and products.read. Financial values require reports.read.
@@ -35,7 +35,7 @@ paths:
         - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
       responses:
         '200': { description: Category insights, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInsightsDetail' } } } }
-  /v1/products/insights:
+  /api/v1/products/insights:
     get:
       operationId: listProductInsights
       description: Catalog counts are available with products.read. includeFinancial requires reports.read.
@@ -55,7 +55,7 @@ paths:
         - { $ref: '#/components/parameters/CatalogIncludeFinancial' }
       responses:
         '200': { description: Paginated product insights, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInsightsPage' } } } }
-  /v1/products/{id}/insights:
+  /api/v1/products/{id}/insights:
     get:
       operationId: getProductInsights
       description: Variant sales use historical invoice-line package-weight snapshots. Recent invoice links additionally require invoices.read.
@@ -71,7 +71,7 @@ paths:
         - { name: recentInvoiceOffset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
       responses:
         '200': { description: Product insights, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInsightsDetail' } } } }
-  /v1/categories:
+  /api/v1/categories:
     get:
       operationId: listCategories
       parameters:
@@ -84,7 +84,7 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryInput' } } } }
       responses:
         '201': { description: Created category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
-  /v1/categories/{id}:
+  /api/v1/categories/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:
       operationId: getCategory
@@ -100,21 +100,21 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
       responses:
         '204': { description: Deleted unreferenced category }
-  /v1/categories/{id}/archive:
+  /api/v1/categories/{id}/archive:
     post:
       operationId: archiveCategory
       parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
       responses:
         '200': { description: Archived category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
-  /v1/categories/{id}/restore:
+  /api/v1/categories/{id}/restore:
     post:
       operationId: restoreCategory
       parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
       responses:
         '200': { description: Restored category, content: { application/json: { schema: { $ref: '#/components/schemas/Category' } } } }
-  /v1/products:
+  /api/v1/products:
     get:
       operationId: listProducts
       parameters:
@@ -128,7 +128,7 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProductInput' } } } }
       responses:
         '201': { description: Created product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
-  /v1/products/{id}:
+  /api/v1/products/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
     get:
       operationId: getProduct
@@ -144,14 +144,14 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
       responses:
         '204': { description: Deleted unreferenced product }
-  /v1/products/{id}/archive:
+  /api/v1/products/{id}/archive:
     post:
       operationId: archiveProduct
       parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CatalogRecordVersion' } } } }
       responses:
         '200': { description: Archived product, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
-  /v1/products/{id}/restore:
+  /api/v1/products/{id}/restore:
     post:
       operationId: restoreProduct
       parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]

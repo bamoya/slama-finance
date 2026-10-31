@@ -1,5 +1,5 @@
 paths:
-  /v1/media/uploads:
+  /api/v1/media/uploads:
     post:
       operationId: uploadMedia
       summary: Upload a private image for an authorized business purpose
@@ -18,7 +18,7 @@ paths:
                 $ref: '#/components/schemas/MediaAsset'
         default:
           $ref: '#/components/responses/Error'
-  /v1/media/{id}:
+  /api/v1/media/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     get:
@@ -46,7 +46,7 @@ paths:
           description: Deleted
         default:
           $ref: '#/components/responses/Error'
-  /v1/media/{id}/download:
+  /api/v1/media/{id}/download:
     get:
       operationId: downloadMedia
       parameters:

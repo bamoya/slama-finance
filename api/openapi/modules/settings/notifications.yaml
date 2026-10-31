@@ -1,5 +1,5 @@
 paths:
-  /v1/notification-rules/{id}/preview:
+  /api/v1/notification-rules/{id}/preview:
     post:
       operationId: previewNotificationRule
       tags: [settings]
@@ -42,7 +42,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/notification-rules:
+  /api/v1/notification-rules:
     get:
       operationId: listNotificationRules
       tags: [settings]
@@ -88,7 +88,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/notification-rules/{id}:
+  /api/v1/notification-rules/{id}:
     patch:
       operationId: updateNotificationRule
       tags: [settings]
@@ -141,7 +141,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/notification-rules/{id}/test:
+  /api/v1/notification-rules/{id}/test:
     post:
       operationId: testNotificationRule
       tags: [settings]

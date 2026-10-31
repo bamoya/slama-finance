@@ -102,7 +102,7 @@ export function createAdministrationModule(options: {
     createAdminOverviewService(createAdminOverviewRepository(), withAdmin, options.clock),
   )
 
-  /** Mounted at /v1/admin. The portal is served by the owner portal origin under /admin. */
+  /** Mounted at /api/v1/admin. The portal is served by the owner portal origin under /admin. */
   async function registerAdminRoutes(app: FastifyInstance) {
     app.addHook('onRequest', createRequirePortalOrigin(options.portalOrigin))
     registerAdminSignInRoutes(app, auth)
@@ -120,7 +120,7 @@ export function createAdministrationModule(options: {
 
   return {
     async registerRoutes(app: FastifyInstance) {
-      await app.register(registerAdminRoutes, { prefix: '/v1/admin' })
+      await app.register(registerAdminRoutes, { prefix: '/api/v1/admin' })
     },
   }
 }

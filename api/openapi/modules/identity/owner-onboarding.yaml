@@ -1,6 +1,6 @@
 {
   "paths": {
-    "/v1/owner/organizations": {
+    "/api/v1/owner/organizations": {
       "post": {
         "operationId": "createOwnerOrganization",
         "security": [
@@ -42,7 +42,7 @@
         }
       }
     },
-    "/v1/owner/organizations/{organizationId}/onboarding": {
+    "/api/v1/owner/organizations/{organizationId}/onboarding": {
       "parameters": [
         {
           "name": "organizationId",
@@ -125,7 +125,7 @@
         }
       }
     },
-    "/v1/owner/organizations/{organizationId}/onboarding/complete": {
+    "/api/v1/owner/organizations/{organizationId}/onboarding/complete": {
       "parameters": [
         {
           "name": "organizationId",
@@ -178,7 +178,7 @@
         }
       }
     },
-    "/v1/owner/organizations/{organizationId}/branding": {
+    "/api/v1/owner/organizations/{organizationId}/branding": {
       "parameters": [
         {
           "name": "organizationId",
@@ -231,7 +231,7 @@
         }
       }
     },
-    "/v1/owner/organizations/{organizationId}/branding/{assetId}": {
+    "/api/v1/owner/organizations/{organizationId}/branding/{assetId}": {
       "parameters": [
         {
           "name": "organizationId",

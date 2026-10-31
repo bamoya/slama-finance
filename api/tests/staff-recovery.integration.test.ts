@@ -29,7 +29,7 @@ describe('staff lifecycle and password recovery', () => {
     attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'operator@example.test', password: 'test-password-123' },
     })
@@ -42,7 +42,7 @@ describe('staff lifecycle and password recovery', () => {
   const requestReset = (email: string) =>
     app.inject({
       method: 'POST',
-      url: '/v1/auth/password-reset/request',
+      url: '/api/v1/auth/password-reset/request',
       headers,
       payload: { email },
     })
@@ -51,14 +51,14 @@ describe('staff lifecycle and password recovery', () => {
   const confirm = (value: string) =>
     app.inject({
       method: 'POST',
-      url: '/v1/auth/password-reset/confirm',
+      url: '/api/v1/auth/password-reset/confirm',
       headers,
       payload: { token: value, password: 'replacement-password-123' },
     })
   async function createStaff(roleIds: string[] = []) {
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/staff',
+      url: '/api/v1/staff',
       headers,
       cookies,
       payload: {
@@ -71,14 +71,14 @@ describe('staff lifecycle and password recovery', () => {
     expect(response.statusCode).toBe(201)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'staff@example.test', password: response.json().temporaryPassword },
     })
     expect(login.json().purpose).toBe('password_change')
     const changed = await app.inject({
       method: 'POST',
-      url: '/v1/auth/change-password',
+      url: '/api/v1/auth/change-password',
       headers,
       cookies: { slama_session: login.cookies[0]!.value },
       payload: { newPassword: 'staff-password-123' },
@@ -89,7 +89,7 @@ describe('staff lifecycle and password recovery', () => {
   it('permanently deletes an unused archived account and rejects self-deletion', async () => {
     const created = await app.inject({
       method: 'POST',
-      url: '/v1/staff',
+      url: '/api/v1/staff',
       headers,
       cookies,
       payload: {
@@ -102,18 +102,23 @@ describe('staff lifecycle and password recovery', () => {
     expect(created.statusCode, created.body).toBe(201)
     const id = created.json().id
     expect(
-      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/archive`, headers, cookies }))
+      (await app.inject({ method: 'POST', url: `/api/v1/staff/${id}/archive`, headers, cookies }))
         .statusCode,
     ).toBe(204)
-    const deleted = await app.inject({ method: 'DELETE', url: `/v1/staff/${id}`, headers, cookies })
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/staff/${id}`,
+      headers,
+      cookies,
+    })
     expect(deleted.statusCode, deleted.body).toBe(204)
-    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(404)
+    expect((await app.inject({ url: `/api/v1/staff/${id}`, cookies })).statusCode).toBe(404)
     expect(
       await fixture.client`select user_id from user_settings where user_id=${id}`,
     ).toHaveLength(0)
     const self = await app.inject({
       method: 'DELETE',
-      url: `/v1/staff/${testUserId}`,
+      url: `/api/v1/staff/${testUserId}`,
       headers,
       cookies,
     })
@@ -123,16 +128,21 @@ describe('staff lifecycle and password recovery', () => {
   it('preserves an account required by audit history', async () => {
     const id = await createStaff()
     await fixture.client`insert into audit_events(actor_id,actor_kind,action,entity_table,entity_key) values(${id},'user','test','users','{}')`
-    const deleted = await app.inject({ method: 'DELETE', url: `/v1/staff/${id}`, headers, cookies })
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/staff/${id}`,
+      headers,
+      cookies,
+    })
     expect(deleted.statusCode, deleted.body).toBe(409)
     expect(deleted.json().code).toBe('STAFF_IN_USE')
-    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(200)
+    expect((await app.inject({ url: `/api/v1/staff/${id}`, cookies })).statusCode).toBe(200)
   })
 
   it('lists, updates, disables/enables and archives without deleting references', async () => {
     const id = await createStaff()
-    expect((await app.inject({ url: '/v1/staff', cookies })).json().items).toHaveLength(2)
-    expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).json()).toMatchObject({
+    expect((await app.inject({ url: '/api/v1/staff', cookies })).json().items).toHaveLength(2)
+    expect((await app.inject({ url: `/api/v1/staff/${id}`, cookies })).json()).toMatchObject({
       roles: [],
       permissionKeys: [],
     })
@@ -140,7 +150,7 @@ describe('staff lifecycle and password recovery', () => {
       (
         await app.inject({
           method: 'PATCH',
-          url: `/v1/staff/${id}`,
+          url: `/api/v1/staff/${id}`,
           cookies,
           headers,
           payload: { firstName: 'New' },
@@ -151,7 +161,7 @@ describe('staff lifecycle and password recovery', () => {
       (
         await app.inject({
           method: 'PATCH',
-          url: `/v1/staff/${id}`,
+          url: `/api/v1/staff/${id}`,
           cookies,
           headers,
           payload: { permissionKeys: ['staff.create'] },
@@ -160,37 +170,37 @@ describe('staff lifecycle and password recovery', () => {
     ).toBe(400)
     const login = await app.inject({
       method: 'POST',
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       headers,
       payload: { email: 'staff@example.test', password: 'staff-password-123' },
     })
     const staffCookies = { slama_session: login.cookies[0]!.value }
     expect(
-      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/disable`, headers, cookies }))
+      (await app.inject({ method: 'POST', url: `/api/v1/staff/${id}/disable`, headers, cookies }))
         .statusCode,
     ).toBe(204)
-    expect((await app.inject({ url: '/v1/auth/session', cookies: staffCookies })).statusCode).toBe(
-      401,
-    )
     expect(
-      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/enable`, headers, cookies }))
+      (await app.inject({ url: '/api/v1/auth/session', cookies: staffCookies })).statusCode,
+    ).toBe(401)
+    expect(
+      (await app.inject({ method: 'POST', url: `/api/v1/staff/${id}/enable`, headers, cookies }))
         .statusCode,
     ).toBe(204)
-    expect((await app.inject({ url: '/v1/auth/session', cookies: staffCookies })).statusCode).toBe(
-      401,
-    )
     expect(
-      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/archive`, headers, cookies }))
+      (await app.inject({ url: '/api/v1/auth/session', cookies: staffCookies })).statusCode,
+    ).toBe(401)
+    expect(
+      (await app.inject({ method: 'POST', url: `/api/v1/staff/${id}/archive`, headers, cookies }))
         .statusCode,
     ).toBe(204)
-    expect((await app.inject({ url: '/v1/staff', cookies })).json().total).toBe(1)
+    expect((await app.inject({ url: '/api/v1/staff', cookies })).json().total).toBe(1)
     expect(
-      (await app.inject({ url: '/v1/staff?status=archived', cookies })).json().items[0].id,
+      (await app.inject({ url: '/api/v1/staff?status=archived', cookies })).json().items[0].id,
     ).toBe(id)
     expect(await fixture.client`select * from users where id=${id}`).toHaveLength(1)
     expect(await fixture.client`select * from user_settings where user_id=${id}`).toHaveLength(1)
     expect(
-      (await app.inject({ method: 'POST', url: `/v1/staff/${id}/enable`, headers, cookies }))
+      (await app.inject({ method: 'POST', url: `/api/v1/staff/${id}/enable`, headers, cookies }))
         .statusCode,
     ).toBe(409)
     expect((await requestReset('staff@example.test')).statusCode).toBe(202)
@@ -199,7 +209,7 @@ describe('staff lifecycle and password recovery', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/rbac/users/${id}/roles`,
+          url: `/api/v1/rbac/users/${id}/roles`,
           headers,
           cookies,
           payload: { roleIds: [] },
@@ -211,7 +221,7 @@ describe('staff lifecycle and password recovery', () => {
     for (const action of ['disable', 'archive', 'roles']) {
       const response = await app.inject({
         method: action === 'roles' ? 'PUT' : 'POST',
-        url: `/v1/staff/${testUserId}/${action}`,
+        url: `/api/v1/staff/${testUserId}/${action}`,
         headers,
         cookies,
         ...(action === 'roles' ? { payload: { roleIds: [] } } : {}),
@@ -224,7 +234,7 @@ describe('staff lifecycle and password recovery', () => {
       (
         await app.inject({
           method: 'PUT',
-          url: `/v1/rbac/roles/${admin!.id}/permissions`,
+          url: `/api/v1/rbac/roles/${admin!.id}/permissions`,
           headers,
           cookies,
           payload: { permissionKeys: [] },
@@ -237,7 +247,7 @@ describe('staff lifecycle and password recovery', () => {
     const second = await createStaff([admin!.id])
     const results = await Promise.all(
       [testUserId, second].map((id) =>
-        app.inject({ method: 'POST', url: `/v1/staff/${id}/disable`, headers, cookies }),
+        app.inject({ method: 'POST', url: `/api/v1/staff/${id}/disable`, headers, cookies }),
       ),
     )
     expect(results.filter((result) => result.statusCode === 204)).toHaveLength(1)
@@ -256,12 +266,12 @@ describe('staff lifecycle and password recovery', () => {
     expect(stored!.token_hash).not.toBe(value)
     expect((await confirm(value)).statusCode).toBe(204)
     expect((await confirm(value)).statusCode).toBe(400)
-    expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(401)
+    expect((await app.inject({ url: '/api/v1/auth/session', cookies })).statusCode).toBe(401)
     expect(
       (
         await app.inject({
           method: 'POST',
-          url: '/v1/auth/login',
+          url: '/api/v1/auth/login',
           headers,
           payload: { email: 'operator@example.test', password: 'replacement-password-123' },
         })

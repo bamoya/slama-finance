@@ -1,7 +1,7 @@
 paths:
-  /v1/owner/organizations:
+  /api/v1/owner/organizations:
     post:
-      $ref: ./owner-onboarding.yaml#/paths/~1v1~1owner~1organizations/post
+      $ref: ./owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organizations/post
     get:
       operationId: listOwnerOrganizations
       security:
@@ -49,7 +49,7 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
-  /v1/owner/organizations/{organizationId}:
+  /api/v1/owner/organizations/{organizationId}:
     get:
       operationId: getOwnerOrganization
       security:

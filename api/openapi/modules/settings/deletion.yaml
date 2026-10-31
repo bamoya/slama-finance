@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info: { title: Settings deletion, version: 0.1.0 }
 paths:
-  /v1/settings/deletion/preview:
+  /api/v1/settings/deletion/preview:
     post:
       operationId: previewSettingsDeletion
       tags: [settings]
@@ -21,7 +21,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '../../shared/errors.yaml#/components/schemas/Error' }
-  /v1/settings/deletion:
+  /api/v1/settings/deletion:
     post:
       operationId: confirmSettingsDeletion
       tags: [settings]

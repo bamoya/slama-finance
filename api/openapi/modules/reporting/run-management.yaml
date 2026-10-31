@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info: { title: Report run management, version: 1.0.0 }
 paths:
-  /v1/report-runs/{id}/cleanup:
+  /api/v1/report-runs/{id}/cleanup:
     post:
       operationId: cleanupReportRun
       tags: [ reporting ]
@@ -33,7 +33,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
-  /v1/report-runs/{id}/regenerate-files:
+  /api/v1/report-runs/{id}/regenerate-files:
     post:
       operationId: regenerateReportRunFiles
       tags: [ reporting ]
