@@ -17,7 +17,6 @@ services:
         condition: service_healthy
         required: true
     environment:
-      - CORS_ORIGIN=${PUBLIC_ORIGIN:?Set the exact HTTPS origin without trailing slash}
       - DATABASE_POOL_SIZE=3
       - DATABASE_URL=${DATABASE_URL:?Set the restricted runtime database URL}
       - EMAIL_FROM=${EMAIL_FROM:?Set the verified sender email address}
@@ -29,7 +28,9 @@ services:
       - NOTIFICATION_POLL_MS=10000
       - NOTIFICATION_TRANSPORT=resend
       - NOTIFICATION_WORKER_ENABLED=true
-      - PASSWORD_RESET_URL=${PUBLIC_ORIGIN:?Set the public HTTPS origin}/reset-password
+      - PLATFORM_DOMAIN=${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      - PLATFORM_SCHEME=${PLATFORM_SCHEME:-https}
+      - PASSWORD_RESET_URL=${PLATFORM_SCHEME:-https}://app.${PLATFORM_DOMAIN:?Set the platform domain}/reset-password
       - PORT=3000
       - REPORT_POLL_MS=60000
       - RESEND_API_KEY=${RESEND_API_KEY:?Set the Resend API key}
@@ -135,8 +136,12 @@ services:
       api:
         condition: service_healthy
         required: true
+    environment:
+      - PLATFORM_DOMAIN=${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      - PUBLIC_CONTACT_EMAIL=${PUBLIC_CONTACT_EMAIL:-}
+      - PUBLIC_WHATSAPP_NUMBER=${PUBLIC_WHATSAPP_NUMBER:-}
     expose:
-      - '80'
+      - '8080'
     healthcheck:
       interval: 30s
       retries: 3
@@ -146,7 +151,7 @@ services:
         - wget
         - -q
         - --spider
-        - http://127.0.0.1/index.html
+        - http://127.0.0.1:8080/index.html
       timeout: 5s
     image: ${UI_IMAGE:?Set the prebuilt UI image for this release}
     logging:

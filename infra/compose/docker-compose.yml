@@ -46,11 +46,11 @@ services:
   #     NODE_ENV: development
   #     DATABASE_URL: postgres://slama:slama@postgres:5432/slama_finance
   #     REDIS_URL: redis://redis:6379
-  #     CORS_ORIGIN: http://localhost:8080
+  #     PLATFORM_DOMAIN: localhost:8080
+  #     PLATFORM_SCHEME: http
   #     RESEND_API_KEY: ${RESEND_API_KEY:-}
   #     EMAIL_FROM: ${EMAIL_FROM:-}
   #     OWNER_AUTH_ENABLED: ${OWNER_AUTH_ENABLED:-false}
-  #     OWNER_PORTAL_ORIGIN: ${OWNER_PORTAL_ORIGIN:-}
   #     PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-}
   #   depends_on:
   #     postgres:

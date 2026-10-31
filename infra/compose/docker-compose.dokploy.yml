@@ -4,8 +4,10 @@
 # Changing env passwords after database initialization does NOT rotate database roles.
 # Initialization runs before API startup. Configure owner authentication and real S3/Resend credentials separately.
 # From repository root, explicitly pass --env-file .env.production for CLI use.
-# Dokploy Domains: slama-finance.bamoya.com -> ui:8080;
-# api-slama-finance.bamoya.com -> api:3000. Enable HTTPS for both.
+# Routing: every public host (apex, www., app., admin., api., <slug>.) goes to ui:8080 only.
+# The UI nginx sends /api/* to the API, api.<domain> to the API only and www. to the apex.
+# The API port is never published. See docs/deployment/domains-and-tls.md for DNS, wildcard TLS
+# (Traefik DNS-01) and the Dokploy Domains / Traefik rules.
 services:
   postgres:
     image: postgres:17-alpine
@@ -44,14 +46,16 @@ services:
       # A separately provisioned non-owner role, never slama_owner.
       DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@postgres:5432/slama_finance
       DATABASE_POOL_SIZE: '5'
-      CORS_ORIGIN: ${PUBLIC_ORIGIN:-https://slama-finance.bamoya.com}
+      # Every site derives from one platform domain; browsers call /api on their own origin.
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      PLATFORM_SCHEME: ${PLATFORM_SCHEME:-https}
       # Empty is fail-safe: forwarded addresses are ignored until proxy IPs are verified.
+      # Set to UI_PROXY_IP plus the verified Traefik address on the Dokploy network.
       TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set the Resend API key}
       EMAIL_FROM: ${EMAIL_FROM:?Set the verified sender email address}
       OWNER_AUTH_ENABLED: ${OWNER_AUTH_ENABLED:-false}
-      OWNER_PORTAL_ORIGIN: ${OWNER_PORTAL_ORIGIN:-}
-      PASSWORD_RESET_URL: ${PUBLIC_ORIGIN:-https://slama-finance.bamoya.com}/reset-password
+      PASSWORD_RESET_URL: ${PLATFORM_SCHEME:-https}://app.${PLATFORM_DOMAIN}/reset-password
       NOTIFICATION_TRANSPORT: resend
       # PostgreSQL-backed workers run inside this single API process; no Redis needed.
       NOTIFICATION_WORKER_ENABLED: 'true'
@@ -91,12 +95,16 @@ services:
   ui:
     image: ${UI_IMAGE:-ghcr.io/bamoya/slama-finance-ui@sha256:a903ccf9d7f9c2bda20b81e71804420980e58f3e03feddfa50eb17a91d30cd84}
     environment:
-      API_BASE_URL: ${API_BASE_URL:-https://api-slama-finance.bamoya.com}
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
       PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:-}
       PUBLIC_WHATSAPP_NUMBER: ${PUBLIC_WHATSAPP_NUMBER:-}
     restart: unless-stopped
     expose: ['8080']
-    networks: [default, application]
+    networks:
+      default: {}
+      application:
+        # Stable proxy address for TRUST_PROXY_IPS; the API sees requests from here.
+        ipv4_address: ${UI_PROXY_IP:-172.30.85.2}
     depends_on:
       api:
         condition: service_healthy
@@ -139,6 +147,9 @@ networks:
   # Dokploy attaches its proxy network to each service selected in Domains.
   default: {}
   # No published ports. API keeps outbound access for object storage and Resend.
-  application: {}
+  application:
+    ipam:
+      config:
+        - subnet: ${APPLICATION_SUBNET:-172.30.85.0/24}
   database:
     internal: true

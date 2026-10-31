@@ -1,6 +1,8 @@
 # Coolify production stack. Pull immutable, matching release images; never build on the VPS.
 # From repository root, explicitly pass --env-file .env.production for CLI use.
-# Assign the HTTPS domain to ui:80 only. Do not publish API or PostgreSQL ports.
+# Route every public host (apex, www., app., admin., api., *.<domain>) to ui only. The UI nginx
+# sends /api/* to the API, api.<domain> to the API only and www. to the apex. Never publish API
+# or PostgreSQL ports. See docs/deployment/domains-and-tls.md.
 services:
   postgres:
     image: postgres:17-alpine
@@ -38,14 +40,14 @@ services:
       # A separately provisioned non-owner role, never slama_owner.
       DATABASE_URL: ${DATABASE_URL:?Set the restricted runtime database URL}
       DATABASE_POOL_SIZE: '5'
-      CORS_ORIGIN: ${PUBLIC_ORIGIN:?Set the exact HTTPS origin without trailing slash}
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      PLATFORM_SCHEME: ${PLATFORM_SCHEME:-https}
       # Empty is fail-safe: forwarded addresses are ignored until proxy IPs are verified.
       TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set the Resend API key}
       EMAIL_FROM: ${EMAIL_FROM:?Set the verified sender email address}
       OWNER_AUTH_ENABLED: ${OWNER_AUTH_ENABLED:-false}
-      OWNER_PORTAL_ORIGIN: ${OWNER_PORTAL_ORIGIN:-}
-      PASSWORD_RESET_URL: ${PUBLIC_ORIGIN:?Set the public HTTPS origin}/reset-password
+      PASSWORD_RESET_URL: ${PLATFORM_SCHEME:-https}://app.${PLATFORM_DOMAIN:?Set the platform domain}/reset-password
       NOTIFICATION_TRANSPORT: resend
       # PostgreSQL-backed workers run inside this single API process; no Redis needed.
       NOTIFICATION_WORKER_ENABLED: 'true'
@@ -83,7 +85,11 @@ services:
   ui:
     image: ${UI_IMAGE:?Set the prebuilt UI image for this release}
     restart: unless-stopped
-    expose: ['80']
+    environment:
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:-}
+      PUBLIC_WHATSAPP_NUMBER: ${PUBLIC_WHATSAPP_NUMBER:-}
+    expose: ['8080']
     networks:
       default: {}
       application:
@@ -95,7 +101,7 @@ services:
     mem_limit: 128m
     cpus: 0.15
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/index.html']
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/index.html']
       interval: 30s
       timeout: 5s
       retries: 3
