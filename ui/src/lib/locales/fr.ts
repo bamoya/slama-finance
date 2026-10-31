@@ -2315,7 +2315,8 @@ export const french: Record<string, string> = {
   'Enter the 6-digit code it shows below.': 'Saisissez ci-dessous le code à 6 chiffres affiché.',
   Copy: 'Copier',
   Copied: 'Copié',
-  'Administrator actions are recorded here.': 'Les actions des administrateurs sont enregistrées ici.',
+  'Administrator actions are recorded here.':
+    'Les actions des administrateurs sont enregistrées ici.',
   Changes: 'Modifications',
   'Selected payment methods': 'Moyens de paiement sélectionnés',
   'Type a method and press Enter': 'Saisissez un moyen puis appuyez sur Entrée',
@@ -2337,4 +2338,18 @@ export const french: Record<string, string> = {
     'Chaque action d’administrateur, avec les données avant et après la modification.',
   'VAT, payment methods and instructions shown to customers when they pay.':
     'TVA, moyens de paiement et instructions affichés aux clients lors du paiement.',
+  'What needs your attention across customers and subscriptions.':
+    'Ce qui demande votre attention parmi les clients et les abonnements.',
+  Attention: 'À surveiller',
+  'Payments to verify': 'Paiements à vérifier',
+  'Submitted payments awaiting confirmation or rejection.':
+    'Paiements soumis en attente de confirmation ou de rejet.',
+  'Trials ending soon': 'Essais bientôt terminés',
+  'Free trials ending within 7 days.': 'Essais gratuits se terminant sous 7 jours.',
+  'In grace period': 'En période de grâce',
+  'Coverage ended; access continues for up to 7 days.':
+    'Couverture terminée ; l’accès continue jusqu’à 7 jours.',
+  'Active subscriptions': 'Abonnements actifs',
+  'Customers with a current paid period.': 'Clients avec une période payée en cours.',
+  'Customers whose access is blocked.': 'Clients dont l’accès est bloqué.',
 }
