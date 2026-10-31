@@ -10,7 +10,7 @@
     "i18n:check": "node scripts/check-translations.mjs",
     "lint:fix": "eslint . --fix",
     "typecheck": "pnpm api:generate && tsc --noEmit",
-    "test": "pnpm api:generate && node --test eslint/architecture.test.js && vitest run",
+    "test": "pnpm api:generate && node --test eslint/architecture.test.js eslint/structure.test.js && vitest run",
     "api:generate": "node ../api/scripts/generate-contracts.mjs --ui && orval --config orval.config.ts"
   },
   "dependencies": {

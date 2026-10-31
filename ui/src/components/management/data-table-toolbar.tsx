@@ -1,4 +1,4 @@
-import { SlidersHorizontal, X } from 'lucide-react'
+import { ListFilter, X } from 'lucide-react'
 import {
   Children,
   type ComponentProps,
@@ -84,7 +84,7 @@ export function DataTableToolbar({
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <Button type="button" variant="outline">
-                  <SlidersHorizontal data-icon="inline-start" />
+                  <ListFilter data-icon="inline-start" />
                   {t('moreFilters')}
                   {!!activeCount && <span className="tabular-nums">({activeCount})</span>}
                   {!activeCount && onReset && (

@@ -4,6 +4,8 @@ Future SaaS work is governed by the [SaaS architecture and commercial agreement]
 That agreement records approved target decisions and outstanding design details;
 it does not mark multi-tenancy as implemented or replace the current delivery baseline.
 
+Folder structure and naming rules for all features and modules: [feature structure](feature-structure.md).
+
 Latest approved cross-module change: [flexible deletion and cancellation](destructive-actions.md).
 That spec records the agreed cascade/detachment rules, shared impact dialogs and staged implementation.
 

@@ -2,11 +2,11 @@ import {
   Download,
   FileCheck2,
   FileClock,
+  ListFilter,
   Pencil,
   Plus,
   Search,
   Send,
-  SlidersHorizontal,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'wouter'
@@ -86,7 +86,7 @@ export function DocumentListPage({ kind }: { kind: 'Invoice' | 'Estimate' }) {
             />
           </div>
           <Button variant="outline">
-            <SlidersHorizontal size={17} />
+            <ListFilter size={17} />
             {translate('Filters')}
           </Button>
         </div>

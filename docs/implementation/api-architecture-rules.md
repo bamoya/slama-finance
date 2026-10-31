@@ -8,6 +8,9 @@ Features inside a module collaborate directly through services. Different
 modules communicate through root `index.ts` / `<module>.public.ts` entry points.
 Supporting document, notification and audit capabilities live in `src/support/`.
 
+Folder layout and naming rules (layers per domain, banned catch-all names) are in
+[feature structure and naming rules](feature-structure.md).
+
 ## Enforced by ESLint
 
 `api/eslint.config.js` enables the local `architecture/boundaries` rule defined

@@ -111,6 +111,25 @@ export default tseslint.config(
     rules: { 'architecture/boundaries': 'error' },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/features/platform/administration/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'lucide-react',
+              importNames: ['Settings', 'Settings2', 'Cog', 'Sliders', 'SlidersHorizontal'],
+              message:
+                'Generic settings/sliders icons say nothing about the content; pick an icon that describes it (e.g. Landmark for billing, ListFilter for filters). See docs/implementation/feature-structure.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/features/*/index.ts'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },

@@ -14,7 +14,7 @@
     "typecheck": "pnpm contracts:generate && tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "pnpm contracts:generate && vitest run && pnpm test:architecture && pnpm test:generator",
     "test:generator": "node --test scripts/generate-contracts.test.mjs",
-    "test:architecture": "node --test eslint/architecture.test.mjs",
+    "test:architecture": "node --test eslint/architecture.test.mjs eslint/structure.test.mjs",
     "test:integration": "pnpm contracts:generate && vitest run --config vitest.integration.config.ts",
     "contract:check": "pnpm contracts:generate && vitest run tests/contract.test.ts tests/generated-contracts.test.ts",
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
