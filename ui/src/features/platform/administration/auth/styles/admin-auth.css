@@ -43,33 +43,18 @@
 .admin-auth-form-column {
   padding: 38px;
   min-width: 0;
-}
-.admin-auth-stepper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  list-style: none;
-  padding: 4px;
-  margin: 0 0 26px;
-  background: var(--surface-muted);
-  border-radius: 10px;
-}
-.admin-auth-stepper li {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  gap: 8px;
-  min-height: 34px;
-  font-size: 12px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  color: var(--muted);
 }
-.admin-auth-stepper li[data-state='current'] {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--text);
-  font-weight: 600;
+/* Larger screens get a taller, more balanced card. */
+@media (min-width: 1024px) and (min-height: 760px) {
+  .admin-auth-panel {
+    min-height: 460px;
+  }
+  .admin-auth-form-column {
+    padding: 48px;
+  }
 }
 .admin-auth-step-mark {
   display: grid;
@@ -81,14 +66,6 @@
   font-weight: 700;
   background: var(--border);
   color: var(--text);
-}
-.admin-auth-stepper li[data-state='current'] .admin-auth-step-mark {
-  background: var(--accent);
-  color: #fff;
-}
-.admin-auth-stepper li[data-state='done'] .admin-auth-step-mark {
-  background: var(--accent-soft);
-  color: var(--accent);
 }
 .admin-auth-heading {
   margin-bottom: 22px;

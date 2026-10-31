@@ -27,7 +27,6 @@ export function AdminSignInPage() {
   const enrollment = challenge?.step === 'enroll' ? challenge.enrollment : null
   return (
     <SignInLayout
-      step={challenge ? 'code' : 'credentials'}
       title={translate('Sign in')}
       description={translate(
         enrollment

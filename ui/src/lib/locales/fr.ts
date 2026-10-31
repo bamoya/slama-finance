@@ -2295,7 +2295,6 @@ export const french: Record<string, string> = {
   'Check the payment methods.': 'Vérifiez les moyens de paiement.',
   Before: 'Avant',
   After: 'Après',
-  'Sign-in steps': 'Étapes de connexion',
   Code: 'Code',
   'Every sign-in is recorded in the audit log.':
     'Chaque connexion est enregistrée dans le journal d’audit.',
