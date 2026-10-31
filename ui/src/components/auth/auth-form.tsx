@@ -14,6 +14,8 @@ type Field = {
   label: string
   type?: 'text' | 'email' | 'password'
   autoComplete: string
+  /** Shares a row with the neighbouring half field from the small breakpoint up. */
+  half?: boolean
 }
 type ValidationResult =
   | { success: true; data: unknown }
@@ -78,58 +80,60 @@ export function AuthForm({
         if (!form.state.isSubmitting) void form.handleSubmit()
       }}
     >
-      {fields.map((config) => (
-        <form.Field key={config.name} name={config.name}>
-          {(field) => (
-            <div className="space-y-2">
-              <Label htmlFor={config.name}>{config.label}</Label>
-              <div className="auth-field-control relative">
-                <Input
-                  className={revealPasswords && config.type === 'password' ? 'pr-12' : undefined}
-                  id={config.name}
-                  name={config.name}
-                  type={visiblePasswords[config.name] ? 'text' : (config.type ?? 'password')}
-                  autoComplete={config.autoComplete}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  aria-invalid={!!validation[config.name]}
-                  aria-describedby={validation[config.name] ? `${config.name}-error` : undefined}
-                />
-                {revealPasswords && config.type === 'password' && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-md"
-                    className="auth-password-toggle absolute right-1 top-1"
-                    aria-label={translate(
-                      visiblePasswords[config.name] ? 'Hide password' : 'Show password',
-                    )}
-                    aria-pressed={!!visiblePasswords[config.name]}
-                    onClick={() =>
-                      setVisiblePasswords((current) => ({
-                        ...current,
-                        [config.name]: !current[config.name],
-                      }))
-                    }
+      <div className="grid gap-content sm:grid-cols-2">
+        {fields.map((config) => (
+          <form.Field key={config.name} name={config.name}>
+            {(field) => (
+              <div className={config.half ? 'space-y-2' : 'space-y-2 sm:col-span-2'}>
+                <Label htmlFor={config.name}>{config.label}</Label>
+                <div className="auth-field-control relative">
+                  <Input
+                    className={revealPasswords && config.type === 'password' ? 'pr-12' : undefined}
+                    id={config.name}
+                    name={config.name}
+                    type={visiblePasswords[config.name] ? 'text' : (config.type ?? 'password')}
+                    autoComplete={config.autoComplete}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    aria-invalid={!!validation[config.name]}
+                    aria-describedby={validation[config.name] ? `${config.name}-error` : undefined}
+                  />
+                  {revealPasswords && config.type === 'password' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-md"
+                      className="auth-password-toggle absolute right-1 top-1"
+                      aria-label={translate(
+                        visiblePasswords[config.name] ? 'Hide password' : 'Show password',
+                      )}
+                      aria-pressed={!!visiblePasswords[config.name]}
+                      onClick={() =>
+                        setVisiblePasswords((current) => ({
+                          ...current,
+                          [config.name]: !current[config.name],
+                        }))
+                      }
+                    >
+                      {visiblePasswords[config.name] ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </Button>
+                  )}
+                </div>
+                {validation[config.name] && (
+                  <p
+                    id={`${config.name}-error`}
+                    role="alert"
+                    className="text-sm text-[var(--error-text)]"
                   >
-                    {visiblePasswords[config.name] ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </Button>
+                    {validation[config.name]}
+                  </p>
                 )}
               </div>
-              {validation[config.name] && (
-                <p
-                  id={`${config.name}-error`}
-                  role="alert"
-                  className="text-sm text-[var(--error-text)]"
-                >
-                  {validation[config.name]}
-                </p>
-              )}
-            </div>
-          )}
-        </form.Field>
-      ))}
+            )}
+          </form.Field>
+        ))}
+      </div>
       <FormError error={error} />
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(pending) => {

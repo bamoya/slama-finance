@@ -74,6 +74,8 @@ describe('Generated owner authentication UI', () => {
       .mockResolvedValue(response({ message: 'accepted' }, 202))
     setup('register')
     fill('Email address', 'new@example.test')
+    fill('First name', 'Amel')
+    fill('Last name', 'Ben Salah')
     fill('Password', 'owner-password-2026')
     // Shared AuthForm confirmation remains client-only.
     fill('Confirm password', 'different-password-2026')
@@ -86,7 +88,13 @@ describe('Generated owner authentication UI', () => {
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         url: '/v1/owner-auth/register',
-        data: { email: 'new@example.test', password: 'owner-password-2026', locale: 'en' },
+        data: {
+          email: 'new@example.test',
+          password: 'owner-password-2026',
+          firstName: 'Amel',
+          lastName: 'Ben Salah',
+          locale: 'en',
+        },
       }),
     )
   })

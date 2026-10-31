@@ -19,6 +19,7 @@ import { AdministrationLayout } from '../../shared/components/administration-lay
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
 import { SearchField } from '../../shared/components/search-field'
 import { useUrlFilters } from '../../shared/hooks/use-url-filters'
+import { ownerFullName } from '../components/owner-full-name'
 import { customerStatusFilters, subscriptionStatusLabel } from '../components/subscription-labels'
 import { SubscriptionStatusBadge } from '../components/subscription-status-badge'
 
@@ -31,9 +32,11 @@ const columns = [
           href={`${adminPaths.customers}/${customer.id}`}
           className="break-all font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
         >
-          {customer.email}
+          {ownerFullName(customer) ?? customer.email}
         </Link>
-        {customer.name && <p className="text-xs text-[var(--muted)]">{customer.name}</p>}
+        {ownerFullName(customer) && (
+          <p className="break-all text-xs text-[var(--muted)]">{customer.email}</p>
+        )}
       </>
     ),
   },

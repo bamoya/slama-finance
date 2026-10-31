@@ -62,6 +62,8 @@ describe('Public website integration', () => {
     expect(location.history.at(-1)).toBe(ownerAuthPaths.register)
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
     expect(document.documentElement).toHaveClass('marketing-document')
+    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Amel' } })
+    fireEvent.change(screen.getByLabelText('Last name'), { target: { value: 'Ben Salah' } })
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'new@example.test' },
     })
@@ -76,7 +78,13 @@ describe('Public website integration', () => {
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({
           url: '/v1/owner-auth/register',
-          data: { email: 'new@example.test', password: 'owner-password-2026', locale: 'en' },
+          data: {
+            email: 'new@example.test',
+            password: 'owner-password-2026',
+            firstName: 'Amel',
+            lastName: 'Ben Salah',
+            locale: 'en',
+          },
         }),
       ),
     )

@@ -59,6 +59,20 @@ export function OwnerAuthPage({ mode }: { mode: Mode }) {
       )
     }
   }, [mode])
+  const firstNameField = {
+    name: 'firstName',
+    label: translate('First name'),
+    type: 'text' as const,
+    autoComplete: 'given-name',
+    half: true,
+  }
+  const lastNameField = {
+    name: 'lastName',
+    label: translate('Last name'),
+    type: 'text' as const,
+    autoComplete: 'family-name',
+    half: true,
+  }
   const emailField = {
     name: 'email',
     label: translate('Email address'),
@@ -152,7 +166,12 @@ export function OwnerAuthPage({ mode }: { mode: Mode }) {
             mode === 'reset'
               ? [passwordField, confirmationField]
               : mode === 'login' || mode === 'register'
-                ? [emailField, passwordField, ...(mode === 'register' ? [confirmationField] : [])]
+                ? [
+                    ...(mode === 'register' ? [firstNameField, lastNameField] : []),
+                    emailField,
+                    passwordField,
+                    ...(mode === 'register' ? [confirmationField] : []),
+                  ]
                 : [emailField]
           }
           onSubmit={async (value) => {

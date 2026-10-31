@@ -40,6 +40,12 @@ const reasonField = () => screen.getByLabelText('Reason (internal)')
 const codeField = () => screen.getByLabelText('Authenticator code')
 
 describe('customer lifecycle actions', () => {
+  it('titles the page with the full name and shows the email underneath', async () => {
+    setup()
+    expect(await screen.findByRole('heading', { name: 'Sara Alaoui' })).toBeInTheDocument()
+    expect(screen.getByText('owner@example.test')).toBeInTheDocument()
+  })
+
   it('offers blocking, not unblocking, for a customer that is not blocked', async () => {
     setup()
     const trigger = await screen.findByRole('button', { name: 'Actions' })

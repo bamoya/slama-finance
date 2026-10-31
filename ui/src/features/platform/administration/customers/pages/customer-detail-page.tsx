@@ -27,6 +27,7 @@ import { CustomerOrganizationsCard } from '../components/customer-organizations-
 import { CustomerPaymentsCard } from '../components/customer-payments-card'
 import { CustomerRestrictionBanner } from '../components/customer-restriction-banner'
 import { CustomerSubscriptionCard } from '../components/customer-subscription-card'
+import { ownerFullName } from '../components/owner-full-name'
 import { SubscriptionStatusBadge } from '../components/subscription-status-badge'
 
 function Item({ label, value }: { label: string; value: string }) {
@@ -73,10 +74,12 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
           <PageHeader
             brandName="BaMoYa Finance"
             eyebrow={translate('Customer')}
-            title={detail.owner.email}
-            description={translate(
-              'Subscription, organizations and payment history of this customer.',
-            )}
+            title={ownerFullName(detail.owner) ?? detail.owner.email}
+            description={
+              ownerFullName(detail.owner)
+                ? detail.owner.email
+                : translate('Subscription, organizations and payment history of this customer.')
+            }
             backHref={adminPaths.customers}
             status={
               <span className="flex flex-wrap items-center gap-2">
@@ -99,12 +102,7 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
             </CardHeader>
             <CardContent>
               <dl className="grid gap-4 sm:grid-cols-3">
-                <Item
-                  label={translate('Name')}
-                  value={
-                    [detail.owner.firstName, detail.owner.lastName].filter(Boolean).join(' ') || '—'
-                  }
-                />
+                <Item label={translate('Name')} value={ownerFullName(detail.owner) ?? '—'} />
                 <Item
                   label={translate('Registered')}
                   value={displayDateTime(detail.owner.createdAt)}
