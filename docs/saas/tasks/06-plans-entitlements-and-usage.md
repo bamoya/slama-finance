@@ -1,6 +1,6 @@
 # 06 — Implement plans, feature gates and quota accounting
 
-Status: partially implemented. Plan catalog, subscription read API, seven-calendar-day trial, expiry checks, concurrency-safe organization/staff admission and selected API/UI feature gates are implemented. Pooled storage/email consumption metering and owner usage warnings are implemented. Audited exceptions, payment-confirmation administration and the full restore/plan matrix remain open.
+Status: nearly complete. Plan catalog, subscription read API, seven-calendar-day trial, expiry checks, concurrency-safe organization/staff admission and shared API/UI feature gates are implemented. Pooled storage/email consumption metering, usage summaries and owner 80% warnings are implemented. Owner exceptions migration decision 2026-10-31: the organization administrator counts toward the staff quota on all plans; counting is not changed. Audited plan exceptions and payment-confirmation administration remain open (task 12 administration).
 
 Depends on: 03, 04.
 
@@ -9,10 +9,10 @@ Depends on: 03, 04.
 ## Work
 
 - [x] Model Essential/Business/Pro using the approved agreement table: 1/3/unlimited organizations and 0/5/unlimited additional staff per organization.
-- [ ] Implement shared API entitlement/quota checks and UI feature gates; owner bypass applies only to staff permissions.
+- [x] Implement shared API entitlement/quota checks and UI feature gates; owner bypass applies only to staff permissions.
 - [x] Meter pooled storage and monthly business emails; trial has separate finite allowances. Use approved reset/recipient/retry rules from task 00.
-- [ ] Count disabled staff and suspended/pending-deletion organizations; exclude archived staff. Make admission checks concurrency-safe.
-- [ ] Add usage summaries, approaching-limit warnings and audited platform exceptions. Exclude account/security email from business quotas.
+- [x] Count disabled staff and suspended/pending-deletion organizations; exclude archived staff. Make admission checks concurrency-safe. Resolved 2026-10-31: agreed counting stays as implemented — the organization administrator counts as one staff member on every plan, including Essential's single-staff quota; archived/deleted staff are excluded, disabled staff and suspended/pending-deletion organizations are counted. Do not change this counting.
+- [ ] Add usage summaries, approaching-limit warnings and audited platform exceptions. Usage summaries and 80% warnings are implemented; audited platform exceptions remain open and belong with task 12 administration. Exclude account/security email from business quotas.
 
 ## Required implementation discipline
 
