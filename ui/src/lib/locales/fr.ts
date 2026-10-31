@@ -2369,6 +2369,10 @@ export const french: Record<string, string> = {
   'Payment reference': 'Référence du paiement',
   'Your plan is activated only after an administrator verifies your payment. No automatic payment is taken.':
     'Votre offre n’est activée qu’après vérification de votre paiement par un administrateur. Aucun paiement automatique n’est prélevé.',
+  'Your next period is already covered until {{date}}.':
+    'Votre prochaine période est déjà couverte jusqu’au {{date}}.',
+  'Your subscription is suspended. Contact us to reactivate it.':
+    'Votre abonnement est suspendu. Contactez-nous pour le réactiver.',
   'A payment is already awaiting verification.': 'Un paiement est déjà en attente de vérification.',
   'Payment submitted. It will be activated once verified.':
     'Paiement soumis. L’offre sera activée après vérification.',

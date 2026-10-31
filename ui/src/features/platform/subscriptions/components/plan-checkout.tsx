@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Field, FieldLabel } from '../../../../components/ui/field'
 import { Input } from '../../../../components/ui/input'
 import { Select, SelectOption } from '../../../../components/ui/select'
-import { displayDateTime } from '../../../../lib/dates'
+import { ApiError } from '../../../../lib/api-error'
+import { displayDate, displayDateTime } from '../../../../lib/dates'
 import { translate } from '../../../../lib/i18n'
 import { cycleLabel, formatDh, paymentKindLabel, paymentMethodLabel } from './billing-format'
 
@@ -37,17 +38,44 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
     [submitted, setSubmitted] = useState(false)
   const { mutate: requestQuote, reset: resetQuote } = quote
   const loaded = !!billing.data
+  const suspended = s.status === 'suspended'
   useEffect(() => {
-    if (!loaded) return
+    if (!loaded || suspended) return
     resetQuote()
     requestQuote({ data: { planCode, cycle } })
-  }, [loaded, planCode, cycle, requestQuote, resetQuote])
+  }, [loaded, suspended, planCode, cycle, requestQuote, resetQuote])
 
   if (billing.isPending || billing.isError) return <RequestState query={billing} />
   const catalog = billing.data,
     q = quote.data,
     methodValue = method || catalog.paymentMethods[0] || ''
   const blocked = !!s.pendingPayment
+  const renewalCovered = quote.error instanceof ApiError && quote.error.code === 'RENEWAL_EXISTS'
+  const notice = suspended
+    ? translate('Your subscription is suspended. Contact us to reactivate it.')
+    : renewalCovered
+      ? translate('Your next period is already covered until {{date}}.', {
+          date: displayDate(s.paidThroughAt),
+        })
+      : null
+
+  if (notice)
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{translate('Choose a plan and pay')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p
+            role="status"
+            data-testid="checkout-notice"
+            className="rounded-xl bg-[var(--accent-soft)] p-4 text-sm"
+          >
+            {notice}
+          </p>
+        </CardContent>
+      </Card>
+    )
 
   return (
     <Card>

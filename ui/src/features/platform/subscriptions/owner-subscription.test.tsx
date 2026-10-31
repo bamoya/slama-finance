@@ -6,6 +6,7 @@ import { memoryLocation } from 'wouter/memory-location'
 
 import type { OwnerSubscription } from '../../../api/generated/models'
 import { httpClient } from '../../../api/http'
+import { ApiError } from '../../../lib/api-error'
 import { OwnerSubscriptionPage } from './pages/owner-subscription-page'
 
 const clients: QueryClient[] = []
@@ -70,6 +71,7 @@ function mockApi(routes: Record<string, unknown>) {
           locale: 'en',
         },
       }
+    if (body instanceof Error) throw body
     return { data: JSON.stringify(body), status: 200, headers: {} } as never
   })
 }
@@ -269,4 +271,38 @@ it('confirms before cancelling at period end', async () => {
   await waitFor(() =>
     expect(calls.find((c) => c.method === 'PUT')?.data).toEqual({ cancelAtPeriodEnd: true }),
   )
+})
+
+it('shows a neutral notice instead of an error when the next period is already covered', async () => {
+  mockApi({
+    '/v1/owner/subscription': paidBase,
+    '/v1/owner/subscription/billing': catalog,
+    'POST /v1/owner/subscription/quote': new ApiError(
+      409,
+      'RENEWAL_EXISTS',
+      'The next period is already paid.',
+      'req-1',
+    ),
+    'GET /v1/owner/subscription/payments': { data: [] },
+  })
+  renderPage()
+  expect(await screen.findByTestId('checkout-notice')).toHaveTextContent(
+    'Your next period is already covered until',
+  )
+  expect(screen.queryByText(/Reference:/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Submit payment' })).not.toBeInTheDocument()
+})
+
+it('does not request a quote and hides the payment form when suspended', async () => {
+  mockApi({
+    '/v1/owner/subscription': { ...paidBase, status: 'suspended' },
+    '/v1/owner/subscription/billing': catalog,
+    'GET /v1/owner/subscription/payments': { data: [] },
+  })
+  renderPage()
+  expect(await screen.findByTestId('checkout-notice')).toHaveTextContent(
+    'Your subscription is suspended',
+  )
+  expect(calls.some((c) => c.url?.endsWith('/quote'))).toBe(false)
+  expect(screen.queryByRole('button', { name: 'Submit payment' })).not.toBeInTheDocument()
 })
