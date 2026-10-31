@@ -51,12 +51,18 @@ const initial = (step = 2): OwnerOnboarding => ({
   completedAt: null,
 })
 const clients: QueryClient[] = []
-function setup(start?: OwnerOnboarding) {
+function setup(start?: OwnerOnboarding, createFailure?: { status: number; body: unknown }) {
   let stored = start
   let conflict = false
   const request = vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
     if (config.url === '/api/v1/owner-auth/session') return response({ owner })
+    if (config.url === '/api/v1/owner/organization-slugs/availability') {
+      const slug = (config.params as { slug: string }).slug
+      const reason = slug === 'taken-shop' ? 'taken' : slug === 'www' ? 'reserved' : null
+      return response({ slug, available: !reason, reason })
+    }
     if (config.url === '/api/v1/owner/organizations' && config.method === 'POST') {
+      if (createFailure) return response(createFailure.body, createFailure.status)
       const body = config.data as { name: string; requestId: string }
       stored = initial()
       stored.organization.id = body.requestId
@@ -139,12 +145,64 @@ afterEach(() => {
 })
 const next = () => fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
 
+describe('Organization address', () => {
+  const address = () => screen.getByLabelText(/^Organization address/)
+  const name = async (value: string) =>
+    fireEvent.change(await screen.findByLabelText(/^Organization name/), { target: { value } })
+
+  it('suggests an address from the name and formats typing live', async () => {
+    setup()
+    await name('Café  Étoile_du Sud!')
+    expect(address()).toHaveValue('cafe-etoile-du-sud')
+    fireEvent.change(address(), { target: { value: '--Mon  Shop__2--Rabat' } })
+    expect(address()).toHaveValue('mon-shop-2-rabat')
+    expect(screen.getByText(/https:\/\/mon-shop-2-rabat\.localhost:3000/)).toBeInTheDocument()
+    fireEvent.change(address(), { target: { value: 'edited' } })
+    await name('Another name')
+    expect(address()).toHaveValue('edited')
+  })
+
+  it('checks availability after a pause and blocks continuing until available', async () => {
+    const { request } = setup()
+    await name('Taken Shop')
+    expect(screen.getByText('Checking availability…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    expect(await screen.findByText('This address is already taken.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    fireEvent.change(address(), { target: { value: 'www' } })
+    expect(await screen.findByText(/is reserved/)).toBeInTheDocument()
+    fireEvent.change(address(), { target: { value: 'ab' } })
+    expect(screen.getByText(/Use 3 to 40 letters/)).toBeInTheDocument()
+    fireEvent.change(address(), { target: { value: 'free-shop' } })
+    expect(await screen.findByText('This address is available.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+    const checks = request.mock.calls.filter(([c]) => c.url?.includes('slugs'))
+    expect(checks.map(([c]) => (c.params as { slug: string }).slug)).toEqual([
+      'taken-shop',
+      'www',
+      'free-shop',
+    ])
+  })
+
+  it('shows a lost race on submit as an address error', async () => {
+    setup(undefined, { status: 409, body: { code: 'SLUG_TAKEN', message: 'taken' } })
+    await name('Maison Atlas')
+    await screen.findByText('This address is available.')
+    next()
+    expect(await screen.findByText('This address is already taken.')).toHaveAttribute('role', 'alert')
+    expect(address()).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByRole('heading', { name: 'Company identity' })).not.toBeInTheDocument()
+  })
+})
+
 describe('Guided owner organization onboarding', () => {
   it('creates a real draft, accepts empty optional company data and completes all six steps', async () => {
     const { location, stored, request } = setup()
     fireEvent.change(await screen.findByLabelText(/^Organization name/), {
       target: { value: 'Maison Atlas' },
     })
+    expect(screen.getByLabelText(/^Organization address/)).toHaveValue('maison-atlas')
+    await screen.findByText('This address is available.')
     next()
     await screen.findByRole('heading', { name: 'Company identity' })
     expect(location.history.at(-1)).toMatch(/\/organizations\/[a-f0-9-]+\/setup$/)
@@ -208,6 +266,7 @@ describe('Guided owner organization onboarding', () => {
     fireEvent.change(await screen.findByLabelText(/^Organization name/), {
       target: { value: 'Draft' },
     })
+    await screen.findByText('This address is available.')
     let resolve!: (value: ReturnType<typeof response>) => void
     request.mockImplementationOnce(
       () =>

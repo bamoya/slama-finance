@@ -27,12 +27,15 @@ import { RequestState } from '../../../../components/management/request-state'
 import { UnsavedChanges } from '../../../../components/management/unsaved-changes'
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { Card } from '../../../../components/ui/card'
+import { ApiError } from '../../../../lib/api-error'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { organizationLoginUrl } from '../../../../lib/platform-sites'
 import { useOwnerAccount } from '../../identity/hooks/use-owner-account'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
 import { OnboardingFields } from '../components/onboarding/onboarding-fields'
 import { OnboardingPreview } from '../components/onboarding/onboarding-preview'
+import { formatSlug, suggestSlug } from '../components/onboarding/organization-slug'
+import { useSlugAvailability } from '../hooks/use-slug-availability'
 import { onboardingSteps } from '../onboarding-steps'
 
 function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
@@ -66,6 +69,10 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
   const [step, setStep] = useState(initial?.currentStep ?? 1)
   const [error, setError] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
+  const [slug, setSlug] = useState(() => suggestSlug(initial?.configuration.name ?? ''))
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [slugConflict, setSlugConflict] = useState(false)
+  const availability = useSlugAvailability(slug, !initial)
   const form = useRef<HTMLFormElement>(null)
   const previousStep = useRef<number | null>(null)
   useEffect(() => {
@@ -112,10 +119,12 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
   }
   const persist = async (nextStep: number) => {
     if (!saved) {
+      if (availability !== 'available') throw new Error(translate('Choose an available address.'))
       const value = await create.mutateAsync({
         data: {
           requestId: requestId.current,
           name: configuration.name.trim(),
+          slug,
           activity: configuration.activity,
         },
       })
@@ -150,7 +159,8 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
         if (exit && isCurrentOwner()) navigate('/organizations')
       }
     } catch (reason) {
-      setError(reason)
+      if (reason instanceof ApiError && reason.code === 'SLUG_TAKEN') setSlugConflict(true)
+      else setError(reason)
     } finally {
       setBusy(false)
     }
@@ -328,9 +338,27 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
               <OnboardingFields
                 step={step}
                 configuration={configuration}
-                onChange={setConfiguration}
+                onChange={(next) => {
+                  if (!saved && !slugEdited && next.name !== configuration.name)
+                    setSlug(formatSlug(suggestSlug(next.name)))
+                  setConfiguration(next)
+                }}
                 onUpload={(purpose, file) => void uploadImage(purpose, file)}
                 onEdit={setStep}
+                address={
+                  saved
+                    ? undefined
+                    : {
+                        value: slug,
+                        availability,
+                        conflict: slugConflict,
+                        onChange: (value) => {
+                          setSlug(value)
+                          setSlugEdited(true)
+                          setSlugConflict(false)
+                        },
+                      }
+                }
               />
             </fieldset>
             <footer className="onboarding-actions">
@@ -343,7 +371,10 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
                 <ArrowLeft size={15} />
                 {translate('Previous')}
               </Button>
-              <Button type="submit" disabled={busy}>
+              <Button
+                type="submit"
+                disabled={busy || (!saved && step === 1 && availability !== 'available')}
+              >
                 {translate(busy ? 'Saving…' : step === 6 ? 'Create my organization' : 'Continue')}
                 <ArrowRight size={15} />
               </Button>

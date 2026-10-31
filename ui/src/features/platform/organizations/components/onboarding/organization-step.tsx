@@ -1,7 +1,8 @@
 import { Input } from '../../../../../components/ui/input'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import type { OnboardingFieldsProps } from './onboarding-types'
-export function OrganizationStep({ configuration: c, onChange }: OnboardingFieldsProps) {
+import { OrganizationAddressField } from './organization-address-field'
+export function OrganizationStep({ configuration: c, onChange, address }: OnboardingFieldsProps) {
   useUiLanguage()
 
   return (
@@ -18,6 +19,7 @@ export function OrganizationStep({ configuration: c, onChange }: OnboardingField
         />
         <small>{translate('The workspace name can differ from your legal company name.')}</small>
       </label>
+      {address && <OrganizationAddressField {...address} />}
       <label className="onboarding-field is-wide">
         <span>
           {translate('Business activity')} <small>{translate('Optional')}</small>

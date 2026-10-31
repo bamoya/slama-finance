@@ -1395,6 +1395,18 @@ export const french: Record<string, string> = {
   'Package weight': 'Poids du conditionnement',
   'Page actions': 'Actions de la page',
   'Page not found': 'Page introuvable',
+  'Organization address': "Adresse de l'organisation",
+  'Your team signs in at': "Votre équipe se connecte à l'adresse",
+  'Checking availability…': 'Vérification de la disponibilité…',
+  'This address is available.': 'Cette adresse est disponible.',
+  'This address is already taken.': 'Cette adresse est déjà utilisée.',
+  'This address is reserved. Choose another one.':
+    'Cette adresse est réservée. Choisissez-en une autre.',
+  'Use 3 to 40 letters, digits or hyphens, without a hyphen at the start or the end.':
+    'Utilisez de 3 à 40 lettres, chiffres ou tirets, sans tiret au début ni à la fin.',
+  'Only the B-Finance team can change this address later.':
+    "Seule l'équipe B-Finance pourra modifier cette adresse par la suite.",
+  'Choose an available address.': 'Choisissez une adresse disponible.',
   'Back to home': "Retour à l'accueil",
   'Address not found': 'Adresse introuvable',
   'This address does not match any B-Finance site.':

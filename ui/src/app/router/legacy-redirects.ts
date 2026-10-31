@@ -1,4 +1,4 @@
-import { type PlatformSite, adminOrigin, ownerOrigin } from '../../lib/platform-sites'
+import { adminOrigin, ownerOrigin,type PlatformSite } from '../../lib/platform-sites'
 
 export type LegacyRedirect =
   { kind: 'origin'; url: string } | { kind: 'lookup'; organizationId: string; rest: string }

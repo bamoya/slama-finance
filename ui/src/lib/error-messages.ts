@@ -66,6 +66,11 @@ export function errorMessage(error: unknown): string {
       ORGANIZATION_NOT_SUSPENDED: 'Cette organisation n’est pas suspendue.',
       INVITATION_NOT_PENDING:
         'Ce client a déjà défini son mot de passe : aucune invitation en attente.',
+      SLUG_TAKEN: 'Cette adresse est déjà utilisée.',
+      SLUG_RESERVED: 'Cette adresse est réservée. Choisissez-en une autre.',
+      SLUG_INVALID:
+        'Adresse invalide : de 3 à 40 lettres, chiffres ou tirets, sans tiret au début ni à la fin.',
+      SLUG_UNCHANGED: 'Cette adresse est déjà celle de l’organisation.',
       EMAIL_TAKEN: 'Un compte existe déjà avec cette adresse e-mail.',
       INVALID_SUBSCRIPTION: 'L’abonnement indiqué est incomplet ou incohérent.',
       INVALID_COVERAGE:
