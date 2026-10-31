@@ -21,7 +21,7 @@ function reply(data: unknown, status = 200) {
   return { data: status === 204 ? '' : JSON.stringify(data), status, headers: {} } as never
 }
 
-function setup(hash: string) {
+function setup(hash: string, Page = AcceptOwnerInvitationPage) {
   window.history.replaceState({}, '', `/auth/accept-invitation${hash}`)
   const location = memoryLocation({ path: '/auth/accept-invitation', record: true })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -29,7 +29,7 @@ function setup(hash: string) {
   render(
     <QueryClientProvider client={client}>
       <Router hook={location.hook} searchHook={location.searchHook}>
-        <AcceptOwnerInvitationPage />
+        <Page />
       </Router>
     </QueryClientProvider>,
   )
@@ -87,8 +87,12 @@ describe('owner invitation acceptance', () => {
   })
 
   it('rejects a missing token without calling the API', async () => {
-    const request = vi.spyOn(httpClient, 'request')
-    setup('')
+    vi.resetModules() // a fresh page load has no token remembered
+    const { httpClient: freshClient } = await import('../../../api/http')
+    const { AcceptOwnerInvitationPage: Fresh } =
+      await import('./pages/accept-owner-invitation-page')
+    const request = vi.spyOn(freshClient, 'request')
+    setup('', Fresh)
     expect(await screen.findByText('This invitation link is not valid.')).toBeInTheDocument()
     expect(request).not.toHaveBeenCalled()
   })

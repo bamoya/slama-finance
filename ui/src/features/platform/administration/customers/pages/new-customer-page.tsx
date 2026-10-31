@@ -86,7 +86,8 @@ export function AdminNewCustomerPage() {
           : issue.path.includes('coverageEnd')
             ? 'coverageEnd'
             : String(issue.path[0])
-        found[key] ??= validationMessage(issue.message)
+        const empty = key in body && !String(body[key as keyof typeof body]).trim()
+        found[key] ??= empty ? translate('Required') : validationMessage(issue.message)
       }
     if (!body.reason) found.reason = translate('Indicate the reason for this action.')
     if (paid && !found.coverageStart && !found.coverageEnd) {

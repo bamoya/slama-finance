@@ -25,16 +25,22 @@ type State =
   | { step: 'failed'; error: unknown }
   | { step: 'ready'; invitation: OwnerInvitation }
 
-/** The token travels in the URL fragment so it never reaches server logs; read it once, then hide it. */
+let capturedToken = ''
+
+/**
+ * The token travels in the URL fragment so it never reaches server logs. Read it once, hide it,
+ * and keep it for remounts (strict mode, layout changes) that no longer see the fragment.
+ */
 function readToken() {
-  const token = new URLSearchParams(window.location.hash.slice(1)).get('token') ?? ''
+  const token = new URLSearchParams(window.location.hash.slice(1)).get('token')
+  if (token !== null) capturedToken = token
   if (window.location.hash)
     window.history.replaceState(
       window.history.state,
       '',
       window.location.pathname + window.location.search,
     )
-  return token
+  return capturedToken
 }
 
 export function AcceptOwnerInvitationPage() {
