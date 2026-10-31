@@ -13,7 +13,7 @@ export function useOwnerLogout() {
     async logout() {
       await mutation.mutateAsync()
       await clearOwnerQueries(client)
-      navigate('/owner/login', { replace: true })
+      navigate('/login', { replace: true })
     },
   }
 }

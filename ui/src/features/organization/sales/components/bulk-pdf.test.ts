@@ -71,7 +71,7 @@ describe('Bulk PDF collection using generated clients', () => {
     expect(result.outcomes[0]?.status).toBe('success')
     expect(apiRequest).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ url: '/v1/payments/p1/receipt' }),
+      expect.objectContaining({ url: '/api/v1/payments/p1/receipt' }),
       expect.anything(),
     )
   })
@@ -85,7 +85,7 @@ describe('Bulk PDF collection using generated clients', () => {
       .mockResolvedValueOnce(pdf)
     await collectPdfArchive('invoices', [invoice], vi.fn(), (key) => key)
     expect(apiRequest).toHaveBeenLastCalledWith(
-      expect.objectContaining({ url: '/v1/artifacts/new/download' }),
+      expect.objectContaining({ url: '/api/v1/artifacts/new/download' }),
       expect.anything(),
     )
   })

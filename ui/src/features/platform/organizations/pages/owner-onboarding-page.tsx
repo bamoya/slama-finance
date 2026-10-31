@@ -28,6 +28,7 @@ import { UnsavedChanges } from '../../../../components/management/unsaved-change
 import { Button, buttonVariants } from '../../../../components/ui/button'
 import { Card } from '../../../../components/ui/card'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { organizationLoginUrl } from '../../../../lib/platform-sites'
 import { useOwnerAccount } from '../../identity/hooks/use-owner-account'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
 import { OnboardingFields } from '../components/onboarding/onboarding-fields'
@@ -118,8 +119,7 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
           activity: configuration.activity,
         },
       })
-      if (apply(value))
-        navigate(`/owner/organizations/${value.organization.id}/setup`, { replace: true })
+      if (apply(value)) navigate(`/organizations/${value.organization.id}/setup`, { replace: true })
       return value
     }
     const value = await save.mutateAsync({
@@ -147,7 +147,7 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
         apply(value)
       } else {
         await persist(exit ? step : Math.min(step + 1, 6))
-        if (exit && isCurrentOwner()) navigate('/owner/organizations')
+        if (exit && isCurrentOwner()) navigate('/organizations')
       }
     } catch (reason) {
       setError(reason)
@@ -216,7 +216,7 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
           )}
         </p>
         {saved.organization.status === 'active' ? (
-          <a href={`/organizations/${saved.organization.id}/login`} className={buttonVariants()}>
+          <a href={organizationLoginUrl(saved.organization.slug)} className={buttonVariants()}>
             {translate('Open organization')}
             <ArrowRight size={15} />
           </a>

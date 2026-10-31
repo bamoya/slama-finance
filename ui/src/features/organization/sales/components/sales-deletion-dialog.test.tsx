@@ -53,7 +53,7 @@ describe('shared sales deletion dialog', () => {
     expect(checkbox).not.toBeChecked()
     expect(apiRequest).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        url: '/v1/sales/deletion/preview',
+        url: '/api/v1/sales/deletion/preview',
         data: {
           resource: 'estimates',
           cascadeInvoices: false,
@@ -107,7 +107,7 @@ describe('shared sales deletion dialog', () => {
     await waitFor(() => expect(complete).toHaveBeenCalledOnce())
     expect(apiRequest).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        url: '/v1/sales/deletion',
+        url: '/api/v1/sales/deletion',
         data: expect.objectContaining({ token: 'fresh-token', cascadeInvoices: false }),
       }),
       undefined,

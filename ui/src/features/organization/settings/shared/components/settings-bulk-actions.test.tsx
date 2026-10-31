@@ -40,7 +40,7 @@ describe('Settings bulk actions', () => {
     expect(apiRequest).toHaveBeenCalledTimes(2)
     expect(apiRequest).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        url: '/v1/settings/deletion',
+        url: '/api/v1/settings/deletion',
         data: {
           resource: 'bank_accounts',
           records: [
@@ -69,7 +69,7 @@ describe('Settings bulk actions', () => {
     await screen.findByText('1 succeeded · 1 skipped · 0 failed')
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/bank-accounts/archived/restore',
+        url: '/api/v1/bank-accounts/archived/restore',
         data: { expectedVersion: 4 },
       }),
       undefined,

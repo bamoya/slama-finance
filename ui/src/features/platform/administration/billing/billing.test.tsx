@@ -64,12 +64,12 @@ describe('billing settings', () => {
       paymentInstructions: 'RIB 123',
     }
     mockApi((key, data) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/billing-settings') return { body: settings }
-      if (key === 'PUT /v1/admin/billing-settings')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/billing-settings') return { body: settings }
+      if (key === 'PUT /api/v1/admin/billing-settings')
         return { body: { ...settings, ...(data as object) } }
     })
-    renderAt('/admin/billing-settings', <AdminBillingSettingsPage />)
+    renderAt('/billing-settings', <AdminBillingSettingsPage />)
   }
   it('saves a VAT percent as basis points', async () => {
     setup()

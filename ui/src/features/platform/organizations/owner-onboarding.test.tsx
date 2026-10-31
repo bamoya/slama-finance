@@ -7,7 +7,7 @@ import { memoryLocation } from 'wouter/memory-location'
 import { getGetOwnerSessionQueryKey } from '../../../api/generated/identity/identity'
 import type { OwnerOnboarding, SaveOwnerOnboarding } from '../../../api/generated/models'
 import { httpClient } from '../../../api/http'
-import { publicRoutes } from '../../../app/router/public-routes'
+import { ownerRoutes } from '../../../app/router/owner-routes'
 
 const id = '33333333-3333-4333-8333-333333333333'
 const owner = {
@@ -55,8 +55,8 @@ function setup(start?: OwnerOnboarding) {
   let stored = start
   let conflict = false
   const request = vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
-    if (config.url === '/v1/owner-auth/session') return response({ owner })
-    if (config.url === '/v1/owner/organizations' && config.method === 'POST') {
+    if (config.url === '/api/v1/owner-auth/session') return response({ owner })
+    if (config.url === '/api/v1/owner/organizations' && config.method === 'POST') {
       const body = config.data as { name: string; requestId: string }
       stored = initial()
       stored.organization.id = body.requestId
@@ -64,7 +64,7 @@ function setup(start?: OwnerOnboarding) {
       stored.configuration.name = body.name
       return response(stored, 201)
     }
-    if (config.url === '/v1/owner/organizations')
+    if (config.url === '/api/v1/owner/organizations')
       return response({
         items: stored ? [stored.organization] : [],
         page: 1,
@@ -98,7 +98,7 @@ function setup(start?: OwnerOnboarding) {
     throw new Error('Unexpected request ' + config.method + ' ' + config.url)
   })
   const location = memoryLocation({
-    path: start ? `/owner/organizations/${id}/setup` : '/owner/organizations/new',
+    path: start ? `/organizations/${id}/setup` : '/organizations/new',
     record: true,
   })
   const client = new QueryClient({
@@ -108,7 +108,7 @@ function setup(start?: OwnerOnboarding) {
   render(
     <QueryClientProvider client={client}>
       <Router hook={location.hook}>
-        <Switch>{publicRoutes}</Switch>
+        <Switch>{ownerRoutes}</Switch>
       </Router>
     </QueryClientProvider>,
   )
@@ -147,7 +147,7 @@ describe('Guided owner organization onboarding', () => {
     })
     next()
     await screen.findByRole('heading', { name: 'Company identity' })
-    expect(location.history.at(-1)).toMatch(/\/owner\/organizations\/[a-f0-9-]+\/setup$/)
+    expect(location.history.at(-1)).toMatch(/\/organizations\/[a-f0-9-]+\/setup$/)
     next()
     await screen.findByRole('heading', { name: 'Brand identity' })
     next()
@@ -186,7 +186,7 @@ describe('Guided owner organization onboarding', () => {
     await screen.findByRole('heading', { name: 'Company identity' })
     expect(screen.getByLabelText(/^Phone numbers/)).toHaveValue('06 11 22 33 44 / 05 22 33 44 55')
     fireEvent.click(screen.getByRole('button', { name: 'Save & exit' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/owner/organizations'))
+    await waitFor(() => expect(location.history.at(-1)).toBe('/organizations'))
     expect(stored()!.currentStep).toBe(2)
   })
   it('shows VAT only after opting in and retains the editable values on a conflict', async () => {
@@ -224,7 +224,7 @@ describe('Guided owner organization onboarding', () => {
       resolve(response(initial(), 201))
       await new Promise((done) => setTimeout(done, 0))
     })
-    expect(location.history.at(-1)).toBe('/owner/organizations/new')
+    expect(location.history.at(-1)).toBe('/organizations/new')
     expect(
       client.getQueriesData({
         predicate: (query) => String(query.queryKey[0]).includes('/onboarding'),
@@ -233,12 +233,13 @@ describe('Guided owner organization onboarding', () => {
   })
 
   it('warns before leaving unsaved company details and keeps editing on request', async () => {
+    window.history.replaceState({}, '', `/organizations/${id}/setup`)
     const { location } = setup(initial(2))
     fireEvent.change(await screen.findByLabelText(/^City/), { target: { value: 'Rabat' } })
     fireEvent.click(screen.getAllByRole('link', { name: 'Overview' })[0]!)
     expect(await screen.findByRole('dialog')).toHaveTextContent('Discard unsaved changes?')
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
     expect(screen.getByLabelText(/^City/)).toHaveValue('Rabat')
-    expect(location.history.at(-1)).toBe(`/owner/organizations/${id}/setup`)
+    expect(location.history.at(-1)).toBe(`/organizations/${id}/setup`)
   })
 })

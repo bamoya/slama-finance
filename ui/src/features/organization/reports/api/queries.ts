@@ -41,7 +41,8 @@ export const refreshSchedules = (cache: QueryClient) =>
   cache.invalidateQueries({
     predicate: ({ queryKey }) =>
       typeof queryKey[0] === 'string' &&
-      (queryKey[0].startsWith('/v1/report-schedules') || queryKey[0].startsWith('/v1/report-runs')),
+      (queryKey[0].startsWith('/api/v1/report-schedules') ||
+        queryKey[0].startsWith('/api/v1/report-runs')),
   })
 export function useScheduleActions() {
   const create = api.useCreateReportSchedule(),

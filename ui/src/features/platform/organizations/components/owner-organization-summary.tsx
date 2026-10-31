@@ -2,6 +2,7 @@ import { ArrowRight, Building2, Users } from 'lucide-react'
 
 import type { OwnerOrganization } from '../../../../api/generated/models'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { organizationLoginUrl } from '../../../../lib/platform-sites'
 import { OrganizationStatus } from './organization-status'
 
 /** Platform ownership does not establish a staff session; active organizations open their login. */
@@ -11,8 +12,8 @@ export function OwnerOrganizationSummary({ organization }: { organization: Owner
     <a
       href={
         organization.status === 'active'
-          ? `/organizations/${organization.id}/login`
-          : `/owner/organizations/${organization.id}${organization.status === 'setup' ? '/setup' : ''}`
+          ? organizationLoginUrl(organization.slug)
+          : `/organizations/${organization.id}${organization.status === 'setup' ? '/setup' : ''}`
       }
       className="owner-org-summary"
     >

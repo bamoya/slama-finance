@@ -1,8 +1,9 @@
+/** Paths on the admin site (admin.<platform domain>). */
 export const adminPaths = {
-  overview: '/admin',
-  login: '/admin/login',
-  payments: '/admin/payments',
-  customers: '/admin/customers',
-  billing: '/admin/billing-settings',
-  audit: '/admin/audit',
+  overview: '/',
+  login: '/login',
+  payments: '/payments',
+  customers: '/customers',
+  billing: '/billing-settings',
+  audit: '/audit',
 } as const

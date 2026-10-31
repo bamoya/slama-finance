@@ -41,7 +41,7 @@ describe('PDF regeneration dialog', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ready to download'))
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `/v1/documents/invoice/${id}/regenerate-pdf`,
+        url: `/api/v1/documents/invoice/${id}/regenerate-pdf`,
         data: { templateId: null },
       }),
       expect.objectContaining({ timeout: 60000 }),

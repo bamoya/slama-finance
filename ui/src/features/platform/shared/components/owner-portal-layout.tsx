@@ -22,9 +22,9 @@ import { OwnerAccountContext } from '../../identity/hooks/use-owner-account'
 import { useOwnerLogout } from '../hooks/use-owner-logout'
 
 const navigation = [
-  { href: '/owner', label: 'Overview', icon: LayoutDashboard },
-  { href: '/owner/organizations', label: 'Organizations', icon: Building2 },
-  { href: '/owner/subscription', label: 'Subscription', icon: CreditCard },
+  { href: '/', label: 'Overview', icon: LayoutDashboard },
+  { href: '/organizations', label: 'Organizations', icon: Building2 },
+  { href: '/subscription', label: 'Subscription', icon: CreditCard },
 ]
 
 export function OwnerPortalLayout({
@@ -38,12 +38,12 @@ export function OwnerPortalLayout({
   const session = useGetOwnerSession({ query: { retry: false, staleTime: 30_000 } })
   const logout = useOwnerLogout()
   const current =
-    navigation.find((item) => item.href !== '/owner' && pathname.startsWith(item.href)) ??
-    (pathname === '/owner/account' ? { label: 'Owner account' } : navigation[0]!)
+    navigation.find((item) => item.href !== '/' && pathname.startsWith(item.href)) ??
+    (pathname === '/account' ? { label: 'Owner account' } : navigation[0]!)
   return (
     <PortalShell
       className={`owner-portal ${onboarding ? 'owner-onboarding-active' : ''}`}
-      homeHref="/owner"
+      homeHref="/"
       portalLabel="Owner portal"
       navigation={navigation}
       navigationLabel={translate('Owner navigation')}
@@ -73,7 +73,7 @@ export function OwnerPortalLayout({
       accountMenu={
         <>
           <DropdownMenuItem asChild>
-            <Link href="/owner/account">
+            <Link href="/account">
               <UserRound />
               {translate('Owner account')}
             </Link>

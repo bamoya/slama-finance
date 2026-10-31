@@ -6,7 +6,6 @@ import {
   type ReactNode,
   useId,
 } from 'react'
-import { Link } from 'wouter'
 
 import { Button as SharedButton, buttonVariants } from '../../../../components/ui/button'
 import {
@@ -18,9 +17,10 @@ import {
 import { Input } from '../../../../components/ui/input'
 import { Select as SharedSelect, SelectOption } from '../../../../components/ui/select'
 import { Tooltip } from '../../../../components/ui/tooltip'
-import { ownerAuthPaths } from '../../../../lib/public-paths'
+import { ownerAuthPaths, ownerSiteUrl } from '../../../../lib/public-paths'
 import { cn } from '../../../../lib/utils'
 import { useMarketing } from '../hooks/marketing-context'
+import { SiteLink } from './site-link'
 
 type Variant = 'primary' | 'outline' | 'ghost'
 type Size = 'default' | 'sm' | 'icon'
@@ -52,7 +52,7 @@ export function RouteButton({
   className?: string
 }) {
   return (
-    <Link
+    <SiteLink
       href={href}
       className={cn(
         buttonVariants({ variant: variants[variant], size: 'md' }),
@@ -62,7 +62,7 @@ export function RouteButton({
       )}
     >
       {children}
-    </Link>
+    </SiteLink>
   )
 }
 export function TrialButton({
@@ -76,7 +76,11 @@ export function TrialButton({
 }) {
   const { t } = useMarketing()
   return (
-    <RouteButton href={ownerAuthPaths.register} variant={variant} className={className}>
+    <RouteButton
+      href={ownerSiteUrl(ownerAuthPaths.register)}
+      variant={variant}
+      className={className}
+    >
       {children || t('Start free trial')}
       <ArrowUpRight size={16} />
     </RouteButton>

@@ -50,7 +50,7 @@ describe('owner invitation acceptance', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome Sara' })).toBeInTheDocument()
     expect(window.location.hash).toBe('')
     expect(request.mock.calls[0]?.[0]).toMatchObject({
-      url: '/v1/owner-auth/invitation/inspect',
+      url: '/api/v1/owner-auth/invitation/inspect',
       data: { token },
     })
     expect(screen.getByLabelText('Email address')).toHaveAttribute('readonly')
@@ -69,9 +69,9 @@ describe('owner invitation acceptance', () => {
       target: { value: 'a-long-password-2026' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Activate account' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/auth/login?invitation=accepted'))
+    await waitFor(() => expect(location.history.at(-1)).toBe('/login?invitation=accepted'))
     expect(request.mock.calls.at(-1)?.[0]).toMatchObject({
-      url: '/v1/owner-auth/invitation/accept',
+      url: '/api/v1/owner-auth/invitation/accept',
       data: { token, password: 'a-long-password-2026' },
     })
   })
@@ -98,7 +98,7 @@ describe('owner invitation acceptance', () => {
   })
 
   it('tells the owner their account is active on the sign-in page', () => {
-    const location = memoryLocation({ path: '/auth/login?invitation=accepted' })
+    const location = memoryLocation({ path: '/login?invitation=accepted' })
     const client = new QueryClient()
     clients.push(client)
     render(

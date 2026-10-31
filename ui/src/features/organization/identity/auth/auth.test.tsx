@@ -6,8 +6,8 @@ import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
 import type { Session } from '../../../../api/generated/schemas/identity/auth.schemas'
+import { organizationRoutes } from '../../../../app/router/organization-routes'
 import { ProtectedRoute } from '../../../../app/router/protected-route'
-import { publicRoutes } from '../../../../app/router/public-routes'
 import { ApiError } from '../../../../lib/api-error'
 import * as api from './api/auth-client'
 import { AuthLayout } from './components/auth-layout'
@@ -96,8 +96,8 @@ describe('authentication UI', () => {
     expect(localStorage.getItem('slama-theme')).toBe('light')
   })
   it('does not register the removed password URL', () => {
-    const { location } = setup(publicRoutes, '/change-password')
-    expect(location.history.at(-1)).toBe('/change-password')
+    const { location } = setup(organizationRoutes, '/password')
+    expect(location.history.at(-1)).toBe('/password')
     expect(screen.queryByRole('button', { name: 'Save new password' })).not.toBeInTheDocument()
     expect(api.getSession).not.toHaveBeenCalled()
     expect(api.changePassword).not.toHaveBeenCalled()

@@ -125,7 +125,7 @@ function OwnerDashboard() {
                     {translate('Independent spaces, one account.')}
                   </h2>
                 </div>
-                <Link href="/owner/organizations" className="owner-text-link">
+                <Link href="/organizations" className="owner-text-link">
                   {translate('Manage all')}
                   <ArrowRight size={14} />
                 </Link>
@@ -153,7 +153,7 @@ function OwnerDashboard() {
                 ))}
               </div>
               {selected.length > 5 && (
-                <Link href="/owner/organizations" className="owner-text-link">
+                <Link href="/organizations" className="owner-text-link">
                   {translate('View all organizations')}
                   <ArrowRight size={14} />
                 </Link>
@@ -167,7 +167,7 @@ function OwnerDashboard() {
                   <h2>{translate('Your subscription')}</h2>
                 </div>
                 <p>{translate('View your plan and shared storage and email usage.')}</p>
-                <Link href="/owner/subscription" className="owner-text-link">
+                <Link href="/subscription" className="owner-text-link">
                   {translate('View subscription')}
                   <ArrowRight size={14} />
                 </Link>

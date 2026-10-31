@@ -5,7 +5,7 @@ import { getGetAdminSessionQueryKey } from '../../../../../api/generated/adminis
 import { ApiError } from '../../../../../lib/api-error'
 
 export const isAdminKey = (key: readonly unknown[]) =>
-  typeof key[0] === 'string' && key[0].startsWith('/v1/admin')
+  typeof key[0] === 'string' && key[0].startsWith('/api/v1/admin')
 
 /** Any 401 from an admin request means the session is gone: clear it and sign out. */
 export function useSignedOutOnUnauthorized(onSignedOut: () => void) {

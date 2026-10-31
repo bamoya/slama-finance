@@ -7,9 +7,10 @@ import { Router, Switch } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
 import { httpClient } from '../../../api/http'
+import { ownerRoutes } from '../../../app/router/owner-routes'
 import { publicRoutes } from '../../../app/router/public-routes'
 import { setUiLanguage } from '../../../lib/i18n'
-import { ownerAuthPaths } from '../../../lib/public-paths'
+import { ownerAuthPaths, ownerSiteUrl } from '../../../lib/public-paths'
 import { contactChannels, contactDraftUrl } from './data/contact'
 import { marketingFrench, marketingTranslate } from './data/translations'
 
@@ -19,7 +20,7 @@ const sources = import.meta.glob<string>(['./components/*', './pages/*', './mark
   import: 'default',
   eager: true,
 })
-function setup(path = '/') {
+function setup(path = '/', routes = publicRoutes) {
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -38,28 +39,36 @@ function setup(path = '/') {
       <Router hook={location.hook}>{children}</Router>
     </QueryClientProvider>
   )
-  const view = render(<Switch>{publicRoutes}</Switch>, { wrapper })
+  const view = render(<Switch>{routes}</Switch>, { wrapper })
   return { ...view, location, client }
 }
 
 describe('Public website integration', () => {
-  it('links the public trial to the real generated owner registration flow and keeps the public shell on owner authentication', async () => {
+  it('sends the public trial call to action to the owner site', () => {
+    const request = vi.spyOn(httpClient, 'request')
+    const { client } = setup()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('finally together')
+    expect(request).not.toHaveBeenCalled()
+    expect(document.documentElement).toHaveClass('marketing-document')
+    const trial = screen.getAllByRole('link', { name: /Try free for 7 days/ })[0]!
+    expect(trial).toHaveAttribute('href', ownerSiteUrl(ownerAuthPaths.register))
+    expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toHaveAttribute(
+      'href',
+      ownerSiteUrl(ownerAuthPaths.login),
+    )
+    client.clear()
+  })
+
+  it('registers an owner on the owner site inside the public shell', async () => {
     const request = vi.spyOn(httpClient, 'request').mockResolvedValue({
       data: JSON.stringify({ message: 'accepted' }),
       status: 202,
       headers: {},
     } as never)
-    const { location, client } = setup()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('finally together')
-    expect(request).not.toHaveBeenCalled()
-    expect(document.documentElement).toHaveClass('marketing-document')
-    const trial = screen.getAllByRole('link', { name: /Try free for 7 days/ })[0]!
-    expect(trial).toHaveAttribute('href', ownerAuthPaths.register)
-    fireEvent.click(trial)
+    const { client } = setup(ownerAuthPaths.register, ownerRoutes)
     expect(
       await screen.findByRole('heading', { name: 'Create your owner account' }),
     ).toBeInTheDocument()
-    expect(location.history.at(-1)).toBe(ownerAuthPaths.register)
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
     expect(document.documentElement).toHaveClass('marketing-document')
     fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Amel' } })
@@ -77,7 +86,7 @@ describe('Public website integration', () => {
     await waitFor(() =>
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: '/v1/owner-auth/register',
+          url: '/api/v1/owner-auth/register',
           data: {
             email: 'new@example.test',
             password: 'owner-password-2026',
@@ -92,8 +101,8 @@ describe('Public website integration', () => {
     client.clear()
   })
 
-  it.each(['/auth/login', '/owner/login'])('preserves owner sign-in through %s', (path) => {
-    const { client } = setup(path)
+  it('shows owner sign-in at the owner login path', () => {
+    const { client } = setup(ownerAuthPaths.login, ownerRoutes)
     expect(screen.getByRole('heading', { name: 'Owner sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Staff sign in' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('aria-current', 'page')
@@ -111,7 +120,7 @@ describe('Public website integration', () => {
     [ownerAuthPaths.verify, 'Verify your owner email'],
     [ownerAuthPaths.resend, 'Resend verification email'],
   ])('serves the owner account page at %s', (path, title) => {
-    const { client } = setup(path)
+    const { client } = setup(path, ownerRoutes)
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Staff sign in' })).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
@@ -119,7 +128,7 @@ describe('Public website integration', () => {
   })
 
   it('cleans up the public shell when leaving owner authentication', () => {
-    const { client, unmount } = setup(ownerAuthPaths.login)
+    const { client, unmount } = setup(ownerAuthPaths.login, ownerRoutes)
     expect(document.documentElement).toHaveClass('marketing-document')
     unmount()
     expect(document.documentElement).not.toHaveClass('marketing-document')

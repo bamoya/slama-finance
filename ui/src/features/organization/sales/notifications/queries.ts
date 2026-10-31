@@ -24,7 +24,7 @@ export const refreshDocumentNotifications = (
 ) =>
   cache.invalidateQueries({
     predicate: ({ queryKey }) =>
-      queryKey[0] === `/v1/documents/${documentType}/${id}/notifications`,
+      queryKey[0] === `/api/v1/documents/${documentType}/${id}/notifications`,
   })
 export function useSendDocumentActions() {
   const invoice = api.useSendInvoice(),

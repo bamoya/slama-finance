@@ -11,13 +11,13 @@ export const refreshSales = (client: QueryClient) =>
         typeof key === 'string' &&
         (isLiveReportingPath(key) ||
           [
-            '/v1/clients',
-            '/v1/estimates',
-            '/v1/invoices',
-            '/v1/delivery-notes',
-            '/v1/payments',
-            '/v1/products',
-            '/v1/categories',
+            '/api/v1/clients',
+            '/api/v1/estimates',
+            '/api/v1/invoices',
+            '/api/v1/delivery-notes',
+            '/api/v1/payments',
+            '/api/v1/products',
+            '/api/v1/categories',
           ].some((path) => key.startsWith(path)))
       )
     },

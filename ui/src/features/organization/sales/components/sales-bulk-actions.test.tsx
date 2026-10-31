@@ -75,7 +75,7 @@ describe('Sales bulk actions through generated API hooks', () => {
       expect(apiRequest).toHaveBeenCalledTimes(2)
       expect(apiRequest).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          url: '/v1/sales/cancellation',
+          url: '/api/v1/sales/cancellation',
           data: {
             resource,
             records: [
@@ -123,7 +123,7 @@ describe('Sales bulk actions through generated API hooks', () => {
       expect(apiRequest).toHaveBeenLastCalledWith(
         expect.objectContaining({
           method: 'POST',
-          url: '/v1/sales/deletion',
+          url: '/api/v1/sales/deletion',
           data: {
             resource,
             cascadeInvoices: false,
@@ -181,7 +181,7 @@ describe('Sales bulk actions through generated API hooks', () => {
     await screen.findByText('1 succeeded · 0 skipped · 0 failed')
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/invoices/cancellation',
+        url: '/api/v1/invoices/cancellation',
         data: {
           invoices: [{ id, expectedVersion: 7 }],
           token: 'confirmed-impact',
@@ -208,7 +208,7 @@ describe('Sales bulk actions through generated API hooks', () => {
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'POST',
-        url: '/v1/sales/deletion/preview',
+        url: '/api/v1/sales/deletion/preview',
         data: {
           resource: 'invoices',
           cascadeInvoices: false,
@@ -232,7 +232,10 @@ describe('Sales bulk actions through generated API hooks', () => {
     confirm()
     await screen.findByText('1 succeeded · 1 skipped · 0 failed')
     expect(apiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ url: `/v1/payments/${id}/restore`, data: { expectedVersion: 7 } }),
+      expect.objectContaining({
+        url: `/api/v1/payments/${id}/restore`,
+        data: { expectedVersion: 7 },
+      }),
       undefined,
     )
   })
@@ -254,7 +257,7 @@ describe('Sales bulk actions through generated API hooks', () => {
     await screen.findByText('1 succeeded · 1 skipped · 0 failed')
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `/v1/documents/invoice/${id}/regenerate-pdf`,
+        url: `/api/v1/documents/invoice/${id}/regenerate-pdf`,
         data: { design: 'saved' },
       }),
       expect.objectContaining({ timeout: 60000 }),

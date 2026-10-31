@@ -7,7 +7,7 @@ import { translate, useUiLanguage } from '../../../../lib/i18n'
 export function OwnerNewOrganizationButton() {
   useUiLanguage()
   return (
-    <Link href="/owner/organizations/new" className={`${buttonVariants()} owner-create-action`}>
+    <Link href="/organizations/new" className={`${buttonVariants()} owner-create-action`}>
       <Plus size={16} />
       {translate('New organization')}
     </Link>

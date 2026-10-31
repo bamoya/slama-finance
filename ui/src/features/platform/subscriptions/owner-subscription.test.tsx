@@ -80,7 +80,7 @@ function renderPage() {
   clients.push(client)
   render(
     <QueryClientProvider client={client}>
-      <Router hook={memoryLocation({ path: '/owner/subscription' }).hook}>
+      <Router hook={memoryLocation({ path: '/subscription' }).hook}>
         <OwnerSubscriptionPage />
       </Router>
     </QueryClientProvider>,
@@ -142,12 +142,12 @@ it('shows real pooled consumption, quota warnings and the trial-wide end date', 
       emailPeriodEnd: '2026-11-06T10:00:00Z',
     },
   }
-  mockApi({ '/v1/owner/subscription': subscription })
+  mockApi({ '/api/v1/owner/subscription': subscription })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   clients.push(client)
   render(
     <QueryClientProvider client={client}>
-      <Router hook={memoryLocation({ path: '/owner/subscription' }).hook}>
+      <Router hook={memoryLocation({ path: '/subscription' }).hook}>
         <OwnerSubscriptionPage />
       </Router>
     </QueryClientProvider>,
@@ -168,7 +168,7 @@ it('shows real pooled consumption, quota warnings and the trial-wide end date', 
 const payments = { data: [] }
 it('shows exact coverage, grace, retention, next plan and a pending payment notice', async () => {
   mockApi({
-    '/v1/owner/subscription': {
+    '/api/v1/owner/subscription': {
       ...paidBase,
       status: 'past_due',
       graceEndsAt: '2026-12-04T10:00:00Z',
@@ -177,9 +177,9 @@ it('shows exact coverage, grace, retention, next plan and a pending payment noti
       nextPlanCode: 'business',
       pendingPayment: payment('submitted'),
     },
-    '/v1/owner/subscription/billing': catalog,
-    'POST /v1/owner/subscription/quote': quoteBody(2000),
-    '/v1/owner/subscription/payments': payments,
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    '/api/v1/owner/subscription/payments': payments,
   })
   renderPage()
   expect(await screen.findByText('Payment overdue')).toBeInTheDocument()
@@ -197,7 +197,7 @@ it('shows exact coverage, grace, retention, next plan and a pending payment noti
 
 it('shows HT, VAT and TTC from the quote before submitting, and posts the payment', async () => {
   mockApi({
-    '/v1/owner/subscription': {
+    '/api/v1/owner/subscription': {
       ...paidBase,
       planCode: 'trial',
       planName: 'Essai',
@@ -206,10 +206,10 @@ it('shows HT, VAT and TTC from the quote before submitting, and posts the paymen
       cycle: null,
       trialEndsAt: '2026-11-06T10:00:00Z',
     },
-    '/v1/owner/subscription/billing': catalog,
-    'POST /v1/owner/subscription/quote': quoteBody(2000),
-    'POST /v1/owner/subscription/payments': payment('submitted'),
-    'GET /v1/owner/subscription/payments': {
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    'POST /api/v1/owner/subscription/payments': payment('submitted'),
+    'GET /api/v1/owner/subscription/payments': {
       data: [payment('confirmed', 'OLD-1')],
     },
   })
@@ -244,10 +244,10 @@ it('shows HT, VAT and TTC from the quote before submitting, and posts the paymen
 
 it('hides VAT when no tax rate is configured and labels upgrades as prorated', async () => {
   mockApi({
-    '/v1/owner/subscription': paidBase,
-    '/v1/owner/subscription/billing': { ...catalog, taxRateBasisPoints: null },
-    'POST /v1/owner/subscription/quote': quoteBody(null, 'upgrade'),
-    '/v1/owner/subscription/payments': payments,
+    '/api/v1/owner/subscription': paidBase,
+    '/api/v1/owner/subscription/billing': { ...catalog, taxRateBasisPoints: null },
+    'POST /api/v1/owner/subscription/quote': quoteBody(null, 'upgrade'),
+    '/api/v1/owner/subscription/payments': payments,
   })
   renderPage()
   const quote = await screen.findByTestId('quote')
@@ -258,11 +258,11 @@ it('hides VAT when no tax rate is configured and labels upgrades as prorated', a
 
 it('confirms before cancelling at period end', async () => {
   mockApi({
-    '/v1/owner/subscription': paidBase,
-    '/v1/owner/subscription/billing': catalog,
-    'POST /v1/owner/subscription/quote': quoteBody(2000),
-    '/v1/owner/subscription/payments': payments,
-    'PUT /v1/owner/subscription/cancellation': { ...paidBase, cancelAtPeriodEnd: true },
+    '/api/v1/owner/subscription': paidBase,
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    '/api/v1/owner/subscription/payments': payments,
+    'PUT /api/v1/owner/subscription/cancellation': { ...paidBase, cancelAtPeriodEnd: true },
   })
   renderPage()
   fireEvent.click(await screen.findByRole('button', { name: 'Cancel at period end' }))
@@ -275,15 +275,15 @@ it('confirms before cancelling at period end', async () => {
 
 it('shows a neutral notice instead of an error when the next period is already covered', async () => {
   mockApi({
-    '/v1/owner/subscription': paidBase,
-    '/v1/owner/subscription/billing': catalog,
-    'POST /v1/owner/subscription/quote': new ApiError(
+    '/api/v1/owner/subscription': paidBase,
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': new ApiError(
       409,
       'RENEWAL_EXISTS',
       'The next period is already paid.',
       'req-1',
     ),
-    'GET /v1/owner/subscription/payments': { data: [] },
+    'GET /api/v1/owner/subscription/payments': { data: [] },
   })
   renderPage()
   expect(await screen.findByTestId('checkout-notice')).toHaveTextContent(
@@ -295,9 +295,9 @@ it('shows a neutral notice instead of an error when the next period is already c
 
 it('does not request a quote and hides the payment form when suspended', async () => {
   mockApi({
-    '/v1/owner/subscription': { ...paidBase, status: 'suspended' },
-    '/v1/owner/subscription/billing': catalog,
-    'GET /v1/owner/subscription/payments': { data: [] },
+    '/api/v1/owner/subscription': { ...paidBase, status: 'suspended' },
+    '/api/v1/owner/subscription/billing': catalog,
+    'GET /api/v1/owner/subscription/payments': { data: [] },
   })
   renderPage()
   expect(await screen.findByTestId('checkout-notice')).toHaveTextContent(

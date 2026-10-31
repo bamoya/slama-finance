@@ -7,8 +7,7 @@ import { memoryLocation } from 'wouter/memory-location'
 import { httpClient } from '../../../../api/http'
 import { AcceptInvitationPage } from './pages/accept-invitation-page'
 
-const organizationId = '33333333-3333-4333-8333-333333333333',
-  token = 'a'.repeat(43)
+const token = 'a'.repeat(43)
 let client: QueryClient
 const response = (data: unknown, status = 200) =>
   ({ data: JSON.stringify(data), status, headers: {} }) as never
@@ -16,22 +15,18 @@ function setup() {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  const location = memoryLocation({ path: `/organizations/${organizationId}/accept-invitation` })
+  const location = memoryLocation({ path: '/accept-invitation' })
   return render(
     <QueryClientProvider client={client}>
       <Router hook={location.hook}>
-        <AcceptInvitationPage organizationId={organizationId} />
+        <AcceptInvitationPage />
       </Router>
     </QueryClientProvider>,
   )
 }
 beforeEach(() => {
   vi.restoreAllMocks()
-  window.history.replaceState(
-    {},
-    '',
-    `/organizations/${organizationId}/accept-invitation#token=${token}`,
-  )
+  window.history.replaceState({}, '', `/accept-invitation#token=${token}`)
 })
 afterEach(() => {
   client?.clear()
@@ -48,7 +43,7 @@ describe('Organization invitation acceptance', () => {
               expiresAt: '2026-11-02T12:00:00Z',
             }
           : {
-              organizationId,
+              organizationId: '33333333-3333-4333-8333-333333333333',
               email: 'sara@example.test',
               message: 'Sign in to your organization.',
             },
@@ -67,7 +62,7 @@ describe('Organization invitation acceptance', () => {
     await screen.findByText('Your password is saved. Sign in to your organization.')
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `/v1/organizations/${organizationId}/auth/invitations/accept`,
+        url: '/api/v1/organization-auth/invitations/accept',
         data: {
           token,
           firstName: 'Sara',
@@ -81,7 +76,7 @@ describe('Organization invitation acceptance', () => {
     ).toBe(false)
     expect(screen.getByRole('link', { name: 'Sign in to your organization' })).toHaveAttribute(
       'href',
-      `/organizations/${organizationId}/login`,
+      '/login',
     )
   })
   it('shows expired invitations safely and does not show an acceptance form', async () => {

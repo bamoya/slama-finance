@@ -98,7 +98,7 @@ function setup(node: ReactNode, path: string, route = path, initialSession = ses
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  client.setQueryData(['/v1/auth/session'], initialSession)
+  client.setQueryData(['/api/v1/auth/session'], initialSession)
   caches.push(client)
   const location = memoryLocation({ path, record: true })
   render(

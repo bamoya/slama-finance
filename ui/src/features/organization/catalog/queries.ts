@@ -31,8 +31,8 @@ export const useCategoryInsight = (
   enabled = true,
 ) => api.useGetCategoryInsights(id, params, { query: { enabled } })
 export const catalogKeys = {
-  products: '/v1/products',
-  categories: '/v1/categories',
+  products: '/api/v1/products',
+  categories: '/api/v1/categories',
   product: api.getGetProductQueryKey,
   category: api.getGetCategoryQueryKey,
 }
@@ -41,7 +41,7 @@ export const refreshCatalog = (client: QueryClient) =>
     predicate: ({ queryKey }) =>
       typeof queryKey[0] === 'string' &&
       (isLiveReportingPath(queryKey[0]) ||
-        ['/v1/invoices', '/v1/estimates', '/v1/delivery-notes'].some((prefix) =>
+        ['/api/v1/invoices', '/api/v1/estimates', '/api/v1/delivery-notes'].some((prefix) =>
           String(queryKey[0]).startsWith(prefix),
         ) ||
         queryKey[0].startsWith(catalogKeys.products) ||

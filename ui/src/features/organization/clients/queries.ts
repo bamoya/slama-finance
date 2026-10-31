@@ -14,9 +14,13 @@ export const refreshClients = (client: QueryClient) =>
       const path = queryKey[0]
       return (
         typeof path === 'string' &&
-        ['/v1/clients', '/v1/invoices', '/v1/estimates', '/v1/delivery-notes', '/v1/payments'].some(
-          (prefix) => path.startsWith(prefix),
-        )
+        [
+          '/api/v1/clients',
+          '/api/v1/invoices',
+          '/api/v1/estimates',
+          '/api/v1/delivery-notes',
+          '/api/v1/payments',
+        ].some((prefix) => path.startsWith(prefix))
       )
     },
   })

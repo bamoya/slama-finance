@@ -9,8 +9,8 @@ useAdminTestLifecycle()
 describe('admin audit log', () => {
   it('opens the before and after snapshots of an entry', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/audit')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/audit')
         return {
           body: {
             items: [
@@ -32,7 +32,7 @@ describe('admin audit log', () => {
           },
         }
     })
-    renderAt('/admin/audit', <AdminAuditLogPage />)
+    renderAt('/audit', <AdminAuditLogPage />)
     fireEvent.click(await screen.findByRole('button', { name: 'Show changes' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText(/cheque/)).toBeInTheDocument()

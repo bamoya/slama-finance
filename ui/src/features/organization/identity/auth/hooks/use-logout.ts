@@ -1,22 +1,23 @@
 import { organizationStaffLogout } from '../../../../../api/generated/identity/identity'
 import { useLogout as useGeneratedLogout } from '../../../../../api/generated/identity/identity'
-import { documentWorkspace } from '../../../../../api/workspace-scope'
+import { useWorkspace } from '../../workspace/workspace-state'
 import { logout } from '../api/auth-client'
 import { useAuthTransition } from './use-session'
 
 export function useLogout() {
   const transition = useAuthTransition()
+  const workspace = useWorkspace()
   return useGeneratedLogout({
     mutation: {
       mutationFn: async () => {
-        if (documentWorkspace) {
-          await organizationStaffLogout(documentWorkspace.organizationId)
-          window.location.assign(`/organizations/${documentWorkspace.organizationId}/login`)
+        if (workspace) {
+          await organizationStaffLogout()
+          window.location.assign('/login')
           return
         }
         await logout()
       },
-      onSuccess: () => (documentWorkspace ? undefined : transition(null)),
+      onSuccess: () => (workspace ? undefined : transition(null)),
     },
   })
 }

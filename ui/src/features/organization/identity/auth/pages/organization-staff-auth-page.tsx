@@ -17,8 +17,6 @@ import {
   PasswordResetConfirmSchema,
   PasswordResetRequestSchema,
 } from '../../../../../api/generated/schemas/identity/auth.schemas'
-import { organizationStaffLoginParamsSchema } from '../../../../../api/generated/schemas/identity/organization-auth.schemas'
-import { openWorkspace } from '../../../../../api/workspace-scope'
 import { AuthForm } from '../../../../../components/auth/auth-form'
 import { FormError } from '../../../../../components/management/form-error'
 import { Button, buttonVariants } from '../../../../../components/ui/button'
@@ -26,26 +24,18 @@ import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { AuthLayout } from '../components/auth-layout'
 
 type Mode = 'login' | 'forgot' | 'reset' | 'password' | 'account'
-export function OrganizationStaffAuthPage({
-  organizationId,
-  mode,
-}: {
-  organizationId: string
-  mode: Mode
-}) {
+export function OrganizationStaffAuthPage({ mode }: { mode: Mode }) {
   useUiLanguage()
   const client = useQueryClient()
   const [, navigate] = useLocation()
-  const base = `/organizations/${organizationId}`
-  const valid = organizationStaffLoginParamsSchema.safeParse({ organizationId }).success
   const login = useOrganizationStaffLogin()
   const logout = useOrganizationStaffLogout()
   const request = useOrganizationStaffRequestReset()
   const reset = useOrganizationStaffConfirmReset()
   const change = useOrganizationStaffChangePassword()
-  const session = useOrganizationStaffSession(organizationId, {
+  const session = useOrganizationStaffSession({
     query: {
-      enabled: valid && (mode === 'account' || mode === 'password'),
+      enabled: mode === 'account' || mode === 'password',
       retry: false,
       staleTime: 0,
     },
@@ -62,11 +52,10 @@ export function OrganizationStaffAuthPage({
         window.location.pathname + window.location.search,
       )
   }, [mode])
-  if (!valid) return <p role="alert">{translate('Organization not found.')}</p>
   if ((mode === 'account' || mode === 'password') && session.error?.status === 401)
-    return <Redirect to={`${base}/login`} />
+    return <Redirect to={'/login'} />
   if (mode === 'account' && session.data?.purpose === 'password_change')
-    return <Redirect to={`${base}/set-password`} />
+    return <Redirect to={'/set-password'} />
   const email = {
     name: 'email',
     label: translate('Email address'),
@@ -132,21 +121,18 @@ export function OrganizationStaffAuthPage({
         <>
           <p className="mb-6 break-words">{session.data.user.email}</p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              className={buttonVariants({ variant: 'outline' })}
-              href={`${base}/change-password`}
-            >
+            <Link className={buttonVariants({ variant: 'outline' })} href={'/change-password'}>
               {translate('Change password')}
             </Link>
             <Button
               disabled={logout.isPending}
               onClick={async () => {
                 try {
-                  await logout.mutateAsync({ organizationId })
+                  await logout.mutateAsync()
                   client.removeQueries({
-                    queryKey: getOrganizationStaffSessionQueryKey(organizationId),
+                    queryKey: getOrganizationStaffSessionQueryKey(),
                   })
-                  navigate(`${base}/login`)
+                  navigate('/login')
                 } catch {
                   /* Shown by FormError. */
                 }
@@ -188,27 +174,22 @@ export function OrganizationStaffAuthPage({
               if (mode === 'login' || mode === 'password') {
                 const result =
                   mode === 'login'
-                    ? await login.mutateAsync({ organizationId, data: LoginSchema.parse(value) })
-                    : await change.mutateAsync({
-                        organizationId,
-                        data: ChangePasswordSchema.parse(value),
-                      })
-                client.setQueryData(getOrganizationStaffSessionQueryKey(organizationId), result)
-                if (result.purpose === 'full') openWorkspace(organizationId, 'staff')
-                else navigate(`${base}/set-password`)
+                    ? await login.mutateAsync({ data: LoginSchema.parse(value) })
+                    : await change.mutateAsync({ data: ChangePasswordSchema.parse(value) })
+                client.setQueryData(getOrganizationStaffSessionQueryKey(), result)
+                if (result.purpose === 'full') window.location.assign('/workspace/dashboard')
+                else navigate('/set-password')
               } else if (mode === 'forgot') {
                 await request.mutateAsync({
-                  organizationId,
                   data: PasswordResetRequestSchema.parse(value),
                 })
                 setDone(true)
               } else {
                 await reset.mutateAsync({
-                  organizationId,
                   data: PasswordResetConfirmSchema.parse({ ...value, token }),
                 })
                 client.removeQueries({
-                  queryKey: getOrganizationStaffSessionQueryKey(organizationId),
+                  queryKey: getOrganizationStaffSessionQueryKey(),
                 })
                 setDone(true)
               }
@@ -219,11 +200,11 @@ export function OrganizationStaffAuthPage({
       {mode !== 'account' && mode !== 'password' && (
         <nav className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
           {mode === 'login' ? (
-            <Link className="underline" href={`${base}/forgot-password`}>
+            <Link className="underline" href={'/forgot-password'}>
               {translate('Forgot your password?')}
             </Link>
           ) : (
-            <Link className="underline" href={`${base}/login`}>
+            <Link className="underline" href={'/login'}>
               {translate('Back to login')}
             </Link>
           )}

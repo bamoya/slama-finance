@@ -24,7 +24,7 @@ describe('organization unavailable', () => {
     } as never)
     const heard = vi.fn()
     window.addEventListener('slama:organization-unavailable', heard)
-    await expect(apiRequest({ url: '/v1/clients', method: 'GET' })).rejects.toMatchObject({
+    await expect(apiRequest({ url: '/api/v1/clients', method: 'GET' })).rejects.toMatchObject({
       code: 'ORGANIZATION_SUSPENDED',
     })
     window.removeEventListener('slama:organization-unavailable', heard)

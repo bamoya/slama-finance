@@ -53,9 +53,9 @@ export function AdminPaymentsPage() {
     client.invalidateQueries({
       predicate: ({ queryKey }) =>
         typeof queryKey[0] === 'string' &&
-        (queryKey[0].startsWith('/v1/admin/payments') ||
-          queryKey[0].startsWith('/v1/admin/owners') ||
-          queryKey[0].startsWith('/v1/admin/overview')),
+        (queryKey[0].startsWith('/api/v1/admin/payments') ||
+          queryKey[0].startsWith('/api/v1/admin/owners') ||
+          queryKey[0].startsWith('/api/v1/admin/overview')),
     })
   const columns: DataColumn<AdminPayment>[] = [
     { title: 'Customer', render: (p) => <span className="break-all">{p.ownerEmail}</span> },

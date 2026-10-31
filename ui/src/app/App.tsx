@@ -1,59 +1,34 @@
-import { useEffect } from 'react'
-import { useLocation } from 'wouter'
-import { Route, Router, Switch } from 'wouter'
+import { lazy, Suspense, useMemo } from 'react'
+import { Router } from 'wouter'
 
-import { documentWorkspace } from '../api/workspace-scope'
-import { WorkspaceBoundary } from '../features/organization/identity'
-import { SessionEvents } from '../features/organization/identity'
 import { useUiLanguage } from '../lib/i18n'
-import { NotFoundPage } from './pages/not-found-page'
-import { protectedRoutes } from './router/protected-routes'
-import { publicRoutes } from './router/public-routes'
+import { currentSite } from '../lib/platform-sites'
+import { UnknownSitePage } from './pages/unknown-site-page'
 
-function AppRoutes() {
-  useUiLanguage()
-  const [path] = useLocation()
-  const base = documentWorkspace
-    ? `/organizations/${documentWorkspace.organizationId}/workspace`
-    : null
-  const leaving = !!base && !path.startsWith(base + '/') && path !== base
-  useEffect(() => {
-    if (leaving) window.location.replace(window.location.href)
-  }, [leaving])
-  if (leaving) return null
-
-  return (
-    <Switch>
-      <Route path="/organizations/:organizationId/workspace" nest>
-        {({ organizationId }) => (
-          <WorkspaceBoundary
-            key={organizationId}
-            organizationId={organizationId}
-            identityType="staff"
-          >
-            <Switch>
-              {protectedRoutes}
-              <Route>
-                <NotFoundPage />
-              </Route>
-            </Switch>
-          </WorkspaceBoundary>
-        )}
-      </Route>
-      {publicRoutes}
-      {protectedRoutes}
-      <Route component={NotFoundPage} />
-    </Switch>
-  )
-}
+// One route tree per site; each is fetched only on its own host.
+const PublicSite = lazy(() => import('./sites/public-site'))
+const OwnerSite = lazy(() => import('./sites/owner-site'))
+const AdminSite = lazy(() => import('./sites/admin-site'))
+const OrganizationSite = lazy(() => import('./sites/organization-site'))
 
 export default function App() {
   useUiLanguage()
+  const site = useMemo(() => currentSite(), [])
+  if (site.kind === 'unknown') return <UnknownSitePage />
 
   return (
     <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-      <SessionEvents />
-      <AppRoutes />
+      <Suspense fallback={null}>
+        {site.kind === 'public' ? (
+          <PublicSite />
+        ) : site.kind === 'owner' ? (
+          <OwnerSite />
+        ) : site.kind === 'admin' ? (
+          <AdminSite />
+        ) : (
+          <OrganizationSite />
+        )}
+      </Suspense>
     </Router>
   )
 }

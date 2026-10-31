@@ -9,11 +9,12 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'wouter'
+import { useLocation } from 'wouter'
 
 import { PlatformBrand } from '../../../../components/branding/platform-brand'
-import { ownerAuthPaths } from '../../../../lib/public-paths'
+import { ownerAuthPaths, ownerSiteUrl } from '../../../../lib/public-paths'
 import { useMarketing } from '../hooks/marketing-context'
+import { SiteLink as Link } from './site-link'
 import { Button, Eyebrow, IconButton, RouteButton, TrialButton } from './ui'
 export function Brand() {
   return (
@@ -87,7 +88,11 @@ export function Header() {
               <Globe size={15} />
               {locale.toUpperCase()}
             </Button>
-            <RouteButton className="desktop-login" variant="ghost" href={ownerAuthPaths.login}>
+            <RouteButton
+              className="desktop-login"
+              variant="ghost"
+              href={ownerSiteUrl(ownerAuthPaths.login)}
+            >
               {t('Sign in')}
             </RouteButton>
             <TrialButton className="header-trial" />
@@ -115,7 +120,7 @@ export function Header() {
                 <ChevronRight size={16} />
               </Link>
             ))}
-            <RouteButton variant="outline" href={ownerAuthPaths.login}>
+            <RouteButton variant="outline" href={ownerSiteUrl(ownerAuthPaths.login)}>
               {t('Sign in')}
             </RouteButton>
             <TrialButton />
@@ -150,7 +155,7 @@ export function Footer() {
             <h3>{t('Need a hand?')}</h3>
             <Link href="/contact">{t('Contact us')}</Link>
             <Link href="/contact?tab=demo">{t('Take a guided tour')}</Link>
-            <a href="/owner">
+            <a href={ownerSiteUrl('/')}>
               {t('My account')}
               <ArrowUpRight size={12} />
             </a>

@@ -14,8 +14,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const session = useSession()
   const [path] = useLocation()
   if (session.isPending || session.isError) return <SessionStatus />
-  if (!session.data) return <Redirect to="/login" />
-  if (session.data.purpose === 'password_change') return <Redirect to="/set-password" />
+  if (!session.data) return <Redirect to="~/login" />
+  if (session.data.purpose === 'password_change') return <Redirect to="~/set-password" />
   return (
     <AppShell>
       <Can

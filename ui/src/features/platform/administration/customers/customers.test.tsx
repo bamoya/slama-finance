@@ -9,8 +9,8 @@ useAdminTestLifecycle()
 describe('admin customers', () => {
   it('lists customers with a link to the customer page and a subscription badge', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/owners')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/owners')
         return {
           body: {
             items: [
@@ -51,9 +51,9 @@ describe('admin customers', () => {
           },
         }
     })
-    renderAt('/admin/customers', <AdminCustomersPage />)
+    renderAt('/customers', <AdminCustomersPage />)
     const link = await screen.findByRole('link', { name: 'Amel Ben Salah' })
-    expect(link).toHaveAttribute('href', '/admin/customers/22222222-2222-4222-8222-222222222222')
+    expect(link).toHaveAttribute('href', '/customers/22222222-2222-4222-8222-222222222222')
     expect(screen.getByText('owner@example.test')).toBeInTheDocument()
     // Legacy accounts without names fall back to the email as the only line.
     expect(screen.getByRole('link', { name: 'legacy@example.test' })).toBeInTheDocument()
@@ -62,28 +62,28 @@ describe('admin customers', () => {
 
   it('reads status, search and page from the address and sends them to the API', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/owners')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/owners')
         return { body: { items: [], page: 2, pageSize: 20, total: 25 } }
     })
-    renderAt('/admin/customers?status=suspended&search=sara&page=2', <AdminCustomersPage />)
+    renderAt('/customers?status=suspended&search=sara&page=2', <AdminCustomersPage />)
     await screen.findByText('No customers found.')
     const params = (
-      calls.filter((c) => c.url === '/v1/admin/owners').at(-1) as { params?: unknown }
+      calls.filter((c) => c.url === '/api/v1/admin/owners').at(-1) as { params?: unknown }
     ).params
     expect(params).toEqual({ search: 'sara', status: 'suspended', page: 2 })
   })
 
   it('filters customers whose trial has not started', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/owners')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/owners')
         return { body: { items: [], page: 1, pageSize: 20, total: 0 } }
     })
-    renderAt('/admin/customers?status=not_started', <AdminCustomersPage />)
+    renderAt('/customers?status=not_started', <AdminCustomersPage />)
     await screen.findByText('No customers found.')
     const params = (
-      calls.filter((c) => c.url === '/v1/admin/owners').at(-1) as { params?: unknown }
+      calls.filter((c) => c.url === '/api/v1/admin/owners').at(-1) as { params?: unknown }
     ).params
     expect(params).toEqual({ status: 'not_started', page: 1 })
     expect(screen.getByRole('combobox', { name: 'Customer status' })).toHaveTextContent(
@@ -93,15 +93,13 @@ describe('admin customers', () => {
 
   it('resets the filters and stores the status in the address', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/owners')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/owners')
         return { body: { items: [], page: 1, pageSize: 20, total: 0 } }
     })
-    renderAt('/admin/customers?status=expired', <AdminCustomersPage />)
+    renderAt('/customers?status=expired', <AdminCustomersPage />)
     fireEvent.click(await screen.findByRole('button', { name: 'Clear filters' }))
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(/^\/admin\/customers$/),
-    )
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/customers$/))
     expect(
       within(screen.getByRole('region', { name: 'Customers' })).queryByRole('button', {
         name: 'Clear filters',

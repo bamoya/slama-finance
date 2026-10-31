@@ -18,7 +18,7 @@ const owner = {
 }
 const clients: QueryClient[] = []
 function setup(mode: Parameters<typeof OwnerAuthPage>[0]['mode'] | 'account') {
-  const location = memoryLocation({ path: '/owner/login', record: true })
+  const location = memoryLocation({ path: '/login', record: true })
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -57,10 +57,10 @@ describe('Generated owner authentication UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hide password' }))
     expect(screen.getByLabelText('Password')).toHaveValue('owner-password-2026')
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/owner'))
+    await waitFor(() => expect(location.history.at(-1)).toBe('/'))
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/owner-auth/login',
+        url: '/api/v1/owner-auth/login',
         data: { email: 'owner@example.test', password: 'owner-password-2026' },
       }),
     )
@@ -87,7 +87,7 @@ describe('Generated owner authentication UI', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('If the account is eligible')
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/owner-auth/register',
+        url: '/api/v1/owner-auth/register',
         data: {
           email: 'new@example.test',
           password: 'owner-password-2026',
@@ -101,7 +101,7 @@ describe('Generated owner authentication UI', () => {
 
   it('requires an explicit verification action and removes the secret fragment', async () => {
     const raw = 'A'.repeat(43)
-    window.history.replaceState({}, '', `/owner/verify-email#token=${raw}`)
+    window.history.replaceState({}, '', `/verify-email#token=${raw}`)
     const request = vi.spyOn(httpClient, 'request').mockResolvedValue(response(undefined, 204))
     setup('verify')
     expect(window.location.hash).toBe('')
@@ -109,7 +109,10 @@ describe('Generated owner authentication UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify email' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Email verified')
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ url: '/v1/owner-auth/verification/confirm', data: { token: raw } }),
+      expect.objectContaining({
+        url: '/api/v1/owner-auth/verification/confirm',
+        data: { token: raw },
+      }),
     )
   })
 
@@ -135,12 +138,16 @@ describe('Generated owner authentication UI', () => {
     const request = vi
       .spyOn(httpClient, 'request')
       .mockImplementation(async (config) =>
-        config.url === '/v1/owner-auth/session' ? response({ owner }) : response(undefined, 204),
+        config.url === '/api/v1/owner-auth/session'
+          ? response({ owner })
+          : response(undefined, 204),
       )
     const { location } = setup('account')
     expect(await screen.findByText('owner@example.test')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/owner/login'))
-    expect(request).toHaveBeenCalledWith(expect.objectContaining({ url: '/v1/owner-auth/logout' }))
+    await waitFor(() => expect(location.history.at(-1)).toBe('/login'))
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/api/v1/owner-auth/logout' }),
+    )
   })
 })

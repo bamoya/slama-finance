@@ -1395,6 +1395,10 @@ export const french: Record<string, string> = {
   'Package weight': 'Poids du conditionnement',
   'Page actions': 'Actions de la page',
   'Page not found': 'Page introuvable',
+  'Back to home': "Retour à l'accueil",
+  'Address not found': 'Adresse introuvable',
+  'This address does not match any B-Finance site.':
+    'Cette adresse ne correspond à aucun site B-Finance.',
   'Page {{page}} of {{pages}}': 'Page {{page}} sur {{pages}}',
   Pages: 'Pages',
   Paid: 'Réglé',

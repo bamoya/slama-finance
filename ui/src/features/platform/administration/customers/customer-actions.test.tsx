@@ -21,11 +21,11 @@ type Reply = { status?: number; body?: unknown }
 
 function setup(detail = ownerDetail(), post?: (key: string) => Reply | undefined) {
   mockApi((key) => {
-    if (key === 'GET /v1/admin/auth/me') return { body: session }
-    if (key === `GET /v1/admin/owners/${ownerId}`) return { body: detail }
+    if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+    if (key === `GET /api/v1/admin/owners/${ownerId}`) return { body: detail }
     if (key.startsWith('POST ')) return post?.(key) ?? { status: 204 }
   })
-  renderAt(`/admin/customers/${ownerId}`, <AdminCustomerDetailPage customerId={ownerId} />)
+  renderAt(`/customers/${ownerId}`, <AdminCustomerDetailPage customerId={ownerId} />)
 }
 
 async function openAction(name: string) {
@@ -71,7 +71,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Block customer' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/owners/${ownerId}/block`,
+      url: `/api/v1/admin/owners/${ownerId}/block`,
       data: { reason: 'Chargeback dispute', code: '123456' },
     })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -105,7 +105,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(submit)
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/owners/${ownerId}/deletion`,
+      url: `/api/v1/admin/owners/${ownerId}/deletion`,
       data: { reason: 'Customer request', code: '654321' },
     })
   })
@@ -131,7 +131,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unblock customer' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/owners/${ownerId}/unblock`,
+      url: `/api/v1/admin/owners/${ownerId}/unblock`,
       data: { reason: 'Resolved' },
     })
   })
@@ -144,7 +144,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/owners/${ownerId}/subscription/plan`,
+      url: `/api/v1/admin/owners/${ownerId}/subscription/plan`,
       data: { planCode: 'business', reason: 'Goodwill' },
     })
   })
@@ -160,7 +160,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Extend coverage' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/owners/${ownerId}/subscription/extension`,
+      url: `/api/v1/admin/owners/${ownerId}/subscription/extension`,
       data: { days: 15, reason: 'Outage compensation' },
     })
   })
@@ -176,7 +176,7 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Suspend organization' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
-      url: `/v1/admin/organizations/${organizationId}/suspend`,
+      url: `/api/v1/admin/organizations/${organizationId}/suspend`,
       data: { reason: 'Abuse report', code: '111222' },
     })
   })

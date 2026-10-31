@@ -33,7 +33,7 @@ const organization: OwnerOrganization = {
 const clients: QueryClient[] = []
 const response = (data: unknown, status = 200) =>
   ({ data: JSON.stringify(data), status, headers: {} }) as never
-function setup(node: ReactNode, path = '/owner') {
+function setup(node: ReactNode, path = '/') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -55,7 +55,7 @@ afterEach(() => clients.splice(0).forEach((client) => client.clear()))
 describe('Owner organization portal', () => {
   it('renders real owned organizations and filters through the generated API', async () => {
     const request = vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
-      if (config.url === '/v1/owner-auth/session') return response({ owner })
+      if (config.url === '/api/v1/owner-auth/session') return response({ owner })
       const filtered = !!(config.params as ListOwnerOrganizationsParams | undefined)?.q
       return response({
         items: filtered
@@ -76,13 +76,13 @@ describe('Owner organization portal', () => {
     })
     setup(<OwnerOrganizationsPage />)
     const link = await screen.findByRole('link', { name: /Slama Agricole/ })
-    expect(link).toHaveAttribute('href', `/owner/organizations/${organization.id}`)
+    expect(link).toHaveAttribute('href', `/organizations/${organization.id}`)
     expect(screen.getByRole('link', { name: /Atlas/ })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Search organizations'), { target: { value: 'Slama' } })
     await waitFor(() =>
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: '/v1/owner/organizations',
+          url: '/api/v1/owner/organizations',
           params: expect.objectContaining({ q: 'Slama', page: 1 }),
         }),
       ),
@@ -94,11 +94,11 @@ describe('Owner organization portal', () => {
   })
   it('shows organization identity and owner access without linking to unscoped finance', async () => {
     vi.spyOn(httpClient, 'request').mockImplementation(async (config) =>
-      response(config.url === '/v1/owner-auth/session' ? { owner } : organization),
+      response(config.url === '/api/v1/owner-auth/session' ? { owner } : organization),
     )
     setup(
       <OwnerOrganizationPage organizationId={organization.id} />,
-      `/owner/organizations/${organization.id}`,
+      `/organizations/${organization.id}`,
     )
     expect(await screen.findByRole('heading', { name: 'Slama Agricole' })).toBeInTheDocument()
     expect(screen.getByText('Organization owner')).toBeInTheDocument()
@@ -108,7 +108,9 @@ describe('Owner organization portal', () => {
   it('keeps paused organization details available in the owner portal', async () => {
     vi.spyOn(httpClient, 'request').mockImplementation(async (config) =>
       response(
-        config.url === '/v1/owner-auth/session' ? { owner } : { ...organization, status: 'paused' },
+        config.url === '/api/v1/owner-auth/session'
+          ? { owner }
+          : { ...organization, status: 'paused' },
       ),
     )
     setup(<OwnerOrganizationPage organizationId={organization.id} />)
@@ -119,30 +121,30 @@ describe('Owner organization portal', () => {
   })
   it('clears old owner metadata before sign-in without clearing staff authentication', async () => {
     vi.spyOn(httpClient, 'request').mockResolvedValue(response({ owner }))
-    const { client, location } = setup(<OwnerAuthPage mode="login" />, '/owner/login')
-    client.setQueryData(['/v1/owner/organizations'], { private: 'previous-owner' })
+    const { client, location } = setup(<OwnerAuthPage mode="login" />, '/login')
+    client.setQueryData(['/api/v1/owner/organizations'], { private: 'previous-owner' })
     client.setQueryData(sessionKey, { private: 'independent-staff' })
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: owner.email } })
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'owner-password-2026' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/owner'))
-    expect(client.getQueryData(['/v1/owner/organizations'])).toBeUndefined()
+    await waitFor(() => expect(location.history.at(-1)).toBe('/'))
+    expect(client.getQueryData(['/api/v1/owner/organizations'])).toBeUndefined()
     expect(client.getQueryData(sessionKey)).toEqual({ private: 'independent-staff' })
     expect(client.getQueryData(getGetOwnerSessionQueryKey())).toEqual({ owner })
   })
   it('clears owner metadata on logout and preserves the staff session', async () => {
     vi.spyOn(httpClient, 'request').mockImplementation(async (config) =>
-      config.url === '/v1/owner-auth/logout' ? response(undefined, 204) : response({ owner }),
+      config.url === '/api/v1/owner-auth/logout' ? response(undefined, 204) : response({ owner }),
     )
-    const { client, location } = setup(<OwnerAccountPage />, '/owner/account')
-    client.setQueryData(['/v1/owner/organizations'], { private: 'owner-metadata' })
+    const { client, location } = setup(<OwnerAccountPage />, '/account')
+    client.setQueryData(['/api/v1/owner/organizations'], { private: 'owner-metadata' })
     client.setQueryData(sessionKey, { private: 'independent-staff' })
     await screen.findByText(owner.email)
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }))
-    await waitFor(() => expect(location.history.at(-1)).toBe('/owner/login'))
-    expect(client.getQueryData(['/v1/owner/organizations'])).toBeUndefined()
+    await waitFor(() => expect(location.history.at(-1)).toBe('/login'))
+    expect(client.getQueryData(['/api/v1/owner/organizations'])).toBeUndefined()
     expect(client.getQueryData(sessionKey)).toEqual({ private: 'independent-staff' })
   })
 })

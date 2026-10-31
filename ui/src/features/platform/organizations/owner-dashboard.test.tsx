@@ -6,6 +6,7 @@ import { memoryLocation } from 'wouter/memory-location'
 
 import type { ListOwnerOrganizationsParams, OwnerOrganization } from '../../../api/generated/models'
 import { httpClient } from '../../../api/http'
+import { organizationLoginUrl } from '../../../lib/platform-sites'
 import { OwnerDashboardPage } from './pages/owner-dashboard-page'
 
 const response = (data: unknown, status = 200) =>
@@ -35,7 +36,7 @@ function setup() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   clients.push(client)
-  const location = memoryLocation({ path: '/owner', record: true })
+  const location = memoryLocation({ path: '/', record: true })
   render(
     <QueryClientProvider client={client}>
       <Router hook={location.hook}>
@@ -56,7 +57,7 @@ describe('Classic owner dashboard', () => {
       makeOrg(index, index === 50 ? 'paused' : 'active'),
     )
     const request = vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
-      if (config.url === '/v1/owner-auth/session') return response({ owner })
+      if (config.url === '/api/v1/owner-auth/session') return response({ owner })
       const page = (config.params as ListOwnerOrganizationsParams).page ?? 1
       return response({
         items: organizations.slice((page - 1) * 50, page * 50),
@@ -71,7 +72,7 @@ describe('Classic owner dashboard', () => {
     ).toBeInTheDocument()
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/owner/organizations',
+        url: '/api/v1/owner/organizations',
         params: { page: 2, pageSize: 50 },
       }),
     )
@@ -84,7 +85,7 @@ describe('Classic owner dashboard', () => {
     expect(screen.getByText('Consolidated finances are not available yet.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Organization 0/ })).toHaveAttribute(
       'href',
-      `/organizations/${organizations[0]!.id}/login`,
+      organizationLoginUrl(organizations[0]!.slug),
     )
     expect(screen.getAllByRole('link', { name: /open organization/i }).length).toBeGreaterThan(0)
     const availability = screen.getByRole('region', { name: 'Organization availability' })
@@ -98,7 +99,7 @@ describe('Classic owner dashboard', () => {
   it('shows an honest first-organization state without demo organizations or fake balances', async () => {
     vi.spyOn(httpClient, 'request').mockImplementation(async (config) =>
       response(
-        config.url === '/v1/owner-auth/session'
+        config.url === '/api/v1/owner-auth/session'
           ? { owner }
           : { items: [], total: 0, page: 1, pageSize: 50 },
       ),
@@ -111,7 +112,7 @@ describe('Classic owner dashboard', () => {
     expect(
       screen
         .getAllByRole('link', { name: 'New organization' })
-        .every((link) => link.getAttribute('href') === '/owner/organizations/new'),
+        .every((link) => link.getAttribute('href') === '/organizations/new'),
     ).toBe(true)
   })
   it('redirects an expired owner session to owner authentication', async () => {
@@ -119,15 +120,15 @@ describe('Classic owner dashboard', () => {
       response({ code: 'UNAUTHENTICATED', message: 'Unauthorized' }, 401),
     )
     const location = setup()
-    await waitFor(() => expect(location.history.at(-1)).toBe('/auth/login'))
+    await waitFor(() => expect(location.history.at(-1)).toBe('/login'))
   })
 })
 
 it('renders real owner aggregates through the platform analytics endpoint without an organization login', async () => {
   const organization = makeOrg(0)
   vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
-    if (config.url === '/v1/owner-auth/session') return response({ owner })
-    if (config.url === '/v1/owner/analytics/financial-summary')
+    if (config.url === '/api/v1/owner-auth/session') return response({ owner })
+    if (config.url === '/api/v1/owner/analytics/financial-summary')
       return response({
         currency: 'MAD',
         start: '2026-10-01',
@@ -167,6 +168,6 @@ it('renders real owner aggregates through the platform analytics endpoint withou
   ).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /Organization 0/ })).toHaveAttribute(
     'href',
-    `/organizations/${organization.id}/login`,
+    organizationLoginUrl(organization.slug),
   )
 })

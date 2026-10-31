@@ -54,8 +54,8 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
     client.invalidateQueries({
       predicate: ({ queryKey }) =>
         typeof queryKey[0] === 'string' &&
-        ['/v1/admin/payments', '/v1/admin/owners', '/v1/admin/overview'].some((prefix) =>
-          String(queryKey[0]).startsWith(prefix),
+        ['/api/v1/admin/payments', '/api/v1/admin/owners', '/api/v1/admin/overview'].some(
+          (prefix) => String(queryKey[0]).startsWith(prefix),
         ),
     })
   return (

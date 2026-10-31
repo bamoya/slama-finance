@@ -7,13 +7,14 @@ import { buttonVariants } from '../../../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { displayDate } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { organizationLoginUrl } from '../../../../lib/platform-sites'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
 import { OrganizationStatus } from '../components/organization-status'
 
 function OrganizationDetail({ organizationId }: { organizationId: string }) {
   useUiLanguage()
   const result = useGetOwnerOrganization(organizationId, { query: { retry: false } })
-  if (result.error?.status === 401) return <Redirect to="/owner/login" />
+  if (result.error?.status === 401) return <Redirect to="/login" />
   if (result.isPending || result.error || !result.data) return <RequestState query={result} />
   const organization = result.data
   return (
@@ -23,18 +24,18 @@ function OrganizationDetail({ organizationId }: { organizationId: string }) {
         eyebrow={translate('Organizations')}
         title={organization.name}
         description={translate('Organization identity and owner access.')}
-        backHref="/owner"
+        backHref="/"
         status={<OrganizationStatus status={organization.status} />}
         actions={
           organization.status === 'setup' ? (
             <Link
-              href={`/owner/organizations/${organization.id}/setup`}
+              href={`/organizations/${organization.id}/setup`}
               className={buttonVariants({ variant: 'outline' })}
             >
               {translate('Resume setup')}
             </Link>
           ) : organization.status === 'active' ? (
-            <a href={`/organizations/${organization.id}/login`} className={buttonVariants()}>
+            <a href={organizationLoginUrl(organization.slug)} className={buttonVariants()}>
               {translate('Open organization')}
             </a>
           ) : undefined

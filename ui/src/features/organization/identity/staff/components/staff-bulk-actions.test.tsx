@@ -47,7 +47,7 @@ describe('Staff bulk access changes', () => {
     expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeDisabled()
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/v1/staff/deletion/preview',
+        url: '/api/v1/staff/deletion/preview',
         method: 'POST',
         data: { ids: ['other', 'self'] },
       }),
@@ -73,7 +73,7 @@ describe('Staff bulk access changes', () => {
     await screen.findByText('1 succeeded · 2 skipped · 0 failed')
     expect(apiRequest).toHaveBeenCalledTimes(1)
     expect(apiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ url: '/v1/staff/other/disable' }),
+      expect.objectContaining({ url: '/api/v1/staff/other/disable' }),
       undefined,
     )
   })

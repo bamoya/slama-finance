@@ -1,18 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Router, Switch } from 'wouter'
+import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
 import { getOrganizationStaffSessionQueryKey } from '../../../../api/generated/identity/identity'
 import { httpClient } from '../../../../api/http'
-import * as workspaceNavigation from '../../../../api/workspace-scope'
-import { publicRoutes } from '../../../../app/router/public-routes'
+import { organizationRoutes } from '../../../../app/router/organization-routes'
 import { SessionEvents } from './components/session-events'
 import { sessionKey } from './hooks/use-session'
 
-const organizationId = '33333333-3333-4333-8333-333333333333'
-const base = `/organizations/${organizationId}`
 const user = {
   id: '55555555-5555-4555-8555-555555555555',
   email: 'sara@example.test',
@@ -24,7 +21,7 @@ const full = { user, purpose: 'full', permissionKeys: [] }
 const clients: QueryClient[] = []
 const response = (data: unknown, status = 200) =>
   ({ data: JSON.stringify(data), status, headers: {} }) as never
-function setup(path = `${base}/login`) {
+function setup(path = '/login') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -34,7 +31,7 @@ function setup(path = `${base}/login`) {
     <QueryClientProvider client={client}>
       <Router hook={location.hook}>
         <SessionEvents />
-        <Switch>{publicRoutes}</Switch>
+        {organizationRoutes}
       </Router>
     </QueryClientProvider>,
   )
@@ -51,18 +48,19 @@ afterEach(() => {
 })
 
 describe('Organization staff authentication UI', () => {
-  it('uses organization-specific generated endpoints and query keys', async () => {
+  it('uses host-scoped organization endpoints and query keys', async () => {
     const request = vi.spyOn(httpClient, 'request').mockResolvedValue(response(full))
-    const open = vi.spyOn(workspaceNavigation, 'openWorkspace').mockImplementation(() => {})
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
     const { client } = setup()
     fill('Email address', 'sara@example.test')
     fill('Password', 'sara-password-one-2026')
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
-    await waitFor(() => expect(open).toHaveBeenCalledWith(organizationId, 'staff'))
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/workspace/dashboard'))
     expect(request).toHaveBeenCalledWith(
-      expect.objectContaining({ url: `/v1/organizations/${organizationId}/auth/login` }),
+      expect.objectContaining({ url: '/api/v1/organization-auth/login' }),
     )
-    expect(client.getQueryData(getOrganizationStaffSessionQueryKey(organizationId))).toEqual(full)
+    expect(client.getQueryData(getOrganizationStaffSessionQueryKey())).toEqual(full)
     expect(client.getQueryData(sessionKey)).toBeUndefined()
   })
   it('replaces paused access with a static page containing no actions', async () => {
@@ -92,7 +90,7 @@ describe('Organization staff authentication UI', () => {
       if (config.url?.endsWith('/change-password')) return response(full)
       return response({ ...full, purpose: 'password_change' })
     })
-    setup(`${base}/set-password`)
+    setup('/set-password')
     await screen.findByLabelText('New password')
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument()
     fill('New password', 'new-staff-password-2026')
@@ -101,7 +99,7 @@ describe('Organization staff authentication UI', () => {
     await waitFor(() =>
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `/v1/organizations/${organizationId}/auth/change-password`,
+          url: '/api/v1/organization-auth/change-password',
           data: { newPassword: 'new-staff-password-2026' },
         }),
       ),

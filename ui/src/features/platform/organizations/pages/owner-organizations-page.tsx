@@ -40,7 +40,7 @@ function OrganizationList() {
     status: status || undefined,
   }
   const result = useListOwnerOrganizations(params, { query: { retry: false } })
-  if (result.error?.status === 401) return <Redirect to="/owner/login" />
+  if (result.error?.status === 401) return <Redirect to="/login" />
   return (
     <>
       <PageHeader
@@ -48,7 +48,7 @@ function OrganizationList() {
         eyebrow={translate('Owner portal')}
         title={translate('Your organizations')}
         description={translate('Choose an organization to view its details and access status.')}
-        backHref="/owner"
+        backHref="/"
         actions={<OwnerNewOrganizationButton />}
       />
       <section aria-label={translate('Organizations')}>
@@ -95,7 +95,7 @@ function OrganizationList() {
               {result.data.items.map((organization) => (
                 <Link
                   key={organization.id}
-                  href={`/owner/organizations/${organization.id}${organization.status === 'setup' ? '/setup' : ''}`}
+                  href={`/organizations/${organization.id}${organization.status === 'setup' ? '/setup' : ''}`}
                   className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors hover:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 >
                   <div className="mb-5 flex items-center justify-between gap-3">

@@ -31,7 +31,7 @@ describe('owner payment history', () => {
         ],
       },
     }))
-    renderAt('/owner/subscription', <PaymentHistory />)
+    renderAt('/subscription', <PaymentHistory />)
     expect(await screen.findByText(/Transfer not received/)).toBeInTheDocument()
     expect(screen.getAllByText(/Reason:/)).toHaveLength(1)
   })

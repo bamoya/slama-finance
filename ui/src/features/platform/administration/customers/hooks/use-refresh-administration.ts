@@ -1,10 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 
 const refreshed = [
-  '/v1/admin/owners',
-  '/v1/admin/payments',
-  '/v1/admin/overview',
-  '/v1/admin/audit',
+  '/api/v1/admin/owners',
+  '/api/v1/admin/payments',
+  '/api/v1/admin/overview',
+  '/api/v1/admin/audit',
 ]
 
 /** Lifecycle actions change a customer, the lists that show it and the overview counts. */

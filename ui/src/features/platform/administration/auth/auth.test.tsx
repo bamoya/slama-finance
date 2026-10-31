@@ -26,34 +26,35 @@ async function signIn(code = '123456') {
 describe('admin login and two-factor flow', () => {
   it('shows a locally rendered QR code and manual secret on enrollment, then signs in', async () => {
     mockApi((key) => {
-      if (key === 'POST /v1/admin/auth/login')
+      if (key === 'POST /api/v1/admin/auth/login')
         return {
           body: {
             step: 'enroll',
             enrollment: { otpauthUri: 'otpauth://totp/Slama:root?secret=ABCDEF', secret: 'ABCDEF' },
           },
         }
-      if (key === 'POST /v1/admin/auth/2fa') return { body: session }
+      if (key === 'POST /api/v1/admin/auth/2fa') return { body: session }
     })
-    renderAt('/admin/login', <AdminSignInPage />)
+    renderAt('/login', <AdminSignInPage />)
     await signIn()
     expect(await screen.findByRole('img', { name: 'Authenticator QR code' })).toBeInTheDocument()
     expect(screen.getByText('ABCDEF')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/admin'))
-    expect(calls.find((call) => call.url === '/v1/admin/auth/2fa')?.data).toEqual({
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/'))
+    expect(calls.find((call) => call.url === '/api/v1/admin/auth/2fa')?.data).toEqual({
       code: '123456',
     })
-    expect(calls.every((call) => call.url?.startsWith('/v1/admin/'))).toBe(true)
+    expect(calls.every((call) => call.url?.startsWith('/api/v1/admin/'))).toBe(true)
   })
 
   it('verifies without a QR code, keeps the form on a wrong code and restarts when the session is killed', async () => {
     let attempts = 0
     mockApi((key) => {
-      if (key === 'POST /v1/admin/auth/login') return { body: { step: 'verify', enrollment: null } }
-      if (key === 'POST /v1/admin/auth/2fa')
+      if (key === 'POST /api/v1/admin/auth/login')
+        return { body: { step: 'verify', enrollment: null } }
+      if (key === 'POST /api/v1/admin/auth/2fa')
         return apiError(401, ++attempts < 2 ? 'INVALID_CODE' : 'UNAUTHENTICATED')
     })
-    renderAt('/admin/login', <AdminSignInPage />)
+    renderAt('/login', <AdminSignInPage />)
     await signIn('000000')
     expect(screen.queryByRole('img', { name: 'Authenticator QR code' })).not.toBeInTheDocument()
     expect(await screen.findByRole('alert')).toHaveTextContent('server INVALID_CODE')
@@ -65,9 +66,9 @@ describe('admin login and two-factor flow', () => {
 
   it('rejects a malformed code locally', async () => {
     mockApi(() => ({ body: { step: 'verify', enrollment: null } }))
-    renderAt('/admin/login', <AdminSignInPage />)
+    renderAt('/login', <AdminSignInPage />)
     await signIn('12ab')
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    expect(calls.some((call) => call.url === '/v1/admin/auth/2fa')).toBe(false)
+    expect(calls.some((call) => call.url === '/api/v1/admin/auth/2fa')).toBe(false)
   })
 })

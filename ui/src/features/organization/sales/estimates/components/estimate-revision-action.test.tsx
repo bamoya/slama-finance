@@ -52,7 +52,7 @@ it('confirms, creates through the generated API client, and opens the editable d
   )
   expect(apiRequest).toHaveBeenCalledWith(
     expect.objectContaining({
-      url: `/v1/estimates/${estimate.id}/revisions`,
+      url: `/api/v1/estimates/${estimate.id}/revisions`,
       data: { expectedVersion: 4 },
     }),
     undefined,

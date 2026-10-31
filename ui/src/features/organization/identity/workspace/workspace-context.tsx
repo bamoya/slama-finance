@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useGetWorkspaceSession } from '../../../../api/generated/identity/identity'
-import { documentWorkspace, workspaceUrl } from '../../../../api/workspace-scope'
 import { RequestState } from '../../../../components/management/request-state'
 import { Button } from '../../../../components/ui/button'
 import { Card, CardContent } from '../../../../components/ui/card'
@@ -43,7 +42,7 @@ function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
           <CardContent className="space-y-4 p-6">
             <h1 className="text-xl font-semibold">{translate('Organization unavailable')}</h1>
             <RequestState query={query} />
-            <a href={`/organizations/${documentWorkspace?.organizationId}/login`}>
+            <a href="/login">
               <Button variant="outline">{translate('Back')}</Button>
             </a>
           </CardContent>
@@ -52,15 +51,8 @@ function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
     )
   return <WorkspaceContext.Provider value={query.data}>{children}</WorkspaceContext.Provider>
 }
-export function WorkspaceBoundary({
-  organizationId,
-  identityType = 'staff',
-  children,
-}: {
-  organizationId: string
-  identityType?: 'staff'
-  children: ReactNode
-}) {
+/** The organization is the site host; one document never changes tenant. */
+export function WorkspaceBoundary({ children }: { children: ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -71,12 +63,8 @@ export function WorkspaceBoundary({
       }),
   )
   const lifetime = useRef(0)
-  const matches =
-    documentWorkspace?.organizationId === organizationId &&
-    documentWorkspace.identityType === identityType
   useEffect(() => {
     const ticket = ++lifetime.current
-    if (!matches) window.location.replace(workspaceUrl(organizationId, identityType))
     return () => {
       queueMicrotask(() => {
         if (lifetime.current === ticket) {
@@ -85,8 +73,7 @@ export function WorkspaceBoundary({
         }
       })
     }
-  }, [client, matches, organizationId, identityType])
-  if (!matches) return null
+  }, [client])
   return (
     <QueryClientProvider client={client}>
       <WorkspaceSessionBoundary>{children}</WorkspaceSessionBoundary>

@@ -42,12 +42,12 @@ describe('Payment receipt actions', () => {
     await waitFor(() => expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled())
     expect(apiRequest).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ url: `/v1/payments/${payment.id}/receipt`, method: 'POST' }),
+      expect.objectContaining({ url: `/api/v1/payments/${payment.id}/receipt`, method: 'POST' }),
       expect.anything(),
     )
     expect(apiRequest).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ url: '/v1/artifacts/artifact-id/download' }),
+      expect.objectContaining({ url: '/api/v1/artifacts/artifact-id/download' }),
       expect.objectContaining({ responseType: 'blob' }),
     )
     expect(screen.getByRole('button', { name: 'Regenerate PDF' })).toBeEnabled()

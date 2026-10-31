@@ -62,9 +62,9 @@ export const refreshSettings = (client: QueryClient) =>
         settingsKeys.company[0],
         settingsKeys.banks[0],
         settingsKeys.templates[0],
-        '/v1/invoices',
-        '/v1/estimates',
-        '/v1/payments',
-        '/v1/delivery-notes',
+        '/api/v1/invoices',
+        '/api/v1/estimates',
+        '/api/v1/payments',
+        '/api/v1/delivery-notes',
       ].some((path) => queryKey[0] === path || (queryKey[0] as string).startsWith(path + '/')),
   })

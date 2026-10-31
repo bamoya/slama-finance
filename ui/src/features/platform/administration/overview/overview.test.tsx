@@ -9,8 +9,8 @@ useAdminTestLifecycle()
 describe('admin overview', () => {
   it('shows the attention cards and links pending payments to the queue', async () => {
     mockApi((key) => {
-      if (key === 'GET /v1/admin/auth/me') return { body: session }
-      if (key === 'GET /v1/admin/overview')
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/overview')
         return {
           body: {
             pendingPayments: 3,
@@ -22,18 +22,18 @@ describe('admin overview', () => {
           },
         }
     })
-    renderAt('/admin', <AdminOverviewPage />)
+    renderAt('/', <AdminOverviewPage />)
     const pending = await screen.findByRole('link', { name: /Payments to verify/ })
-    expect(pending).toHaveAttribute('href', '/admin/payments?status=submitted')
+    expect(pending).toHaveAttribute('href', '/payments?status=submitted')
     expect(pending).toHaveTextContent('3')
     expect(screen.getByRole('link', { name: /Expired/ })).toHaveTextContent('4')
     expect(screen.getByRole('link', { name: /Expired/ })).toHaveAttribute(
       'href',
-      '/admin/customers?status=expired',
+      '/customers?status=expired',
     )
     expect(screen.getByRole('link', { name: /Suspended subscriptions/ })).toHaveAttribute(
       'href',
-      '/admin/customers?status=suspended',
+      '/customers?status=suspended',
     )
   })
 })

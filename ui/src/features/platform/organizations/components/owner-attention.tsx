@@ -33,9 +33,7 @@ export function OwnerAttention({ organizations }: { organizations: OwnerOrganiza
                   : ShieldAlert
             return (
               <li key={org.id}>
-                <Link
-                  href={`/owner/organizations/${org.id}${org.status === 'setup' ? '/setup' : ''}`}
-                >
+                <Link href={`/organizations/${org.id}${org.status === 'setup' ? '/setup' : ''}`}>
                   <span className="owner-attention-icon">
                     <Icon size={18} />
                   </span>
@@ -59,7 +57,7 @@ export function OwnerAttention({ organizations }: { organizations: OwnerOrganiza
         </div>
       )}
       {attention.length > 3 && (
-        <Link className="owner-text-link" href="/owner/organizations">
+        <Link className="owner-text-link" href="/organizations">
           {translate('View all organizations')}
           <ArrowRight size={14} />
         </Link>

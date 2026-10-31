@@ -25,7 +25,7 @@ export function useClientActivity(clientId: string) {
     'payments.read',
   ].map((key) => can(key))
   return useQuery({
-    queryKey: ['/v1/clients', clientId, 'activity-tree', permissions],
+    queryKey: ['/api/v1/clients', clientId, 'activity-tree', permissions],
     queryFn: async ({ signal }) => {
       const [estimates, invoices, deliveries, payments] = await Promise.all([
         permissions[0]

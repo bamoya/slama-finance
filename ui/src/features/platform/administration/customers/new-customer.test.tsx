@@ -18,10 +18,10 @@ useAdminTestLifecycle()
 
 function setup(reply?: { status: number; body: unknown }) {
   mockApi((key) => {
-    if (key === 'GET /v1/admin/auth/me') return { body: session }
-    if (key === 'POST /v1/admin/owners') return reply ?? { status: 201, body: ownerDetail() }
+    if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+    if (key === 'POST /api/v1/admin/owners') return reply ?? { status: 201, body: ownerDetail() }
   })
-  renderAt('/admin/customers/new', <AdminNewCustomerPage />)
+  renderAt('/customers/new', <AdminNewCustomerPage />)
 }
 
 const fill = (label: string, value: string) =>
@@ -63,7 +63,7 @@ describe('new customer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create customer' }))
     await waitFor(() => expect(created()).toHaveLength(1))
     expect(created()[0]).toMatchObject({
-      url: '/v1/admin/owners',
+      url: '/api/v1/admin/owners',
       data: {
         firstName: 'Sara',
         lastName: 'Alaoui',
@@ -74,7 +74,7 @@ describe('new customer', () => {
       },
     })
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(`/admin/customers/${ownerId}`),
+      expect(screen.getByTestId('location')).toHaveTextContent(`/customers/${ownerId}`),
     )
   })
 

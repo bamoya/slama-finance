@@ -179,7 +179,7 @@ export function OwnerAuthPage({ mode }: { mode: Mode }) {
               const session = await login.mutateAsync({ data: OwnerLoginSchema.parse(value) })
               await clearOwnerQueries(client)
               client.setQueryData(getGetOwnerSessionQueryKey(), session)
-              navigate('/owner')
+              navigate('/')
             } else if (mode === 'register') {
               await register.mutateAsync({
                 data: OwnerRegisterSchema.parse({

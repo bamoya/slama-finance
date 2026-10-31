@@ -41,7 +41,7 @@ it('deletes eligible roles only and explains that staff assignments are removed'
   await screen.findByText('1 succeeded · 2 skipped · 0 failed')
   expect(apiRequest).toHaveBeenCalledTimes(1)
   expect(apiRequest).toHaveBeenCalledWith(
-    expect.objectContaining({ url: '/v1/rbac/roles/role', method: 'DELETE' }),
+    expect.objectContaining({ url: '/api/v1/rbac/roles/role', method: 'DELETE' }),
     undefined,
   )
 })

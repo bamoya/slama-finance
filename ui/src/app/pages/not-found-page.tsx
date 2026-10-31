@@ -2,7 +2,13 @@ import { Link } from 'wouter'
 
 import { translate, useUiLanguage } from '../../lib/i18n'
 
-export function NotFoundPage() {
+export function NotFoundPage({
+  home = '/',
+  label = 'Back to home',
+}: {
+  home?: string
+  label?: string
+}) {
   useUiLanguage()
 
   return (
@@ -12,8 +18,8 @@ export function NotFoundPage() {
         <h1 className="mt-3 text-4xl font-bold text-[var(--text)]">
           {translate('Page not found')}
         </h1>
-        <Link href="/dashboard" className="mt-6 inline-block font-semibold text-[var(--accent)]">
-          {translate('Back to dashboard')}
+        <Link href={home} className="mt-6 inline-block font-semibold text-[var(--accent)]">
+          {translate(label)}
         </Link>
       </div>
     </main>

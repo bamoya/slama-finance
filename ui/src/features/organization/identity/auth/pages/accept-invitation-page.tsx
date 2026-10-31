@@ -8,7 +8,6 @@ import {
 import {
   AcceptStaffInvitationInputSchema,
   InspectStaffInvitationInputSchema,
-  organizationStaffInspectInvitationParamsSchema,
 } from '../../../../../api/generated/schemas/identity/staff-invitations.schemas'
 import { AuthForm } from '../../../../../components/auth/auth-form'
 import { FormError } from '../../../../../components/management/form-error'
@@ -16,7 +15,7 @@ import { buttonVariants } from '../../../../../components/ui/button'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { AuthLayout } from '../components/auth-layout'
 
-export function AcceptInvitationPage({ organizationId }: { organizationId: string }) {
+export function AcceptInvitationPage() {
   useUiLanguage()
   const [done, setDone] = useState(false)
   const [token] = useState(
@@ -25,9 +24,7 @@ export function AcceptInvitationPage({ organizationId }: { organizationId: strin
   const inspect = useOrganizationStaffInspectInvitation({ mutation: { gcTime: 0 } }),
     accept = useOrganizationStaffAcceptInvitation({ mutation: { gcTime: 0 } })
   const { mutate } = inspect
-  const valid =
-    InspectStaffInvitationInputSchema.safeParse({ token }).success &&
-    organizationStaffInspectInvitationParamsSchema.safeParse({ organizationId }).success
+  const valid = InspectStaffInvitationInputSchema.safeParse({ token }).success
   useEffect(() => {
     if (window.location.hash)
       window.history.replaceState(
@@ -35,8 +32,8 @@ export function AcceptInvitationPage({ organizationId }: { organizationId: strin
         '',
         window.location.pathname + window.location.search,
       )
-    if (valid) mutate({ organizationId, data: { token } })
-  }, [mutate, organizationId, token, valid])
+    if (valid) mutate({ data: { token } })
+  }, [mutate, token, valid])
   return (
     <AuthLayout
       brand="platform"
@@ -97,7 +94,6 @@ export function AcceptInvitationPage({ organizationId }: { organizationId: strin
             onSubmit={async (value) => {
               try {
                 await accept.mutateAsync({
-                  organizationId,
                   data: AcceptStaffInvitationInputSchema.parse({ ...value, token }),
                 })
                 setDone(true)
@@ -110,7 +106,7 @@ export function AcceptInvitationPage({ organizationId }: { organizationId: strin
       ) : null}
       <Link
         className={buttonVariants({ variant: 'outline', className: 'mt-4 w-full' })}
-        href={`/organizations/${organizationId}/login`}
+        href="/login"
       >
         {translate('Sign in to your organization')}
       </Link>

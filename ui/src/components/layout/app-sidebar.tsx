@@ -116,9 +116,7 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
               className="ui-action rounded-xl border border-transparent"
             >
               <Link
-                href={
-                  workspace ? `~/organizations/${workspace.organization.id}/account` : '/profile'
-                }
+                href={workspace ? `~/account` : '/profile'}
                 aria-label={translate('View my profile')}
                 aria-current={pathname.startsWith('/profile') ? 'page' : undefined}
                 onClick={closeMobile}

@@ -63,8 +63,8 @@ export function classifyHost(host: string, domain: string): PlatformSite {
   return { kind: 'organization', slug: label }
 }
 
-export function currentSite(): PlatformSite {
-  return classifyHost(window.location.host, platformDomain())
+export function currentSite(host = window.location.host): PlatformSite {
+  return classifyHost(host, platformDomain())
 }
 
 function scheme() {
