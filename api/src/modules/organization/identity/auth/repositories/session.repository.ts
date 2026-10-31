@@ -23,7 +23,7 @@ export function createSessionRepository(database: () => Database, organizationId
           and(
             eq(sessions.tokenHash, tokenHash),
             staffOrganizationScope(sessions.organizationId, organizationId),
-            sql`exists(select 1 from organizations where id=${sessions.organizationId} and activated_at is not null and paused_at is null and suspended_at is null and deletion_requested_at is null)`,
+            sql`exists(select 1 from organizations where id=${sessions.organizationId} and activated_at is not null and paused_at is null and suspended_at is null and deletion_requested_at is null and not exists(select 1 from platform_users p where p.id=organizations.owner_id and (p.blocked_at is not null or p.deletion_requested_at is not null)))`,
             gt(sessions.expiresAt, new Date()),
             isNull(sessions.revokedAt),
           ),
@@ -39,7 +39,7 @@ export function createSessionRepository(database: () => Database, organizationId
           and(
             eq(sessions.tokenHash, tokenHash),
             staffOrganizationScope(sessions.organizationId, organizationId),
-            sql`exists(select 1 from organizations where id=${sessions.organizationId} and activated_at is not null and paused_at is null and suspended_at is null and deletion_requested_at is null)`,
+            sql`exists(select 1 from organizations where id=${sessions.organizationId} and activated_at is not null and paused_at is null and suspended_at is null and deletion_requested_at is null and not exists(select 1 from platform_users p where p.id=organizations.owner_id and (p.blocked_at is not null or p.deletion_requested_at is not null)))`,
           ),
         )
     },

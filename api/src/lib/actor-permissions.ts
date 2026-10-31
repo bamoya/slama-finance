@@ -14,6 +14,7 @@ export async function actorPermissionKeys(
     select 1 from actors a join organizations o on o.id=${scope}
     left join users u on u.id=a.staff_id
     where a.id=${actor}::uuid and o.activated_at is not null and o.paused_at is null and o.suspended_at is null and o.deletion_requested_at is null
+    and not exists(select 1 from platform_users pu where pu.id=o.owner_id and (pu.blocked_at is not null or pu.deletion_requested_at is not null))
     and ((a.kind='staff' and u.organization_id=o.id and u.disabled_at is null and u.archived_at is null and u.deleted_at is null and not u.must_change_password
       and exists(select 1 from user_roles ur join role_permissions rp on rp.role_id=ur.role_id where ur.user_id=u.id and rp.permission_id=p.id)))
   ) order by p.key`)

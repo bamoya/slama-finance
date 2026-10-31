@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm'
 
-import { organizations } from '../../db/schema/organizations.js'
+import { organizations, platformUsers } from '../../db/schema/organizations.js'
 import { ownerSubscriptions, subscriptionPlans } from '../../db/schema/subscriptions.js'
 import type { Database } from './db.js'
 import { inTenantScope } from './tenant-database.js'
@@ -20,6 +20,7 @@ export function createTenantWorkerRunner(database: () => Database) {
         return tx
           .select({ id: organizations.id })
           .from(organizations)
+          .innerJoin(platformUsers, eq(platformUsers.id, organizations.ownerId))
           .leftJoin(ownerSubscriptions, eq(ownerSubscriptions.ownerId, organizations.ownerId))
           .leftJoin(subscriptionPlans, eq(subscriptionPlans.code, ownerSubscriptions.planCode))
           .where(
@@ -33,6 +34,10 @@ export function createTenantWorkerRunner(database: () => Database) {
                     isNull(organizations.pausedAt),
                     isNull(organizations.suspendedAt),
                     isNull(organizations.deletionRequestedAt),
+                    // Administrator restrictions: suspended subscription, blocked or deleting customer.
+                    isNull(ownerSubscriptions.suspendedAt),
+                    isNull(platformUsers.blockedAt),
+                    isNull(platformUsers.deletionRequestedAt),
                   ]
                 : []),
             ),
