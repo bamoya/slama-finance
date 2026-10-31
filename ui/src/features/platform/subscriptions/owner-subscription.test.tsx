@@ -53,6 +53,7 @@ const payment = (status: string, reference = 'REF-1') => ({
   coverageEnd: status === 'confirmed' ? '2026-11-01T10:00:00Z' : null,
   submittedAt: '2026-10-01T09:00:00Z',
   decidedAt: status === 'submitted' ? null : '2026-10-01T10:00:00Z',
+  rejectionReason: status === 'rejected' ? 'Transfer not received' : null,
 })
 const calls: { url?: string; method?: string; data?: unknown }[] = []
 function mockApi(routes: Record<string, unknown>) {

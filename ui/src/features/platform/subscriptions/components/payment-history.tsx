@@ -66,6 +66,11 @@ export function PaymentHistory() {
                         }
                         tone={paymentStatusTone(p.status)}
                       />
+                      {p.status === 'rejected' && p.rejectionReason && (
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {translate('Reason:')} {p.rejectionReason}
+                        </p>
+                      )}
                     </td>
                     <td className="whitespace-nowrap">
                       {p.coverageStart && p.coverageEnd

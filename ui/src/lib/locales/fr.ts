@@ -2235,4 +2235,62 @@ export const french: Record<string, string> = {
   'Payment submitted. It will be activated once verified.':
     'Paiement soumis. L’offre sera activée après vérification.',
   'Submit payment': 'Soumettre le paiement',
+  'Administration navigation': 'Navigation de l’administration',
+  'Billing settings': 'Paramètres de facturation',
+  'Audit log': 'Journal d’audit',
+  'Reject payment': 'Rejeter le paiement',
+  'The owner is told why the payment was rejected. This cannot be undone.':
+    'Le propriétaire verra le motif du rejet. Cette action est irréversible.',
+  'Confirming activates or extends the owner subscription. This cannot be undone.':
+    'La confirmation active ou prolonge l’abonnement du propriétaire. Cette action est irréversible.',
+  Owner: 'Propriétaire',
+  'Rejection reason': 'Motif du rejet',
+  'Indicate why the payment is rejected.': 'Indiquez le motif du rejet.',
+  'Received reference (optional)': 'Référence reçue (facultatif)',
+  Actor: 'Acteur',
+  Action: 'Action',
+  Target: 'Cible',
+  'No audit entries yet.': 'Aucune entrée dans le journal.',
+  'Hide changes': 'Masquer les modifications',
+  'Show changes': 'Afficher les modifications',
+  'VAT applicable': 'TVA applicable',
+  'Separate with commas, for example bank_transfer, cash.':
+    'Séparez par des virgules, par exemple bank_transfer, cash.',
+  'Payment instructions': 'Instructions de paiement',
+  'Billing settings saved.': 'Paramètres de facturation enregistrés.',
+  Save: 'Enregistrer',
+  'Two-factor verification': 'Vérification en deux étapes',
+  'Administrator sign in': 'Connexion administrateur',
+  'Scan the QR code with your authenticator app, then enter the 6-digit code to finish setting up your account.':
+    'Scannez le QR code avec votre application d’authentification, puis saisissez le code à 6 chiffres pour finaliser votre compte.',
+  'Enter the 6-digit code from your authenticator app.':
+    'Saisissez le code à 6 chiffres de votre application d’authentification.',
+  'Restricted access for platform administrators.':
+    'Accès réservé aux administrateurs de la plateforme.',
+  'Authenticator QR code': 'QR code d’authentification',
+  'Or enter this key manually:': 'Ou saisissez cette clé manuellement :',
+  Verify: 'Vérifier',
+  'Verification code': 'Code de vérification',
+  'Your sign-in attempt expired. Log in again.':
+    'Votre tentative de connexion a expiré. Reconnectez-vous.',
+  'Back to customers': 'Retour aux clients',
+  Registered: 'Inscription',
+  Cycle: 'Cycle',
+  'No organizations yet.': 'Aucune organisation pour le moment.',
+  'Reason:': 'Motif :',
+  'Search customers': 'Rechercher des clients',
+  'Search by email or name': 'Rechercher par e-mail ou nom',
+  'No customers found.': 'Aucun client trouvé.',
+  'No payments for this status.': 'Aucun paiement pour ce statut.',
+  Reject: 'Rejeter',
+  'Enter a rate between 0 and 100.': 'Saisissez un taux compris entre 0 et 100.',
+  'Enter between 1 and 10 payment methods.': 'Saisissez entre 1 et 10 moyens de paiement.',
+  'Use lowercase letters, digits and underscores only.':
+    'Utilisez uniquement des minuscules, chiffres et tirets bas.',
+  'Payment methods must be unique.': 'Les moyens de paiement doivent être uniques.',
+  'Instructions must not exceed 2000 characters.':
+    'Les instructions ne doivent pas dépasser 2000 caractères.',
+  'Check the payment methods.': 'Vérifiez les moyens de paiement.',
+  Before: 'Avant',
+  After: 'Après',
 }

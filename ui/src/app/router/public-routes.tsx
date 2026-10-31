@@ -1,4 +1,4 @@
-import { Route } from 'wouter'
+import { Redirect, Route } from 'wouter'
 
 import { AcceptInvitationPage } from '../../features/organization/identity'
 import {
@@ -17,12 +17,31 @@ import {
   OwnerOrganizationsPage,
   OwnerSubscriptionPage,
 } from '../../features/platform'
+import {
+  AdminAuditPage,
+  AdminBillingSettingsPage,
+  AdminLoginPage,
+  AdminOwnerDetailPage,
+  AdminOwnersPage,
+  AdminPaymentsPage,
+} from '../../features/platform/administration'
 import { MarketingSite } from '../../features/platform/marketing'
 import { ownerAuthPaths } from '../../lib/public-paths'
 import { OwnerAccess } from './owner-access'
 
 export const publicRoutes = (
   <>
+    <Route path="/admin/login" component={AdminLoginPage} />
+    <Route path="/admin/payments" component={AdminPaymentsPage} />
+    <Route path="/admin/owners/:ownerId">
+      {({ ownerId }) => <AdminOwnerDetailPage key={ownerId} ownerId={ownerId} />}
+    </Route>
+    <Route path="/admin/owners" component={AdminOwnersPage} />
+    <Route path="/admin/billing-settings" component={AdminBillingSettingsPage} />
+    <Route path="/admin/audit" component={AdminAuditPage} />
+    <Route path="/admin">
+      <Redirect to="/admin/payments" replace />
+    </Route>
     <Route
       path={/^\/(?:fonctionnalites|tarifs|contact|confidentialite|conditions|mentions-legales)?$/}
       component={MarketingSite}

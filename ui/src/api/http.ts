@@ -34,7 +34,7 @@ export async function apiRequest<T>(
       ...request,
       headers: {
         ...request.headers,
-        ...(documentWorkspace && !path.startsWith('/v1/owner')
+        ...(documentWorkspace && !path.startsWith('/v1/owner') && !path.startsWith('/v1/admin')
           ? {
               'X-Organization-Id': documentWorkspace.organizationId,
               'X-Workspace-Identity': documentWorkspace.identityType,
@@ -84,6 +84,7 @@ export async function apiRequest<T>(
       !path.startsWith('/v1/auth/') &&
       !path.startsWith('/v1/owner-auth/') &&
       !path.startsWith('/v1/owner/') &&
+      !path.startsWith('/v1/admin/') &&
       !/^\/v1\/organizations\/[^/]+\/auth\//.test(path) &&
       typeof window !== 'undefined'
     )

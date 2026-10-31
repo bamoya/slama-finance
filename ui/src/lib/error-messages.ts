@@ -38,6 +38,15 @@ export function errorMessage(error: unknown): string {
       RENEWAL_EXISTS: 'Un renouvellement est déjà confirmé pour la période suivante.',
       NOT_CANCELLABLE: 'Cet abonnement ne peut pas être résilié dans son état actuel.',
       UPGRADE_STALE: 'Le prix du changement d’offre a évolué. Actualisez le devis puis réessayez.',
+      INVALID_CREDENTIALS: 'E-mail ou mot de passe incorrect.',
+      INVALID_CODE: 'Code de vérification incorrect ou expiré. Vérifiez votre application.',
+      ADMIN_UNAVAILABLE:
+        'L’administration est temporairement indisponible : la configuration du serveur est incomplète.',
+      PAYMENT_REJECTED: 'Ce paiement a déjà été rejeté et ne peut plus être modifié.',
+      PAYMENT_CONFIRMED: 'Ce paiement a déjà été confirmé et ne peut plus être modifié.',
+      REJECTION_REASON_REQUIRED: 'Indiquez le motif du rejet.',
+      NOT_FOUND: 'Cet élément est introuvable ou n’est plus disponible.',
+      UNAUTHENTICATED: 'Session administrateur expirée. Reconnectez-vous.',
       EMAIL_UNAVAILABLE: 'L’envoi des invitations est temporairement indisponible.',
     }
     if (invitationErrors[error.code]) return invitationErrors[error.code]!
