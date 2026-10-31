@@ -1,7 +1,7 @@
 import {
   type AdminBillingSettingsUpdate,
   AdminBillingSettingsUpdateSchema,
-} from '../../../api/generated/schemas/administration/administration.schemas'
+} from '../../../../api/generated/schemas/administration/administration.schemas'
 
 export type BillingFormValues = {
   vatApplicable: boolean

@@ -1,26 +1,26 @@
 import { Fragment, useState } from 'react'
 
-import { useListAdminAudit } from '../../../../api/generated/administration/administration'
-import { DataTablePagination } from '../../../../components/management/data-table-pagination'
-import { RequestState } from '../../../../components/management/request-state'
-import { Button } from '../../../../components/ui/button'
-import { displayDateTime } from '../../../../lib/dates'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
-import { AdminLayout } from '../components/admin-layout'
-import { AdminTable } from '../components/admin-table'
+import { useListAdminAudit } from '../../../../../api/generated/administration/administration'
+import { DataTablePagination } from '../../../../../components/management/data-table-pagination'
+import { RequestState } from '../../../../../components/management/request-state'
+import { Button } from '../../../../../components/ui/button'
+import { displayDateTime } from '../../../../../lib/dates'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { AdministrationLayout } from '../../shared/components/administration-layout'
+import { ScrollingTable } from '../../shared/components/scrolling-table'
 
-export function AdminAuditPage() {
+export function AdminAuditLogPage() {
   useUiLanguage()
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
   const query = useListAdminAudit({ page }, { query: { retry: false } })
   return (
-    <AdminLayout title="Audit log">
+    <AdministrationLayout title="Audit log">
       {query.isPending || query.isError ? (
         <RequestState query={query} />
       ) : (
         <section aria-label={translate('Audit log')} className="space-y-4">
-          <AdminTable>
+          <ScrollingTable>
             <thead>
               <tr>
                 <th>{translate('Date')}</th>
@@ -93,7 +93,7 @@ export function AdminAuditPage() {
                 )
               })}
             </tbody>
-          </AdminTable>
+          </ScrollingTable>
           <DataTablePagination
             total={query.data.total}
             page={query.data.page}
@@ -102,6 +102,6 @@ export function AdminAuditPage() {
           />
         </section>
       )}
-    </AdminLayout>
+    </AdministrationLayout>
   )
 }

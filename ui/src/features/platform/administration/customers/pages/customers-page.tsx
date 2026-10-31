@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'wouter'
 
-import { useListAdminOwners } from '../../../../api/generated/administration/administration'
-import { DataTablePagination } from '../../../../components/management/data-table-pagination'
-import { RequestState } from '../../../../components/management/request-state'
-import { Input } from '../../../../components/ui/input'
-import { displayDateTime } from '../../../../lib/dates'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
-import { planLabel } from '../../subscriptions/components/billing-format'
-import { adminPaths } from '../admin-paths'
-import { AdminLayout } from '../components/admin-layout'
-import { AdminTable } from '../components/admin-table'
+import { useListAdminOwners } from '../../../../../api/generated/administration/administration'
+import { DataTablePagination } from '../../../../../components/management/data-table-pagination'
+import { RequestState } from '../../../../../components/management/request-state'
+import { Input } from '../../../../../components/ui/input'
+import { displayDateTime } from '../../../../../lib/dates'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { planLabel } from '../../../subscriptions/components/billing-format'
+import { adminPaths } from '../../shared/admin-paths'
+import { AdministrationLayout } from '../../shared/components/administration-layout'
+import { ScrollingTable } from '../../shared/components/scrolling-table'
 import { subscriptionStatusLabel } from '../components/subscription-labels'
 
-export function AdminOwnersPage() {
+export function AdminCustomersPage() {
   useUiLanguage()
   const [draft, setDraft] = useState('')
   const [search, setSearch] = useState('')
@@ -23,7 +23,7 @@ export function AdminOwnersPage() {
     { query: { retry: false } },
   )
   return (
-    <AdminLayout title="Customers">
+    <AdministrationLayout title="Customers">
       <form
         role="search"
         onSubmit={(event) => {
@@ -46,7 +46,7 @@ export function AdminOwnersPage() {
         <RequestState query={query} />
       ) : (
         <section aria-label={translate('Customers')} className="space-y-4">
-          <AdminTable>
+          <ScrollingTable>
             <thead>
               <tr>
                 <th>{translate('Owner')}</th>
@@ -68,7 +68,7 @@ export function AdminOwnersPage() {
                 <tr key={owner.id} className="border-t border-[var(--border)]">
                   <td>
                     <Link
-                      href={`${adminPaths.owners}/${owner.id}`}
+                      href={`${adminPaths.customers}/${owner.id}`}
                       className="break-all font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
                     >
                       {owner.email}
@@ -84,7 +84,7 @@ export function AdminOwnersPage() {
                 </tr>
               ))}
             </tbody>
-          </AdminTable>
+          </ScrollingTable>
           <DataTablePagination
             total={query.data.total}
             page={query.data.page}
@@ -93,6 +93,6 @@ export function AdminOwnersPage() {
           />
         </section>
       )}
-    </AdminLayout>
+    </AdministrationLayout>
   )
 }

@@ -1,4 +1,4 @@
-import { translate } from '../../../../lib/i18n'
+import { translate } from '../../../../../lib/i18n'
 
 const labels: Record<string, string> = {
   trial: 'Free trial',

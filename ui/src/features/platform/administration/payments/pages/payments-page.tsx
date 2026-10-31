@@ -5,24 +5,24 @@ import {
   useConfirmAdminPayment,
   useListAdminPayments,
   useRejectAdminPayment,
-} from '../../../../api/generated/administration/administration'
-import type { AdminPayment } from '../../../../api/generated/models'
-import { DataTablePagination } from '../../../../components/management/data-table-pagination'
-import { RequestState } from '../../../../components/management/request-state'
-import { StatusBadge } from '../../../../components/management/status-badge'
-import { Button } from '../../../../components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '../../../../components/ui/tabs'
-import { displayDateTime } from '../../../../lib/dates'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
+} from '../../../../../api/generated/administration/administration'
+import type { AdminPayment } from '../../../../../api/generated/models'
+import { DataTablePagination } from '../../../../../components/management/data-table-pagination'
+import { RequestState } from '../../../../../components/management/request-state'
+import { StatusBadge } from '../../../../../components/management/status-badge'
+import { Button } from '../../../../../components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '../../../../../components/ui/tabs'
+import { displayDateTime } from '../../../../../lib/dates'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import {
   cycleLabel,
   formatDh,
   paymentKindLabel,
   paymentStatusTone,
   planLabel,
-} from '../../subscriptions/components/billing-format'
-import { AdminLayout } from '../components/admin-layout'
-import { AdminTable } from '../components/admin-table'
+} from '../../../subscriptions/components/billing-format'
+import { AdministrationLayout } from '../../shared/components/administration-layout'
+import { ScrollingTable } from '../../shared/components/scrolling-table'
 import { type Decision, PaymentDecisionDialog } from '../components/payment-decision-dialog'
 
 const statuses = [
@@ -48,7 +48,7 @@ export function AdminPaymentsPage() {
           queryKey[0].startsWith('/v1/admin/owners')),
     })
   return (
-    <AdminLayout title="Payments">
+    <AdministrationLayout title="Payments">
       <Tabs
         value={status}
         onValueChange={(value) => {
@@ -68,7 +68,7 @@ export function AdminPaymentsPage() {
         <RequestState query={query} />
       ) : (
         <section aria-label={translate('Payments')} className="space-y-4">
-          <AdminTable>
+          <ScrollingTable>
             <thead>
               <tr>
                 <th>{translate('Owner')}</th>
@@ -134,7 +134,7 @@ export function AdminPaymentsPage() {
                 </tr>
               ))}
             </tbody>
-          </AdminTable>
+          </ScrollingTable>
           <DataTablePagination
             total={query.data.total}
             page={query.data.page}
@@ -161,6 +161,6 @@ export function AdminPaymentsPage() {
           }}
         />
       )}
-    </AdminLayout>
+    </AdministrationLayout>
   )
 }

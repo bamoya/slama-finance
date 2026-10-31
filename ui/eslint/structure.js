@@ -117,7 +117,6 @@ export const UI_FORBIDDEN_LAYERS = [
 const LEGACY = 'legacy, pending refactor'
 /** Paths are relative to ui/src/features. New violations must fail; shrink this list, never grow it. */
 export const STRUCTURE_EXCEPTIONS = [
-  { path: 'platform/administration', reason: `${LEGACY} (uncommitted work, restructure planned)` },
   { path: 'organization/catalog/data', reason: LEGACY },
   { path: 'organization/clients/data', reason: LEGACY },
   { path: 'organization/delivery-notes/data', reason: LEGACY },

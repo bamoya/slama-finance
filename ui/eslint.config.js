@@ -112,7 +112,6 @@ export default tseslint.config(
   },
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/features/platform/administration/**'],
     rules: {
       'no-restricted-imports': [
         'error',

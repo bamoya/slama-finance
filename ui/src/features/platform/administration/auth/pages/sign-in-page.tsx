@@ -1,28 +1,23 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useLocation } from 'wouter'
-import { z } from 'zod'
 
 import {
   getGetAdminSessionQueryKey,
   useAdminLogin,
   useAdminVerifyTwoFactor,
-} from '../../../../api/generated/administration/administration'
-import type { AdminLoginChallenge } from '../../../../api/generated/models'
-import { AdminLoginSchema } from '../../../../api/generated/schemas/administration/administration.schemas'
-import { AuthForm } from '../../../../components/auth/auth-form'
-import { PlatformBrand } from '../../../../components/branding/platform-brand'
-import { ApiError } from '../../../../lib/api-error'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
-import { useTheme } from '../../../../lib/use-theme'
-import { adminPaths } from '../admin-paths'
-import { QrCode } from '../components/qr-code'
+} from '../../../../../api/generated/administration/administration'
+import type { AdminLoginChallenge } from '../../../../../api/generated/models'
+import { PlatformBrand } from '../../../../../components/branding/platform-brand'
+import { ApiError } from '../../../../../lib/api-error'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { useTheme } from '../../../../../lib/use-theme'
+import { adminPaths } from '../../shared/admin-paths'
+import { CodeForm } from '../components/code-form'
+import { CredentialsForm } from '../components/credentials-form'
+import { TotpEnrollment } from '../components/totp-enrollment'
 
-const codeSchema = z.object({
-  code: z.string().regex(/^[0-9]{6}$/, 'Enter the 6-digit code from your authenticator app.'),
-})
-
-export function AdminLoginPage() {
+export function AdminSignInPage() {
   useUiLanguage()
   const { isDark } = useTheme()
   const client = useQueryClient()
@@ -61,60 +56,23 @@ export function AdminLoginPage() {
           </p>
         )}
         {!challenge ? (
-          <AuthForm
+          <CredentialsForm
             key="credentials"
-            schema={AdminLoginSchema}
-            submitLabel={translate('Log in')}
-            revealPasswords
-            fields={[
-              {
-                name: 'email',
-                label: translate('Email address'),
-                type: 'email',
-                autoComplete: 'username',
-              },
-              {
-                name: 'password',
-                label: translate('Password'),
-                type: 'password',
-                autoComplete: 'current-password',
-              },
-            ]}
             onSubmit={async (value) => {
               setNotice(null)
-              setChallenge(
-                await login.mutateAsync({
-                  data: { email: value.email ?? '', password: value.password ?? '' },
-                }),
-              )
+              setChallenge(await login.mutateAsync({ data: value }))
             }}
           />
         ) : (
           <>
             {enrollment && (
-              <div className="flex flex-col items-center gap-3">
-                <QrCode value={enrollment.otpauthUri} label={translate('Authenticator QR code')} />
-                <p className="text-center text-sm">
-                  {translate('Or enter this key manually:')}{' '}
-                  <code className="break-all font-mono font-semibold">{enrollment.secret}</code>
-                </p>
-              </div>
+              <TotpEnrollment otpauthUri={enrollment.otpauthUri} secret={enrollment.secret} />
             )}
-            <AuthForm
+            <CodeForm
               key="code"
-              schema={codeSchema}
-              submitLabel={translate('Verify')}
-              fields={[
-                {
-                  name: 'code',
-                  label: translate('Verification code'),
-                  type: 'text',
-                  autoComplete: 'one-time-code',
-                },
-              ]}
-              onSubmit={async (value) => {
+              onSubmit={async (code) => {
                 try {
-                  const session = await verify.mutateAsync({ data: { code: value.code ?? '' } })
+                  const session = await verify.mutateAsync({ data: { code } })
                   client.setQueryData(getGetAdminSessionQueryKey(), session)
                   navigate(adminPaths.payments, { replace: true })
                 } catch (error) {

@@ -1,19 +1,19 @@
 import { useState } from 'react'
 
-import type { AdminPayment } from '../../../../api/generated/models'
-import { FormError } from '../../../../components/management/form-error'
-import { Button } from '../../../../components/ui/button'
+import type { AdminPayment } from '../../../../../api/generated/models'
+import { FormError } from '../../../../../components/management/form-error'
+import { Button } from '../../../../../components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '../../../../components/ui/dialog'
-import { Input } from '../../../../components/ui/input'
-import { Label } from '../../../../components/ui/label'
-import { Textarea } from '../../../../components/ui/textarea'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
-import { formatDh } from '../../subscriptions/components/billing-format'
+} from '../../../../../components/ui/dialog'
+import { Input } from '../../../../../components/ui/input'
+import { Label } from '../../../../../components/ui/label'
+import { Textarea } from '../../../../../components/ui/textarea'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { formatDh } from '../../../subscriptions/components/billing-format'
 
 export type Decision = 'confirm' | 'reject'
 

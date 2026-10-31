@@ -18,12 +18,12 @@ import {
   OwnerSubscriptionPage,
 } from '../../features/platform'
 import {
-  AdminAuditPage,
+  AdminAuditLogPage,
   AdminBillingSettingsPage,
-  AdminLoginPage,
-  AdminOwnerDetailPage,
-  AdminOwnersPage,
+  AdminCustomerDetailPage,
+  AdminCustomersPage,
   AdminPaymentsPage,
+  AdminSignInPage,
 } from '../../features/platform/administration'
 import { MarketingSite } from '../../features/platform/marketing'
 import { ownerAuthPaths } from '../../lib/public-paths'
@@ -31,14 +31,14 @@ import { OwnerAccess } from './owner-access'
 
 export const publicRoutes = (
   <>
-    <Route path="/admin/login" component={AdminLoginPage} />
+    <Route path="/admin/login" component={AdminSignInPage} />
     <Route path="/admin/payments" component={AdminPaymentsPage} />
-    <Route path="/admin/owners/:ownerId">
-      {({ ownerId }) => <AdminOwnerDetailPage key={ownerId} ownerId={ownerId} />}
+    <Route path="/admin/customers/:customerId">
+      {({ customerId }) => <AdminCustomerDetailPage key={customerId} customerId={customerId} />}
     </Route>
-    <Route path="/admin/owners" component={AdminOwnersPage} />
+    <Route path="/admin/customers" component={AdminCustomersPage} />
     <Route path="/admin/billing-settings" component={AdminBillingSettingsPage} />
-    <Route path="/admin/audit" component={AdminAuditPage} />
+    <Route path="/admin/audit" component={AdminAuditLogPage} />
     <Route path="/admin">
       <Redirect to="/admin/payments" replace />
     </Route>

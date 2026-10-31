@@ -1,22 +1,22 @@
 import { Link } from 'wouter'
 
-import { useGetAdminOwner } from '../../../../api/generated/administration/administration'
-import { RequestState } from '../../../../components/management/request-state'
-import { StatusBadge } from '../../../../components/management/status-badge'
-import { buttonVariants } from '../../../../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
-import { displayDateTime } from '../../../../lib/dates'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { useGetAdminOwner } from '../../../../../api/generated/administration/administration'
+import { RequestState } from '../../../../../components/management/request-state'
+import { StatusBadge } from '../../../../../components/management/status-badge'
+import { buttonVariants } from '../../../../../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
+import { displayDateTime } from '../../../../../lib/dates'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import {
   cycleLabel,
   formatDh,
   paymentKindLabel,
   paymentStatusTone,
   planLabel,
-} from '../../subscriptions/components/billing-format'
-import { adminPaths } from '../admin-paths'
-import { AdminLayout } from '../components/admin-layout'
-import { AdminTable } from '../components/admin-table'
+} from '../../../subscriptions/components/billing-format'
+import { adminPaths } from '../../shared/admin-paths'
+import { AdministrationLayout } from '../../shared/components/administration-layout'
+import { ScrollingTable } from '../../shared/components/scrolling-table'
 import { subscriptionStatusLabel } from '../components/subscription-labels'
 
 const paymentStatus = {
@@ -34,13 +34,13 @@ function Item({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function AdminOwnerDetailPage({ ownerId }: { ownerId: string }) {
+export function AdminCustomerDetailPage({ customerId }: { customerId: string }) {
   useUiLanguage()
-  const query = useGetAdminOwner(ownerId, { query: { retry: false } })
+  const query = useGetAdminOwner(customerId, { query: { retry: false } })
   const detail = query.data
   return (
-    <AdminLayout title="Customer">
-      <Link href={adminPaths.owners} className={buttonVariants({ variant: 'outline' })}>
+    <AdministrationLayout title="Customer">
+      <Link href={adminPaths.customers} className={buttonVariants({ variant: 'outline' })}>
         {translate('Back to customers')}
       </Link>
       {query.isPending || query.isError || !detail ? (
@@ -142,7 +142,7 @@ export function AdminOwnerDetailPage({ ownerId }: { ownerId: string }) {
               <CardTitle>{translate('Payment history')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <AdminTable>
+              <ScrollingTable>
                 <thead>
                   <tr>
                     <th>{translate('Submitted')}</th>
@@ -186,11 +186,11 @@ export function AdminOwnerDetailPage({ ownerId }: { ownerId: string }) {
                     </tr>
                   ))}
                 </tbody>
-              </AdminTable>
+              </ScrollingTable>
             </CardContent>
           </Card>
         </div>
       )}
-    </AdminLayout>
+    </AdministrationLayout>
   )
 }

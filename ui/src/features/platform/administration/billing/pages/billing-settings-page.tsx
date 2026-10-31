@@ -5,23 +5,23 @@ import {
   getGetAdminBillingSettingsQueryKey,
   useGetAdminBillingSettings,
   useUpdateAdminBillingSettings,
-} from '../../../../api/generated/administration/administration'
-import { FormError } from '../../../../components/management/form-error'
-import { RequestState } from '../../../../components/management/request-state'
-import { Button } from '../../../../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
-import { Input } from '../../../../components/ui/input'
-import { Label } from '../../../../components/ui/label'
-import { Switch } from '../../../../components/ui/switch'
-import { Textarea } from '../../../../components/ui/textarea'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
+} from '../../../../../api/generated/administration/administration'
+import { FormError } from '../../../../../components/management/form-error'
+import { RequestState } from '../../../../../components/management/request-state'
+import { Button } from '../../../../../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
+import { Input } from '../../../../../components/ui/input'
+import { Label } from '../../../../../components/ui/label'
+import { Switch } from '../../../../../components/ui/switch'
+import { Textarea } from '../../../../../components/ui/textarea'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { AdministrationLayout } from '../../shared/components/administration-layout'
 import {
   type BillingErrors,
   type BillingFormValues,
   toFormValues,
   validateBilling,
 } from '../billing-settings'
-import { AdminLayout } from '../components/admin-layout'
 
 function BillingSettingsForm({
   initial,
@@ -143,12 +143,12 @@ function BillingSettingsForm({
 export function AdminBillingSettingsPage() {
   const query = useGetAdminBillingSettings({ query: { retry: false } })
   return (
-    <AdminLayout title="Billing settings">
+    <AdministrationLayout title="Billing settings">
       {query.isPending || query.isError ? (
         <RequestState query={query} />
       ) : (
         <BillingSettingsForm initial={toFormValues(query.data)} currency={query.data.currency} />
       )}
-    </AdminLayout>
+    </AdministrationLayout>
   )
 }

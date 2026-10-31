@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 /** Horizontally scrollable table that keeps its columns readable on narrow screens. */
-export function AdminTable({ children }: { children: ReactNode }) {
+export function ScrollingTable({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
       <table

@@ -1,60 +1,33 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { CreditCard, LogOut, ScrollText, Settings2, Users } from 'lucide-react'
+import { CreditCard, Landmark, LogOut, ScrollText, Users } from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
 import { Link, Redirect, useLocation } from 'wouter'
 
 import {
-  getGetAdminSessionQueryKey,
   useAdminLogout,
   useGetAdminSession,
-} from '../../../../api/generated/administration/administration'
-import { PlatformBrand } from '../../../../components/branding/platform-brand'
-import { FormError } from '../../../../components/management/form-error'
-import { LoadingState } from '../../../../components/management/page-state'
-import { Button } from '../../../../components/ui/button'
-import { LanguageSwitcher } from '../../../../components/ui/language-switcher'
-import { ThemeToggle } from '../../../../components/ui/theme-toggle'
-import { ApiError } from '../../../../lib/api-error'
-import { translate, useUiLanguage } from '../../../../lib/i18n'
-import { useTheme } from '../../../../lib/use-theme'
+} from '../../../../../api/generated/administration/administration'
+import { PlatformBrand } from '../../../../../components/branding/platform-brand'
+import { FormError } from '../../../../../components/management/form-error'
+import { LoadingState } from '../../../../../components/management/page-state'
+import { Button } from '../../../../../components/ui/button'
+import { LanguageSwitcher } from '../../../../../components/ui/language-switcher'
+import { ThemeToggle } from '../../../../../components/ui/theme-toggle'
+import { ApiError } from '../../../../../lib/api-error'
+import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { useTheme } from '../../../../../lib/use-theme'
 import { adminPaths } from '../admin-paths'
+import { isAdminKey, useSignedOutOnUnauthorized } from '../hooks/use-signed-out-on-unauthorized'
 
 const navigation = [
   { href: adminPaths.payments, label: 'Payments', icon: CreditCard },
-  { href: adminPaths.owners, label: 'Customers', icon: Users },
-  { href: adminPaths.billing, label: 'Billing settings', icon: Settings2 },
+  { href: adminPaths.customers, label: 'Customers', icon: Users },
+  { href: adminPaths.billing, label: 'Billing settings', icon: Landmark },
   { href: adminPaths.audit, label: 'Audit log', icon: ScrollText },
 ]
 
-const isAdminKey = (key: readonly unknown[]) =>
-  typeof key[0] === 'string' && key[0].startsWith('/v1/admin')
-
-/** Any 401 from an admin request means the session is gone: clear it and sign out. */
-function useSignedOutOnUnauthorized(onSignedOut: () => void) {
-  const client = useQueryClient()
-  useEffect(() => {
-    const isUnauthorized = (error: unknown) => error instanceof ApiError && error.status === 401
-    const queries = client.getQueryCache().subscribe((event) => {
-      if (
-        event.type === 'updated' &&
-        isAdminKey(event.query.queryKey) &&
-        event.query.queryKey[0] !== getGetAdminSessionQueryKey()[0] &&
-        isUnauthorized(event.query.state.error)
-      )
-        onSignedOut()
-    })
-    const mutations = client.getMutationCache().subscribe((event) => {
-      if (event.type === 'updated' && isUnauthorized(event.mutation.state.error)) onSignedOut()
-    })
-    return () => {
-      queries()
-      mutations()
-    }
-  }, [client, onSignedOut])
-}
-
 /** Dedicated platform-administrator shell: no links into owner or organization areas. */
-export function AdminLayout({ children, title }: { children: ReactNode; title: string }) {
+export function AdministrationLayout({ children, title }: { children: ReactNode; title: string }) {
   useUiLanguage()
   const { isDark, toggleTheme } = useTheme()
   const client = useQueryClient()
