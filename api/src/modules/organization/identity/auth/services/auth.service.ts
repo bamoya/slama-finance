@@ -7,7 +7,12 @@ import type { createAuthRepository } from '../repositories/auth.repository.js'
 import type { createPasswordService } from './password.service.js'
 import type { createSessionService } from './session.service.js'
 
-const invalid = () => new AppError(401, 'INVALID_CREDENTIALS', 'Invalid email or password')
+const invalid = () =>
+  new AppError(
+    401,
+    'INVALID_CREDENTIALS',
+    'Invalid email or password. A temporary password works only once: if you already used it, choose "Forgot your password?".',
+  )
 export function createAuthService(
   repository: ReturnType<typeof createAuthRepository>,
   passwords: ReturnType<typeof createPasswordService>,

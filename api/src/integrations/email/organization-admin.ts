@@ -15,8 +15,8 @@ export function createOrganizationAdminDelivery(
           ? 'Votre accès administrateur est prêt'
           : 'Your administrator account is ready',
         detail = fr
-          ? 'Ce mot de passe temporaire expire dans 24 heures. Vous devez le remplacer après votre première connexion. Votre compte organisation est indépendant de votre compte BaMoYa.'
-          : 'This temporary password expires in 24 hours. You must replace it after your first login. Your organization account is independent of your BaMoYa account.'
+          ? 'Ce mot de passe temporaire ne fonctionne qu’une seule fois et expire dans 24 heures. Dès votre première connexion, vous devez le remplacer par un nouveau mot de passe ; si vous quittez avant de l’avoir fait, utilisez « Mot de passe oublié ». Votre compte organisation est indépendant de votre compte BaMoYa.'
+          : 'This temporary password works only once and expires in 24 hours. At your first login you must set a new password; if you leave before doing so, use "Forgot your password?". Your organization account is independent of your BaMoYa account.'
       await provider.send({
         idempotencyKey: input.idempotencyKey,
         from: { email: from, name: 'BaMoYa Finance' },

@@ -947,8 +947,10 @@ export const french: Record<string, string> = {
     'Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.',
   'Your saved document designs. Open a preview or manage a template.':
     'Vos designs de documents enregistrés. Ouvrez un aperçu ou gérez un modèle.',
-  'Your temporary password has been used. Choose a new password to unlock your account. This session expires after 15 minutes.':
-    'Votre mot de passe temporaire a été utilisé. Choisissez un nouveau mot de passe pour déverrouiller votre compte. Cette session expire après 15 minutes.',
+  'Your temporary password is now used and cannot be used again. Set your new password now. This session expires after 15 minutes.':
+    'Votre mot de passe temporaire est maintenant utilisé et ne peut plus servir. Définissez dès maintenant votre nouveau mot de passe. Cette session expire après 15 minutes.',
+  'Invalid email or password. A temporary password works only once: if you already used it, choose "Forgot your password?".':
+    'Adresse e-mail ou mot de passe incorrect. Un mot de passe temporaire ne fonctionne qu’une seule fois : si vous l’avez déjà utilisé, choisissez « Mot de passe oublié ».',
   accounts: 'comptes',
   available: 'disponible',
   'e.g. Premium wheat': 'ex. Blé premium',
@@ -1656,8 +1658,8 @@ export const french: Record<string, string> = {
   Identity: 'Identité',
   'If the account is eligible, a reset link will arrive by email. Check your inbox and spam folder. The link expires in 15 minutes.':
     'Si le compte est éligible, un lien sera envoyé par e-mail. Vérifiez votre boîte de réception et vos indésirables. Le lien expire après 15 minutes.',
-  'If this session expires, use password recovery or ask your administrator for a new temporary password.':
-    'Si cette session expire, utilisez la récupération du mot de passe ou demandez un nouveau mot de passe temporaire à votre administrateur.',
+  'If you leave this page before saving a new password, the temporary password will no longer work: use "Forgot your password?" on the login page.':
+    'Si vous quittez cette page avant d’avoir enregistré un nouveau mot de passe, le mot de passe temporaire ne fonctionnera plus : utilisez « Mot de passe oublié » sur la page de connexion.',
   'Illustrative preview — not company records': 'Aperçu illustratif — données fictives',
   'Images must be at most 2 MiB.': 'Les images ne doivent pas dépasser 2 Mio.',
   'In construction': 'En construction',
@@ -2321,8 +2323,8 @@ export const french: Record<string, string> = {
   'Staff — permissions assigned later': 'Personnel — permissions à attribuer',
   'Invitations are queued after activation and sent after the administrator changes their temporary password. Staff without roles need permissions assigned in the organization.':
     'Les invitations sont mises en attente à l’activation, puis envoyées après le changement du mot de passe temporaire de l’administrateur. Les permissions du personnel sans rôle devront être attribuées dans l’organisation.',
-  'Your administrator login and temporary password will be emailed to you. Replace that password on first login; staff invitations will then be delivered.':
-    'Votre accès administrateur et votre mot de passe temporaire vous seront envoyés par e-mail. Remplacez ce mot de passe à la première connexion ; les invitations du personnel seront ensuite envoyées.',
+  'Your administrator login and temporary password will be emailed to you. It works only once: set your own password at first login; staff invitations will then be delivered.':
+    'Votre accès administrateur et votre mot de passe temporaire vous seront envoyés par e-mail. Il ne fonctionne qu’une seule fois : définissez votre propre mot de passe à la première connexion ; les invitations du personnel seront ensuite envoyées.',
   revoked: 'Révoquée',
   all: 'Tous',
   sending: 'Envoi en cours',

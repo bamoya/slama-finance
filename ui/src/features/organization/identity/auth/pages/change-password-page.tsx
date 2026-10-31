@@ -57,7 +57,7 @@ export function ChangePasswordPage({ embedded = false }: { embedded?: boolean })
       description={
         restricted
           ? translate(
-              'Your temporary password has been used. Choose a new password to unlock your account. This session expires after 15 minutes.',
+              'Your temporary password is now used and cannot be used again. Set your new password now. This session expires after 15 minutes.',
             )
           : translate(
               'Choose a unique password with at least 12 characters. Other sessions will be signed out.',
@@ -112,7 +112,7 @@ export function ChangePasswordPage({ embedded = false }: { embedded?: boolean })
       {restricted && (
         <p className="mt-6 text-sm text-[var(--muted)]">
           {translate(
-            'If this session expires, use password recovery or ask your administrator for a new temporary password.',
+            'If you leave this page before saving a new password, the temporary password will no longer work: use "Forgot your password?" on the login page.',
           )}
         </p>
       )}

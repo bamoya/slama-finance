@@ -327,6 +327,10 @@ describe('authentication UI', () => {
     const { location } = setup(<ChangePasswordPage />, '/set-password')
     await screen.findByLabelText('New password')
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/temporary password is now used and cannot be used again/),
+    ).toBeVisible()
+    expect(screen.getByText(/use "Forgot your password\?" on the login page/)).toBeVisible()
     fill('New password', 'new-password-123')
     fill('Confirm new password', 'new-password-123')
     fireEvent.click(screen.getByRole('button', { name: 'Save new password' }))

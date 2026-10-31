@@ -105,6 +105,7 @@ describe('identity services', () => {
     passwords.verify.mockResolvedValue(false)
     await expect(service.login(user.email, 'wrong')).rejects.toMatchObject({
       code: 'INVALID_CREDENTIALS',
+      message: expect.stringContaining('Forgot your password?'),
     })
     repository.findByEmail.mockResolvedValue({ ...user, disabledAt: new Date() })
     await expect(service.login(user.email, 'password')).rejects.toMatchObject({

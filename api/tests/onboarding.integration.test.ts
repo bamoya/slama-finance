@@ -123,7 +123,10 @@ describe('temporary credentials and password changes', () => {
         })
       ).statusCode,
     ).toBe(403)
-    expect((await login()).statusCode).toBe(401)
+    const reused = await login()
+    expect(reused.statusCode).toBe(401)
+    expect(reused.json().code).toBe('INVALID_CREDENTIALS')
+    expect(reused.json().message).toContain('Forgot your password?')
     expect((await app.inject({ url: '/v1/auth/session', cookies })).json().purpose).toBe(
       'password_change',
     )
