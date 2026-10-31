@@ -382,6 +382,12 @@ describe('SaaS administration portal', () => {
       organizationCount: 1,
     })
     expect((await as(cookie).get('/v1/admin/owners?search=%25')).json().total).toBe(0)
+    await fixture.client`insert into platform_users (id,email,password_hash) values (${randomBytesUuid()},'no-organization@example.test','not-a-login-hash')`
+    const notStarted = (await as(cookie).get('/v1/admin/owners?status=not_started')).json()
+    expect(notStarted.items.map((item: { email: string }) => item.email)).toEqual([
+      'no-organization@example.test',
+    ])
+    expect(notStarted.items[0].subscriptionStatus).toBe('not_started')
     const detail = await as(cookie).get(`/v1/admin/owners/${testOwnerId}`)
     expect(detail.statusCode).toBe(200)
     expect(detail.json().organizations).toEqual([

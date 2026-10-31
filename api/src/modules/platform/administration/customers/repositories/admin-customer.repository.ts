@@ -30,9 +30,11 @@ export function createAdminCustomerRepository() {
         : undefined
       const where = and(
         matches,
-        status
-          ? sql`${platformUsers.id} in (select owner_id from (${subscriptionLifecycle(sql`${now.toISOString()}::timestamptz`)}) l where l.status=${status})`
-          : undefined,
+        status === 'not_started'
+          ? sql`${platformUsers.id} not in (select owner_id from owner_subscriptions)`
+          : status
+            ? sql`${platformUsers.id} in (select owner_id from (${subscriptionLifecycle(sql`${now.toISOString()}::timestamptz`)}) l where l.status=${status})`
+            : undefined,
       )
       const organizationCount = sql<number>`(select count(*)::int from organizations o where o.owner_id=platform_users.id)`
       const [rows, [total]] = await Promise.all([

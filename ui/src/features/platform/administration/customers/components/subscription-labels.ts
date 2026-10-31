@@ -23,6 +23,7 @@ export function subscriptionStatusLabel(status: string | null | undefined) {
 }
 
 export const customerStatusFilters = [
+  'not_started',
   'trial',
   'active',
   'past_due',

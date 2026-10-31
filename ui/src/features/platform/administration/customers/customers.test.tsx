@@ -74,6 +74,23 @@ describe('admin customers', () => {
     expect(params).toEqual({ search: 'sara', status: 'suspended', page: 2 })
   })
 
+  it('filters customers whose trial has not started', async () => {
+    mockApi((key) => {
+      if (key === 'GET /v1/admin/auth/me') return { body: session }
+      if (key === 'GET /v1/admin/owners')
+        return { body: { items: [], page: 1, pageSize: 20, total: 0 } }
+    })
+    renderAt('/admin/customers?status=not_started', <AdminCustomersPage />)
+    await screen.findByText('No customers found.')
+    const params = (
+      calls.filter((c) => c.url === '/v1/admin/owners').at(-1) as { params?: unknown }
+    ).params
+    expect(params).toEqual({ status: 'not_started', page: 1 })
+    expect(screen.getByRole('combobox', { name: 'Customer status' })).toHaveTextContent(
+      'Trial not started',
+    )
+  })
+
   it('resets the filters and stores the status in the address', async () => {
     mockApi((key) => {
       if (key === 'GET /v1/admin/auth/me') return { body: session }

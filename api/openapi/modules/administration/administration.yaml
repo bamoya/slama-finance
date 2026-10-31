@@ -154,7 +154,7 @@ paths:
         - name: status
           in: query
           description: Subscription lifecycle status, evaluated with the coverage rules.
-          schema: { type: string, enum: [trial, active, past_due, expired, suspended] }
+          schema: { type: string, enum: [not_started, trial, active, past_due, expired, suspended] }
         - name: page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
