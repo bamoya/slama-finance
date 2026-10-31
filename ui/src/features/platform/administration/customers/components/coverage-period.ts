@@ -23,5 +23,11 @@ export function coverageEnd(start: string, cycle: Cycle) {
   return `${target.getUTCFullYear()}-${pad(target.getUTCMonth() + 1)}-${pad(target.getUTCDate())}`
 }
 
-/** Coverage boundaries are whole days at midnight UTC. */
-export const midnightUtc = (day: string) => `${day}T00:00:00.000Z`
+/**
+ * Coverage boundaries are whole days at midnight in the administrator's calendar, the same
+ * calendar `todayIso` uses, so "today" is never in the future.
+ */
+export function localMidnight(day: string) {
+  const [year, month, date] = day.split('-').map(Number)
+  return new Date(year!, month! - 1, date!).toISOString()
+}

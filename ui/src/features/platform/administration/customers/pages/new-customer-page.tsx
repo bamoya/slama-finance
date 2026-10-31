@@ -20,7 +20,7 @@ import { cycleLabel, planLabel } from '../../../subscriptions/components/billing
 import { adminPaths } from '../../shared/admin-paths'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
-import { coverageEnd, type Cycle, midnightUtc, todayIso } from '../components/coverage-period'
+import { coverageEnd, type Cycle, localMidnight, todayIso } from '../components/coverage-period'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
 
 const plans = ['essential', 'business', 'pro'] as const
@@ -73,8 +73,8 @@ export function AdminNewCustomerPage() {
             kind,
             planCode,
             cycle,
-            coverageStart: start ? midnightUtc(start) : '',
-            coverageEnd: end ? midnightUtc(end) : '',
+            coverageStart: start ? localMidnight(start) : '',
+            coverageEnd: end ? localMidnight(end) : '',
           }
         : { kind },
     }
@@ -91,9 +91,9 @@ export function AdminNewCustomerPage() {
       }
     if (!body.reason) found.reason = translate('Indicate the reason for this action.')
     if (paid && !found.coverageStart && !found.coverageEnd) {
-      if (new Date(midnightUtc(start)).getTime() > Date.now())
+      if (new Date(localMidnight(start)).getTime() > Date.now())
         found.coverageStart = translate('The coverage cannot start in the future.')
-      else if (new Date(midnightUtc(end)).getTime() <= Date.now())
+      else if (new Date(localMidnight(end)).getTime() <= Date.now())
         found.coverageEnd = translate('The coverage must end in the future.')
     }
     setErrors(found)

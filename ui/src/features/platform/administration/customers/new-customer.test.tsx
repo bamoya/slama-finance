@@ -11,7 +11,7 @@ import {
   session,
   useAdminTestLifecycle,
 } from '../shared/api-mock'
-import { coverageEnd, midnightUtc, todayIso } from './components/coverage-period'
+import { coverageEnd, localMidnight, todayIso } from './components/coverage-period'
 import { AdminNewCustomerPage } from './pages/new-customer-page'
 
 useAdminTestLifecycle()
@@ -92,8 +92,8 @@ describe('new customer', () => {
         kind: 'paid',
         planCode: 'essential',
         cycle: 'monthly',
-        coverageStart: midnightUtc(start),
-        coverageEnd: midnightUtc(coverageEnd(start, 'monthly')),
+        coverageStart: localMidnight(start),
+        coverageEnd: localMidnight(coverageEnd(start, 'monthly')),
       },
     })
   })
