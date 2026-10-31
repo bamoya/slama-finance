@@ -5,6 +5,10 @@ import { currentOrganizationId } from '../../../../lib/tenant-database.js'
 import type { createBillingRepository } from '../repositories/billing.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
 import { createBillingService, toPayment } from './billing.service.js'
+/** Never discloses which restriction applies; the organization domain shows a static page. */
+const unavailable = () =>
+  new AppError(403, 'ORGANIZATION_UNAVAILABLE', 'This organization is currently unavailable.')
+
 export function createSubscriptionService(
   repo: ReturnType<typeof createSubscriptionRepository>,
   billingRepo: ReturnType<typeof createBillingRepository>,
@@ -55,6 +59,7 @@ export function createSubscriptionService(
     }
   }
   const available = (s: OwnerSubscription) => {
+    if (s.status === 'suspended') throw unavailable()
     if (s.status === 'expired')
       throw new AppError(
         402,
@@ -65,6 +70,7 @@ export function createSubscriptionService(
   async function current(tx: Transaction) {
     const owner = await repo.ownerForOrganization(tx)
     if (!owner) throw new AppError(403, 'FORBIDDEN', 'Organization not found.')
+    if (await repo.organizationRestricted(tx)) throw unavailable()
     return repo.ownerScope(owner, tx, () => summary(owner, tx))
   }
   return {

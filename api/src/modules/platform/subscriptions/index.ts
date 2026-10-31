@@ -18,7 +18,11 @@ export function createSubscriptionsModule(database: () => Database) {
   return {
     publicApi: service,
     /** Privileged operator actions; never exposed through owner or staff routes. */
-    administration: { confirm: billing.confirm, reject: billing.reject },
+    administration: {
+      confirm: billing.confirm,
+      reject: billing.reject,
+      lifecycle: billing.administration,
+    },
     storage: (storage: ObjectStorage) => createMeteredStorage(storage, service),
     async registerRoutes(
       app: FastifyInstance,

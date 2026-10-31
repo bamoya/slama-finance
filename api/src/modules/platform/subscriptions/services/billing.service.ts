@@ -11,6 +11,17 @@ import type { createBillingRepository, PaymentRow } from '../repositories/billin
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
 
+const DAY_MS = 86_400_000
+const suspended = () =>
+  new AppError(409, 'SUBSCRIPTION_SUSPENDED', 'This subscription is suspended.')
+
+export type AdminGrant = {
+  planCode: string
+  cycle: 'monthly' | 'annual'
+  start: Date
+  end: Date
+}
+
 export function toPayment(row: PaymentRow): SubscriptionPayment {
   return {
     id: row.id,
@@ -76,6 +87,7 @@ export function createBillingService(
     if (!plan || plan.code === 'trial')
       throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
     if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'Create an organization first.')
+    if (s.status === 'suspended') throw suspended()
     const price = input.cycle === 'annual' ? plan.annualHt : plan.monthlyHt
     const amount = (ht: number) => money(ht, settings.taxRateBasisPoints, settings.currency)
     const current = s.current
@@ -107,7 +119,126 @@ export function createBillingService(
     }
   }
 
+  /**
+   * Administrator lifecycle operations. They run inside the caller's platform_admin transaction so
+   * the change, the 2FA step and the audit row commit together.
+   */
+  const administration = {
+    state,
+    async suspend(ownerId: string, tx: Transaction) {
+      await subscriptions.lock(ownerId, tx)
+      const s = await state(ownerId, tx)
+      if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
+      if (s.status === 'suspended') throw suspended()
+      await repo.setSuspended(ownerId, clock(), tx)
+    },
+    async resume(ownerId: string, tx: Transaction) {
+      await subscriptions.lock(ownerId, tx)
+      const s = await state(ownerId, tx)
+      const since = s.row?.suspendedAt
+      if (!since)
+        throw new AppError(409, 'SUBSCRIPTION_NOT_SUSPENDED', 'This subscription is not suspended.')
+      const now = clock()
+      await repo.shiftCoverage(ownerId, since, Math.max(0, now.getTime() - since.getTime()), tx)
+      await repo.setSuspended(ownerId, null, tx)
+    },
+    async changePlan(ownerId: string, planCode: string, decidedBy: string, tx: Transaction) {
+      await subscriptions.lock(ownerId, tx)
+      const now = clock()
+      const [s, plan, settings] = await Promise.all([
+        state(ownerId, tx, now),
+        repo.plan(planCode, tx),
+        repo.settings(tx),
+      ])
+      if (!plan || plan.code === 'trial')
+        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      if (s.status === 'suspended') throw suspended()
+      if (!s.current)
+        throw new AppError(409, 'NO_PAID_PERIOD', 'There is no current paid period to change.')
+      if (s.current.planCode === plan.code)
+        throw new AppError(409, 'SAME_PLAN', 'The subscription already uses this plan.')
+      const active = await repo.plan(s.current.planCode, tx)
+      await repo.adjustment(
+        {
+          ownerId,
+          planCode: plan.code,
+          cycle: s.current.cycle ?? 'monthly',
+          kind: active && plan.rank > active.rank ? 'upgrade' : 'activation',
+          start: now,
+          end: s.current.end,
+          decidedBy,
+          currency: settings.currency,
+          now,
+        },
+        tx,
+      )
+      await repo.extendPaidThrough(ownerId, s.current.end, plan.code, tx)
+    },
+    async extend(ownerId: string, days: number, decidedBy: string, tx: Transaction) {
+      await subscriptions.lock(ownerId, tx)
+      const now = clock()
+      const s = await state(ownerId, tx, now)
+      if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
+      if (s.status === 'suspended') throw suspended()
+      const add = days * DAY_MS
+      if (!s.paidThroughAt) {
+        const from = Math.max(s.row.trialEndsAt.getTime(), now.getTime())
+        await repo.setTrialEnd(ownerId, new Date(from + add), tx)
+        return
+      }
+      const last = s.coverage.reduce((a, b) => (b.end.getTime() >= a.end.getTime() ? b : a))
+      const start = s.status === 'active' || s.status === 'past_due' ? s.paidThroughAt : now
+      const end = new Date(start.getTime() + add)
+      const settings = await repo.settings(tx)
+      await repo.adjustment(
+        {
+          ownerId,
+          planCode: last.planCode,
+          cycle: last.cycle ?? 'monthly',
+          kind: 'renewal',
+          start,
+          end,
+          decidedBy,
+          currency: settings.currency,
+          now,
+        },
+        tx,
+      )
+      await repo.extendPaidThrough(ownerId, end, start <= now ? last.planCode : null, tx)
+    },
+    /** Paid subscription granted when an administrator creates the account. */
+    async grant(ownerId: string, grant: AdminGrant, decidedBy: string, tx: Transaction) {
+      const now = clock()
+      const plan = await repo.plan(grant.planCode, tx)
+      if (!plan || plan.code === 'trial')
+        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      if (grant.start.getTime() > now.getTime() || grant.end.getTime() <= now.getTime())
+        throw new AppError(
+          400,
+          'INVALID_COVERAGE',
+          'Coverage must have started and must end in the future.',
+        )
+      const settings = await repo.settings(tx)
+      await repo.createPaid(ownerId, plan.code, grant.end, now, tx)
+      await repo.adjustment(
+        {
+          ownerId,
+          planCode: plan.code,
+          cycle: grant.cycle,
+          kind: 'activation',
+          start: grant.start,
+          end: grant.end,
+          decidedBy,
+          currency: settings.currency,
+          now,
+        },
+        tx,
+      )
+    },
+  }
+
   return {
+    administration,
     async catalog(ownerId: string): Promise<BillingCatalog> {
       return subscriptions.owner(ownerId, async (tx) => {
         const [settings, plans] = await Promise.all([repo.settings(tx), repo.paidPlans(tx)])

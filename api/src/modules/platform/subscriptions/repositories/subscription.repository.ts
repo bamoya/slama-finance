@@ -157,6 +157,13 @@ export function createSubscriptionRepository(database: () => Database) {
         )
       return r?.id
     },
+    /** Paused, suspended, deleting, or owned by a blocked or deleting customer. */
+    async organizationRestricted(tx: Transaction) {
+      const [r] = await tx.execute(
+        sql`select exists(select 1 from organizations o join platform_users p on p.id=o.owner_id where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and (o.paused_at is not null or o.suspended_at is not null or o.deletion_requested_at is not null or p.blocked_at is not null or p.deletion_requested_at is not null)) as restricted`,
+      )
+      return Boolean(r?.restricted)
+    },
     async staffCount(tx: Transaction) {
       const [r] = await tx
         .select({ n: count() })

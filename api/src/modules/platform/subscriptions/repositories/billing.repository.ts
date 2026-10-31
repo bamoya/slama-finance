@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, ne, sql } from 'drizzle-orm'
 
 import {
   billingSettings,
@@ -91,6 +91,108 @@ export function createBillingRepository(database: () => Database) {
           ...(values.planCode ? { planCode: values.planCode } : {}),
         })
         .where(eq(ownerSubscriptions.ownerId, ownerId)),
+    /** Administrator grant or adjustment: a confirmed zero-amount coverage row. */
+    async adjustment(
+      values: {
+        ownerId: string
+        planCode: string
+        cycle: 'monthly' | 'annual'
+        kind: 'activation' | 'renewal' | 'upgrade'
+        start: Date
+        end: Date
+        decidedBy: string
+        currency: string
+        now: Date
+      },
+      tx: Transaction,
+    ) {
+      const [row] = await tx
+        .insert(subscriptionPayments)
+        .values({
+          ownerId: values.ownerId,
+          planCode: values.planCode,
+          cycle: values.cycle,
+          kind: values.kind,
+          status: 'confirmed',
+          method: 'admin_adjustment',
+          reference: 'admin_adjustment',
+          currency: values.currency,
+          amountHt: 0,
+          taxRateBasisPoints: null,
+          taxAmount: 0,
+          amountTtc: 0,
+          coverageStart: values.start,
+          coverageEnd: values.end,
+          submittedAt: values.now,
+          decidedAt: values.now,
+          decidedBy: values.decidedBy,
+        })
+        .returning()
+      return row!
+    },
+    extendPaidThrough: (
+      ownerId: string,
+      paidThroughAt: Date,
+      planCode: string | null,
+      tx: Transaction,
+    ) =>
+      tx
+        .update(ownerSubscriptions)
+        .set({
+          paidThroughAt: sql`greatest(${ownerSubscriptions.paidThroughAt},${paidThroughAt.toISOString()}::timestamptz)`,
+          ...(planCode ? { planCode } : {}),
+        })
+        .where(eq(ownerSubscriptions.ownerId, ownerId)),
+    setTrialEnd: (ownerId: string, trialEndsAt: Date, tx: Transaction) =>
+      tx
+        .update(ownerSubscriptions)
+        .set({ trialEndsAt })
+        .where(eq(ownerSubscriptions.ownerId, ownerId)),
+    setSuspended: (ownerId: string, suspendedAt: Date | null, tx: Transaction) =>
+      tx
+        .update(ownerSubscriptions)
+        .set({ suspendedAt })
+        .where(eq(ownerSubscriptions.ownerId, ownerId)),
+    /** Moves every period still running at `from` forward; later periods move entirely. */
+    async shiftCoverage(ownerId: string, from: Date, byMs: number, tx: Transaction) {
+      const at = sql`${from.toISOString()}::timestamptz`
+      const by = sql`(${byMs} * interval '1 millisecond')`
+      await tx
+        .update(subscriptionPayments)
+        .set({
+          coverageStart: sql`case when ${subscriptionPayments.coverageStart}>=${at} then ${subscriptionPayments.coverageStart}+${by} else ${subscriptionPayments.coverageStart} end`,
+          coverageEnd: sql`${subscriptionPayments.coverageEnd}+${by}`,
+        })
+        .where(
+          and(
+            eq(subscriptionPayments.ownerId, ownerId),
+            eq(subscriptionPayments.status, 'confirmed'),
+            gt(subscriptionPayments.coverageEnd, from),
+          ),
+        )
+      await tx
+        .update(ownerSubscriptions)
+        .set({
+          paidThroughAt: sql`case when ${ownerSubscriptions.paidThroughAt}>${at} then ${ownerSubscriptions.paidThroughAt}+${by} else ${ownerSubscriptions.paidThroughAt} end`,
+          trialEndsAt: sql`case when ${ownerSubscriptions.trialEndsAt}>${at} then ${ownerSubscriptions.trialEndsAt}+${by} else ${ownerSubscriptions.trialEndsAt} end`,
+        })
+        .where(eq(ownerSubscriptions.ownerId, ownerId))
+    },
+    /** Administrator-created paid subscription; the trial window is recorded but superseded. */
+    createPaid: (
+      ownerId: string,
+      planCode: string,
+      paidThroughAt: Date,
+      now: Date,
+      tx: Transaction,
+    ) =>
+      tx.insert(ownerSubscriptions).values({
+        ownerId,
+        planCode,
+        trialStartedAt: now,
+        trialEndsAt: new Date(now.getTime() + 7 * 86_400_000),
+        paidThroughAt,
+      }),
     setCancellation: (ownerId: string, cancel: boolean, tx: Transaction) =>
       tx
         .update(ownerSubscriptions)

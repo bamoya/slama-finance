@@ -4,7 +4,7 @@ export const RETENTION_MS = 90 * 86_400_000
 export type Cycle = 'monthly' | 'annual'
 export type Coverage = { planCode: string; cycle: Cycle | null; start: Date; end: Date }
 export type CoverageState = {
-  status: 'not_started' | 'trial' | 'active' | 'past_due' | 'expired'
+  status: 'not_started' | 'trial' | 'active' | 'past_due' | 'expired' | 'suspended'
   planCode: string
   cycle: Cycle | null
   current: Coverage | null
@@ -16,10 +16,25 @@ export type CoverageState = {
 }
 
 /**
+ * Administrator suspension freezes the clock at the suspension instant: the lifecycle is evaluated
+ * there and reported as suspended. Resuming shifts coverage by the suspended duration.
+ */
+export function resolveCoverage(
+  subscription: { trialEndsAt: Date; cancelAtPeriodEnd: boolean; suspendedAt?: Date | null } | null,
+  coverage: Coverage[],
+  now: Date,
+): CoverageState {
+  const frozen = subscription?.suspendedAt
+  if (!frozen) return resolveRunning(subscription, coverage, now)
+  const at = frozen.getTime() < now.getTime() ? frozen : now
+  return { ...resolveRunning(subscription, coverage, at), status: 'suspended' }
+}
+
+/**
  * Derives lifecycle from confirmed coverage. Trials never get grace; cancellation ends access at
  * the paid boundary. Later-starting coverage wins on overlap so confirmed upgrades take effect.
  */
-export function resolveCoverage(
+function resolveRunning(
   subscription: { trialEndsAt: Date; cancelAtPeriodEnd: boolean } | null,
   coverage: Coverage[],
   now: Date,
