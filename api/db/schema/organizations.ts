@@ -116,7 +116,7 @@ export const organizations = pgTable(
     check('organizations_locale', sql`${t.locale} in ('fr', 'en')`),
     check(
       'organizations_suspension_source',
-      sql`(${t.suspendedAt} is null) = (${t.suspensionSource} is null)`,
+      sql`${t.suspensionSource} is null or ${t.suspendedAt} is not null`,
     ),
     check(
       'organizations_deletion_window',
@@ -193,6 +193,9 @@ export const ownerAccountTokens = pgTable(
   (t) => [
     uniqueIndex('owner_account_tokens_hash_unique').on(t.tokenHash),
     index('owner_account_tokens_owner_idx').on(t.ownerId),
-    check('owner_account_tokens_purpose', sql`${t.purpose} in ('verify_email', 'reset_password', 'invitation')`),
+    check(
+      'owner_account_tokens_purpose',
+      sql`${t.purpose} in ('verify_email', 'reset_password', 'invitation')`,
+    ),
   ],
 )

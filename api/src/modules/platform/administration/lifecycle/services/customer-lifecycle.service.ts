@@ -293,7 +293,7 @@ export function createCustomerLifecycleService(options: {
       const ownerId = await withAdmin(async (tx) => {
         const org = await repo.organization(organizationId, tx)
         if (!org) throw new AppError(404, 'NOT_FOUND', 'Organization not found.')
-        if (!org.suspendedAt || org.suspensionSource !== 'admin')
+        if (!org.suspendedAt)
           throw conflict('ORGANIZATION_NOT_SUSPENDED', 'This organization is not suspended.')
         await repo.setSuspension(organizationId, null, tx)
         await record(

@@ -874,7 +874,7 @@ CREATE TABLE IF NOT EXISTS "organizations" (
 	CONSTRAINT "organizations_name_present" CHECK (btrim("organizations"."name") <> ''),
 	CONSTRAINT "organizations_slug_format" CHECK (char_length("organizations"."slug") between 1 and 63 and "organizations"."slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 	CONSTRAINT "organizations_locale" CHECK ("organizations"."locale" in ('fr', 'en')),
-	CONSTRAINT "organizations_suspension_source" CHECK (("organizations"."suspended_at" is null) = ("organizations"."suspension_source" is null)),
+	CONSTRAINT "organizations_suspension_source" CHECK ("organizations"."suspension_source" is null or "organizations"."suspended_at" is not null),
 	CONSTRAINT "organizations_deletion_window" CHECK (("organizations"."deletion_requested_at" is null and "organizations"."deletion_due_at" is null) or ("organizations"."deletion_requested_at" is not null and "organizations"."deletion_due_at" is not null and "organizations"."deletion_due_at" > "organizations"."deletion_requested_at"))
 );
 
