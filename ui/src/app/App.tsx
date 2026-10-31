@@ -4,6 +4,7 @@ import { Router } from 'wouter'
 import { useUiLanguage } from '../lib/i18n'
 import { currentSite } from '../lib/platform-sites'
 import { UnknownSitePage } from './pages/unknown-site-page'
+import { LegacyRedirectGate } from './router/legacy-redirect-gate'
 
 // One route tree per site; each is fetched only on its own host.
 const PublicSite = lazy(() => import('./sites/public-site'))
@@ -18,17 +19,19 @@ export default function App() {
 
   return (
     <Router base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-      <Suspense fallback={null}>
-        {site.kind === 'public' ? (
-          <PublicSite />
-        ) : site.kind === 'owner' ? (
-          <OwnerSite />
-        ) : site.kind === 'admin' ? (
-          <AdminSite />
-        ) : (
-          <OrganizationSite />
-        )}
-      </Suspense>
+      <LegacyRedirectGate site={site}>
+        <Suspense fallback={null}>
+          {site.kind === 'public' ? (
+            <PublicSite />
+          ) : site.kind === 'owner' ? (
+            <OwnerSite />
+          ) : site.kind === 'admin' ? (
+            <AdminSite />
+          ) : (
+            <OrganizationSite />
+          )}
+        </Suspense>
+      </LegacyRedirectGate>
     </Router>
   )
 }
