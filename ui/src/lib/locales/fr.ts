@@ -2295,4 +2295,24 @@ export const french: Record<string, string> = {
   'Check the payment methods.': 'Vérifiez les moyens de paiement.',
   Before: 'Avant',
   After: 'Après',
+  'Sign-in steps': 'Étapes de connexion',
+  Code: 'Code',
+  'Every sign-in is recorded in the audit log.':
+    'Chaque connexion est enregistrée dans le journal d’audit.',
+  'Platform administration': 'Administration de la plateforme',
+  'Operate the platform with confidence.': 'Pilotez la plateforme en toute confiance.',
+  'Verify payments, manage customer subscriptions and keep a complete audit trail.':
+    'Vérifiez les paiements, gérez les abonnements des clients et conservez une piste d’audit complète.',
+  'Mandatory two-factor authentication': 'Double authentification obligatoire',
+  'Every administrator signs in with a password and an authenticator code.':
+    'Chaque administrateur se connecte avec un mot de passe et un code d’authentification.',
+  'Payment verification': 'Vérification des paiements',
+  'Customer subscriptions': 'Abonnements des clients',
+  'Audit log of every action': 'Journal d’audit de chaque action',
+  'Install an authenticator app such as Google Authenticator, Microsoft Authenticator or 1Password.':
+    'Installez une application d’authentification comme Google Authenticator, Microsoft Authenticator ou 1Password.',
+  'Scan this QR code with the app.': 'Scannez ce QR code avec l’application.',
+  'Enter the 6-digit code it shows below.': 'Saisissez ci-dessous le code à 6 chiffres affiché.',
+  Copy: 'Copier',
+  Copied: 'Copié',
 }
