@@ -45,7 +45,7 @@ describe('Organization staff invitations', () => {
     }
     app = await buildApp({
       logger: false,
-      environment: loadEnvironment({ NODE_ENV: 'test', OWNER_PORTAL_ORIGIN: origin }),
+      environment: loadEnvironment({ NODE_ENV: 'test' }),
       organizationInvitationDelivery: delivery,
     })
     attachTestDatabase(app, f)
@@ -54,7 +54,7 @@ describe('Organization staff invitations', () => {
       database: db,
       subscriptions: createSubscriptionsModule(db).publicApi,
       invitationDelivery: delivery,
-      portalOrigin: origin,
+      organizationOrigin: async () => origin,
       ttlDays: 14,
       secure: false,
     })
@@ -102,6 +102,7 @@ describe('Organization staff invitations', () => {
     expect(stored!.token_hash).toBe(hash(token))
     expect(JSON.stringify(stored)).not.toContain(token)
     expect(new URL(mail[0]!.url).search).toBe('')
+    expect(new URL(mail[0]!.url).pathname).toBe('/accept-invitation')
     expect((await publicPost('inspect', token)).json()).toMatchObject({
       organizationName: 'Fixture',
       email: invitation.email,

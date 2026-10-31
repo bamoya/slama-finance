@@ -6,7 +6,8 @@ import type {
 } from '../../../../../contracts/generated/administration/administration.schemas.js'
 import type { OwnerAccountDelivery } from '../../../../../integrations/contracts.js'
 import type { Transaction } from '../../../../../lib/db.js'
-import { AppError } from '../../../../../lib/errors.js'
+import { AppError, databaseCode } from '../../../../../lib/errors.js'
+import { normalizeSlug, slugProblem } from '../../../../../lib/platform-sites.js'
 import type { AdminAuditService } from '../../audit/services/admin-audit.service.js'
 import type { AdminLifecyclePort } from '../../payments/services/admin-billing.port.js'
 import type { AdminTransaction } from '../../shared/repositories/admin-transaction.repository.js'
@@ -282,6 +283,50 @@ export function createCustomerLifecycleService(options: {
           tx,
         )
         return org.ownerId
+      })
+      return detail(ownerId)
+    },
+    async renameOrganizationSlug(
+      admin: AuthenticatedAdmin,
+      organizationId: string,
+      input: Sensitive & { slug: string },
+    ) {
+      const slug = normalizeSlug(input.slug)
+      const problem = slugProblem(slug)
+      if (problem === 'SLUG_RESERVED')
+        throw new AppError(400, 'SLUG_RESERVED', 'This address is reserved.')
+      if (problem)
+        throw new AppError(
+          400,
+          'SLUG_INVALID',
+          'Use 3 to 40 lowercase letters, digits or hyphens, without a leading or trailing hyphen.',
+        )
+      const ownerId = await withAdmin(async (tx) => {
+        await stepUp(admin, input.code, tx)
+        const org = await repo.organization(organizationId, tx)
+        if (!org) throw new AppError(404, 'NOT_FOUND', 'Organization not found.')
+        if (org.slug === slug)
+          throw conflict('SLUG_UNCHANGED', 'The organization already uses this address.')
+        if ((await repo.slugUsers(slug, tx)).some((id) => id !== organizationId))
+          throw conflict('SLUG_TAKEN', 'This address is already used.')
+        const now = clock()
+        await repo.renameSlug(organizationId, org.slug, slug, now, tx)
+        // Sessions belong to the old host; everyone signs in again on the new address.
+        await repo.revokeOrganizationSessions(organizationId, now, tx)
+        await record(
+          admin,
+          'organization.rename_slug',
+          'organization',
+          organizationId,
+          { slug: org.slug },
+          { slug, ownerId: org.ownerId, reason: input.reason },
+          tx,
+        )
+        return org.ownerId
+      }).catch((error: unknown) => {
+        if (databaseCode(error) === '23505')
+          throw conflict('SLUG_TAKEN', 'This address is already used.')
+        throw error
       })
       return detail(ownerId)
     },

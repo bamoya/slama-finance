@@ -23,7 +23,8 @@ export function createReportingModule(options: {
   storage: ObjectStorage
   notifications?: NotificationPublicApi
   sender?: { email: string; name: string }
-  uiOrigin?: string
+  /** Current organization site origin for report links (resolved in the tenant scope). */
+  uiOrigin?: () => Promise<string | undefined>
   clock?: () => Date
   leaseMs?: number
   observe?: WorkerObserver

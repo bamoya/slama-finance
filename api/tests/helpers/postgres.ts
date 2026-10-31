@@ -69,6 +69,7 @@ export async function isolatedDatabase() {
     await admin.unsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".actors TO "${role}"`)
     await admin.unsafe(`GRANT SELECT ON "${schema}".organizations TO "${role}"`)
+    await admin.unsafe(`GRANT SELECT ON "${schema}".organization_slug_history TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT, UPDATE ON "${schema}".users TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".audit_events TO "${role}"`)
     return { db: drizzle(client, { schema: tables }), client, role, cleanup }

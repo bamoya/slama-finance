@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 
+import { sql } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
@@ -43,8 +44,6 @@ describe('Customer lifecycle administration', () => {
       environment: loadEnvironment({
         NODE_ENV: 'test',
         OWNER_AUTH_ENABLED: 'true',
-        OWNER_PORTAL_ORIGIN: origin,
-        CORS_ORIGIN: origin,
         ADMIN_TOTP_KEY: randomBytes(32).toString('base64'),
       }),
       logger: false,
@@ -429,5 +428,115 @@ describe('Customer lifecycle administration', () => {
     expect((await post('inspect', { token: tokenOf(messages.at(-1)!) })).statusCode).toBe(400)
     const incomplete = await create('bad@example.test', { kind: 'paid', planCode: 'pro' })
     expect(incomplete.json().code).toBe('INVALID_SUBSCRIPTION')
+  })
+
+  it('renames an organization address, keeps the old one redirecting and revokes sessions', async () => {
+    const staffA = await staffSession(testOrganizationId, 'staff-a@example.test')
+    const rename = (body: Record<string, unknown>, id = testOrganizationId) =>
+      admin(`/api/v1/admin/organizations/${id}/slug`, body)
+    for (const [slug, code] of [
+      ['ab', 'SLUG_INVALID'],
+      ['support', 'SLUG_RESERVED'],
+      ['  API ', 'SLUG_RESERVED'],
+    ] as const) {
+      const response = await rename({ slug, reason: 'r', code: await freshCode() })
+      expect(response.statusCode, slug).toBe(400)
+      expect(response.json().code).toBe(code)
+    }
+    const taken = await rename({ slug: 'second', reason: 'r', code: await freshCode() })
+    expect(taken.statusCode).toBe(409)
+    expect(taken.json().code).toBe('SLUG_TAKEN')
+    expect(
+      (await rename({ slug: 'Atelier Neuf', reason: 'rebrand', code: '000000' })).statusCode,
+    ).toBe(403)
+    const renamed = await rename({ slug: 'Atelier Neuf', reason: secret, code: await freshCode() })
+    expect(renamed.statusCode, renamed.body).toBe(200)
+    expect(
+      (await fixture.client`select slug from organizations where id=${testOrganizationId}`)[0]!
+        .slug,
+    ).toBe('atelier-neuf')
+    expect(
+      await fixture.client`select slug,organization_id from organization_slug_history`,
+    ).toEqual([{ slug: 'fixture', organization_id: testOrganizationId }])
+    const [audit] = await audits('organization.rename_slug')
+    expect(audit).toMatchObject({ before: { slug: 'fixture' }, after: { slug: 'atelier-neuf' } })
+    expect(await staffAlive(testOrganizationId, staffA)).toBe(false)
+    // The old host no longer serves the API but tells the UI where the organization moved.
+    const old = await app.inject({
+      url: '/api/v1/organization-auth/session',
+      headers: { host: 'fixture.localhost:5173' },
+    })
+    expect(old.statusCode).toBe(404)
+    const site = await app.inject({
+      url: '/api/v1/public/site',
+      headers: { host: 'fixture.localhost:5173' },
+    })
+    expect(site.json()).toEqual({
+      kind: 'organization',
+      organization: null,
+      redirectTo: 'http://atelier-neuf.localhost:5173',
+    })
+    const current = await app.inject({
+      url: '/api/v1/public/site',
+      headers: { host: 'atelier-neuf.localhost:5173' },
+    })
+    expect(current.json()).toEqual({
+      kind: 'organization',
+      organization: { slug: 'atelier-neuf', name: 'Fixture' },
+      redirectTo: null,
+    })
+    // A former address stays unavailable to other organizations but the owner may take it back.
+    const stolen = await rename({ slug: 'fixture', reason: 'r', code: await freshCode() }, orgB)
+    expect(stolen.json().code).toBe('SLUG_TAKEN')
+    const back = await rename({ slug: 'fixture', reason: 'r', code: await freshCode() })
+    expect(back.statusCode, back.body).toBe(200)
+    expect(await fixture.client`select slug from organization_slug_history order by slug`).toEqual([
+      { slug: 'atelier-neuf' },
+    ])
+    // Owners cannot change the address themselves, even with a column grant on the table.
+    await fixture.client.unsafe(`GRANT UPDATE ON organizations TO "${fixture.role}"`)
+    await expect(
+      fixture.db.transaction(async (tx) => {
+        await tx.execute(sql`set local role ${sql.raw(`"${fixture.role}"`)}`)
+        await tx.execute(
+          sql`select set_config('app.actor_type','owner',true),set_config('app.owner_id',${testOwnerId},true)`,
+        )
+        await tx.execute(
+          sql`update organizations set slug='owner-pick' where id=${testOrganizationId}`,
+        )
+      }),
+    ).rejects.toThrow(/administrator context required/)
+  })
+
+  it('resolves legacy organization links only for active organizations', async () => {
+    const address = (id: string) =>
+      app.inject({
+        url: `/api/v1/public/organizations/${id}/address`,
+        headers: { host: 'localhost:5173' },
+      })
+    expect((await address(testOrganizationId)).json()).toEqual({
+      url: 'http://fixture.localhost:5173',
+    })
+    const onOrganizationHost = await app.inject({
+      url: `/api/v1/public/organizations/${orgB}/address`,
+      headers: { host: 'second.localhost:5173' },
+    })
+    expect(onOrganizationHost.json()).toEqual({ url: 'http://second.localhost:5173' })
+    const unknown = await address('10000000-0000-4000-8000-0000000000ff')
+    expect(unknown.statusCode).toBe(404)
+    await admin(`/api/v1/admin/organizations/${orgB}/suspend`, {
+      reason: 'r',
+      code: await freshCode(),
+    })
+    const suspended = await address(orgB)
+    expect(suspended.statusCode).toBe(404)
+    expect(suspended.body).toBe(
+      unknown.body.replace(unknown.json().requestId, suspended.json().requestId),
+    )
+    expect(
+      (
+        await app.inject({ url: '/api/v1/public/site', headers: { host: 'localhost:5173' } })
+      ).json(),
+    ).toEqual({ kind: 'public', organization: null, redirectTo: null })
   })
 })

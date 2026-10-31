@@ -26,8 +26,6 @@ describe('Owner onboarding persistence and isolation', () => {
       environment: loadEnvironment({
         NODE_ENV: 'test',
         OWNER_AUTH_ENABLED: 'true',
-        OWNER_PORTAL_ORIGIN: 'http://localhost:5173',
-        CORS_ORIGIN: 'http://localhost:5173',
       }),
       logger: false,
       mediaStorage: {
@@ -69,7 +67,7 @@ describe('Owner onboarding persistence and isolation', () => {
     const result = await request(
       'POST',
       '/api/v1/owner/organizations',
-      { name: 'Atelier Atlas', requestId: randomUUID() },
+      { name: 'Atelier Atlas', slug: `atlas-${randomUUID().slice(0, 8)}`, requestId: randomUUID() },
       token,
     )
     expect(result.statusCode).toBe(201)
@@ -84,7 +82,7 @@ describe('Owner onboarding persistence and isolation', () => {
     )
   it('creates an idempotent independent setup with an independent administrator and optional company data', async () => {
     const requestId = randomUUID(),
-      payload = { name: '  Atelier Atlas  ', requestId }
+      payload = { name: '  Atelier Atlas  ', slug: 'atelier-atlas', requestId }
     const first = await request('POST', '/api/v1/owner/organizations', payload)
     expect(first.statusCode).toBe(201)
     expect(first.json()).toMatchObject({
@@ -212,7 +210,7 @@ describe('Owner onboarding persistence and isolation', () => {
           url: '/api/v1/owner/organizations',
           headers: { origin: 'https://foreign.example' },
           cookies: { slama_owner_session: 'owner-a' },
-          payload: { name: 'Forbidden', requestId: randomUUID() },
+          payload: { name: 'Forbidden', slug: 'forbidden-org', requestId: randomUUID() },
         })
       ).statusCode,
     ).toBe(403)
@@ -280,7 +278,7 @@ describe('Owner onboarding persistence and isolation', () => {
       const rows = await tx.execute(sql`select organization_id from organization_profiles`)
       const createdId = randomUUID()
       await tx.execute(
-        sql`insert into organizations(id,owner_id,name,slug) values (${createdId},${ownerA},'Runtime setup',${'runtime-' + createdId})`,
+        sql`insert into organizations(id,owner_id,name,slug) values (${createdId},${ownerA},'Runtime setup',${'runtime-' + createdId.slice(0, 8)})`,
       )
       await tx.execute(
         sql`insert into organization_profiles(organization_id,configuration) values (${createdId},${JSON.stringify(a.configuration)}::jsonb)`,
@@ -302,5 +300,92 @@ describe('Owner onboarding persistence and isolation', () => {
         ).length,
       ).toBe(0)
     })
+  })
+
+  it('lets the owner choose a normalized, unique organization address', async () => {
+    const createWith = (slug: string, requestId = randomUUID(), token = 'owner-a') =>
+      request('POST', '/api/v1/owner/organizations', { name: 'Atlas', slug, requestId }, token)
+    const created = await createWith('  Café_Atlas  Rabat--2026 ')
+    expect(created.statusCode, created.body).toBe(201)
+    const id = created.json<OwnerOnboarding>().organization.id
+    expect((await fixture.client`select slug from organizations where id=${id}`)[0]!.slug).toBe(
+      'cafe-atlas-rabat-2026',
+    )
+    for (const [slug, code] of [
+      ['ab', 'SLUG_INVALID'],
+      ['x'.repeat(41), 'SLUG_INVALID'],
+      ['---', 'SLUG_INVALID'],
+      ['Admin', 'SLUG_RESERVED'],
+      ['www', 'SLUG_RESERVED'],
+    ] as const) {
+      const response = await createWith(slug)
+      expect(response.statusCode, slug).toBe(400)
+      expect(response.json().code).toBe(code)
+    }
+    const duplicate = await createWith('CAFE atlas rabat 2026', randomUUID(), 'owner-b')
+    expect(duplicate.statusCode).toBe(409)
+    expect(duplicate.json().code).toBe('SLUG_TAKEN')
+    // A former address of another organization stays unavailable.
+    await fixture.client`insert into organization_slug_history(slug,organization_id) values ('old-atlas',${id})`
+    expect((await createWith('old-atlas', randomUUID(), 'owner-b')).json().code).toBe('SLUG_TAKEN')
+
+    const availability = (slug: string) =>
+      request(
+        'GET',
+        `/api/v1/owner/organization-slugs/availability?slug=${encodeURIComponent(slug)}`,
+      )
+    expect((await availability(' Nouvelle Société ')).json()).toEqual({
+      slug: 'nouvelle-societe',
+      available: true,
+      reason: null,
+    })
+    expect((await availability('cafe-atlas-rabat-2026')).json()).toMatchObject({
+      available: false,
+      reason: 'taken',
+    })
+    expect((await availability('old-atlas')).json()).toMatchObject({
+      available: false,
+      reason: 'taken',
+    })
+    expect((await availability('api')).json()).toMatchObject({
+      available: false,
+      reason: 'reserved',
+    })
+    expect((await availability('a')).json()).toEqual({
+      slug: 'a',
+      available: false,
+      reason: 'invalid',
+    })
+    const anonymous = await app.inject({
+      url: '/api/v1/owner/organization-slugs/availability?slug=free-name',
+      headers: { host: 'app.localhost:5173' },
+    })
+    expect(anonymous.statusCode).toBe(401)
+    const elsewhere = await app.inject({
+      url: '/api/v1/owner/organization-slugs/availability?slug=free-name',
+      headers: { host: 'localhost:5173' },
+      cookies: { slama_owner_session: 'owner-a' },
+    })
+    expect(elsewhere.statusCode).toBe(404)
+  })
+
+  it('accepts exactly one of two concurrent creations with the same address', async () => {
+    const results = await Promise.all(
+      ['owner-a', 'owner-b'].map((token) =>
+        request(
+          'POST',
+          '/api/v1/owner/organizations',
+          { name: 'Race', slug: 'race-address', requestId: randomUUID() },
+          token,
+        ),
+      ),
+    )
+    expect(results.map((r) => r.statusCode).sort()).toEqual([201, 409])
+    expect(results.find((r) => r.statusCode === 409)!.json().code).toBe('SLUG_TAKEN')
+    expect(
+      (
+        await fixture.client`select count(*)::int n from organizations where slug='race-address'`
+      )[0]!.n,
+    ).toBe(1)
   })
 })

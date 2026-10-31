@@ -857,6 +857,18 @@ CREATE TABLE IF NOT EXISTS "organization_domains" (
 ALTER TABLE "organization_domains" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "organization_slug_history" (
+	"slug" text PRIMARY KEY NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"replaced_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "organization_slug_history_format" CHECK (char_length("organization_slug_history"."slug") between 1 and 63 and "organization_slug_history"."slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$')
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "organization_slug_history" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "organizations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"owner_id" uuid NOT NULL,
@@ -872,7 +884,7 @@ CREATE TABLE IF NOT EXISTS "organizations" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_name_present" CHECK (btrim("organizations"."name") <> ''),
-	CONSTRAINT "organizations_slug_format" CHECK (char_length("organizations"."slug") between 1 and 63 and "organizations"."slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+	CONSTRAINT "organizations_slug_format" CHECK (char_length("organizations"."slug") between 3 and 40 and "organizations"."slug" ~ '^[a-z0-9][a-z0-9-]*[a-z0-9]$' and "organizations"."slug" not like 'xn--%' and "organizations"."slug" not in ('app','admin','api','www','mail','static','assets','status','docs','help','support','billing','auth')),
 	CONSTRAINT "organizations_locale" CHECK ("organizations"."locale" in ('fr', 'en')),
 	CONSTRAINT "organizations_suspension_source" CHECK ("organizations"."suspension_source" is null or "organizations"."suspended_at" is not null),
 	CONSTRAINT "organizations_deletion_window" CHECK (("organizations"."deletion_requested_at" is null and "organizations"."deletion_due_at" is null) or ("organizations"."deletion_requested_at" is not null and "organizations"."deletion_due_at" is not null and "organizations"."deletion_due_at" > "organizations"."deletion_requested_at"))
@@ -1520,6 +1532,9 @@ CREATE INDEX IF NOT EXISTS "organization_domains_organization_idx" ON "organizat
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "organization_domains_active_unique" ON "organization_domains" USING btree ("organization_id") WHERE "organization_domains"."activated_at" is not null;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "organization_slug_history_organization_idx" ON "organization_slug_history" USING btree ("organization_id");
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "organizations_slug_unique" ON "organizations" USING btree ("slug");
@@ -2427,6 +2442,14 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
+ ALTER TABLE "organization_slug_history" ADD CONSTRAINT "organization_slug_history_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
  ALTER TABLE "organizations" ADD CONSTRAINT "organizations_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -2899,6 +2922,18 @@ CREATE POLICY "tenant_isolation" ON "organization_admin_deliveries" AS PERMISSIV
 CREATE POLICY "organization_domains_tenant_scope" ON "organization_domains" AS PERMISSIVE FOR ALL TO public USING ("organization_domains"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("organization_domains"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "organization_slug_history_host_resolution" ON "organization_slug_history" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='host_resolver');
+--> statement-breakpoint
+
+CREATE POLICY "organization_slug_history_platform_admin_read" ON "organization_slug_history" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "organization_slug_history_platform_admin_write" ON "organization_slug_history" AS PERMISSIVE FOR INSERT TO public WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "organization_slug_history_platform_admin_delete" ON "organization_slug_history" AS PERMISSIVE FOR DELETE TO public USING (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "organizations_platform_admin_read" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
@@ -3043,6 +3078,8 @@ ALTER TABLE "organization_profiles" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "organization_admin_deliveries" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "organization_domains" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "organization_slug_history" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "organizations" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -3743,6 +3780,34 @@ END $$;
 CREATE TRIGGER owner_subscriptions_admin_coverage BEFORE UPDATE ON owner_subscriptions FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
 --> statement-breakpoint
 CREATE TRIGGER billing_settings_admin_only BEFORE UPDATE ON billing_settings FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
+--> statement-breakpoint
+-- Organization addresses: a slug recorded as another organization's former address stays
+-- unavailable, and only administrators rename an existing organization. SECURITY DEFINER reads
+-- the history regardless of the caller's row policies; it returns no data to the caller.
+CREATE FUNCTION guard_organization_slug() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND NEW.slug IS NOT DISTINCT FROM OLD.slug THEN
+  RETURN NEW;
+ END IF;
+ IF EXISTS (SELECT 1 FROM organization_slug_history h WHERE h.slug=NEW.slug AND h.organization_id<>NEW.id) THEN
+  RAISE EXCEPTION 'Organization slug is unavailable' USING ERRCODE='23505', CONSTRAINT='organizations_slug_unique';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER organizations_slug_guard BEFORE INSERT OR UPDATE OF slug ON organizations FOR EACH ROW EXECUTE FUNCTION guard_organization_slug();
+--> statement-breakpoint
+CREATE FUNCTION require_platform_admin_slug_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.slug IS DISTINCT FROM OLD.slug
+   AND current_setting('app.actor_type',true) IS DISTINCT FROM 'platform_admin'
+   AND NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  RAISE EXCEPTION 'Platform administrator context required' USING ERRCODE='42501';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER organizations_slug_admin_only BEFORE UPDATE OF slug ON organizations FOR EACH ROW EXECUTE FUNCTION require_platform_admin_slug_change();
 
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "document_artifacts" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id');

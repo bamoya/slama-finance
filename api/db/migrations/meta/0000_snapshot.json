@@ -1,5 +1,5 @@
 {
-  "id": "4a3616b1-f64a-4d08-8c8e-59f35455ef17",
+  "id": "4f175db4-5bf0-4325-a570-bc9f527f7dcf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -7062,6 +7062,110 @@
       },
       "isRLSEnabled": true
     },
+    "public.organization_slug_history": {
+      "name": "organization_slug_history",
+      "schema": "",
+      "columns": {
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "replaced_at": {
+          "name": "replaced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organization_slug_history_organization_idx": {
+          "name": "organization_slug_history_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_slug_history_organization_id_organizations_id_fk": {
+          "name": "organization_slug_history_organization_id_organizations_id_fk",
+          "tableFrom": "organization_slug_history",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "organization_slug_history_host_resolution": {
+          "name": "organization_slug_history_host_resolution",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='host_resolver'"
+        },
+        "organization_slug_history_platform_admin_read": {
+          "name": "organization_slug_history_platform_admin_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "organization_slug_history_platform_admin_write": {
+          "name": "organization_slug_history_platform_admin_write",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "public"
+          ],
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "organization_slug_history_platform_admin_delete": {
+          "name": "organization_slug_history_platform_admin_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "organization_slug_history_format": {
+          "name": "organization_slug_history_format",
+          "value": "char_length(\"organization_slug_history\".\"slug\") between 1 and 63 and \"organization_slug_history\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": true
+    },
     "public.organizations": {
       "name": "organizations",
       "schema": "",
@@ -7282,7 +7386,7 @@
         },
         "organizations_slug_format": {
           "name": "organizations_slug_format",
-          "value": "char_length(\"organizations\".\"slug\") between 1 and 63 and \"organizations\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+          "value": "char_length(\"organizations\".\"slug\") between 3 and 40 and \"organizations\".\"slug\" ~ '^[a-z0-9][a-z0-9-]*[a-z0-9]$' and \"organizations\".\"slug\" not like 'xn--%' and \"organizations\".\"slug\" not in ('app','admin','api','www','mail','static','assets','status','docs','help','support','billing','auth')"
         },
         "organizations_locale": {
           "name": "organizations_locale",

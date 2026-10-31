@@ -44,7 +44,8 @@ type Options = {
   clock?: () => Date
   notifications?: NotificationPublicApi
   sender?: { email: string; name: string }
-  uiOrigin?: string
+  /** Current organization site origin for report links (resolved in the tenant scope). */
+  uiOrigin?: () => Promise<string | undefined>
   leaseMs?: number
   observe?: WorkerObserver
 }
@@ -648,7 +649,7 @@ export function createScheduleService(
                 outcomes.push({ userId, status: 'skipped', reason, messageId: null })
                 continue
               }
-              const link = `${options.uiOrigin!.replace(/\/$/, '')}/reports/runs/${row.id}`
+              const link = `${(await options.uiOrigin!()) ?? ''}/reports/runs/${row.id}`
               const attachments = []
               for (const file of published.filter((item) => item.format !== 'csv')) {
                 const attachment = await repo.pinFile(row.id, file.objectKey, tx)

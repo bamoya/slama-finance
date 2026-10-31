@@ -9,6 +9,11 @@ export function registerOwnerOrganizationRoutes(
   onboarding?: ReturnType<typeof createOwnerOnboardingController>,
 ) {
   if (onboarding) {
+    app.get(
+      '/organization-slugs/availability',
+      { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+      onboarding.slugAvailability,
+    )
     app.post(
       '/organizations',
       { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },

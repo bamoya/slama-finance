@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { sessions } from '../../../../../../db/schema/auth.js'
 import {
   organizations,
+  organizationSlugHistory,
   ownerAccountTokens,
   ownerSessions,
   platformUsers,
@@ -67,6 +68,33 @@ export function createCustomerLifecycleRepository() {
       await tx
         .update(organizations)
         .set({ suspendedAt, suspensionSource: suspendedAt ? 'admin' : null, updatedAt: new Date() })
+        .where(eq(organizations.id, id))
+    },
+    /** Which organization uses the slug now or used it before (platform_admin reads both). */
+    async slugUsers(slug: string, tx: Transaction) {
+      const current = await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.slug, slug))
+      const former = await tx
+        .select({ id: organizationSlugHistory.organizationId })
+        .from(organizationSlugHistory)
+        .where(eq(organizationSlugHistory.slug, slug))
+      return [...current, ...former].map((row) => row.id)
+    },
+    /** Keeps the old address for redirects; an organization taking back its own former slug drops it. */
+    async renameSlug(id: string, from: string, to: string, now: Date, tx: Transaction) {
+      await tx
+        .delete(organizationSlugHistory)
+        .where(
+          and(eq(organizationSlugHistory.slug, to), eq(organizationSlugHistory.organizationId, id)),
+        )
+      await tx
+        .insert(organizationSlugHistory)
+        .values({ slug: from, organizationId: id, replacedAt: now })
+      await tx
+        .update(organizations)
+        .set({ slug: to, updatedAt: now })
         .where(eq(organizations.id, id))
     },
     /** Staff sessions are tenant-scoped rows: briefly enter that organization's scope to revoke. */

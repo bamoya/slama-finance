@@ -55,7 +55,7 @@ export function createOwnerOnboardingRepository(database: () => Database) {
             slug,
             locale: configuration.defaults.language,
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing({ target: organizations.id })
           .returning({ id: organizations.id })
         if (inserted.length)
           await tx

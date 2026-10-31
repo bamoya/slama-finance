@@ -282,6 +282,51 @@
           }
         }
       }
+    },
+    "/api/v1/owner/organization-slugs/availability": {
+      "get": {
+        "operationId": "checkOwnerOrganizationSlug",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "description": "Normalizes a candidate organization address and reports whether it can be used now. Rate limited. Creation still enforces uniqueness atomically.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOrganizationSlugAvailability"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -539,10 +584,17 @@
           "requestId": {
             "type": "string",
             "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Owner-chosen address (<slug>.<platform domain>). Normalized server-side (accents removed, lowercase, spaces/underscores to '-'), then 3-40 of a-z, 0-9 and inner '-'; reserved names and xn-- rejected. 400 SLUG_INVALID or SLUG_RESERVED, 409 SLUG_TAKEN (also former addresses of other organizations)."
           }
         },
         "required": [
           "name",
+          "slug",
           "requestId"
         ]
       },
@@ -697,6 +749,36 @@
           },
           "data": {
             "type": "string"
+          }
+        }
+      },
+      "OwnerOrganizationSlugAvailability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "available",
+          "reason"
+        ],
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Normalized slug"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "taken",
+              "reserved",
+              "invalid",
+              null
+            ]
           }
         }
       }

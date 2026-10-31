@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
   AdminCoverageExtensionSchema,
+  AdminOrganizationSlugChangeSchema,
   AdminOwnerCreateSchema,
   AdminPlanChangeSchema,
   AdminReasonSchema,
@@ -77,6 +78,14 @@ export function createCustomerLifecycleController(
         organizationOf(request),
         sensitive(request),
       ),
+    renameOrganizationSlug(request: FastifyRequest) {
+      const body = AdminOrganizationSlugChangeSchema.parse(request.body)
+      return lifecycle.renameOrganizationSlug(currentAdmin(request), organizationOf(request), {
+        slug: body.slug,
+        reason: body.reason.trim(),
+        code: body.code,
+      })
+    },
     reactivateOrganization: (request: FastifyRequest) =>
       lifecycle.reactivateOrganization(
         currentAdmin(request),

@@ -238,7 +238,7 @@ describe('Live and frozen reporting', () => {
         storage,
         notifications,
         sender: { email: 'reports@example.test', name: 'Slama' },
-        uiOrigin: 'http://localhost:5173',
+        uiOrigin: async () => 'http://fixture.localhost:5173',
       })
       const created = await post('/api/v1/report-schedules', {
         name: 'Disabled weekly test',
@@ -601,7 +601,7 @@ describe('Live and frozen reporting', () => {
       clock: () => clock,
       notifications,
       sender: { email: 'reports@example.test', name: 'B-Finance' },
-      uiOrigin: 'http://localhost:5173',
+      uiOrigin: async () => 'http://fixture.localhost:5173',
     })
     const response = await post('/api/v1/report-schedules', {
       name: 'Neutral report notice',

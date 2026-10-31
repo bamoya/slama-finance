@@ -27,3 +27,31 @@ END $$;
 CREATE TRIGGER owner_subscriptions_admin_coverage BEFORE UPDATE ON owner_subscriptions FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
 --> statement-breakpoint
 CREATE TRIGGER billing_settings_admin_only BEFORE UPDATE ON billing_settings FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
+--> statement-breakpoint
+-- Organization addresses: a slug recorded as another organization's former address stays
+-- unavailable, and only administrators rename an existing organization. SECURITY DEFINER reads
+-- the history regardless of the caller's row policies; it returns no data to the caller.
+CREATE FUNCTION guard_organization_slug() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND NEW.slug IS NOT DISTINCT FROM OLD.slug THEN
+  RETURN NEW;
+ END IF;
+ IF EXISTS (SELECT 1 FROM organization_slug_history h WHERE h.slug=NEW.slug AND h.organization_id<>NEW.id) THEN
+  RAISE EXCEPTION 'Organization slug is unavailable' USING ERRCODE='23505', CONSTRAINT='organizations_slug_unique';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER organizations_slug_guard BEFORE INSERT OR UPDATE OF slug ON organizations FOR EACH ROW EXECUTE FUNCTION guard_organization_slug();
+--> statement-breakpoint
+CREATE FUNCTION require_platform_admin_slug_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.slug IS DISTINCT FROM OLD.slug
+   AND current_setting('app.actor_type',true) IS DISTINCT FROM 'platform_admin'
+   AND NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  RAISE EXCEPTION 'Platform administrator context required' USING ERRCODE='42501';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER organizations_slug_admin_only BEFORE UPDATE OF slug ON organizations FOR EACH ROW EXECUTE FUNCTION require_platform_admin_slug_change();

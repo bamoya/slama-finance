@@ -78,6 +78,7 @@ describe('Owner activation, workspace access and admission limits', () => {
   const create = async () => {
     const r = await request('POST', '/api/v1/owner/organizations', {
       name: 'Atelier Atlas',
+      slug: `atlas-${randomUUID().slice(0, 8)}`,
       requestId: randomUUID(),
     })
     expect(r.statusCode, r.body).toBe(201)
@@ -119,7 +120,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       database: () => tenantDatabase(fixture.db, id),
       ttlDays: 14,
       secure: false,
-      portalOrigin: origin,
+      organizationOrigin: async () => origin,
       adminDelivery: {
         send: async (input) => {
           deliveries.push(input)
@@ -128,6 +129,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     })
     await identity.provisioning.runOne()
     expect(deliveries).toHaveLength(1)
+    expect(deliveries[0]!.loginUrl).toBe(`${origin}/login`)
     const login = await app.inject({
       method: 'POST',
       url: '/api/v1/organization-auth/login',
@@ -180,7 +182,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       database: () => tenantDatabase(fixture.db, orgId),
       ttlDays: 14,
       secure: false,
-      portalOrigin: origin,
+      organizationOrigin: async () => origin,
       invitationDelivery: {
         async send(input) {
           sent.push(input)
@@ -221,6 +223,7 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(admin!.temporary_password_expires_at).toBeNull()
     const retry = await request('POST', '/api/v1/owner/organizations', {
       name: 'Retry',
+      slug: 'retry-org',
       requestId: draft.organization.id,
     })
     expect(retry.statusCode, retry.body).toBe(201)
@@ -231,6 +234,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       (
         await request('POST', '/api/v1/owner/organizations', {
           name: 'Extra',
+          slug: 'extra-org',
           requestId: randomUUID(),
         })
       ).json().code,
@@ -396,7 +400,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       database: () => tenantDatabase(fixture.db, id),
       ttlDays: 14,
       secure: false,
-      portalOrigin: origin,
+      organizationOrigin: async () => origin,
       adminDelivery: {
         send: async (input) => {
           if (fail) throw Error('provider unavailable')

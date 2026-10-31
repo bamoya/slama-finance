@@ -18,4 +18,5 @@ export function registerCustomerLifecycleRoutes(
   app.post('/owners/:ownerId/subscription/extension', controller.extend)
   app.post('/organizations/:organizationId/suspend', controller.suspendOrganization)
   app.post('/organizations/:organizationId/reactivate', controller.reactivateOrganization)
+  app.post('/organizations/:organizationId/slug', controller.renameOrganizationSlug)
 }

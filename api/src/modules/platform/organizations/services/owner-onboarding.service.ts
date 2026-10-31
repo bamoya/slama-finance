@@ -7,7 +7,8 @@ import type {
 } from '../../../../contracts/generated/identity/owner-onboarding.schemas.js'
 import { OwnerOnboardingConfigurationSchema } from '../../../../contracts/generated/identity/owner-onboarding.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
-import { AppError } from '../../../../lib/errors.js'
+import { AppError, databaseCode } from '../../../../lib/errors.js'
+import { normalizeSlug, slugProblem } from '../../../../lib/platform-sites.js'
 import type { OrganizationProvisioningPublicApi } from '../../../organization/identity/index.js'
 import type { OwnerBrandingPublicApi } from '../../../organization/media/index.js'
 import type { SettingsPublicApi } from '../../../organization/settings/index.js'
@@ -37,7 +38,20 @@ export function createOwnerOnboardingService(
       input: { email: string; firstName: string | null; lastName: string | null },
     ) => Promise<string>
   },
+  /** Whole-SaaS slug usage (current and former addresses); owners cannot read other organizations. */
+  slugs: { taken: (slug: string, exceptOrganizationId?: string) => Promise<boolean> } = {
+    taken: async () => false,
+  },
 ) {
+  const slugError = (problem: 'SLUG_INVALID' | 'SLUG_RESERVED') =>
+    problem === 'SLUG_RESERVED'
+      ? new AppError(400, 'SLUG_RESERVED', 'This address is reserved.')
+      : new AppError(
+          400,
+          'SLUG_INVALID',
+          'Use 3 to 40 lowercase letters, digits or hyphens, without a leading or trailing hyphen.',
+        )
+  const taken = () => new AppError(409, 'SLUG_TAKEN', 'This address is already used.')
   const assertBrand = async (
     ownerId: string,
     organizationId: string,
@@ -90,31 +104,49 @@ export function createOwnerOnboardingService(
         },
         invitations: [],
       })
-      const base =
-        configuration.name
-          .normalize('NFKD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '')
-          .slice(0, 45) || 'organisation'
+      const slug = normalizeSlug(input.slug)
+      const problem = slugProblem(slug)
+      if (problem) throw slugError(problem)
+      if (await slugs.taken(slug, input.requestId)) throw taken()
       return map(
-        await repository.create(
-          owner.id,
-          input.requestId,
-          `${base}-${input.requestId.slice(0, 8)}`,
-          configuration,
-          activation ? (tx) => activation.subscriptions.admitOrganization(owner.id, tx) : undefined,
-          activation
-            ? (tx) =>
-                activation.provision(tx, {
-                  email: owner.email,
-                  firstName: owner.firstName,
-                  lastName: owner.lastName,
-                })
-            : undefined,
-        ),
+        await repository
+          .create(
+            owner.id,
+            input.requestId,
+            slug,
+            configuration,
+            activation
+              ? (tx) => activation.subscriptions.admitOrganization(owner.id, tx)
+              : undefined,
+            activation
+              ? (tx) =>
+                  activation.provision(tx, {
+                    email: owner.email,
+                    firstName: owner.firstName,
+                    lastName: owner.lastName,
+                  })
+              : undefined,
+          )
+          .catch((error: unknown) => {
+            // Concurrent creation or a former address: the unique index / slug guard decides.
+            if (databaseCode(error) === '23505') throw taken()
+            throw error
+          }),
       )
+    },
+    /** Advisory only: creation enforces uniqueness atomically (unique index and slug guard). */
+    async slugAvailability(token: string | undefined, input: string) {
+      await owners.session(token)
+      const slug = normalizeSlug(input)
+      const problem = slugProblem(slug)
+      if (problem)
+        return {
+          slug,
+          available: false,
+          reason: problem === 'SLUG_RESERVED' ? ('reserved' as const) : ('invalid' as const),
+        }
+      if (await slugs.taken(slug)) return { slug, available: false, reason: 'taken' as const }
+      return { slug, available: true, reason: null }
     },
     async get(token: string | undefined, id: string) {
       const owner = await owners.session(token)

@@ -16,7 +16,10 @@ export function createPasswordRecoveryService(
     const url = new URL(delivery.resetUrl)
     if (
       url.protocol !== 'https:' &&
-      !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))
+      !(
+        url.protocol === 'http:' &&
+        (['localhost', '127.0.0.1'].includes(url.hostname) || url.hostname.endsWith('.localhost'))
+      )
     )
       throw new Error('Password reset URL must use HTTPS (except localhost)')
   }

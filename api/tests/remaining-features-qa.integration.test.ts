@@ -177,7 +177,7 @@ describe('Independent remaining-feature regression QA', () => {
       storage,
       notifications,
       sender: { email: 'notifications@example.invalid', name: 'QA' },
-      uiOrigin: headers.origin,
+      uiOrigin: async () => headers.origin,
       clock: () => clock,
       observe,
     })

@@ -1,0 +1,64 @@
+paths:
+  /api/v1/public/site:
+    get:
+      operationId: getPublicSite
+      tags: [identity]
+      security: []
+      description: Classifies the current host. On an organization host returns its public identity; on a
+        former organization address returns redirectTo (the current origin; the UI keeps the path).
+        Unknown organization hosts return kind organization with organization null and redirectTo null.
+      responses:
+        '200':
+          description: Current site
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSite' }
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/public/organizations/{organizationId}/address:
+    get:
+      operationId: getPublicOrganizationAddress
+      tags: [identity]
+      security: []
+      description: Resolves a legacy /organizations/<uuid>/ link to the organization origin. Only active
+        organizations resolve; anything else is 404 NOT_FOUND. Rate limited.
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Organization origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicOrganizationAddress' }
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+components:
+  schemas:
+    PublicSite:
+      type: object
+      additionalProperties: false
+      required: [kind, organization, redirectTo]
+      properties:
+        kind: { type: string, enum: [public, owner, admin, api, organization, unknown] }
+        organization:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required: [slug, name]
+              properties:
+                slug: { type: string }
+                name: { type: string }
+            - type: 'null'
+        redirectTo: { type: [string, 'null'], description: Current origin when this host is a former address. }
+    PublicOrganizationAddress:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: { type: string, description: 'Organization origin, for example https://acme.bfinance.ma' }

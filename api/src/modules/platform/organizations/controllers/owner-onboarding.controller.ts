@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
+  checkOwnerOrganizationSlugQuerySchema,
   CompleteOwnerOnboardingSchema,
   CreateOwnerOrganizationSchema,
   getOwnerBrandImageParamsSchema,
@@ -20,6 +21,8 @@ export function createOwnerOnboardingController(
       reply
         .code(201)
         .send(await service.create(token(r), CreateOwnerOrganizationSchema.parse(r.body))),
+    slugAvailability: (r: FastifyRequest) =>
+      service.slugAvailability(token(r), checkOwnerOrganizationSlugQuerySchema.parse(r.query).slug),
     get: (r: FastifyRequest) => service.get(token(r), id(r)),
     save: (r: FastifyRequest) =>
       service.save(token(r), id(r), SaveOwnerOnboardingSchema.parse(r.body)),

@@ -47,7 +47,8 @@ export function createIdentityModule(options: {
   subscriptions?: SubscriptionsPublicApi
   invitationDelivery?: OrganizationInvitationDelivery
   adminDelivery?: OrganizationAdminDelivery
-  portalOrigin?: string
+  /** Organization site origin (<slug>.<platform domain>) for staff email links. */
+  organizationOrigin?: (organizationId: string) => Promise<string | undefined>
   ttlDays: number
   secure: boolean
   passwordReset?: { adapter: PasswordResetDelivery; resetUrl: string }
@@ -86,13 +87,13 @@ export function createIdentityModule(options: {
     {
       subscriptions: options.subscriptions,
       delivery: options.invitationDelivery,
-      origin: options.portalOrigin,
+      origin: options.organizationOrigin,
     },
   )
   const adminProvisioning = createAdminProvisioningService(
     createAdminProvisioningRepository(options.database),
     options.adminDelivery,
-    options.portalOrigin,
+    options.organizationOrigin,
   )
   const authorizeOrganization = createOrganizationAccessService({
     organizations: organizationRepository,
@@ -202,12 +203,14 @@ export function createIdentityModule(options: {
               createRbacRepository(options.database, organizationId),
               scopedSessions,
             )
+            // Reset links open on the organization's own site.
+            const site = await options.organizationOrigin?.(organizationId)
             const delivery = options.passwordReset
               ? {
                   ...options.passwordReset,
                   resetUrl: new URL(
-                    `/organizations/${organizationId}/reset-password`,
-                    options.passwordReset.resetUrl,
+                    '/reset-password',
+                    site ?? options.passwordReset.resetUrl,
                   ).toString(),
                 }
               : undefined

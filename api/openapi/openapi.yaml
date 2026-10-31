@@ -68,6 +68,14 @@ paths:
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organizations~1{organizationId}~1onboarding~1complete
   '/api/v1/owner/organizations/{organizationId}/onboarding':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organizations~1{organizationId}~1onboarding
+  '/api/v1/owner/organization-slugs/availability':
+    $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organization-slugs~1availability
+  '/api/v1/admin/organizations/{organizationId}/slug':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1organizations~1{organizationId}~1slug
+  /api/v1/public/site:
+    $ref: ./modules/identity/public-sites.yaml#/paths/~1api~1v1~1public~1site
+  '/api/v1/public/organizations/{organizationId}/address':
+    $ref: ./modules/identity/public-sites.yaml#/paths/~1api~1v1~1public~1organizations~1{organizationId}~1address
   '/api/v1/owner/organizations':
     $ref: ./modules/identity/owner-organizations.yaml#/paths/~1api~1v1~1owner~1organizations
   '/api/v1/owner/organizations/{organizationId}':
@@ -420,6 +428,14 @@ components:
       $ref: ./modules/identity/owner-onboarding.yaml#/components/schemas/OwnerBrandImage
     OwnerOnboardingConfiguration:
       $ref: ./modules/identity/owner-onboarding.yaml#/components/schemas/OwnerOnboardingConfiguration
+    OwnerOrganizationSlugAvailability:
+      $ref: ./modules/identity/owner-onboarding.yaml#/components/schemas/OwnerOrganizationSlugAvailability
+    AdminOrganizationSlugChange:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOrganizationSlugChange
+    PublicSite:
+      $ref: ./modules/identity/public-sites.yaml#/components/schemas/PublicSite
+    PublicOrganizationAddress:
+      $ref: ./modules/identity/public-sites.yaml#/components/schemas/PublicOrganizationAddress
     CreateOwnerOrganization:
       $ref: ./modules/identity/owner-onboarding.yaml#/components/schemas/CreateOwnerOrganization
     OwnerOnboarding:

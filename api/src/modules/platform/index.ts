@@ -3,7 +3,9 @@ import type { FastifyInstance } from 'fastify'
 import type { OwnerAccountDelivery } from '../../integrations/contracts.js'
 import type { Database } from '../../lib/db.js'
 import { AppError } from '../../lib/errors.js'
+import type { OrganizationHosts } from '../../lib/organization-hosts.js'
 import { createPasswordService } from '../../lib/password.js'
+import type { PlatformSites } from '../../lib/platform-sites.js'
 import type { OrganizationProvisioningPublicApi } from '../organization/identity/index.js'
 import type { OwnerBrandingPublicApi } from '../organization/media/index.js'
 import type { SettingsPublicApi } from '../organization/settings/index.js'
@@ -22,6 +24,9 @@ import { createOwnerOrganizationRepository } from './organizations/repositories/
 import { registerOwnerOrganizationRoutes } from './organizations/routes/owner-organization.routes.js'
 import { createOwnerOnboardingService } from './organizations/services/owner-onboarding.service.js'
 import { createOwnerOrganizationService } from './organizations/services/owner-organization.service.js'
+import { createPublicSiteController } from './sites/controllers/public-site.controller.js'
+import { registerPublicSiteRoutes } from './sites/routes/public-site.routes.js'
+import { createPublicSiteService } from './sites/services/public-site.service.js'
 import type { SubscriptionsPublicApi } from './subscriptions/index.js'
 
 export function createPlatformModule(options: {
@@ -33,6 +38,8 @@ export function createPlatformModule(options: {
   settings: () => SettingsPublicApi
   subscriptions: SubscriptionsPublicApi
   provisioning: () => OrganizationProvisioningPublicApi
+  sites?: { platform: PlatformSites; hosts: OrganizationHosts }
+  slugs?: { taken: (slug: string, exceptOrganizationId?: string) => Promise<boolean> }
 }) {
   const owners = createOwnerAuthService(
     createOwnerAuthRepository(options.database),
@@ -57,10 +64,18 @@ export function createPlatformModule(options: {
       invite: (tx, inputs, language) => options.provisioning().invite(tx, inputs, language),
       provision: (tx, input) => options.provisioning().provision(tx, input),
     },
+    options.slugs,
   )
   return {
     publicApi: { resolveOwnerSession: owners.session },
     async registerRoutes(app: FastifyInstance) {
+      if (options.sites)
+        registerPublicSiteRoutes(
+          app,
+          createPublicSiteController(
+            createPublicSiteService(options.sites.platform, options.sites.hosts),
+          ),
+        )
       registerOwnerFinancialSummaryRoutes(
         app,
         createOwnerFinancialSummaryController(

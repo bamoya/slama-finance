@@ -32,7 +32,7 @@ import { loggerOptions } from './lib/logging.js'
 import { createOrganizationHosts } from './lib/organization-hosts.js'
 import { organizationSessionToken } from './lib/organization-session.js'
 import { createPlatformSites, type PlatformSites } from './lib/platform-sites.js'
-import { tenantDatabase } from './lib/tenant-database.js'
+import { currentOrganizationId, tenantDatabase } from './lib/tenant-database.js'
 import { createTenantWorkerRunner } from './lib/tenant-workers.js'
 import type { WorkerObserver } from './lib/worker-observer.js'
 import { createRequirePermission } from './middlewares/require-permission.js'
@@ -177,6 +177,16 @@ export async function buildApp(options: AppOptions = {}) {
     database: () => tenantDatabase(app.database()),
     ttlDays: env.SESSION_TTL_DAYS,
     secure: sites.secureCookies,
+    sites: { platform: sites, hosts: organizationHosts },
+    slugs: {
+      async taken(slug, exceptOrganizationId) {
+        const [current, former] = await Promise.all([
+          organizationHosts.bySlug(slug),
+          organizationHosts.byFormerSlug(slug),
+        ])
+        return [current, former].some((row) => row && row.id !== exceptOrganizationId)
+      },
+    },
     ownerAuth: {
       enabled: env.OWNER_AUTH_ENABLED,
       portalOrigin: sites.origins.owner,
@@ -184,7 +194,10 @@ export async function buildApp(options: AppOptions = {}) {
     },
   })
   const identity = createIdentityModule({
-    portalOrigin: sites.origins.owner,
+    organizationOrigin: async (organizationId) => {
+      const slug = await organizationHosts.slugOf(organizationId)
+      return slug ? sites.organizationOrigin(slug) : undefined
+    },
     invitationDelivery:
       options.organizationInvitationDelivery ??
       (env.NOTIFICATION_TRANSPORT === 'smtp'
@@ -341,7 +354,11 @@ export async function buildApp(options: AppOptions = {}) {
     storage,
     notifications,
     sender: { email: senderEmail, name: 'B-Finance' },
-    uiOrigin: sites.origins.public,
+    uiOrigin: async () => {
+      const organizationId = currentOrganizationId()
+      const slug = organizationId ? await organizationHosts.slugOf(organizationId) : undefined
+      return slug ? sites.organizationOrigin(slug) : undefined
+    },
     observe,
   })
   const notificationSettings = createNotificationSettingsModule(

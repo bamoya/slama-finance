@@ -14,7 +14,7 @@ export class AppError extends Error {
   }
 }
 
-function databaseCode(error: unknown): string | undefined {
+export function databaseCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object') return
   const value = error as { code?: unknown; cause?: unknown }
   if (typeof value.code === 'string') return value.code

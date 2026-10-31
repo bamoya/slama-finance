@@ -125,6 +125,8 @@ export async function initializeDatabase(env = process.env) {
       for (const [privileges, tables] of [
         ['SELECT', ['permissions', 'subscription_plans', 'billing_settings']],
         ['SELECT, INSERT', ['organizations']],
+        // Former addresses; delete only when an organization takes back its own old slug.
+        ['SELECT, INSERT, DELETE', ['organization_slug_history']],
         [
           'SELECT, INSERT',
           [
@@ -157,7 +159,7 @@ export async function initializeDatabase(env = process.env) {
         for (const table of tables)
           await tx.unsafe(`GRANT ${privileges} ON TABLE public.${identifier(table)} TO ${role}`)
       await tx.unsafe(
-        `GRANT UPDATE (name, locale, updated_at, activated_at, suspended_at, suspension_source) ON public.organizations TO ${role}`,
+        `GRANT UPDATE (name, slug, locale, updated_at, activated_at, suspended_at, suspension_source) ON public.organizations TO ${role}`,
       )
       // Payment decisions, coverage and billing configuration additionally require the
       // platform_admin transaction context (RLS policies and update guards).

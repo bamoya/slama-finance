@@ -131,7 +131,8 @@ describe('Organization-scoped staff identities', () => {
     expect((await post(orgA, 'password-reset/request', { email: shared })).statusCode).toBe(202)
     expect(emails).toHaveLength(1)
     const url = new URL(emails[0]!.resetUrl)
-    expect(url.pathname).toBe(`/organizations/${orgA}/reset-password`)
+    expect(url.origin).toBe('http://org-a.localhost:5173')
+    expect(url.pathname).toBe('/reset-password')
     const token = new URLSearchParams(url.hash.slice(1)).get('token')!
     expect(
       (await post(orgB, 'password-reset/confirm', { token, password: 'new-password-one-2026' }))

@@ -114,9 +114,10 @@ export const organizations = pgTable(
       withCheck: sql`${t.id} = nullif(current_setting('app.organization_id', true), '')::uuid`,
     }),
     check('organizations_name_present', sql`btrim(${t.name}) <> ''`),
+    // Mirrors slugProblem() in src/lib/platform-sites.ts: the slug is the organization host label.
     check(
       'organizations_slug_format',
-      sql`char_length(${t.slug}) between 1 and 63 and ${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
+      sql`char_length(${t.slug}) between 3 and 40 and ${t.slug} ~ '^[a-z0-9][a-z0-9-]*[a-z0-9]$' and ${t.slug} not like 'xn--%' and ${t.slug} not in ('app','admin','api','www','mail','static','assets','status','docs','help','support','billing','auth')`,
     ),
     check('organizations_locale', sql`${t.locale} in ('fr', 'en')`),
     check(
@@ -160,6 +161,42 @@ export const organizationDomains = pgTable(
     check(
       'organization_domains_activation_verified',
       sql`${t.activatedAt} is null or ${t.verifiedAt} is not null`,
+    ),
+  ],
+).enableRLS()
+
+// Former organization addresses: an old <slug>. host redirects to the current one. A slug is never
+// reused by another organization while it is recorded here.
+export const organizationSlugHistory = pgTable(
+  'organization_slug_history',
+  {
+    slug: text('slug').primaryKey(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    replacedAt: timestamp('replaced_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('organization_slug_history_organization_idx').on(t.organizationId),
+    pgPolicy('organization_slug_history_host_resolution', {
+      for: 'select',
+      using: sql`current_setting('app.actor_type',true)='host_resolver'`,
+    }),
+    pgPolicy('organization_slug_history_platform_admin_read', {
+      for: 'select',
+      using: sql`current_setting('app.actor_type',true)='platform_admin'`,
+    }),
+    pgPolicy('organization_slug_history_platform_admin_write', {
+      for: 'insert',
+      withCheck: sql`current_setting('app.actor_type',true)='platform_admin'`,
+    }),
+    pgPolicy('organization_slug_history_platform_admin_delete', {
+      for: 'delete',
+      using: sql`current_setting('app.actor_type',true)='platform_admin'`,
+    }),
+    check(
+      'organization_slug_history_format',
+      sql`char_length(${t.slug}) between 1 and 63 and ${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
     ),
   ],
 ).enableRLS()

@@ -8,7 +8,8 @@ import type { createAdminProvisioningRepository } from '../repositories/admin-pr
 export function createAdminProvisioningService(
   repo: ReturnType<typeof createAdminProvisioningRepository>,
   delivery?: OrganizationAdminDelivery,
-  origin?: string,
+  /** Organization site origin (<slug>.<platform domain>) for the sign-in link. */
+  origin?: (organizationId: string) => Promise<string | undefined>,
 ) {
   const passwords = createPasswordService()
   return {
@@ -29,10 +30,12 @@ export function createAdminProvisioningService(
         job = await repo.claim(await passwords.hash(temporaryPassword))
       if (!job) return
       try {
+        const site = await origin(job.organizationId)
+        if (!site) throw new Error('Organization address unavailable')
         await delivery.send({
           ...job,
           temporaryPassword,
-          loginUrl: new URL(`/organizations/${job.organizationId}/login`, origin).toString(),
+          loginUrl: new URL('/login', site).toString(),
           idempotencyKey: `organization-admin:${job.organizationId}:${job.leaseId}`,
         })
         await repo.finish(job, true)

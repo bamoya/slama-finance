@@ -22,7 +22,8 @@ export function createInvitationService(
   options: {
     subscriptions?: SubscriptionsPublicApi
     delivery?: OrganizationInvitationDelivery
-    origin?: string
+    /** Organization site origin (<slug>.<platform domain>) for staff links. */
+    origin?: (organizationId: string) => Promise<string | undefined>
   },
 ) {
   const passwords = createPasswordService()
@@ -300,7 +301,9 @@ export function createInvitationService(
         return { ...updated, organizationName: org.name }
       })
       if (!job) return
-      const url = new URL(`/organizations/${job.organizationId}/accept-invitation`, options.origin)
+      const origin = await options.origin(job.organizationId)
+      if (!origin) return
+      const url = new URL('/accept-invitation', origin)
       url.hash = new URLSearchParams({ token: rawToken }).toString()
       try {
         await options.delivery.send({
