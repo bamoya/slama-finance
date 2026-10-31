@@ -161,8 +161,61 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/OwnerResetPassword"
+  /v1/owner-auth/invitation/inspect:
+    post:
+      operationId: inspectOwnerInvitation
+      security: []
+      description: 'Returns the invited account for a valid, unused, unexpired invitation token (72 hours). Invalid tokens return 400 INVALID_INVITATION_TOKEN.'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerInvitation"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerToken"
+  /v1/owner-auth/invitation/accept:
+    post:
+      operationId: acceptOwnerInvitation
+      security: []
+      description: 'Sets the first password and verifies the email. Single use; the owner then signs in normally. Invalid tokens return 400 INVALID_INVITATION_TOKEN.'
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerResetPassword"
 components:
   schemas:
+    OwnerInvitation:
+      type: object
+      additionalProperties: false
+      required: [email, firstName, lastName, locale]
+      properties:
+        email: { type: string }
+        firstName: { type: [string, "null"] }
+        lastName: { type: [string, "null"] }
+        locale: { type: string, enum: [fr, en] }
     OwnerRegister:
       type: object
       additionalProperties: false

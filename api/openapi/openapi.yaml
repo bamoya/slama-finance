@@ -31,6 +31,28 @@ paths:
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners
   '/v1/admin/owners/{ownerId}':
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}
+  '/v1/admin/owners/{ownerId}/invitation':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1invitation
+  '/v1/admin/owners/{ownerId}/block':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1block
+  '/v1/admin/owners/{ownerId}/unblock':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1unblock
+  '/v1/admin/owners/{ownerId}/deletion':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1deletion
+  '/v1/admin/owners/{ownerId}/deletion/cancel':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1deletion~1cancel
+  '/v1/admin/owners/{ownerId}/subscription/suspend':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1subscription~1suspend
+  '/v1/admin/owners/{ownerId}/subscription/resume':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1subscription~1resume
+  '/v1/admin/owners/{ownerId}/subscription/plan':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1subscription~1plan
+  '/v1/admin/owners/{ownerId}/subscription/extension':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}~1subscription~1extension
+  '/v1/admin/organizations/{organizationId}/suspend':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1organizations~1{organizationId}~1suspend
+  '/v1/admin/organizations/{organizationId}/reactivate':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1organizations~1{organizationId}~1reactivate
   '/v1/admin/billing-settings':
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1billing-settings
   '/v1/admin/audit':
@@ -83,6 +105,10 @@ paths:
     $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1password-reset~1request
   /v1/owner-auth/password-reset/confirm:
     $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1password-reset~1confirm
+  /v1/owner-auth/invitation/inspect:
+    $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1invitation~1inspect
+  /v1/owner-auth/invitation/accept:
+    $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1invitation~1accept
   /v1/sales/cancellation/preview:
     $ref: ./modules/sales/cancellation.yaml#/paths/~1v1~1sales~1cancellation~1preview
   /v1/sales/cancellation:
@@ -428,6 +454,8 @@ components:
       $ref: ./modules/identity/owner-auth.yaml#/components/schemas/OwnerSession
     OwnerRequestAccepted:
       $ref: ./modules/identity/owner-auth.yaml#/components/schemas/OwnerRequestAccepted
+    OwnerInvitation:
+      $ref: ./modules/identity/owner-auth.yaml#/components/schemas/OwnerInvitation
     SalesCancellationSelection:
       $ref: ./modules/sales/cancellation.yaml#/components/schemas/SalesCancellationSelection
     ConfirmSalesCancellation:
@@ -822,6 +850,18 @@ components:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerPage
     AdminOwnerDetail:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerDetail
+    AdminOwnerCreate:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerCreate
+    AdminReason:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminReason
+    AdminSensitiveAction:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminSensitiveAction
+    AdminPlanChange:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPlanChange
+    AdminCoverageExtension:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminCoverageExtension
+    AdminOwnerRestriction:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerRestriction
     AdminBillingSettings:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminBillingSettings
     AdminBillingSettingsUpdate:

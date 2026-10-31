@@ -167,7 +167,12 @@ components:
       properties:
         planCode: { type: string, enum: [trial, essential, business, pro] }
         planName: { type: string }
-        status: { type: string, enum: [not_started, trial, active, past_due, expired] }
+        status:
+          {
+            type: string,
+            enum: [not_started, trial, active, past_due, expired, suspended],
+            description: 'suspended: an administrator froze the subscription; access is blocked and the remaining paid or trial time is restored on resume.',
+          }
         trialEndsAt: { type: [string, 'null'], format: date-time }
         paidThroughAt: { type: [string, 'null'], format: date-time }
         cycle: { anyOf: [{ $ref: '#/components/schemas/BillingCycle' }, { type: 'null' }] }

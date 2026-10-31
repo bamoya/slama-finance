@@ -151,6 +151,10 @@ paths:
           in: query
           description: Case-insensitive match on email or name.
           schema: { type: string, maxLength: 120 }
+        - name: status
+          in: query
+          description: Subscription lifecycle status, evaluated with the coverage rules.
+          schema: { type: string, enum: [trial, active, past_due, expired, suspended] }
         - name: page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
@@ -160,6 +164,27 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOwnerPage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+    post:
+      operationId: createAdminOwner
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Creates an owner account without organization and emails a one-time set-password invitation valid 72 hours. 409 EMAIL_TAKEN when the email exists; 503 EMAIL_UNAVAILABLE when owner email is not configured.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminOwnerCreate' }
+      responses:
+        '201':
+          description: Created customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
         default:
           description: Request failed
           content:
@@ -175,6 +200,267 @@ paths:
       responses:
         '200':
           description: Owner profile basics, organizations, subscription and payment history. Never tenant finance data.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/invitation:
+    post:
+      operationId: resendAdminOwnerInvitation
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Sends a new set-password invitation (72 hours) and invalidates earlier ones. 409 INVITATION_NOT_PENDING once the owner has set a password.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReason' }
+      responses:
+        '204':
+          description: Done.
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/block:
+    post:
+      operationId: blockAdminOwner
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Blocks the owner portal and every organization of the owner, revoking all their sessions. Payment never lifts it. 409 ALREADY_BLOCKED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/unblock:
+    post:
+      operationId: unblockAdminOwner
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Lifts the block. Other restrictions (scheduled deletion, organization or subscription suspension) remain. 409 NOT_BLOCKED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReason' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/deletion:
+    post:
+      operationId: scheduleAdminOwnerDeletion
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Immediately blocks the owner and all organizations and schedules permanent deletion 30 days later. The purge itself is not automatic yet. 409 DELETION_SCHEDULED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/deletion/cancel:
+    post:
+      operationId: cancelAdminOwnerDeletion
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Cancels a scheduled deletion before its due date, restoring the previous state including any outstanding restriction. 409 DELETION_NOT_SCHEDULED or DELETION_DUE.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReason' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/subscription/suspend:
+    post:
+      operationId: suspendAdminSubscription
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Blocks access and freezes the coverage clock. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/subscription/resume:
+    post:
+      operationId: resumeAdminSubscription
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Restores access and shifts remaining paid or trial time by the suspended duration. 409 SUBSCRIPTION_NOT_SUSPENDED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReason' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/subscription/plan:
+    post:
+      operationId: changeAdminSubscriptionPlan
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Switches the current paid period to another plan immediately without payment (recorded as a confirmed 0-amount admin_adjustment payment). Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPlanChange' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}/subscription/extension:
+    post:
+      operationId: extendAdminSubscription
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Adds days to paid coverage (an admin_adjustment payment continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCoverageExtension' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/organizations/{organizationId}/suspend:
+    post:
+      operationId: suspendAdminOrganization
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Suspends one organization: sessions are revoked, logins and workers stop. Only an administrator can reactivate. Returns the owning customer. 409 ORGANIZATION_SUSPENDED.'
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
+      responses:
+        '200':
+          description: Updated customer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/organizations/{organizationId}/reactivate:
+    post:
+      operationId: reactivateAdminOrganization
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Lifts an administrator suspension; users sign in again. Returns the owning customer. 409 ORGANIZATION_NOT_SUSPENDED.'
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReason' }
+      responses:
+        '200':
+          description: Updated customer.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
@@ -392,6 +678,9 @@ components:
           planCode,
           paidThroughAt,
           organizationCount,
+          blockedAt,
+          deletionDueAt,
+          invitationPending,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -399,10 +688,15 @@ components:
         name: { type: [string, 'null'] }
         createdAt: { type: string, format: date-time }
         disabledAt: { type: [string, 'null'], format: date-time }
-        subscriptionStatus: { type: string, enum: [not_started, trial, active, past_due, expired] }
+        subscriptionStatus:
+          { type: string, enum: [not_started, trial, active, past_due, expired, suspended] }
         planCode: { type: string, enum: [trial, essential, business, pro] }
         paidThroughAt: { type: [string, 'null'], format: date-time }
         organizationCount: { type: integer, minimum: 0 }
+        blockedAt: { type: [string, 'null'], format: date-time, description: Administrator block. }
+        deletionDueAt:
+          { type: [string, 'null'], format: date-time, description: Scheduled deletion date. }
+        invitationPending: { type: boolean }
     AdminOwnerPage:
       type: object
       additionalProperties: false
@@ -417,8 +711,11 @@ components:
     AdminOwnerDetail:
       type: object
       additionalProperties: false
-      required: [owner, organizations, subscription, payments]
+      required: [owner, organizations, subscription, payments, restriction, invitationPending]
       properties:
+        restriction: { $ref: '#/components/schemas/AdminOwnerRestriction' }
+        invitationPending:
+          { type: boolean, description: 'Created by an administrator and no password set yet.' }
         owner:
           type: object
           additionalProperties: false
@@ -437,17 +734,102 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [id, name, slug, createdAt, activatedAt]
+            required:
+              [id, name, slug, createdAt, activatedAt, state, suspendedAt, suspensionReason]
             properties:
               id: { type: string, format: uuid }
               name: { type: string }
               slug: { type: string }
               createdAt: { type: string, format: date-time }
               activatedAt: { type: [string, 'null'], format: date-time }
+              state:
+                {
+                  type: string,
+                  enum: [setup, active, paused, suspended, pending_deletion],
+                  description: 'Own organization markers; customer block and subscription state apply on top.',
+                }
+              suspendedAt: { type: [string, 'null'], format: date-time }
+              suspensionReason:
+                { type: [string, 'null'], description: 'Internal administrator note.' }
         subscription: { $ref: ../../openapi.yaml#/components/schemas/OwnerSubscription }
         payments:
           type: array
           items: { $ref: '#/components/schemas/AdminPayment' }
+    AdminReason:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            description: 'Internal note kept in the audit trail; never shown to owners or staff.',
+          }
+    AdminSensitiveAction:
+      type: object
+      additionalProperties: false
+      required: [reason, code]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
+          }
+    AdminPlanChange:
+      type: object
+      additionalProperties: false
+      required: [planCode, reason]
+      properties:
+        planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    AdminCoverageExtension:
+      type: object
+      additionalProperties: false
+      required: [days, reason]
+      properties:
+        days: { type: integer, minimum: 1, maximum: 366 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    AdminOwnerCreate:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, email, locale, subscription]
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        locale: { type: string, enum: [fr, en] }
+        subscription:
+          type: object
+          additionalProperties: false
+          required: [kind]
+          description: 'trial: the 7-day trial starts with the first organization. paid: an administrator grant; requires planCode, cycle, coverageStart (not in the future), coverageEnd (in the future) and reason.'
+          properties:
+            kind: { type: string, enum: [trial, paid] }
+            planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
+            cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
+            coverageStart: { type: string, format: date-time }
+            coverageEnd: { type: string, format: date-time }
+            reason: { type: string, minLength: 1, maxLength: 500 }
+    AdminOwnerRestriction:
+      type: object
+      additionalProperties: false
+      required:
+        [blockedAt, blockReason, deletionRequestedAt, deletionDueAt, deletionReason]
+      properties:
+        blockedAt: { type: [string, 'null'], format: date-time }
+        blockReason: { type: [string, 'null'], description: Internal administrator note. }
+        deletionRequestedAt: { type: [string, 'null'], format: date-time }
+        deletionDueAt:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'Cancellable until this date. Permanent purge is not automated yet.',
+          }
+        deletionReason: { type: [string, 'null'], description: Internal administrator note. }
     AdminBillingSettings:
       type: object
       additionalProperties: false
@@ -489,7 +871,7 @@ components:
         action:
           {
             type: string,
-            description: 'For example payment.confirm, payment.reject, billing_settings.update, auth.login, auth.login_failed, admin.create, admin.disable, admin.reset_2fa.',
+            description: 'For example payment.confirm, payment.reject, billing_settings.update, customer.create, customer.invite, customer.block, customer.unblock, customer.delete, customer.delete_cancel, subscription.suspend, subscription.resume, subscription.change_plan, subscription.extend, organization.suspend, organization.reactivate, auth.login, auth.login_failed, admin.create, admin.disable, admin.reset_2fa.',
           }
         targetType: { type: string }
         targetId: { type: [string, 'null'] }
@@ -510,7 +892,8 @@ components:
     AdminOverview:
       type: object
       additionalProperties: false
-      required: [pendingPayments, activeSubscriptions, trialsEndingSoon, inGracePeriod, expired]
+      required:
+        [pendingPayments, activeSubscriptions, trialsEndingSoon, inGracePeriod, expired, suspended]
       properties:
         pendingPayments:
           description: 'Subscription payments with status submitted, awaiting confirmation or rejection.'
@@ -530,5 +913,9 @@ components:
           minimum: 0
         expired:
           description: 'Owners whose access is blocked: trial ended without any coverage, or the grace period ended after the last coverage (status expired).'
+          type: integer
+          minimum: 0
+        suspended:
+          description: 'Subscriptions suspended by an administrator (status suspended); not counted in the other lifecycle counts.'
           type: integer
           minimum: 0
