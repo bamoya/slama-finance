@@ -29,10 +29,20 @@ export const platformUsers = pgTable(
       .default('fr'),
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    // Administrator restrictions; reasons live only in the administrator audit trail.
+    blockedAt: timestamp('blocked_at', { withTimezone: true }),
+    deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
+    deletionDueAt: timestamp('deletion_due_at', { withTimezone: true }),
+    // Set when an administrator created the account; pending until the owner sets a password.
+    invitedAt: timestamp('invited_at', { withTimezone: true }),
     ...timestamps(),
   },
   (t) => [
     uniqueIndex('platform_users_email_unique').on(t.email),
+    check(
+      'platform_users_deletion_window',
+      sql`(${t.deletionRequestedAt} is null and ${t.deletionDueAt} is null) or (${t.deletionRequestedAt} is not null and ${t.deletionDueAt} > ${t.deletionRequestedAt})`,
+    ),
     check('platform_users_locale', sql`${t.locale} in ('fr', 'en')`),
     check(
       'platform_users_email_normalized',
@@ -57,6 +67,8 @@ export const organizations = pgTable(
     activatedAt: timestamp('activated_at', { withTimezone: true }),
     pausedAt: timestamp('paused_at', { withTimezone: true }),
     suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    // Who suspended the organization; only that source may lift the suspension.
+    suspensionSource: text('suspension_source', { enum: ['admin'] }),
     deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
     deletionDueAt: timestamp('deletion_due_at', { withTimezone: true }),
     ...timestamps(),
@@ -68,6 +80,11 @@ export const organizations = pgTable(
     pgPolicy('organizations_platform_admin_read', {
       for: 'select',
       using: sql`current_setting('app.actor_type',true)='platform_admin'`,
+    }),
+    pgPolicy('organizations_platform_admin_update', {
+      for: 'update',
+      using: sql`current_setting('app.actor_type',true)='platform_admin'`,
+      withCheck: sql`current_setting('app.actor_type',true)='platform_admin'`,
     }),
     pgPolicy('organizations_worker_discovery', {
       for: 'select',
@@ -97,6 +114,10 @@ export const organizations = pgTable(
       sql`char_length(${t.slug}) between 1 and 63 and ${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
     ),
     check('organizations_locale', sql`${t.locale} in ('fr', 'en')`),
+    check(
+      'organizations_suspension_source',
+      sql`(${t.suspendedAt} is null) = (${t.suspensionSource} is null)`,
+    ),
     check(
       'organizations_deletion_window',
       sql`(${t.deletionRequestedAt} is null and ${t.deletionDueAt} is null) or (${t.deletionRequestedAt} is not null and ${t.deletionDueAt} is not null and ${t.deletionDueAt} > ${t.deletionRequestedAt})`,
@@ -163,7 +184,7 @@ export const ownerAccountTokens = pgTable(
     ownerId: uuid('owner_id')
       .notNull()
       .references(() => platformUsers.id, { onDelete: 'cascade' }),
-    purpose: text('purpose', { enum: ['verify_email', 'reset_password'] }).notNull(),
+    purpose: text('purpose', { enum: ['verify_email', 'reset_password', 'invitation'] }).notNull(),
     tokenHash: text('token_hash').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),
@@ -172,6 +193,6 @@ export const ownerAccountTokens = pgTable(
   (t) => [
     uniqueIndex('owner_account_tokens_hash_unique').on(t.tokenHash),
     index('owner_account_tokens_owner_idx').on(t.ownerId),
-    check('owner_account_tokens_purpose', sql`${t.purpose} in ('verify_email', 'reset_password')`),
+    check('owner_account_tokens_purpose', sql`${t.purpose} in ('verify_email', 'reset_password', 'invitation')`),
   ],
 )

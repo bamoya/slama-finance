@@ -866,6 +866,7 @@ CREATE TABLE IF NOT EXISTS "organizations" (
 	"activated_at" timestamp with time zone,
 	"paused_at" timestamp with time zone,
 	"suspended_at" timestamp with time zone,
+	"suspension_source" text,
 	"deletion_requested_at" timestamp with time zone,
 	"deletion_due_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -873,6 +874,7 @@ CREATE TABLE IF NOT EXISTS "organizations" (
 	CONSTRAINT "organizations_name_present" CHECK (btrim("organizations"."name") <> ''),
 	CONSTRAINT "organizations_slug_format" CHECK (char_length("organizations"."slug") between 1 and 63 and "organizations"."slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 	CONSTRAINT "organizations_locale" CHECK ("organizations"."locale" in ('fr', 'en')),
+	CONSTRAINT "organizations_suspension_source" CHECK (("organizations"."suspended_at" is null) = ("organizations"."suspension_source" is null)),
 	CONSTRAINT "organizations_deletion_window" CHECK (("organizations"."deletion_requested_at" is null and "organizations"."deletion_due_at" is null) or ("organizations"."deletion_requested_at" is not null and "organizations"."deletion_due_at" is not null and "organizations"."deletion_due_at" > "organizations"."deletion_requested_at"))
 );
 
@@ -889,7 +891,7 @@ CREATE TABLE IF NOT EXISTS "owner_account_tokens" (
 	"expires_at" timestamp with time zone NOT NULL,
 	"consumed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "owner_account_tokens_purpose" CHECK ("owner_account_tokens"."purpose" in ('verify_email', 'reset_password'))
+	CONSTRAINT "owner_account_tokens_purpose" CHECK ("owner_account_tokens"."purpose" in ('verify_email', 'reset_password', 'invitation'))
 );
 
 --> statement-breakpoint
@@ -914,8 +916,13 @@ CREATE TABLE IF NOT EXISTS "platform_users" (
 	"locale" text DEFAULT 'fr' NOT NULL,
 	"email_verified_at" timestamp with time zone,
 	"disabled_at" timestamp with time zone,
+	"blocked_at" timestamp with time zone,
+	"deletion_requested_at" timestamp with time zone,
+	"deletion_due_at" timestamp with time zone,
+	"invited_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "platform_users_deletion_window" CHECK (("platform_users"."deletion_requested_at" is null and "platform_users"."deletion_due_at" is null) or ("platform_users"."deletion_requested_at" is not null and "platform_users"."deletion_due_at" > "platform_users"."deletion_requested_at")),
 	CONSTRAINT "platform_users_locale" CHECK ("platform_users"."locale" in ('fr', 'en')),
 	CONSTRAINT "platform_users_email_normalized" CHECK ("platform_users"."email" = lower(btrim("platform_users"."email")) and "platform_users"."email" <> '')
 );
@@ -1250,7 +1257,8 @@ CREATE TABLE IF NOT EXISTS "owner_subscriptions" (
 	"trial_ends_at" timestamp with time zone NOT NULL,
 	"paid_through_at" timestamp with time zone,
 	"cancel_at_period_end" boolean DEFAULT false NOT NULL,
-	CONSTRAINT "trial_window" CHECK ("owner_subscriptions"."trial_ends_at"="owner_subscriptions"."trial_started_at"+interval '7 days')
+	"suspended_at" timestamp with time zone,
+	CONSTRAINT "trial_window" CHECK ("owner_subscriptions"."trial_ends_at">="owner_subscriptions"."trial_started_at"+interval '7 days')
 );
 
 --> statement-breakpoint
@@ -2892,6 +2900,9 @@ CREATE POLICY "organization_domains_tenant_scope" ON "organization_domains" AS P
 --> statement-breakpoint
 
 CREATE POLICY "organizations_platform_admin_read" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "organizations_platform_admin_update" ON "organizations" AS PERMISSIVE FOR UPDATE TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
 CREATE POLICY "organizations_worker_discovery" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker');

@@ -60,6 +60,8 @@ export const ownerSubscriptions = pgTable(
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }).notNull(),
     paidThroughAt: timestamp('paid_through_at', { withTimezone: true }),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    // Administrator suspension freezes the coverage clock; resume shifts coverage by its length.
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
   },
   (t) => [
     pgPolicy('subscription_worker_read', {
@@ -71,7 +73,8 @@ export const ownerSubscriptions = pgTable(
       using: sql`current_setting('app.actor_type',true)='platform_admin'`,
       withCheck: sql`current_setting('app.actor_type',true)='platform_admin'`,
     }),
-    check('trial_window', sql`${t.trialEndsAt}=${t.trialStartedAt}+interval '7 days'`),
+    // Seven days at start; administrator extensions and suspensions may lengthen it.
+    check('trial_window', sql`${t.trialEndsAt}>=${t.trialStartedAt}+interval '7 days'`),
     pgPolicy('subscription_scope', {
       for: 'all',
       using: sql`(${t.ownerId}=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=${t.ownerId})`,

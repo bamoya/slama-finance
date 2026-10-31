@@ -1,5 +1,5 @@
 {
-  "id": "3afc90ab-e555-4c43-b70c-89e4184811b8",
+  "id": "9d852294-616d-4d8a-8ab7-04b4d1a2bba9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -7116,6 +7116,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "suspension_source": {
+          "name": "suspension_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "deletion_requested_at": {
           "name": "deletion_requested_at",
           "type": "timestamp with time zone",
@@ -7202,6 +7208,16 @@
           ],
           "using": "current_setting('app.actor_type',true)='platform_admin'"
         },
+        "organizations_platform_admin_update": {
+          "name": "organizations_platform_admin_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
         "organizations_worker_discovery": {
           "name": "organizations_worker_discovery",
           "as": "PERMISSIVE",
@@ -7262,6 +7278,10 @@
         "organizations_locale": {
           "name": "organizations_locale",
           "value": "\"organizations\".\"locale\" in ('fr', 'en')"
+        },
+        "organizations_suspension_source": {
+          "name": "organizations_suspension_source",
+          "value": "(\"organizations\".\"suspended_at\" is null) = (\"organizations\".\"suspension_source\" is null)"
         },
         "organizations_deletion_window": {
           "name": "organizations_deletion_window",
@@ -7372,7 +7392,7 @@
       "checkConstraints": {
         "owner_account_tokens_purpose": {
           "name": "owner_account_tokens_purpose",
-          "value": "\"owner_account_tokens\".\"purpose\" in ('verify_email', 'reset_password')"
+          "value": "\"owner_account_tokens\".\"purpose\" in ('verify_email', 'reset_password', 'invitation')"
         }
       },
       "isRLSEnabled": false
@@ -7527,6 +7547,30 @@
           "primaryKey": false,
           "notNull": false
         },
+        "blocked_at": {
+          "name": "blocked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletion_requested_at": {
+          "name": "deletion_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletion_due_at": {
+          "name": "deletion_due_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invited_at": {
+          "name": "invited_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -7564,6 +7608,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "platform_users_deletion_window": {
+          "name": "platform_users_deletion_window",
+          "value": "(\"platform_users\".\"deletion_requested_at\" is null and \"platform_users\".\"deletion_due_at\" is null) or (\"platform_users\".\"deletion_requested_at\" is not null and \"platform_users\".\"deletion_due_at\" > \"platform_users\".\"deletion_requested_at\")"
+        },
         "platform_users_locale": {
           "name": "platform_users_locale",
           "value": "\"platform_users\".\"locale\" in ('fr', 'en')"
@@ -10017,6 +10065,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "suspended_at": {
+          "name": "suspended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -10084,7 +10138,7 @@
       "checkConstraints": {
         "trial_window": {
           "name": "trial_window",
-          "value": "\"owner_subscriptions\".\"trial_ends_at\"=\"owner_subscriptions\".\"trial_started_at\"+interval '7 days'"
+          "value": "\"owner_subscriptions\".\"trial_ends_at\">=\"owner_subscriptions\".\"trial_started_at\"+interval '7 days'"
         }
       },
       "isRLSEnabled": true

@@ -157,12 +157,12 @@ export async function initializeDatabase(env = process.env) {
         for (const table of tables)
           await tx.unsafe(`GRANT ${privileges} ON TABLE public.${identifier(table)} TO ${role}`)
       await tx.unsafe(
-        `GRANT UPDATE (name, locale, updated_at, activated_at) ON public.organizations TO ${role}`,
+        `GRANT UPDATE (name, locale, updated_at, activated_at, suspended_at, suspension_source) ON public.organizations TO ${role}`,
       )
       // Payment decisions, coverage and billing configuration additionally require the
       // platform_admin transaction context (RLS policies and update guards).
       await tx.unsafe(
-        `GRANT UPDATE (cancel_at_period_end, paid_through_at, plan_code) ON public.owner_subscriptions TO ${role}`,
+        `GRANT UPDATE (cancel_at_period_end, paid_through_at, plan_code, suspended_at, trial_ends_at) ON public.owner_subscriptions TO ${role}`,
       )
       await tx.unsafe(
         `GRANT UPDATE (status, coverage_start, coverage_end, decided_at, decided_by, received_reference, rejection_reason) ON public.subscription_payments TO ${role}`,
