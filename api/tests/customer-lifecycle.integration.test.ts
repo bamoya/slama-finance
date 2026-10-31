@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
-import { createTenantWorkerRunner } from '../src/lib/tenant-workers.js'
 import { createPasswordService } from '../src/lib/password.js'
+import { createTenantWorkerRunner } from '../src/lib/tenant-workers.js'
 import { base32Decode, totp } from '../src/lib/totp.js'
 import { createAdminAccounts } from '../src/modules/platform/administration/index.js'
 import {
