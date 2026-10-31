@@ -1395,6 +1395,15 @@ export const french: Record<string, string> = {
   'Package weight': 'Poids du conditionnement',
   'Page actions': 'Actions de la page',
   'Page not found': 'Page introuvable',
+  'Change address': "Changer l'adresse",
+  'New address': 'Nouvelle adresse',
+  'Current address': 'Adresse actuelle',
+  'The organization moves to the new address immediately.':
+    "L'organisation passe immédiatement à la nouvelle adresse.",
+  'The former address keeps redirecting to the new one.':
+    "L'ancienne adresse continue de rediriger vers la nouvelle.",
+  'All sessions of this organization are closed: staff sign in again.':
+    "Toutes les sessions de cette organisation sont fermées : l'équipe doit se reconnecter.",
   'Organization address': "Adresse de l'organisation",
   'Your team signs in at': "Votre équipe se connecte à l'adresse",
   'Checking availability…': 'Vérification de la disponibilité…',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { checkOwnerOrganizationSlug } from '../../../../api/generated/identity/identity'
-import { minimumSlugLength } from '../components/onboarding/organization-slug'
+import { minimumSlugLength } from '../../../../lib/organization-slug'
 
 export type SlugAvailability = 'empty' | 'checking' | 'available' | 'taken' | 'reserved' | 'invalid'
 

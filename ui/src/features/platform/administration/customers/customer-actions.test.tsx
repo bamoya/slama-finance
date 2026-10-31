@@ -181,6 +181,57 @@ describe('customer lifecycle actions', () => {
     })
   })
 
+  async function openAddressDialog() {
+    const row = await screen.findByRole('button', { name: 'Actions for Atlas Conseil' })
+    fireEvent.pointerDown(row, { button: 0, ctrlKey: false })
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Change address' }))
+    await screen.findByRole('dialog')
+  }
+
+  it('changes an organization address with a live preview, a reason and a code', async () => {
+    setup()
+    await openAddressDialog()
+    const input = screen.getByLabelText('New address')
+    fireEvent.change(input, { target: { value: 'Atlas  Conseil_2' } })
+    expect(input).toHaveValue('atlas-conseil-2')
+    expect(screen.getByText('https://atlas-conseil-2.localhost:3000')).toBeInTheDocument()
+    fireEvent.change(reasonField(), { target: { value: 'Rebranding' } })
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Change address' }))
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(posts()[0]).toMatchObject({
+      url: `/api/v1/admin/organizations/${organizationId}/slug`,
+      data: { slug: 'atlas-conseil-2', reason: 'Rebranding', code: '123456' },
+    })
+  })
+
+  it('refuses an unchanged or too short address without calling the API', async () => {
+    setup()
+    await openAddressDialog()
+    for (const value of ['atlas', 'ab', '']) {
+      fireEvent.change(screen.getByLabelText('New address'), { target: { value } })
+      fireEvent.change(reasonField(), { target: { value: 'Rebranding' } })
+      fireEvent.change(codeField(), { target: { value: '123456' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Change address' }))
+    }
+    expect(posts()).toHaveLength(0)
+  })
+
+  it.each([
+    ['SLUG_TAKEN', 409],
+    ['SLUG_RESERVED', 400],
+    ['SLUG_INVALID', 400],
+  ])('shows the %s failure inside the dialog', async (code, status) => {
+    setup(ownerDetail(), (key) => (key.endsWith('/slug') ? apiError(status, code) : undefined))
+    await openAddressDialog()
+    fireEvent.change(screen.getByLabelText('New address'), { target: { value: 'new-name' } })
+    fireEvent.change(reasonField(), { target: { value: 'Rebranding' } })
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Change address' }))
+    expect(await screen.findByText(`server ${code}`)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   it('offers resend invitation only while the invitation is pending', async () => {
     setup(ownerDetail({ invitationPending: true }))
     const trigger = await screen.findByRole('button', { name: 'Actions' })

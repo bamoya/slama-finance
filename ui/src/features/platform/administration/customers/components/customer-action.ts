@@ -12,3 +12,4 @@ export type CustomerAction =
   | { kind: 'cancel-deletion' }
   | { kind: 'suspend-organization'; organization: AdminOwnerDetailOrganizationsItem }
   | { kind: 'reactivate-organization'; organization: AdminOwnerDetailOrganizationsItem }
+  | { kind: 'change-address'; organization: AdminOwnerDetailOrganizationsItem }

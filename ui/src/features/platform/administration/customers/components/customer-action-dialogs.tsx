@@ -6,6 +6,7 @@ import {
   changeAdminSubscriptionPlan,
   extendAdminSubscription,
   reactivateAdminOrganization,
+  renameAdminOrganizationSlug,
   resendAdminOwnerInvitation,
   resumeAdminSubscription,
   scheduleAdminOwnerDeletion,
@@ -18,6 +19,8 @@ import { Input } from '../../../../../components/ui/input'
 import { Label } from '../../../../../components/ui/label'
 import { Select, SelectGroup, SelectOption } from '../../../../../components/ui/select'
 import { translate } from '../../../../../lib/i18n'
+import { formatSlug } from '../../../../../lib/organization-slug'
+import { organizationAddress } from '../../../../../lib/platform-sites'
 import { planLabel } from '../../../subscriptions/components/billing-format'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
 import type { CustomerAction } from './customer-action'
@@ -58,6 +61,41 @@ function PlanChangeFields({
     </div>
   )
 }
+
+/** Live-formatted new address with the resulting host; the server remains the authority. */
+export function AddressChangeFields({
+  current,
+  value,
+  onChange,
+}: {
+  current: string
+  value: string
+  onChange: (slug: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="action-address">{translate('New address')}</Label>
+      <Input
+        id="action-address"
+        maxLength={40}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        value={value}
+        onChange={(event) => onChange(formatSlug(event.target.value))}
+        onBlur={() => onChange(formatSlug(value, true))}
+      />
+      <p className="text-sm">
+        <span className="text-[var(--muted)]">{translate('Current address')}: </span>
+        {organizationAddress(current)}
+      </p>
+      <p className="text-sm font-semibold break-all">https://{organizationAddress(value || '…')}</p>
+    </div>
+  )
+}
+
+export const validAddress = (slug: string, current: string) =>
+  /^[a-z0-9](?:[a-z0-9-]{1,38})[a-z0-9]$/.test(slug) && slug !== current
 
 function ExtensionFields({ days, onChange }: { days: string; onChange: (days: string) => void }) {
   const invalid =
@@ -102,6 +140,7 @@ export function CustomerActionDialogs({
     paidPlans.find((item) => item !== currentPlan) ?? 'essential',
   )
   const [days, setDays] = useState('30')
+  const [address, setAddress] = useState('')
   const run = (call: (input: ActionInput) => Promise<unknown>) => async (input: ActionInput) => {
     await call(input)
     await refresh()
@@ -259,6 +298,36 @@ export function CustomerActionDialogs({
           submitLabel={translate('Cancel deletion')}
           onClose={onClose}
           onSubmit={run((input) => cancelAdminOwnerDeletion(ownerId, reasonOnly(input)))}
+        />
+      )
+    case 'change-address':
+      return (
+        <CustomerActionDialog
+          title={translate('Change address')}
+          description={action.organization.name}
+          impacts={[
+            translate('The organization moves to the new address immediately.'),
+            translate('The former address keeps redirecting to the new one.'),
+            translate('All sessions of this organization are closed: staff sign in again.'),
+          ]}
+          sensitive
+          submitLabel={translate('Change address')}
+          fields={
+            <AddressChangeFields
+              current={action.organization.slug}
+              value={address}
+              onChange={setAddress}
+            />
+          }
+          fieldsReady={validAddress(address, action.organization.slug)}
+          onClose={onClose}
+          onSubmit={run((input) =>
+            renameAdminOrganizationSlug(action.organization.id, {
+              slug: address,
+              reason: input.reason,
+              code: input.code,
+            }),
+          )}
         />
       )
     case 'suspend-organization':

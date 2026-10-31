@@ -2,9 +2,9 @@ import { Check, LoaderCircle } from 'lucide-react'
 
 import { Input } from '../../../../../components/ui/input'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { formatSlug } from '../../../../../lib/organization-slug'
 import { organizationAddress } from '../../../../../lib/platform-sites'
 import type { SlugAvailability } from '../../hooks/use-slug-availability'
-import { formatSlug } from './organization-slug'
 
 const messages: Record<Exclude<SlugAvailability, 'empty' | 'checking' | 'available'>, string> = {
   taken: 'This address is already taken.',

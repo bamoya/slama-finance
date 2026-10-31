@@ -1,4 +1,4 @@
-import { Ellipsis, Pause, Play } from 'lucide-react'
+import { Ellipsis, Globe, Pause, Play } from 'lucide-react'
 
 import type { AdminOwnerDetailOrganizationsItem } from '../../../../../api/generated/models'
 import { type DataColumn, DataTable } from '../../../../../components/management/data-table'
@@ -13,6 +13,7 @@ import {
 } from '../../../../../components/ui/dropdown-menu'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate } from '../../../../../lib/i18n'
+import { organizationAddress } from '../../../../../lib/platform-sites'
 import type { CustomerAction } from './customer-action'
 
 type Organization = AdminOwnerDetailOrganizationsItem
@@ -35,7 +36,12 @@ export function CustomerOrganizationsCard({
   const columns: DataColumn<Organization>[] = [
     {
       title: 'Organization',
-      render: (organization) => <span className="font-semibold">{organization.name}</span>,
+      render: (organization) => (
+        <>
+          <span className="font-semibold">{organization.name}</span>
+          <p className="text-xs text-[var(--muted)]">{organizationAddress(organization.slug)}</p>
+        </>
+      ),
     },
     {
       title: 'Status',
@@ -76,6 +82,10 @@ export function CustomerOrganizationsCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onSelect({ kind: 'change-address', organization })}>
+              <Globe aria-hidden="true" />
+              {translate('Change address')}
+            </DropdownMenuItem>
             {organization.state === 'suspended' ? (
               <DropdownMenuItem
                 onSelect={() => onSelect({ kind: 'reactivate-organization', organization })}

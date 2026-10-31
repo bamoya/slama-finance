@@ -189,7 +189,10 @@ describe('Organization address', () => {
     await name('Maison Atlas')
     await screen.findByText('This address is available.')
     next()
-    expect(await screen.findByText('This address is already taken.')).toHaveAttribute('role', 'alert')
+    expect(await screen.findByText('This address is already taken.')).toHaveAttribute(
+      'role',
+      'alert',
+    )
     expect(address()).toHaveAttribute('aria-invalid', 'true')
     expect(screen.queryByRole('heading', { name: 'Company identity' })).not.toBeInTheDocument()
   })
