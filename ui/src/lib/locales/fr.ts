@@ -1,6 +1,6 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
-  'Created': 'Créée',
+  Created: 'Créée',
   'Welcome {{name}}': 'Bienvenue {{name}}',
   'Activate your owner account': 'Activez votre compte propriétaire',
   'Choose a password to activate your account.':
