@@ -599,7 +599,7 @@
   color: var(--muted);
   max-width: 430px;
 }
-.owner-onboarding-active .owner-bottom-nav {
+.owner-onboarding-active .portal-bottom-nav {
   display: none;
 }
 @media (max-width: 1400px) {
