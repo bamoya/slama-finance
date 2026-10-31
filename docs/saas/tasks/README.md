@@ -49,11 +49,11 @@ Task 03's enforcement and task 04's domain migration must be coordinated as one 
 | [05 — Build organization creation and owner navigation](05-organization-onboarding.md)                     | 02, 04; plan/trial checks integrate with 06–07 | In progress                                           |
 | [06 — Implement plans, feature gates and quota accounting](06-plans-entitlements-and-usage.md)             | 03, 04                                         | In progress (nearly complete; exceptions moved to 12) |
 | [07 — Implement trial, manual payments and subscription lifecycle](07-subscriptions-and-manual-billing.md) | 05, 06; tax and billing decisions from 00      | In progress                                           |
-| [08 — Implement suspension, deletion and recovery](08-organization-lifecycle.md)                           | 04, 07; approved retention policy from 00      | Not started                                           |
+| [08 — Implement suspension, deletion and recovery](08-organization-lifecycle.md)                           | 04, 07; approved retention policy from 00      | In progress                                           |
 | [09 — Implement default and verified custom website domains](09-website-domains.md)                        | 03, 05, 06, 08; owner-login design from 00     | Not started                                           |
 | [10 — Implement shared and custom sender identities](10-email-domains-and-delivery.md)                     | 04, 06, 08; domain-sharing policy from 00      | Not started                                           |
 | [11 — Build consolidated owner analytics](11-owner-portfolio-analytics.md)                                 | 04, 05, 06                                     | Not started                                           |
-| [12 — Build SaaS administrator operations](12-platform-administration.md)                                  | 02, 06, 07, 08, 10                             | Not started                                           |
+| [12 — Build SaaS administrator operations](12-platform-administration.md)                                  | 02, 06, 07, 08, 10                             | In progress                                           |
 | [13 — Rehearse migration and validate SaaS release](13-release-and-isolation-verification.md)              | 02–12 complete; outstanding gates resolved     | Not started                                           |
 
 ## Rules for executing tasks

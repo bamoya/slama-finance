@@ -1,6 +1,7 @@
 # 08 — Implement suspension, deletion and recovery
 
-Status: not started. Documentation only; no implementation is performed by this task file.
+Status: In progress. Restriction sources, enforcement and administrator-driven lifecycle actions are
+implemented. Owner self-service deletion, retention jobs and the permanent purge remain open.
 
 Depends on: 04, 07; approved retention policy from 00.
 
@@ -8,9 +9,9 @@ Depends on: 04, 07; approved retention policy from 00.
 
 ## Work
 
-- [ ] Represent organization state/restriction sources separately from subscription eligibility so renewal cannot undo administrator suspension.
+- [x] Represent organization state/restriction sources separately from subscription eligibility so renewal cannot undo administrator suspension.
 - [ ] On pause/suspension/expiry block, revoke organization sessions, reject new logins and serve a static unavailable page with no actions or sensitive notes.
-- [ ] Pause business workers while preserving essential platform/security/maintenance operations. Reactivation requires fresh login and avoids missed-email replay.
+- [x] Pause business workers while preserving essential platform/security/maintenance operations. Reactivation requires fresh login and avoids missed-email replay.
 - [ ] Add owner reauthenticated deletion request, impact confirmation, 30-day grace, cancellation to prior eligibility and permitted portal exports.
 - [ ] Implement idempotent tenant/file deletion and expired-data retention jobs only after legal/backup policy approval. Preserve unrelated tenants and required billing records.
 
@@ -30,4 +31,31 @@ Depends on: 04, 07; approved retention policy from 00.
 
 ## Completion evidence
 
-Record implemented files, migration/contract changes, test commands/results and remaining blockers here when work is completed. Do not mark complete based only on scaffolding.
+Status: in progress.
+
+**Implemented** (commits `6a5d875`, `077233b`, `604b4d9`, `0adfa0c`, `d545e4b`, `a055019`, `fd0f6bd`):
+
+- Restriction columns on organizations and subscription suspension with frozen coverage, kept separate from
+  subscription eligibility (`api/db/schema/organizations.ts`, `api/db/schema/subscriptions.ts`).
+- Administrator actions: block owner, suspend organization, subscription suspend/resume (frozen clock), and
+  scheduled deletion with a 30-day grace; cancelling a deletion restores the previous state
+  (`customer-lifecycle` service, controller, repository and routes under `api/src/modules/platform/administration/`).
+- Enforcement: organization sessions are revoked, owner and organization login is rejected, the
+  `ORGANIZATION_SUSPENDED` error is returned, and tenant workers skip restricted organizations
+  (`api/src/lib/tenant-workers.ts`, auth repositories).
+- Owner invitation acceptance and blocked owner sign-in rejection (`0adfa0c`).
+- Pre-existing organization suspensions without a recorded source are allowed (`d545e4b`).
+
+**Tests:**
+
+- `api/tests/customer-lifecycle.integration.test.ts` (lifecycle, enforcement, invitations).
+- `api/tests/subscription-coverage.test.ts`.
+- Results are not recorded in the repository; run `pnpm check` and `pnpm test:integration` to confirm.
+
+**Open items:**
+
+- Permanent purge job: blocked on legal/backup policy approval.
+- Owner self-service deletion with reauthentication, impact confirmation and portal export.
+- Owner pause UI review (unavailable page with no actions or notes).
+- Past-due grace is not restored after subscription suspension.
+- Reactivation without missed-email replay and the job-race tests listed above are not yet evidenced.
