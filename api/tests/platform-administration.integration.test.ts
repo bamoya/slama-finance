@@ -134,6 +134,7 @@ describe('SaaS administration portal', () => {
       trialsEndingSoon: 2,
       inGracePeriod: 1,
       expired: 4,
+      suspended: 0,
     })
   })
 
@@ -388,9 +389,11 @@ describe('SaaS administration portal', () => {
     ])
     expect(detail.json().subscription.usage).toBeDefined()
     expect(Object.keys(detail.json()).sort()).toEqual([
+      'invitationPending',
       'organizations',
       'owner',
       'payments',
+      'restriction',
       'subscription',
     ])
     expect(detail.body).not.toMatch(/password|invoice|client/i)

@@ -62,4 +62,11 @@ describe('subscription coverage', () => {
     expect(prorate(50000, may, d('2026-05-16T12:00:00Z'))).toBe(25000)
     expect(prorate(50000, may, d('2026-06-02T00:00:00Z'))).toBe(0)
   })
+
+  it('reports a suspension and freezes the lifecycle at the suspension instant', () => {
+    const suspended = { ...trial(), suspendedAt: d('2026-05-20T00:00:00Z') }
+    const state = resolveCoverage(suspended, [may], d('2026-07-01T00:00:00Z'))
+    expect(state).toMatchObject({ status: 'suspended', planCode: 'business', blockedAt: null })
+    expect(state.current).toEqual(may)
+  })
 })
