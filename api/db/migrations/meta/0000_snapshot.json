@@ -1,5 +1,5 @@
 {
-  "id": "153ca329-22e5-4c63-9b61-e4cbd5a25b2f",
+  "id": "3afc90ab-e555-4c43-b70c-89e4184811b8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -80,6 +80,372 @@
         "actor_identity": {
           "name": "actor_identity",
           "value": "(\"actors\".\"kind\"='staff' and \"actors\".\"staff_id\"=\"actors\".\"id\" and \"actors\".\"owner_id\" is null) or (\"actors\".\"kind\"='owner' and \"actors\".\"owner_id\"=\"actors\".\"id\" and \"actors\".\"staff_id\" is null)"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.platform_admin_audit": {
+      "name": "platform_admin_audit",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "before": {
+          "name": "before",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "after": {
+          "name": "after",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "platform_admin_audit_created_idx": {
+          "name": "platform_admin_audit_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_audit_admin_id_platform_admins_id_fk": {
+          "name": "platform_admin_audit_admin_id_platform_admins_id_fk",
+          "tableFrom": "platform_admin_audit",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admin_audit_read": {
+          "name": "platform_admin_audit_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "platform_admin_audit_insert": {
+          "name": "platform_admin_audit_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "public"
+          ],
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.platform_admin_sessions": {
+      "name": "platform_admin_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failed_attempts": {
+          "name": "failed_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_sessions_token_unique": {
+          "name": "platform_admin_sessions_token_unique",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_sessions_admin_idx": {
+          "name": "platform_admin_sessions_admin_idx",
+          "columns": [
+            {
+              "expression": "admin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_sessions_admin_id_platform_admins_id_fk": {
+          "name": "platform_admin_sessions_admin_id_platform_admins_id_fk",
+          "tableFrom": "platform_admin_sessions",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admin_sessions_admin_only": {
+          "name": "platform_admin_sessions_admin_only",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "platform_admin_sessions_window": {
+          "name": "platform_admin_sessions_window",
+          "value": "\"platform_admin_sessions\".\"expires_at\" > \"platform_admin_sessions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.platform_admins": {
+      "name": "platform_admins",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totp_secret": {
+          "name": "totp_secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totp_enrolled_at": {
+          "name": "totp_enrolled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totp_last_step": {
+          "name": "totp_last_step",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "platform_admins_email_unique": {
+          "name": "platform_admins_email_unique",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admins_admin_only": {
+          "name": "platform_admins_admin_only",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "platform_admins_email_normalized": {
+          "name": "platform_admins_email_normalized",
+          "value": "\"platform_admins\".\"email\" = lower(btrim(\"platform_admins\".\"email\")) and \"platform_admins\".\"email\" <> ''"
+        },
+        "platform_admins_name_present": {
+          "name": "platform_admins_name_present",
+          "value": "btrim(\"platform_admins\".\"name\") <> ''"
+        },
+        "platform_admins_enrollment": {
+          "name": "platform_admins_enrollment",
+          "value": "\"platform_admins\".\"totp_enrolled_at\" is null or \"platform_admins\".\"totp_secret\" is not null"
         }
       },
       "isRLSEnabled": true
@@ -6827,6 +7193,15 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {
+        "organizations_platform_admin_read": {
+          "name": "organizations_platform_admin_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'"
+        },
         "organizations_worker_discovery": {
           "name": "organizations_worker_discovery",
           "as": "PERMISSIVE",
@@ -9945,6 +10320,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -10020,11 +10401,19 @@
         "subscription_payment_owner": {
           "name": "subscription_payment_owner",
           "as": "PERMISSIVE",
-          "for": "ALL",
+          "for": "SELECT",
           "to": [
             "public"
           ],
-          "using": "(\"subscription_payments\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_payments\".\"owner_id\")",
+          "using": "(\"subscription_payments\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_payments\".\"owner_id\")"
+        },
+        "subscription_payment_owner_submit": {
+          "name": "subscription_payment_owner_submit",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "public"
+          ],
           "withCheck": "\"subscription_payments\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
         },
         "subscription_payment_admin": {
@@ -10050,6 +10439,10 @@
         "subscription_payment_reference": {
           "name": "subscription_payment_reference",
           "value": "btrim(\"subscription_payments\".\"reference\")<>''"
+        },
+        "subscription_payment_rejection_reason": {
+          "name": "subscription_payment_rejection_reason",
+          "value": "(\"subscription_payments\".\"status\"='rejected')=(\"subscription_payments\".\"rejection_reason\" is not null and btrim(\"subscription_payments\".\"rejection_reason\")<>'')"
         }
       },
       "isRLSEnabled": true

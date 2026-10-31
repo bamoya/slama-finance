@@ -11,37 +11,59 @@ security:
   - organizationStaffCookie: []
     organizationScope: []
 paths:
+  '/v1/admin/auth/login':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~1login
+  '/v1/admin/auth/2fa':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~12fa
+  '/v1/admin/auth/logout':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~1logout
+  '/v1/admin/auth/me':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~1me
+  '/v1/admin/payments':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1payments
+  '/v1/admin/payments/{paymentId}/confirm':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1payments~1{paymentId}~1confirm
+  '/v1/admin/payments/{paymentId}/reject':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1payments~1{paymentId}~1reject
+  '/v1/admin/owners':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners
+  '/v1/admin/owners/{ownerId}':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1owners~1{ownerId}
+  '/v1/admin/billing-settings':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1billing-settings
+  '/v1/admin/audit':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1audit
   /v1/owner/analytics/financial-summary:
     $ref: ./modules/identity/owner-analytics.yaml#/paths/~1v1~1owner~1analytics~1financial-summary
-  "/v1/owner/organizations/{organizationId}/branding/{assetId}":
+  '/v1/owner/organizations/{organizationId}/branding/{assetId}':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1v1~1owner~1organizations~1{organizationId}~1branding~1{assetId}
-  "/v1/owner/organizations/{organizationId}/branding":
+  '/v1/owner/organizations/{organizationId}/branding':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1v1~1owner~1organizations~1{organizationId}~1branding
-  "/v1/owner/organizations/{organizationId}/onboarding/complete":
+  '/v1/owner/organizations/{organizationId}/onboarding/complete':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1v1~1owner~1organizations~1{organizationId}~1onboarding~1complete
-  "/v1/owner/organizations/{organizationId}/onboarding":
+  '/v1/owner/organizations/{organizationId}/onboarding':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1v1~1owner~1organizations~1{organizationId}~1onboarding
-  "/v1/owner/organizations":
+  '/v1/owner/organizations':
     $ref: ./modules/identity/owner-organizations.yaml#/paths/~1v1~1owner~1organizations
-  "/v1/owner/organizations/{organizationId}":
+  '/v1/owner/organizations/{organizationId}':
     $ref: ./modules/identity/owner-organizations.yaml#/paths/~1v1~1owner~1organizations~1{organizationId}
-  "/v1/organizations/{organizationId}/auth/login":
+  '/v1/organizations/{organizationId}/auth/login':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1login
-  "/v1/organizations/{organizationId}/auth/session":
+  '/v1/organizations/{organizationId}/auth/session':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1session
-  "/v1/organizations/{organizationId}/auth/logout":
+  '/v1/organizations/{organizationId}/auth/logout':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1logout
-  "/v1/organizations/{organizationId}/auth/profile":
+  '/v1/organizations/{organizationId}/auth/profile':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1profile
-  "/v1/organizations/{organizationId}/auth/change-password":
+  '/v1/organizations/{organizationId}/auth/change-password':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1change-password
-  "/v1/organizations/{organizationId}/auth/password-reset/request":
+  '/v1/organizations/{organizationId}/auth/password-reset/request':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1password-reset~1request
-  "/v1/organizations/{organizationId}/auth/password-reset/confirm":
+  '/v1/organizations/{organizationId}/auth/password-reset/confirm':
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1password-reset~1confirm
-  "/v1/organizations/{organizationId}/auth/invitations/inspect":
+  '/v1/organizations/{organizationId}/auth/invitations/inspect':
     $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1invitations~1inspect
-  "/v1/organizations/{organizationId}/auth/invitations/accept":
+  '/v1/organizations/{organizationId}/auth/invitations/accept':
     $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1invitations~1accept
   /v1/owner-auth/register:
     $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1register
@@ -315,9 +337,9 @@ paths:
     $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1temporary-password
   /v1/staff/invitations:
     $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations
-  "/v1/staff/invitations/{invitationId}/resend":
+  '/v1/staff/invitations/{invitationId}/resend':
     $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations~1{invitationId}~1resend
-  "/v1/staff/invitations/{invitationId}/revoke":
+  '/v1/staff/invitations/{invitationId}/revoke':
     $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations~1{invitationId}~1revoke
   /v1/auth/change-password:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1change-password
@@ -361,6 +383,10 @@ components:
       type: apiKey
       in: cookie
       name: slama_owner_session
+    adminSessionCookie:
+      type: apiKey
+      in: cookie
+      name: slama_admin_session
     sessionCookie:
       type: apiKey
       in: cookie
@@ -770,6 +796,38 @@ components:
       $ref: ./shared/common.yaml#/components/schemas/Weight
     ExpectedVersion:
       $ref: ./shared/common.yaml#/components/schemas/ExpectedVersion
+    AdminLogin:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminLogin
+    AdminLoginChallenge:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminLoginChallenge
+    AdminTotpEnrollment:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminTotpEnrollment
+    AdminTwoFactor:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminTwoFactor
+    AdminSession:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminSession
+    AdminPayment:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPayment
+    AdminPaymentPage:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPaymentPage
+    AdminPaymentConfirmation:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPaymentConfirmation
+    AdminPaymentRejection:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPaymentRejection
+    AdminOwnerSummary:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerSummary
+    AdminOwnerPage:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerPage
+    AdminOwnerDetail:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerDetail
+    AdminBillingSettings:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminBillingSettings
+    AdminBillingSettingsUpdate:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminBillingSettingsUpdate
+    AdminAuditEntry:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminAuditEntry
+    AdminAuditPage:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminAuditPage
     OwnerSubscription:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/OwnerSubscription
     SubscriptionEntitlements:

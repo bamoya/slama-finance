@@ -136,6 +136,9 @@ export async function initializeDatabase(env = process.env) {
           ],
         ],
         ['SELECT, INSERT, UPDATE, DELETE', ['subscription_storage']],
+        ['SELECT, INSERT, UPDATE', ['platform_admins', 'platform_admin_sessions']],
+        // Append-only administrator audit trail.
+        ['SELECT, INSERT', ['platform_admin_audit']],
         [
           'SELECT, INSERT, UPDATE',
           [
@@ -156,9 +159,16 @@ export async function initializeDatabase(env = process.env) {
       await tx.unsafe(
         `GRANT UPDATE (name, locale, updated_at, activated_at) ON public.organizations TO ${role}`,
       )
-      // Payment confirmation runs only through the privileged administrator path.
+      // Payment decisions, coverage and billing configuration additionally require the
+      // platform_admin transaction context (RLS policies and update guards).
       await tx.unsafe(
-        `GRANT UPDATE (cancel_at_period_end) ON public.owner_subscriptions TO ${role}`,
+        `GRANT UPDATE (cancel_at_period_end, paid_through_at, plan_code) ON public.owner_subscriptions TO ${role}`,
+      )
+      await tx.unsafe(
+        `GRANT UPDATE (status, coverage_start, coverage_end, decided_at, decided_by, received_reference, rejection_reason) ON public.subscription_payments TO ${role}`,
+      )
+      await tx.unsafe(
+        `GRANT UPDATE (tax_rate_basis_points, payment_methods, payment_instructions) ON public.billing_settings TO ${role}`,
       )
     })
     await runtime`SELECT 1 FROM public.users LIMIT 1`

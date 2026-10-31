@@ -31,8 +31,12 @@ export function toPayment(row: PaymentRow): SubscriptionPayment {
     coverageEnd: row.coverageEnd?.toISOString() ?? null,
     submittedAt: row.submittedAt.toISOString(),
     decidedAt: row.decidedAt?.toISOString() ?? null,
+    rejectionReason: row.rejectionReason,
   }
 }
+
+/** Runs inside the decision transaction only when the payment actually changed state. */
+export type DecisionHook = (tx: Transaction, before: PaymentRow, after: PaymentRow) => Promise<void>
 
 export function createBillingService(
   repo: ReturnType<typeof createBillingRepository>,
@@ -169,7 +173,12 @@ export function createBillingService(
      * Administrator confirmation of actual receipt. Idempotent: confirming twice returns the
      * existing coverage. Coverage dates are fixed now, not at submission.
      */
-    confirm: (id: string, decidedBy: string, receivedReference?: string) =>
+    confirm: (
+      id: string,
+      decidedBy: string,
+      receivedReference?: string,
+      onDecided?: DecisionHook,
+    ) =>
       repo.admin(async (tx) => {
         const found = await repo.payment(id, tx)
         if (!found) throw new AppError(404, 'NOT_FOUND', 'Payment not found.')
@@ -211,16 +220,26 @@ export function createBillingService(
           { paidThroughAt: end, ...(start <= now ? { planCode: payment.planCode } : {}) },
           tx,
         )
+        await onDecided?.(tx, payment, confirmed!)
         return toPayment(confirmed!)
       }),
-    reject: (id: string, decidedBy: string) =>
+    /** Idempotent; the reason is stored and shown to the owner. */
+    reject: (id: string, decidedBy: string, reason: string, onDecided?: DecisionHook) =>
       repo.admin(async (tx) => {
+        const rejectionReason = reason.trim()
+        if (!rejectionReason)
+          throw new AppError(400, 'REJECTION_REASON_REQUIRED', 'Give a reason for the rejection.')
         const payment = await repo.payment(id, tx)
         if (!payment) throw new AppError(404, 'NOT_FOUND', 'Payment not found.')
         if (payment.status === 'rejected') return toPayment(payment)
-        const row = await repo.decide(id, { status: 'rejected', decidedAt: clock(), decidedBy }, tx)
+        const row = await repo.decide(
+          id,
+          { status: 'rejected', decidedAt: clock(), decidedBy, rejectionReason },
+          tx,
+        )
         if (!row)
           throw new AppError(409, 'PAYMENT_CONFIRMED', 'A confirmed payment cannot be rejected.')
+        await onDecided?.(tx, payment, row)
         return toPayment(row)
       }),
   }

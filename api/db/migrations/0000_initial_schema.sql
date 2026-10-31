@@ -12,6 +12,62 @@ CREATE TABLE IF NOT EXISTS "actors" (
 ALTER TABLE "actors" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "platform_admin_audit" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"admin_id" uuid,
+	"actor" text NOT NULL,
+	"action" text NOT NULL,
+	"target_type" text NOT NULL,
+	"target_id" text,
+	"before" jsonb,
+	"after" jsonb,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admin_audit" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "platform_admin_sessions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"admin_id" uuid NOT NULL,
+	"token_hash" text NOT NULL,
+	"verified_at" timestamp with time zone,
+	"failed_attempts" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_seen_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"revoked_at" timestamp with time zone,
+	CONSTRAINT "platform_admin_sessions_window" CHECK ("platform_admin_sessions"."expires_at" > "platform_admin_sessions"."created_at")
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admin_sessions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "platform_admins" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"email" text NOT NULL,
+	"password_hash" text NOT NULL,
+	"name" text NOT NULL,
+	"totp_secret" text,
+	"totp_enrolled_at" timestamp with time zone,
+	"totp_last_step" bigint,
+	"disabled_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "platform_admins_email_normalized" CHECK ("platform_admins"."email" = lower(btrim("platform_admins"."email")) and "platform_admins"."email" <> ''),
+	CONSTRAINT "platform_admins_name_present" CHECK (btrim("platform_admins"."name") <> ''),
+	CONSTRAINT "platform_admins_enrollment" CHECK ("platform_admins"."totp_enrolled_at" is null or "platform_admins"."totp_secret" is not null)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admins" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "document_artifacts" (
 	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -1238,9 +1294,11 @@ CREATE TABLE IF NOT EXISTS "subscription_payments" (
 	"decided_at" timestamp with time zone,
 	"decided_by" text,
 	"received_reference" text,
+	"rejection_reason" text,
 	CONSTRAINT "subscription_payment_amounts" CHECK ("subscription_payments"."amount_ht">=0 and "subscription_payments"."tax_amount">=0 and "subscription_payments"."amount_ttc"="subscription_payments"."amount_ht"+"subscription_payments"."tax_amount"),
 	CONSTRAINT "subscription_payment_coverage" CHECK (("subscription_payments"."status"='confirmed')=("subscription_payments"."coverage_start" is not null and "subscription_payments"."coverage_end">"subscription_payments"."coverage_start")),
-	CONSTRAINT "subscription_payment_reference" CHECK (btrim("subscription_payments"."reference")<>'')
+	CONSTRAINT "subscription_payment_reference" CHECK (btrim("subscription_payments"."reference")<>''),
+	CONSTRAINT "subscription_payment_rejection_reason" CHECK (("subscription_payments"."status"='rejected')=("subscription_payments"."rejection_reason" is not null and btrim("subscription_payments"."rejection_reason")<>''))
 );
 
 --> statement-breakpoint
@@ -1274,6 +1332,18 @@ CREATE TABLE IF NOT EXISTS "subscription_storage" (
 --> statement-breakpoint
 
 ALTER TABLE "subscription_storage" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "platform_admin_audit_created_idx" ON "platform_admin_audit" USING btree ("created_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "platform_admin_sessions_token_unique" ON "platform_admin_sessions" USING btree ("token_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "platform_admin_sessions_admin_idx" ON "platform_admin_sessions" USING btree ("admin_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "platform_admins_email_unique" ON "platform_admins" USING btree ("email");
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "document_artifacts_objectKey_tenant_unique" ON "document_artifacts" USING btree ("organization_id","object_key");
@@ -1526,6 +1596,22 @@ END $$;
 
 DO $$ BEGIN
  ALTER TABLE "actors" ADD CONSTRAINT "actors_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "platform_admin_audit" ADD CONSTRAINT "platform_admin_audit_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "platform_admin_sessions" ADD CONSTRAINT "platform_admin_sessions_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -2703,6 +2789,18 @@ END $$;
 CREATE POLICY "actor_scope" ON "actors" AS PERMISSIVE FOR ALL TO public USING (("actors"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and (o.owner_id="actors"."owner_id" or exists(select 1 from users u where u.id="actors"."staff_id" and u.organization_id=o.id)))) WITH CHECK (("actors"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and (o.owner_id="actors"."owner_id" or exists(select 1 from users u where u.id="actors"."staff_id" and u.organization_id=o.id))));
 --> statement-breakpoint
 
+CREATE POLICY "platform_admin_audit_read" ON "platform_admin_audit" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "platform_admin_audit_insert" ON "platform_admin_audit" AS PERMISSIVE FOR INSERT TO public WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "platform_admin_sessions_admin_only" ON "platform_admin_sessions" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "platform_admins_admin_only" ON "platform_admins" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "tenant_isolation" ON "document_artifacts" AS PERMISSIVE FOR ALL TO public USING ("document_artifacts"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("document_artifacts"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
@@ -2793,6 +2891,9 @@ CREATE POLICY "tenant_isolation" ON "organization_admin_deliveries" AS PERMISSIV
 CREATE POLICY "organization_domains_tenant_scope" ON "organization_domains" AS PERMISSIVE FOR ALL TO public USING ("organization_domains"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("organization_domains"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "organizations_platform_admin_read" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "organizations_worker_discovery" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker');
 --> statement-breakpoint
 
@@ -2850,7 +2951,10 @@ CREATE POLICY "subscription_scope" ON "owner_subscriptions" AS PERMISSIVE FOR AL
 CREATE POLICY "usage_owner" ON "subscription_emails" AS PERMISSIVE FOR ALL TO public USING ("subscription_emails"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_emails"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
 --> statement-breakpoint
 
-CREATE POLICY "subscription_payment_owner" ON "subscription_payments" AS PERMISSIVE FOR ALL TO public USING (("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_payments"."owner_id")) WITH CHECK ("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+CREATE POLICY "subscription_payment_owner" ON "subscription_payments" AS PERMISSIVE FOR SELECT TO public USING (("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_payments"."owner_id"));
+--> statement-breakpoint
+
+CREATE POLICY "subscription_payment_owner_submit" ON "subscription_payments" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
 --> statement-breakpoint
 
 CREATE POLICY "subscription_payment_admin" ON "subscription_payments" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
@@ -2859,6 +2963,12 @@ CREATE POLICY "subscription_payment_admin" ON "subscription_payments" AS PERMISS
 CREATE POLICY "usage_owner" ON "subscription_storage" AS PERMISSIVE FOR ALL TO public USING ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
 --> statement-breakpoint
 ALTER TABLE "actors" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "platform_admin_audit" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "platform_admin_sessions" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "platform_admins" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "document_artifacts" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -3588,6 +3698,37 @@ END $$;
 --> statement-breakpoint
 CREATE TRIGGER organization_defaults_after_create AFTER INSERT ON organizations
 FOR EACH ROW EXECUTE FUNCTION provision_organization_defaults();
+
+--> statement-breakpoint
+CREATE FUNCTION reject_platform_admin_audit_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ RAISE EXCEPTION 'Platform administration audit is append-only' USING ERRCODE='42501';
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER platform_admin_audit_append_only BEFORE UPDATE OR DELETE ON platform_admin_audit FOR EACH ROW EXECUTE FUNCTION reject_platform_admin_audit_change();
+--> statement-breakpoint
+CREATE TRIGGER platform_admin_audit_no_truncate BEFORE TRUNCATE ON platform_admin_audit FOR EACH STATEMENT EXECUTE FUNCTION reject_platform_admin_audit_change();
+--> statement-breakpoint
+-- Coverage, plan and billing configuration change only through the administrator context.
+-- The table owner (migrations, operator tooling) is exempt; the runtime role is not.
+CREATE FUNCTION require_platform_admin_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF current_setting('app.actor_type',true) IS DISTINCT FROM 'platform_admin'
+   AND NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  IF TG_TABLE_NAME='owner_subscriptions' THEN
+   -- Owners may only toggle cancellation; coverage and plan follow confirmed payments.
+   IF to_jsonb(NEW)-'cancel_at_period_end' IS NOT DISTINCT FROM to_jsonb(OLD)-'cancel_at_period_end' THEN
+    RETURN NEW;
+   END IF;
+  END IF;
+  RAISE EXCEPTION 'Platform administrator context required' USING ERRCODE='42501';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER owner_subscriptions_admin_coverage BEFORE UPDATE ON owner_subscriptions FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_settings_admin_only BEFORE UPDATE ON billing_settings FOR EACH ROW EXECUTE FUNCTION require_platform_admin_change();
 
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "document_artifacts" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id');

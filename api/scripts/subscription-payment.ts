@@ -1,5 +1,6 @@
 // Operator tool until the SaaS administration portal (task 12) exists.
-// Usage: pnpm subscription:payment <confirm|reject|list> [paymentId] --by <operator> [--received <bank ref>]
+// Usage: pnpm subscription:payment <confirm|reject|list> [paymentId] --by <operator>
+//   [--received <bank ref>] (confirm) | --reason <shown to the owner> (reject, required)
 import { existsSync } from 'node:fs'
 import { loadEnvFile } from 'node:process'
 import { parseArgs } from 'node:util'
@@ -14,7 +15,11 @@ const url = process.env.MIGRATION_DATABASE_URL
 if (!url) throw new Error('MIGRATION_DATABASE_URL is required for payment administration.')
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { by: { type: 'string' }, received: { type: 'string' } },
+  options: {
+    by: { type: 'string' },
+    received: { type: 'string' },
+    reason: { type: 'string' },
+  },
 })
 const [action, id] = positionals
 const { db, close } = createDatabase(url, 1)
@@ -28,14 +33,20 @@ try {
       )
     })
     console.table(rows)
-  } else if ((action === 'confirm' || action === 'reject') && id && values.by) {
+  } else if (
+    id &&
+    values.by &&
+    (action === 'confirm' || (action === 'reject' && values.reason?.trim()))
+  ) {
     const result =
       action === 'confirm'
         ? await admin.confirm(id, values.by, values.received)
-        : await admin.reject(id, values.by)
+        : await admin.reject(id, values.by, values.reason!)
     console.log(JSON.stringify(result, null, 2))
   } else {
-    throw new Error('Usage: <confirm|reject> <paymentId> --by <operator> [--received <ref>] | list')
+    throw new Error(
+      'Usage: confirm <paymentId> --by <operator> [--received <ref>] | reject <paymentId> --by <operator> --reason <text> | list',
+    )
   }
 } finally {
   await close()

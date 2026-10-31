@@ -69,6 +69,7 @@ try {
     'integrity/domain-triggers.sql',
     'integrity/actors.sql',
     'integrity/organization-defaults.sql',
+    'integrity/platform-administration.sql',
   ])
     sql += separator + (await readFile(path.join(root, 'db', file), 'utf8'))
   for (const table of tenant.values()) {

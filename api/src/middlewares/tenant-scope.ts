@@ -16,6 +16,8 @@ export function registerTenantScope(app: FastifyInstance) {
       !request.url.startsWith('/v1/') ||
       request.url.startsWith('/v1/owner/') ||
       request.url.startsWith('/v1/owner-auth/') ||
+      // The SaaS administration realm never selects or enters a tenant scope.
+      request.url.startsWith('/v1/admin/') ||
       request.method === 'OPTIONS'
     )
       return done()

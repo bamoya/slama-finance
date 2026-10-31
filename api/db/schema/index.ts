@@ -1,4 +1,5 @@
 export * from './actors.js'
+export * from './administration.js'
 export * from './artifacts.js'
 export * from './auth.js'
 export * from './catalog.js'

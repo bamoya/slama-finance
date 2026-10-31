@@ -59,6 +59,17 @@ const environmentSchema = z
       (value) => (value === '' ? undefined : value),
       origin.optional(),
     ),
+    // 32-byte key (base64) encrypting administrator TOTP secrets; admin sign-in is unavailable without it.
+    ADMIN_TOTP_KEY: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .refine(
+          (value) => Buffer.from(value, 'base64').length === 32,
+          'Use 32 random bytes encoded as base64',
+        )
+        .optional(),
+    ),
     MEDIA_ASSET_DIR: z.string().default('.local/media'),
     S3_ENDPOINT: z.string().url().optional().or(z.literal('')),
     S3_REGION: z.string().default('us-ashburn-1'),

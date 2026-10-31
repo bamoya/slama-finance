@@ -146,7 +146,14 @@ describe('Manual subscription billing', () => {
       method: 'cash',
       reference: 'bad',
     })
-    expect((await billing.reject(submitted.id, testUserId)).status).toBe('rejected')
+    await expect(billing.reject(submitted.id, testUserId, '  ')).rejects.toMatchObject({
+      code: 'REJECTION_REASON_REQUIRED',
+    })
+    const rejected = await billing.reject(submitted.id, testUserId, 'Transfer not received')
+    expect(rejected).toMatchObject({
+      status: 'rejected',
+      rejectionReason: 'Transfer not received',
+    })
     await expect(billing.confirm(submitted.id, testUserId)).rejects.toMatchObject({
       code: 'PAYMENT_REJECTED',
     })

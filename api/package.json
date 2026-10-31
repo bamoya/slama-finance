@@ -20,7 +20,10 @@
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate",
     "db:grant-sales-runtime": "tsx scripts/grant-sales-runtime.ts",
-    "subscription:payment": "tsx scripts/subscription-payment.ts"
+    "subscription:payment": "tsx scripts/subscription-payment.ts",
+    "admin:create": "tsx scripts/admin.ts create",
+    "admin:disable": "tsx scripts/admin.ts disable",
+    "admin:reset-2fa": "tsx scripts/admin.ts reset-2fa"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",

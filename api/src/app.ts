@@ -46,6 +46,7 @@ import {
   createNotificationSettingsModule,
   createSettingsModule,
 } from './modules/organization/index.js'
+import { createAdministrationModule } from './modules/platform/administration/index.js'
 import { createPlatformModule } from './modules/platform/index.js'
 import { createSubscriptionsModule } from './modules/platform/subscriptions/index.js'
 import { createArtifactCleanup } from './support/artifacts/index.js'
@@ -264,6 +265,13 @@ export async function buildApp(options: AppOptions = {}) {
     })
   })
   await platform.registerRoutes(app)
+  await createAdministrationModule({
+    database: () => tenantDatabase(app.database()),
+    billing: { ...subscriptions.administration, summary: subscriptions.publicApi.summary },
+    secure: env.NODE_ENV === 'production',
+    portalOrigin: env.OWNER_PORTAL_ORIGIN,
+    totpKey: env.ADMIN_TOTP_KEY ? Buffer.from(env.ADMIN_TOTP_KEY, 'base64') : undefined,
+  }).registerRoutes(app)
   await identity.registerRoutes(app, permission)
   await subscriptions.registerRoutes(
     app,

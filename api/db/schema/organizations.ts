@@ -64,6 +64,11 @@ export const organizations = pgTable(
   (t) => [
     uniqueIndex('organizations_slug_unique').on(t.slug),
     index('organizations_owner_idx').on(t.ownerId),
+    // SaaS administration sees organization identity only; finance tables stay tenant-scoped.
+    pgPolicy('organizations_platform_admin_read', {
+      for: 'select',
+      using: sql`current_setting('app.actor_type',true)='platform_admin'`,
+    }),
     pgPolicy('organizations_worker_discovery', {
       for: 'select',
       using: sql`current_setting('app.actor_type',true)='worker'`,

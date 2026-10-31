@@ -158,6 +158,8 @@ export const subscriptionPayments = pgTable(
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     decidedBy: text('decided_by'),
     receivedReference: text('received_reference'),
+    // Shown to the owner; required whenever an administrator rejects a payment.
+    rejectionReason: text('rejection_reason'),
   },
   (t) => [
     check(
@@ -169,13 +171,21 @@ export const subscriptionPayments = pgTable(
       sql`(${t.status}='confirmed')=(${t.coverageStart} is not null and ${t.coverageEnd}>${t.coverageStart})`,
     ),
     check('subscription_payment_reference', sql`btrim(${t.reference})<>''`),
+    check(
+      'subscription_payment_rejection_reason',
+      sql`(${t.status}='rejected')=(${t.rejectionReason} is not null and btrim(${t.rejectionReason})<>'')`,
+    ),
     uniqueIndex('subscription_payments_one_open')
       .on(t.ownerId)
       .where(sql`${t.status}='submitted'`),
     index('subscription_payments_owner').on(t.ownerId, t.submittedAt),
+    // Owners read and submit; only administrators may decide (update) a payment.
     pgPolicy('subscription_payment_owner', {
-      for: 'all',
+      for: 'select',
       using: sql`(${t.ownerId}=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=${t.ownerId})`,
+    }),
+    pgPolicy('subscription_payment_owner_submit', {
+      for: 'insert',
       withCheck: sql`${t.ownerId}=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'`,
     }),
     pgPolicy('subscription_payment_admin', {

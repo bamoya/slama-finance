@@ -1,0 +1,492 @@
+paths:
+  /v1/admin/auth/login:
+    post:
+      operationId: adminLogin
+      tags: [administration]
+      security: []
+      description: 'Verifies email and password, then starts a short pending session (slama_admin_session cookie) that must be completed with a TOTP code. Unenrolled administrators receive the TOTP secret once. All credential failures return the same 401 INVALID_CREDENTIALS.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminLogin' }
+      responses:
+        '200':
+          description: Second factor required.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminLoginChallenge' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/auth/2fa:
+    post:
+      operationId: adminVerifyTwoFactor
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Completes enrollment or sign-in with a 6-digit TOTP code. A code is accepted once; the pending session is replaced by a fresh 8-hour session (30-minute idle timeout). Failures return 401 INVALID_CODE; five failures revoke the pending session.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminTwoFactor' }
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSession' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      responses:
+        '204':
+          description: Session revoked and cookie cleared.
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/auth/me:
+    get:
+      operationId: getAdminSession
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      responses:
+        '200':
+          description: Current administrator. Extends the idle timeout.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSession' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/payments:
+    get:
+      operationId: listAdminPayments
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [submitted, confirmed, rejected] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
+      responses:
+        '200':
+          description: Manual subscription payments, oldest submitted first for pending, newest first otherwise. 20 per page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPaymentPage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/payments/{paymentId}/confirm:
+    post:
+      operationId: confirmAdminPayment
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: paymentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPaymentConfirmation' }
+      responses:
+        '200':
+          description: Confirmed payment and its coverage. Idempotent; 409 PAYMENT_REJECTED for a rejected payment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayment' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/payments/{paymentId}/reject:
+    post:
+      operationId: rejectAdminPayment
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: paymentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPaymentRejection' }
+      responses:
+        '200':
+          description: Rejected payment; the reason is shown to the owner. Idempotent; 409 PAYMENT_CONFIRMED for a confirmed payment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPayment' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners:
+    get:
+      operationId: listAdminOwners
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - name: search
+          in: query
+          description: Case-insensitive match on email or name.
+          schema: { type: string, maxLength: 120 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
+      responses:
+        '200':
+          description: Platform owners, newest first. 20 per page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerPage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/owners/{ownerId}:
+    get:
+      operationId: getAdminOwner
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Owner profile basics, organizations, subscription and payment history. Never tenant finance data.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/billing-settings:
+    get:
+      operationId: getAdminBillingSettings
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      responses:
+        '200':
+          description: Platform billing configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBillingSettings' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+    put:
+      operationId: updateAdminBillingSettings
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Applies to future quotes only; submitted payments keep their tax snapshot. Currency is read-only.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminBillingSettingsUpdate' }
+      responses:
+        '200':
+          description: Updated configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBillingSettings' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/audit:
+    get:
+      operationId: listAdminAudit
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
+      responses:
+        '200':
+          description: Administrator audit trail, newest first. 50 per page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminAuditPage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+components:
+  schemas:
+    AdminLogin:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, minLength: 3, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 256 }
+    AdminLoginChallenge:
+      type: object
+      additionalProperties: false
+      required: [step, enrollment]
+      properties:
+        step: { type: string, enum: [enroll, verify] }
+        enrollment:
+          description: 'Present only for step enroll. Shown once; a new secret is issued on every unenrolled sign-in.'
+          anyOf:
+            - { $ref: '#/components/schemas/AdminTotpEnrollment' }
+            - { type: 'null' }
+    AdminTotpEnrollment:
+      type: object
+      additionalProperties: false
+      required: [otpauthUri, secret]
+      properties:
+        otpauthUri:
+          {
+            type: string,
+            description: 'otpauth://totp URI for QR rendering (SHA1, 6 digits, 30 s).',
+          }
+        secret: { type: string, description: Base32 secret for manual entry. }
+    AdminTwoFactor:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    AdminSession:
+      type: object
+      additionalProperties: false
+      required: [admin, expiresAt, idleTimeoutSeconds]
+      properties:
+        admin:
+          type: object
+          additionalProperties: false
+          required: [id, email, name]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string }
+            name: { type: string }
+        expiresAt: { type: string, format: date-time, description: Absolute session end. }
+        idleTimeoutSeconds: { type: integer, minimum: 1 }
+    AdminPayment:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          ownerId,
+          ownerEmail,
+          planCode,
+          cycle,
+          kind,
+          status,
+          method,
+          reference,
+          amount,
+          coverageStart,
+          coverageEnd,
+          submittedAt,
+          decidedAt,
+          decidedBy,
+          receivedReference,
+          rejectionReason,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        ownerId: { type: string, format: uuid }
+        ownerEmail: { type: string }
+        planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
+        cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
+        kind: { type: string, enum: [activation, renewal, upgrade] }
+        status: { type: string, enum: [submitted, confirmed, rejected] }
+        method: { type: string }
+        reference: { type: string }
+        amount: { $ref: ../../openapi.yaml#/components/schemas/MoneyBreakdown }
+        coverageStart: { type: [string, 'null'], format: date-time }
+        coverageEnd: { type: [string, 'null'], format: date-time }
+        submittedAt: { type: string, format: date-time }
+        decidedAt: { type: [string, 'null'], format: date-time }
+        decidedBy: { type: [string, 'null'] }
+        receivedReference: { type: [string, 'null'] }
+        rejectionReason: { type: [string, 'null'] }
+    AdminPaymentPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminPayment' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
+    AdminPaymentConfirmation:
+      type: object
+      additionalProperties: false
+      properties:
+        receivedReference:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 120,
+            description: Bank or cash receipt reference actually observed.,
+          }
+    AdminPaymentRejection:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500, description: Shown to the owner. }
+    AdminOwnerSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          email,
+          name,
+          createdAt,
+          disabledAt,
+          subscriptionStatus,
+          planCode,
+          paidThroughAt,
+          organizationCount,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        disabledAt: { type: [string, 'null'], format: date-time }
+        subscriptionStatus: { type: string, enum: [not_started, trial, active, past_due, expired] }
+        planCode: { type: string, enum: [trial, essential, business, pro] }
+        paidThroughAt: { type: [string, 'null'], format: date-time }
+        organizationCount: { type: integer, minimum: 0 }
+    AdminOwnerPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminOwnerSummary' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
+    AdminOwnerDetail:
+      type: object
+      additionalProperties: false
+      required: [owner, organizations, subscription, payments]
+      properties:
+        owner:
+          type: object
+          additionalProperties: false
+          required: [id, email, firstName, lastName, locale, emailVerifiedAt, disabledAt, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string }
+            firstName: { type: [string, 'null'] }
+            lastName: { type: [string, 'null'] }
+            locale: { type: string, enum: [fr, en] }
+            emailVerifiedAt: { type: [string, 'null'], format: date-time }
+            disabledAt: { type: [string, 'null'], format: date-time }
+            createdAt: { type: string, format: date-time }
+        organizations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, slug, createdAt, activatedAt]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              slug: { type: string }
+              createdAt: { type: string, format: date-time }
+              activatedAt: { type: [string, 'null'], format: date-time }
+        subscription: { $ref: ../../openapi.yaml#/components/schemas/OwnerSubscription }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/AdminPayment' }
+    AdminBillingSettings:
+      type: object
+      additionalProperties: false
+      required: [currency, taxRateBasisPoints, paymentMethods, paymentInstructions]
+      properties:
+        currency: { type: string, readOnly: true }
+        taxRateBasisPoints: { type: [integer, 'null'], minimum: 0, maximum: 10000 }
+        paymentMethods:
+          type: array
+          items: { type: string }
+        paymentInstructions: { type: string }
+    AdminBillingSettingsUpdate:
+      type: object
+      additionalProperties: false
+      required: [taxRateBasisPoints, paymentMethods, paymentInstructions]
+      properties:
+        taxRateBasisPoints:
+          {
+            type: [integer, 'null'],
+            minimum: 0,
+            maximum: 10000,
+            description: 'Null when tax is not legally applicable.',
+          }
+        paymentMethods:
+          type: array
+          minItems: 1
+          maxItems: 10
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 40, pattern: '^[a-z0-9_]+$' }
+        paymentInstructions: { type: string, maxLength: 2000 }
+    AdminAuditEntry:
+      type: object
+      additionalProperties: false
+      required: [id, adminId, actor, action, targetType, targetId, before, after, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        adminId: { type: [string, 'null'], format: uuid }
+        actor: { type: string, description: 'Administrator email, or cli for operator tooling.' }
+        action:
+          {
+            type: string,
+            description: 'For example payment.confirm, payment.reject, billing_settings.update, auth.login, auth.login_failed, admin.create, admin.disable, admin.reset_2fa.',
+          }
+        targetType: { type: string }
+        targetId: { type: [string, 'null'] }
+        before: { type: [object, 'null'], additionalProperties: true }
+        after: { type: [object, 'null'], additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    AdminAuditPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminAuditEntry' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
