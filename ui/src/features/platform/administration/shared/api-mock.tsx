@@ -81,6 +81,8 @@ export function renderAt(path: string, ui: ReactNode) {
 /** Registers the shared setup and teardown for an administration test file. */
 export function useAdminTestLifecycle() {
   beforeEach(() => {
+    // jsdom has no hit testing; the OTP input probes it for password-manager badges.
+    document.elementFromPoint ??= () => null
     vi.stubGlobal(
       'ResizeObserver',
       class {
