@@ -93,7 +93,14 @@ function BillingSettingsForm({
             <Switch
               id="vat-applicable"
               checked={values.vatApplicable}
-              onCheckedChange={(checked) => set('vatApplicable', checked)}
+              onCheckedChange={(checked) => {
+                setSaved(false)
+                setValues((current) => ({
+                  ...current,
+                  vatApplicable: checked,
+                  vatPercent: checked && !current.vatPercent.trim() ? '20' : current.vatPercent,
+                }))
+              }}
             />
             <Label htmlFor="vat-applicable">{translate('VAT applicable')}</Label>
           </div>

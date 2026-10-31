@@ -88,6 +88,27 @@ describe('billing settings', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Billing settings saved.')
   })
 
+  it('prefills 20 when VAT is switched on and saves without typing, then null when off', async () => {
+    setup()
+    const toggle = await screen.findByRole('switch', { name: 'VAT applicable' })
+    fireEvent.click(toggle)
+    expect(screen.getByLabelText('VAT rate (%)')).toHaveValue('20')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(calls.find((call) => call.method === 'PUT')?.data).toMatchObject({
+        taxRateBasisPoints: 2000,
+      }),
+    )
+    await screen.findByRole('status')
+    fireEvent.click(screen.getByRole('switch', { name: 'VAT applicable' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(calls.filter((call) => call.method === 'PUT').at(-1)?.data).toMatchObject({
+        taxRateBasisPoints: null,
+      }),
+    )
+  })
+
   it('blocks invalid input without calling the API', async () => {
     setup()
     fireEvent.change(await screen.findByLabelText('Payment methods'), {
