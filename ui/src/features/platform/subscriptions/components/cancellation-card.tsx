@@ -22,7 +22,10 @@ export function CancellationCard({ s }: { s: OwnerSubscription }) {
   const cache = useQueryClient(),
     mutation = useSetOwnerSubscriptionCancellation(),
     [open, setOpen] = useState(false)
-  if (s.planCode === 'trial' || !s.paidThroughAt || s.status === 'expired') return null
+  // The API only accepts cancellation while active; a pending cancellation can still be undone.
+  const resumable = s.cancelAtPeriodEnd && s.status !== 'expired'
+  if (s.planCode === 'trial' || !s.paidThroughAt || (s.status !== 'active' && !resumable))
+    return null
   const resuming = s.cancelAtPeriodEnd,
     end = displayDateTime(s.paidThroughAt, 'Africa/Casablanca')
   const title = translate(resuming ? 'Resume subscription' : 'Cancel at period end')

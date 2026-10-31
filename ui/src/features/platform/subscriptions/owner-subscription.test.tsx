@@ -305,4 +305,6 @@ it('does not request a quote and hides the payment form when suspended', async (
   )
   expect(calls.some((c) => c.url?.endsWith('/quote'))).toBe(false)
   expect(screen.queryByRole('button', { name: 'Submit payment' })).not.toBeInTheDocument()
+  // The API refuses cancellation unless active, so the action is not offered.
+  expect(screen.queryByRole('button', { name: /cancel at period end/i })).not.toBeInTheDocument()
 })
