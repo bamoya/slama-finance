@@ -1,9 +1,8 @@
-import { Link } from 'wouter'
-
 import { useGetAdminOwner } from '../../../../../api/generated/administration/administration'
+import type { AdminOwnerDetailPaymentsItem } from '../../../../../api/generated/models'
+import { type DataColumn, DataTable } from '../../../../../components/management/data-table'
 import { RequestState } from '../../../../../components/management/request-state'
 import { StatusBadge } from '../../../../../components/management/status-badge'
-import { buttonVariants } from '../../../../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
@@ -16,14 +15,51 @@ import {
 } from '../../../subscriptions/components/billing-format'
 import { adminPaths } from '../../shared/admin-paths'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
-import { ScrollingTable } from '../../shared/components/scrolling-table'
-import { subscriptionStatusLabel } from '../components/subscription-labels'
+import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
+import { SubscriptionStatusBadge } from '../components/subscription-status-badge'
 
 const paymentStatus = {
   confirmed: 'Confirmed',
   rejected: 'Rejected',
   submitted: 'Awaiting verification',
 } as const
+
+type CustomerPayment = AdminOwnerDetailPaymentsItem
+
+const paymentColumns: DataColumn<CustomerPayment>[] = [
+  {
+    title: 'Submitted',
+    render: (p) => <span className="whitespace-nowrap">{displayDateTime(p.submittedAt)}</span>,
+  },
+  { title: 'Type', render: (p) => paymentKindLabel(p.kind) },
+  {
+    title: 'Plan',
+    render: (p) => (
+      <span className="whitespace-nowrap">
+        {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
+      </span>
+    ),
+  },
+  { title: 'Reference', render: (p) => <span className="break-all">{p.reference}</span> },
+  {
+    title: 'Total incl. tax',
+    align: 'right',
+    render: (p) => <span className="whitespace-nowrap">{formatDh(p.amount.amountTtc)}</span>,
+  },
+  {
+    title: 'Status',
+    render: (p) => (
+      <>
+        <StatusBadge label={paymentStatus[p.status]} tone={paymentStatusTone(p.status)} />
+        {p.rejectionReason && (
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {translate('Reason:')} {p.rejectionReason}
+          </p>
+        )}
+      </>
+    ),
+  },
+]
 
 function Item({ label, value }: { label: string; value: string }) {
   return (
@@ -40,13 +76,23 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
   const detail = query.data
   return (
     <AdministrationLayout title="Customer">
-      <Link href={adminPaths.customers} className={buttonVariants({ variant: 'outline' })}>
-        {translate('Back to customers')}
-      </Link>
       {query.isPending || query.isError || !detail ? (
-        <RequestState query={query} />
+        <>
+          <AdministrationPageHeader
+            title="Customer"
+            description="Subscription, organizations and payment history of this customer."
+            backHref={adminPaths.customers}
+          />
+          <RequestState query={query} />
+        </>
       ) : (
-        <div className="space-y-4">
+        <>
+          <AdministrationPageHeader
+            title="Customer"
+            description="Subscription, organizations and payment history of this customer."
+            backHref={adminPaths.customers}
+            status={<SubscriptionStatusBadge status={detail.subscription.status} />}
+          />
           <Card>
             <CardHeader>
               <CardTitle className="break-all">{detail.owner.email}</CardTitle>
@@ -77,10 +123,6 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
             <CardContent>
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Item label={translate('Plan')} value={planLabel(detail.subscription.planCode)} />
-                <Item
-                  label={translate('Status')}
-                  value={subscriptionStatusLabel(detail.subscription.status)}
-                />
                 <Item
                   label={translate('Cycle')}
                   value={detail.subscription.cycle ? cycleLabel(detail.subscription.cycle) : '—'}
@@ -137,59 +179,20 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{translate('Payment history')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollingTable>
-                <thead>
-                  <tr>
-                    <th>{translate('Submitted')}</th>
-                    <th>{translate('Type')}</th>
-                    <th>{translate('Plan')}</th>
-                    <th>{translate('Reference')}</th>
-                    <th className="text-right">{translate('Total incl. tax')}</th>
-                    <th>{translate('Status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!detail.payments.length && (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-[var(--muted)]">
-                        {translate('No payments yet.')}
-                      </td>
-                    </tr>
-                  )}
-                  {detail.payments.map((p) => (
-                    <tr key={p.id} className="border-t border-[var(--border)]">
-                      <td className="whitespace-nowrap">{displayDateTime(p.submittedAt)}</td>
-                      <td>{paymentKindLabel(p.kind)}</td>
-                      <td className="whitespace-nowrap">
-                        {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
-                      </td>
-                      <td className="break-all">{p.reference}</td>
-                      <td className="whitespace-nowrap text-right">
-                        {formatDh(p.amount.amountTtc)}
-                      </td>
-                      <td>
-                        <StatusBadge
-                          label={paymentStatus[p.status]}
-                          tone={paymentStatusTone(p.status)}
-                        />
-                        {p.rejectionReason && (
-                          <p className="mt-1 text-xs text-[var(--muted)]">
-                            {translate('Reason:')} {p.rejectionReason}
-                          </p>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </ScrollingTable>
-            </CardContent>
-          </Card>
-        </div>
+          <section aria-label={translate('Payment history')}>
+            <Card className="gap-0 overflow-hidden p-0">
+              <CardHeader className="border-b border-[var(--border)] p-4">
+                <CardTitle>{translate('Payment history')}</CardTitle>
+              </CardHeader>
+              <DataTable
+                items={detail.payments}
+                columns={paymentColumns}
+                emptyTitle={translate('No payments yet.')}
+                emptyDescription={translate('Payments submitted by this customer appear here.')}
+              />
+            </Card>
+          </section>
+        </>
       )}
     </AdministrationLayout>
   )

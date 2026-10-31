@@ -8,6 +8,14 @@ const labels: Record<string, string> = {
   active: 'Active',
 }
 
+export const subscriptionStatusTones = {
+  active: 'active',
+  trial: 'archived',
+  not_started: 'archived',
+  past_due: 'draft',
+  expired: 'overdue',
+} as const
+
 export function subscriptionStatusLabel(status: string | null | undefined) {
   return status ? translate(labels[status] ?? status) : '—'
 }

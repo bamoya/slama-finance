@@ -2315,4 +2315,26 @@ export const french: Record<string, string> = {
   'Enter the 6-digit code it shows below.': 'Saisissez ci-dessous le code à 6 chiffres affiché.',
   Copy: 'Copier',
   Copied: 'Copié',
+  'Administrator actions are recorded here.': 'Les actions des administrateurs sont enregistrées ici.',
+  Changes: 'Modifications',
+  'Selected payment methods': 'Moyens de paiement sélectionnés',
+  'Type a method and press Enter': 'Saisissez un moyen puis appuyez sur Entrée',
+  'Payment settings': 'Paramètres de paiement',
+  'Lowercase codes such as bank_transfer or cash. Press Enter to add one.':
+    'Codes en minuscules comme bank_transfer ou cash. Appuyez sur Entrée pour en ajouter un.',
+  'Payments submitted by this customer appear here.':
+    'Les paiements soumis par ce client apparaissent ici.',
+  'Try adjusting the search.': 'Essayez de modifier la recherche.',
+  'Payments appear here once customers submit them.':
+    'Les paiements apparaissent ici dès que les clients les soumettent.',
+  'Find customers and review their subscription and payments.':
+    'Retrouvez vos clients et consultez leur abonnement et leurs paiements.',
+  'Verify bank transfers and confirm or reject subscription payments.':
+    'Vérifiez les virements et confirmez ou rejetez les paiements d’abonnement.',
+  'Subscription, organizations and payment history of this customer.':
+    'Abonnement, organisations et historique de paiements de ce client.',
+  'Every administrator action, with the data before and after the change.':
+    'Chaque action d’administrateur, avec les données avant et après la modification.',
+  'VAT, payment methods and instructions shown to customers when they pay.':
+    'TVA, moyens de paiement et instructions affichés aux clients lors du paiement.',
 }

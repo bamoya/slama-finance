@@ -6,6 +6,7 @@ import {
   useGetAdminBillingSettings,
   useUpdateAdminBillingSettings,
 } from '../../../../../api/generated/administration/administration'
+import { FormActionBar } from '../../../../../components/management/form-action-bar'
 import { FormError } from '../../../../../components/management/form-error'
 import { RequestState } from '../../../../../components/management/request-state'
 import { Button } from '../../../../../components/ui/button'
@@ -16,12 +17,14 @@ import { Switch } from '../../../../../components/ui/switch'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
+import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
 import {
   type BillingErrors,
   type BillingFormValues,
   toFormValues,
   validateBilling,
 } from '../billing-settings'
+import { PaymentMethodsInput } from '../components/payment-methods-input'
 
 function BillingSettingsForm({
   initial,
@@ -34,6 +37,7 @@ function BillingSettingsForm({
   const client = useQueryClient()
   const update = useUpdateAdminBillingSettings()
   const [values, setValues] = useState(initial)
+  const [methodDraft, setMethodDraft] = useState('')
   const [errors, setErrors] = useState<BillingErrors>({})
   const [error, setError] = useState<unknown>(null)
   const [saved, setSaved] = useState(false)
@@ -50,17 +54,21 @@ function BillingSettingsForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{translate('Billing settings')}</CardTitle>
+        <CardTitle>{translate('Payment settings')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form
+          id="billing-settings-form"
           noValidate
           className="max-w-2xl space-y-5"
           onSubmit={(event) => {
             event.preventDefault()
             setSaved(false)
             setError(null)
-            const result = validateBilling(values)
+            const result = validateBilling({
+              ...values,
+              paymentMethods: [values.paymentMethods, methodDraft].filter(Boolean).join(', '),
+            })
             setErrors(result.errors ?? {})
             if (!result.payload) return
             update.mutate(
@@ -69,6 +77,7 @@ function BillingSettingsForm({
                 onSuccess: (settings) => {
                   client.setQueryData(getGetAdminBillingSettingsQueryKey(), settings)
                   setValues(toFormValues(settings))
+                  setMethodDraft('')
                   setSaved(true)
                 },
                 onError: setError,
@@ -104,15 +113,20 @@ function BillingSettingsForm({
           )}
           <div className="space-y-2">
             <Label htmlFor="paymentMethods">{translate('Payment methods')}</Label>
-            <Input
+            <PaymentMethodsInput
               id="paymentMethods"
               value={values.paymentMethods}
-              aria-invalid={!!errors.paymentMethods}
-              aria-describedby={errors.paymentMethods ? 'paymentMethods-error' : undefined}
-              onChange={(event) => set('paymentMethods', event.target.value)}
+              draft={methodDraft}
+              invalid={!!errors.paymentMethods}
+              describedBy={errors.paymentMethods ? 'paymentMethods-error' : undefined}
+              onChange={(value) => set('paymentMethods', value)}
+              onDraftChange={(draft) => {
+                setSaved(false)
+                setMethodDraft(draft)
+              }}
             />
             <p className="text-xs text-[var(--muted)]">
-              {translate('Separate with commas, for example bank_transfer, cash.')}
+              {translate('Lowercase codes such as bank_transfer or cash. Press Enter to add one.')}
             </p>
             {fieldError('paymentMethods')}
           </div>
@@ -131,9 +145,11 @@ function BillingSettingsForm({
           </div>
           <FormError error={error} />
           {saved && <p role="status">{translate('Billing settings saved.')}</p>}
-          <Button type="submit" disabled={update.isPending}>
-            {update.isPending ? translate('Please wait…') : translate('Save')}
-          </Button>
+          <FormActionBar>
+            <Button type="submit" form="billing-settings-form" disabled={update.isPending}>
+              {update.isPending ? translate('Please wait…') : translate('Save')}
+            </Button>
+          </FormActionBar>
         </form>
       </CardContent>
     </Card>
@@ -144,6 +160,10 @@ export function AdminBillingSettingsPage() {
   const query = useGetAdminBillingSettings({ query: { retry: false } })
   return (
     <AdministrationLayout title="Billing settings">
+      <AdministrationPageHeader
+        title="Billing settings"
+        description="VAT, payment methods and instructions shown to customers when they pay."
+      />
       {query.isPending || query.isError ? (
         <RequestState query={query} />
       ) : (

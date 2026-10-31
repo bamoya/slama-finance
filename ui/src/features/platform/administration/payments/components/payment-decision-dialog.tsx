@@ -78,7 +78,7 @@ export function PaymentDecisionDialog({
             )}
           </DialogDescription>
           <dl className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--accent-soft)] p-3 text-sm">
-            <dt className="text-[var(--muted)]">{translate('Owner')}</dt>
+            <dt className="text-[var(--muted)]">{translate('Customer')}</dt>
             <dd className="break-all font-semibold">{payment.ownerEmail}</dd>
             <dt className="text-[var(--muted)]">{translate('Reference')}</dt>
             <dd className="break-all font-semibold">{payment.reference}</dd>

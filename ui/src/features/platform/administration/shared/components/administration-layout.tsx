@@ -65,10 +65,7 @@ export function AdministrationLayout({ children, title }: { children: ReactNode;
       }}
       ready={Boolean(session.data)}
     >
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">{translate(title)}</h1>
-        {children}
-      </div>
+      {children}
     </PortalShell>
   )
 }
