@@ -1,6 +1,6 @@
 # 05 — Build organization creation and owner navigation
 
-Status: in progress. Persisted six-step setup, branding, transactional activation, secure owner workspace entry, trial and organization/staff admission checks are implemented. Invitation delivery and custom-domain/session handoff remain outstanding.
+Status: in progress. Persisted six-step setup, branding, transactional activation, secure owner workspace entry, trial and organization/staff admission checks are implemented. Staff invitation delivery and acceptance are implemented; custom-domain/session handoff remains outstanding.
 
 Depends on: 02, 04; plan/trial checks integrate with 06–07.
 
@@ -69,3 +69,7 @@ Supersedes the earlier metadata-only boundary: completion now applies live compa
 ## Independent organization administrator — current implementation
 
 The platform/organization source split, independent administrator provisioning, leased credential delivery and ownership-scoped analytics are implemented. The initial administrator counts toward the member cap. Staff/profile/password operations are normal organization operations, with no Owner staff role or permission bypass. Prepared additional invitations, manual subscription administration and future custom-domain deployment remain separate tasks. See [the current agreement](../platform-organization-boundaries.md).
+
+## Staff invitation slice — 2026-10-31
+
+Onboarding queues additional organization invitations once, through the organization identity provisioning interface. Initial administrator password setup precedes delivery. Staff management supports list/create/resend/revoke; public acceptance creates an ordinary organization account with its own password. Invitation tokens are hashed, expire after 48 hours and are consumed once. Pending invitations do not consume member seats; capacity is serialized and rechecked on acceptance. See [implementation and validation](../../implementation/staff-invitations/progress.md). This supersedes earlier notes describing prepared invitations as unsent.

@@ -52,12 +52,20 @@ export function StaffPage() {
           'Manage company accounts, role assignments and access. No public registration.',
         )}
         actions={
-          <Can permission="staff.create">
-            <Link href="/settings/staff/new" className={buttonVariants({})}>
-              <Plus size={17} />
-              {translate('Add staff member')}
+          <>
+            <Link
+              href="/settings/staff/invitations"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              {translate('Staff invitations')}
             </Link>
-          </Can>
+            <Can permission="staff.create">
+              <Link href="/settings/staff/new" className={buttonVariants({})}>
+                <Plus size={17} />
+                {translate('Add staff member')}
+              </Link>
+            </Can>
+          </>
         }
       />
       <section className="overflow-hidden rounded-panel border border-[var(--border)] bg-[var(--surface)]">

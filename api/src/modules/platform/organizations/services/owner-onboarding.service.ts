@@ -8,6 +8,7 @@ import type {
 import { OwnerOnboardingConfigurationSchema } from '../../../../contracts/generated/identity/owner-onboarding.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
+import type { OrganizationProvisioningPublicApi } from '../../../organization/identity/index.js'
 import type { OwnerBrandingPublicApi } from '../../../organization/media/index.js'
 import type { SettingsPublicApi } from '../../../organization/settings/index.js'
 import type { createOwnerAuthService } from '../../identity/services/owner-auth.service.js'
@@ -28,6 +29,7 @@ export function createOwnerOnboardingService(
   owners: ReturnType<typeof createOwnerAuthService>,
   branding: () => OwnerBrandingPublicApi,
   activation?: {
+    invite?: OrganizationProvisioningPublicApi['invite']
     subscriptions: SubscriptionsPublicApi
     settings: () => SettingsPublicApi
     provision: (
@@ -160,8 +162,7 @@ export function createOwnerOnboardingService(
                     'FEATURE_UNAVAILABLE',
                     'Your plan includes one fixed document layout.',
                   )
-                if (c.invitations.length)
-                  await activation.subscriptions.admitStaff(tx, c.invitations.length)
+                await activation.invite?.(tx, c.invitations, c.defaults.language)
                 await branding().attachWorkspace(tx, images, owner.id)
                 await activation.settings().applyOrganizationSetup(tx, c, owner.id)
               }

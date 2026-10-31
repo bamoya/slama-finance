@@ -1,0 +1,361 @@
+paths:
+  /v1/staff/invitations:
+    get:
+      operationId: listStaffInvitations
+      tags: [identity]
+      x-permissions: [staff.read]
+      description: Lists the current organization's staff invitations. Ordinary organization staff
+        sessions only; owner cookies cannot authorize staff management. Expiry is evaluated at read
+        time, so a pending invitation past its current token's deadline is reported as expired.
+        Responses carry safe management metadata only and never include tokens, token hashes or
+        delivery lease internals.
+      security:
+        - organizationStaffCookie: []
+          organizationScope: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: q
+          in: query
+          description: Case-insensitive search on the invited email address.
+          schema:
+            type: string
+            maxLength: 200
+        - name: status
+          in: query
+          description: Pending by default, mirroring the staff list's current-account default; expired
+            invitations stay resendable and are reachable through this filter.
+          schema:
+            type: string
+            enum: [pending, accepted, revoked, expired, all]
+            default: pending
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [email, createdAt, expiresAt]
+            default: createdAt
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPage
+        default: &standardError
+          description: Standard error envelope, including validation, authorization, conflict, request size,
+            rate limit and unavailable service
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+    post:
+      operationId: createStaffInvitation
+      tags: [identity]
+      x-permissions: [staff.create]
+      description: Creates an organization staff invitation and queues delivery on the security-email
+        transport; security mail never consumes business-email quota. Nonempty roleIds also requires
+        roles.update, with the existing anti-escalation checks; an invitation without roles grants no
+        implicit permissions. Email addresses are normalized (trimmed, lowercased), duplicate pending
+        invitations within the organization are prevented, and an address already used by an existing
+        staff account is rejected. The delivery worker generates the cryptographically random
+        single-use token when it attempts delivery, stores only its hash and emails it; the 48-hour
+        validity starts at that generation, not at this request, and the invitation's expiry is null
+        until then. Tokens never appear on management responses. Pending invitations do not consume
+        staff slots; subscription access and member capacity, including the administrator, are
+        rechecked and locked atomically on acceptance. Safe errors include 403 FORBIDDEN without
+        staff.create, or when roles.update or the anti-escalation checks fail for nonempty roleIds,
+        409 DUPLICATE_RECORD, 429 RATE_LIMITED, and 503 EMAIL_UNAVAILABLE when the security-email
+        transport is not configured.
+      security:
+        - organizationStaffCookie: []
+          organizationScope: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/CreateStaffInvitation
+      responses:
+        "201":
+          description: Invitation created with delivery queued; no token exists until the delivery worker generates one
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
+        default: *standardError
+  "/v1/staff/invitations/{invitationId}/resend":
+    post:
+      operationId: resendStaffInvitation
+      tags: [identity]
+      x-permissions: [staff.update]
+      description: Resends a pending or expired invitation, reopening it as pending. Immediately
+        invalidates the previous single-use token and queues a new delivery attempt; the delivery
+        worker then generates the next token, and each delivery attempt, including a retry, rotates
+        the token and restarts its 48-hour validity from that generation, so the expiry is null again
+        until the attempt runs. Delivery uses the security-email transport with bounded retries and
+        never consumes business-email quota. Safe errors include 403 FORBIDDEN without staff.update,
+        409 INVITATION_CONFLICT when the invitation is accepted or revoked, 429 RATE_LIMITED, and 503
+        EMAIL_UNAVAILABLE when the security-email transport is not configured.
+      security:
+        - organizationStaffCookie: []
+          organizationScope: []
+      parameters:
+        - &invitationId
+          name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Invitation with the previous token invalidated and delivery queued; the next token exists only after the delivery worker generates it
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
+        default: *standardError
+  "/v1/staff/invitations/{invitationId}/revoke":
+    post:
+      operationId: revokeStaffInvitation
+      tags: [identity]
+      x-permissions: [staff.update]
+      description: Revokes an invitation that has not been accepted and invalidates any generated
+        token immediately. Idempotent, revoking an already-revoked invitation returns the same
+        revoked state. Safe errors include 403 FORBIDDEN without staff.update and 409
+        INVITATION_CONFLICT when the invitation has been accepted.
+      security:
+        - organizationStaffCookie: []
+          organizationScope: []
+      parameters:
+        - *invitationId
+      responses:
+        "200":
+          description: Current invitation state; repeating the request returns the same revoked invitation
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
+        default: *standardError
+  "/v1/organizations/{organizationId}/auth/invitations/inspect":
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffInspectInvitation
+      tags: [identity]
+      security: []
+      description: Public preview before accepting a staff invitation. The single-use token is supplied
+        in the request body and never in a URL; the emailed acceptance link carries it in the browser
+        URL fragment only, never as a query parameter, keeping it out of server and proxy URL logs.
+        Limited to five attempts per minute per client IP per API instance; excess attempts return 429
+        with Retry-After. Reveals only the organization name, invited email and expiry, and only for a
+        valid pending token. Safe errors use distinct codes for clear UI states, including 400
+        INVALID_INVITATION_TOKEN for an unknown or malformed token, 410 INVITATION_EXPIRED, 410
+        INVITATION_REVOKED, 410 INVITATION_ALREADY_USED, 403 ORGANIZATION_SUSPENDED or 404
+        ORGANIZATION_NOT_FOUND when the organization is unavailable, and 429 RATE_LIMITED.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/InspectStaffInvitationInput
+      responses:
+        "200":
+          description: Minimal invitation preview
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPreview
+        default: *standardError
+  "/v1/organizations/{organizationId}/auth/invitations/accept":
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffAcceptInvitation
+      tags: [identity]
+      security: []
+      description: Public single-use acceptance. The token is supplied in the request body and never in a
+        URL; the emailed acceptance link carries it in the browser URL fragment only, never as a query
+        parameter, keeping it out of server and proxy URL logs. Collects first and family names and a
+        new password following the current password policy, then atomically revalidates the
+        invitation, the inviter's authority and assigned roles, subscription access and member
+        capacity, including the administrator, before creating an ordinary organization staff
+        account. An invitation never replaces an existing staff account or changes its credentials. No
+        session is issued and the UI redirects to the organization login. Limited to five attempts per
+        minute per client IP per API instance; excess attempts return 429 with Retry-After. Safe
+        errors use distinct codes for clear UI states, including 400 INVALID_INVITATION_TOKEN for an
+        unknown or malformed token, 410 INVITATION_EXPIRED, 410 INVITATION_REVOKED, 410
+        INVITATION_ALREADY_USED on token replay, 403 ORGANIZATION_SUSPENDED or 404
+        ORGANIZATION_NOT_FOUND when the organization is unavailable, 402 SUBSCRIPTION_EXPIRED, 403
+        FORBIDDEN when inviter authority or assigned roles no longer hold, 409 STAFF_LIMIT when the
+        last member seat is taken concurrently, 409 DUPLICATE_RECORD when the email already belongs to
+        a staff account, 429 RATE_LIMITED.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/AcceptStaffInvitationInput
+      responses:
+        "200":
+          description: Staff account created; no session is issued, sign in on the organization login page
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/StaffInvitationAccepted
+        default: *standardError
+components:
+  schemas:
+    CreateStaffInvitation:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          description: Normalized (trimmed, lowercased) before use.
+        roleIds:
+          type: array
+          items: { type: string, format: uuid }
+          default: []
+          description: Optional roles granted on acceptance; requires roles.update with the existing
+            anti-escalation checks. Empty grants no implicit permissions.
+        language:
+          type: string
+          enum: [fr, en]
+          default: fr
+          description: Language of the invitation email; French is the default.
+    StaffInvitation:
+      type: object
+      additionalProperties: false
+      required:
+        [id, email, status, delivery, roles, createdAt, expiresAt, acceptedAt, revokedAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        status:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+          description: Expired is derived at read time from the current token's deadline; delivery
+            state is tracked separately.
+        delivery:
+          type: object
+          additionalProperties: false
+          required: [state, attempts, updatedAt]
+          properties:
+            state:
+              type: string
+              enum: [queued, sending, sent, failed, cancelled]
+              description: Sent means accepted by the transport, not read. Delivery uses the leased
+                security-email transport with bounded retries; the current token is generated by the
+                latest delivery attempt and lease internals are never exposed.
+            attempts: { type: integer, minimum: 0 }
+            updatedAt: { type: string, format: date-time }
+        roles:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, key, name]
+            properties:
+              id: { type: string, format: uuid }
+              key: { type: string }
+              name: { type: string }
+          description: Roles granted on acceptance; empty means no implicit permissions, and permissions
+            must be assigned separately after acceptance.
+        createdAt: { type: string, format: date-time }
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
+          description: Null before the delivery worker generates the current token; 48 hours after the
+            latest delivery attempt that created it. Retried delivery rotates the token and its
+            expiry.
+        acceptedAt: { type: [string, "null"], format: date-time }
+        revokedAt: { type: [string, "null"], format: date-time }
+    StaffInvitationPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items: { $ref: "../../openapi.yaml#/components/schemas/StaffInvitation" }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+    InspectStaffInvitationInput:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          description: Single-use invitation token from the email link, transported in the request body
+            only.
+    StaffInvitationPreview:
+      type: object
+      additionalProperties: false
+      required: [organizationName, email, expiresAt]
+      properties:
+        organizationName: { type: string, minLength: 1, maxLength: 160 }
+        email: { type: string, format: email }
+        expiresAt: { type: string, format: date-time }
+    AcceptStaffInvitationInput:
+      type: object
+      additionalProperties: false
+      required: [token, firstName, lastName, password]
+      properties:
+        token:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          description: Single-use invitation token from the email link, transported in the request body
+            only.
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        password:
+          type: string
+          minLength: 12
+          maxLength: 256
+          description: New password following the current password policy.
+    StaffInvitationAccepted:
+      type: object
+      additionalProperties: false
+      required: [organizationId, email, message]
+      properties:
+        organizationId: { type: string, format: uuid }
+        email: { type: string, format: email }
+        message:
+          type: string
+          description: Directs the UI to the organization login; no session is created.

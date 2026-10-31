@@ -2150,4 +2150,42 @@ export const french: Record<string, string> = {
   'Members per organization': 'Membres par organisation',
   'The initial administrator counts toward the member limit. Disabled members count; archived members do not.':
     'L’administrateur initial compte dans la limite de membres. Les membres désactivés comptent ; les membres archivés ne comptent pas.',
+  'Staff invitations': 'Invitations du personnel',
+  'Pending invitations do not use a member seat. Capacity is checked when accepted.':
+    'Les invitations en attente ne consomment pas de place. La capacité est vérifiée à l’acceptation.',
+  'Invite a staff member': 'Inviter un membre',
+  'Search invitations': 'Rechercher des invitations',
+  'Search email': 'Rechercher un e-mail',
+  'Invitation status': 'État de l’invitation',
+  Expires: 'Expiration',
+  'No invitations found.': 'Aucune invitation trouvée.',
+  'No roles assigned': 'Aucun rôle attribué',
+  'Not sent yet': 'Pas encore envoyé',
+  'Resend invitation': 'Renvoyer l’invitation',
+  'Revoke invitation': 'Révoquer l’invitation',
+  'This link will no longer allow access.':
+    'Ce lien ne permettra plus de rejoindre l’organisation.',
+  'The recipient chooses their own password. Access is limited to this organization.':
+    'Le destinataire choisit son mot de passe. Son accès est limité à cette organisation.',
+  'Send invitation': 'Envoyer l’invitation',
+  'Email language': 'Langue de l’e-mail',
+  'Without a role, a member has no operational permissions. Assign roles to grant access.':
+    'Sans rôle, un membre ne dispose d’aucune permission opérationnelle. Attribuez des rôles pour lui donner accès.',
+  'Your account is ready': 'Votre compte est prêt',
+  'Join your organization': 'Rejoindre votre organisation',
+  'Accept your personal invitation to create an organization account.':
+    'Acceptez votre invitation personnelle pour créer un compte dans l’organisation.',
+  'Your password is saved. Sign in to your organization.':
+    'Votre mot de passe est enregistré. Connectez-vous à votre organisation.',
+  'This invitation link is invalid.': 'Ce lien d’invitation n’est pas valide.',
+  'Accept invitation': 'Accepter l’invitation',
+  'Sign in to your organization': 'Se connecter à votre organisation',
+  'Staff — permissions assigned later': 'Personnel — permissions à attribuer',
+  'Invitations are queued after activation and sent after the administrator changes their temporary password. Staff without roles need permissions assigned in the organization.':
+    'Les invitations sont mises en attente à l’activation, puis envoyées après le changement du mot de passe temporaire de l’administrateur. Les permissions du personnel sans rôle devront être attribuées dans l’organisation.',
+  'Your administrator login and temporary password will be emailed to you. Replace that password on first login; staff invitations will then be delivered.':
+    'Votre accès administrateur et votre mot de passe temporaire vous seront envoyés par e-mail. Remplacez ce mot de passe à la première connexion ; les invitations du personnel seront ensuite envoyées.',
+  revoked: 'Révoquée',
+  all: 'Tous',
+  sending: 'Envoi en cours',
 }

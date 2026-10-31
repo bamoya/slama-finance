@@ -166,6 +166,49 @@ describe('Owner activation, workspace access and admission limits', () => {
       headers: { origin, 'x-organization-id': id },
       cookies: { slama_staff_session: staffToken },
     })
+  it('queues onboarding invitations once and sends them only after the ordinary administrator completes password setup', async () => {
+    const draft = await create()
+    draft.configuration.invitations = [
+      { email: 'staff@example.test', role: 'staff' },
+      { email: 'admin2@example.test', role: 'administrator' },
+    ]
+    const complete = await activate(draft)
+    const orgId = complete.organization.id
+    const sent: { to: string }[] = []
+    const identity = createIdentityModule({
+      database: () => tenantDatabase(fixture.db, orgId),
+      ttlDays: 14,
+      secure: false,
+      portalOrigin: origin,
+      invitationDelivery: {
+        async send(input) {
+          sent.push(input)
+        },
+      },
+    })
+    await identity.invitations.runOne()
+    expect(sent).toEqual([])
+    expect(
+      (
+        await fixture.client`select count(*)::int n from staff_invitations where organization_id=${orgId}`
+      )[0]!.n,
+    ).toBe(2)
+    expect(
+      (await fixture.client`select count(*)::int n from users where organization_id=${orgId}`)[0]!
+        .n,
+    ).toBe(1)
+    await enter(orgId)
+    await fixture.client`update staff_invitations set available_at=now() where organization_id=${orgId}`
+    await identity.invitations.runOne()
+    await identity.invitations.runOne()
+    expect(sent.map((i) => i.to).sort()).toEqual(['admin2@example.test', 'staff@example.test'])
+    const assigned =
+      await fixture.client`select i.email,count(ir.role_id)::int n from staff_invitations i left join staff_invitation_roles ir on ir.invitation_id=i.id where i.organization_id=${orgId} group by i.email order by i.email`
+    expect(assigned).toEqual([
+      { email: 'admin2@example.test', n: 1 },
+      { email: 'staff@example.test', n: 0 },
+    ])
+  })
   it('creates exactly one independent administrator during idempotent organization creation and starts one seven-day trial', async () => {
     const draft = await create()
     expect(draft.organization.staffCount).toBe(1)

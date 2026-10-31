@@ -142,7 +142,7 @@ describe('Owner onboarding persistence and isolation', () => {
     const concurrent = await Promise.all([save(updated), save(updated)])
     expect(concurrent.map((r) => r.statusCode).sort()).toEqual([200, 409])
   })
-  it('activates configuration once without duplicating staff or sending prepared invitations', async () => {
+  it('activates configuration once and queues invitations without duplicating staff or sending inline mail', async () => {
     const draft = await create()
     draft.configuration.invitations = [{ email: 'staff@example.test', role: 'staff' }]
     const saved = (await save(draft)).json<OwnerOnboarding>()
@@ -156,6 +156,9 @@ describe('Owner onboarding persistence and isolation', () => {
     )
     expect((await save(finished.json<OwnerOnboarding>())).statusCode).toBe(409)
     expect((await fixture.client`select count(*)::int n from users`)[0]!.n).toBe(2)
+    expect(
+      await fixture.client`select email,delivery_state from staff_invitations where organization_id=${saved.organization.id}`,
+    ).toEqual([{ email: 'staff@example.test', delivery_state: 'queued' }])
     expect((await fixture.client`select count(*)::int n from outbound_messages`)[0]!.n).toBe(0)
   })
   it('rejects duplicate/owner invitations and restricts every setup route to its owner and portal', async () => {

@@ -66,3 +66,14 @@ export interface OrganizationAdminDelivery {
     idempotencyKey: string
   }): Promise<void>
 }
+
+export interface OrganizationInvitationDelivery {
+  send(input: {
+    to: string
+    organizationName: string
+    url: string
+    expiresAt: Date
+    language: 'fr' | 'en'
+    idempotencyKey: string
+  }): Promise<void>
+}

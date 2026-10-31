@@ -12,6 +12,7 @@ import { ClientDetailPage } from '../../features/organization/clients'
 import { ClientFormPage } from '../../features/organization/clients'
 import { ClientsPage } from '../../features/organization/clients'
 import { DashboardPage } from '../../features/organization/dashboard'
+import { StaffInvitationFormPage, StaffInvitationsPage } from '../../features/organization/identity'
 import { ChangePasswordPage } from '../../features/organization/identity'
 import { ProfilePage } from '../../features/organization/identity'
 import { RoleCreatePage } from '../../features/organization/identity'
@@ -253,6 +254,16 @@ export const protectedRoutes = (
     <Route path="/reports">
       <ProtectedRoute>
         <ReportsPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/settings/staff/invitations/new">
+      <ProtectedRoute>
+        <StaffInvitationFormPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/settings/staff/invitations">
+      <ProtectedRoute>
+        <StaffInvitationsPage />
       </ProtectedRoute>
     </Route>
     <Route path="/settings/staff/new">

@@ -9,7 +9,12 @@ import { FormError } from '../management/form-error'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-type Field = { name: string; label: string; type?: 'email' | 'password'; autoComplete: string }
+type Field = {
+  name: string
+  label: string
+  type?: 'text' | 'email' | 'password'
+  autoComplete: string
+}
 type ValidationResult =
   | { success: true; data: unknown }
   | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } }
@@ -78,8 +83,9 @@ export function AuthForm({
           {(field) => (
             <div className="space-y-2">
               <Label htmlFor={config.name}>{config.label}</Label>
-              <div className="auth-field-control">
+              <div className="auth-field-control relative">
                 <Input
+                  className={revealPasswords && config.type === 'password' ? 'pr-12' : undefined}
                   id={config.name}
                   name={config.name}
                   type={visiblePasswords[config.name] ? 'text' : (config.type ?? 'password')}
@@ -95,7 +101,7 @@ export function AuthForm({
                     type="button"
                     variant="ghost"
                     size="icon-md"
-                    className="auth-password-toggle"
+                    className="auth-password-toggle absolute right-1 top-1"
                     aria-label={translate(
                       visiblePasswords[config.name] ? 'Hide password' : 'Show password',
                     )}

@@ -132,7 +132,13 @@ export async function initializeDatabase(env = process.env) {
         ['SELECT, INSERT, UPDATE, DELETE', ['subscription_storage']],
         [
           'SELECT, INSERT, UPDATE',
-          ['background_jobs', 'organization_admin_deliveries', 'notification_rules'],
+          [
+            'background_jobs',
+            'organization_admin_deliveries',
+            'staff_invitations',
+            'staff_invitation_roles',
+            'notification_rules',
+          ],
         ],
         [
           'SELECT, INSERT, DELETE',

@@ -2,6 +2,7 @@ import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
 import type {
   OrganizationAdminDelivery,
+  OrganizationInvitationDelivery,
   PasswordResetDelivery,
 } from '../../../integrations/contracts.js'
 import type { Database, Transaction } from '../../../lib/db.js'
@@ -26,6 +27,10 @@ import { createPasswordRecoveryService } from './auth/services/password-recovery
 import { createSessionService } from './auth/services/session.service.js'
 import { createWorkspaceService } from './auth/services/workspace.service.js'
 import type { IdentityPublicApi } from './identity.public.js'
+import { createInvitationController } from './invitations/controllers/invitation.controller.js'
+import { createInvitationRepository } from './invitations/repositories/invitation.repository.js'
+import { registerInvitationRoutes } from './invitations/routes/invitation.routes.js'
+import { createInvitationService } from './invitations/services/invitation.service.js'
 import { createAdminProvisioningRepository } from './provisioning/repositories/admin-provisioning.repository.js'
 import { createAdminProvisioningService } from './provisioning/services/admin-provisioning.service.js'
 import { createRbacController } from './rbac/controllers/rbac.controller.js'
@@ -40,6 +45,7 @@ import { createStaffService } from './staff/services/staff.service.js'
 export function createIdentityModule(options: {
   database: () => Database
   subscriptions?: SubscriptionsPublicApi
+  invitationDelivery?: OrganizationInvitationDelivery
   adminDelivery?: OrganizationAdminDelivery
   portalOrigin?: string
   ttlDays: number
@@ -73,6 +79,20 @@ export function createIdentityModule(options: {
     passwords,
     options.onAuthorizationChange,
     options.subscriptions,
+  )
+  const invitations = createInvitationService(
+    createInvitationRepository(options.database),
+    createStaffRepository(options.database),
+    {
+      subscriptions: options.subscriptions,
+      delivery: options.invitationDelivery,
+      origin: options.portalOrigin,
+    },
+  )
+  const adminProvisioning = createAdminProvisioningService(
+    createAdminProvisioningRepository(options.database),
+    options.adminDelivery,
+    options.portalOrigin,
   )
   const authorizeOrganization = createOrganizationAccessService({
     organizations: organizationRepository,
@@ -132,15 +152,13 @@ export function createIdentityModule(options: {
   }
   return {
     publicApi,
-    provisioning: createAdminProvisioningService(
-      createAdminProvisioningRepository(options.database),
-      options.adminDelivery,
-      options.portalOrigin,
-    ),
+    invitations,
+    provisioning: { ...adminProvisioning, invite: invitations.provision },
     async registerRoutes(
       app: FastifyInstance,
       requirePermission: (key: string) => preHandlerHookHandler,
     ) {
+      registerInvitationRoutes(app, createInvitationController(invitations), requirePermission)
       if (options.subscriptions)
         registerWorkspaceRoutes(
           app,
@@ -263,4 +281,4 @@ export function createIdentityModule(options: {
 export type OrganizationProvisioningPublicApi = Pick<
   ReturnType<typeof createAdminProvisioningService>,
   'provision'
->
+> & { invite: ReturnType<typeof createInvitationService>['provision'] }

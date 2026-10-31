@@ -8,7 +8,7 @@ The owner portal now offers a persisted six-step setup at `/owner/organizations/
 2. Optional company identity, email, flexible phone text, address, city, ICE, RC and IF. Missing information is omitted from the document preview.
 3. Optional logo/signature uploads and document accent color. PNG, JPEG and WebP are supported, with a 2 MiB input limit. Images retain their proportions.
 4. Essential, Signature or Atelier layout; French/English document language; MAD currency; payment deadline and estimate validity; compact mode; VAT **off by default**; optional bank details and footer.
-5. Owner administrator identity and optional prepared staff invitations. The owner does not consume a staff identity. Invitations are scoped to this organization and **are not sent or activated yet**.
+5. An independent organization administrator, counted toward the member limit, and optional staff invitations. Activation queues invitations; delivery begins after the administrator changes their temporary password. Pending invitations use no member seats; acceptance rechecks capacity atomically.
 6. Review with edit links, then complete setup.
 
 Continue saves each step. Previous preserves current values. Save & exit saves the current step; drafts can be resumed. Unsaved navigation prompts, disabled pending controls, step focus, reduced-motion support and a reload action for conflicts protect the form. Mobile uses compact progress, collapsible preview and fixed Previous/Continue controls; normal bottom navigation is hidden during setup.
@@ -40,7 +40,7 @@ Included in the clean baseline: `0000_initial_schema.sql`.
 - `organization_brand_assets`: independent per-organization image metadata and private object key. Files use `organizations/:organizationId/branding/:assetId.png`.
 - Owner policies use authenticated transaction context and ownership checks. Both new tables enforce RLS, including for the table owner where PostgreSQL permits it.
 - Runtime access adds reviewed grants for the new tables, organization INSERT, and column-limited organization name/locale/update-time changes.
-- The current schema is installed directly by the initial baseline. No staff account is duplicated, no customer data is inserted and no legacy company binding exists.
+- The current schema is installed directly by the initial baseline. Exactly one independent administrator is provisioned per organization; no customer data or legacy company binding is inserted.
 
 Configuration references are checked for organization ownership and image purpose before saving. Upload failure cleans the new object if metadata could not be stored. Replaced/detached image history is retained for now; safe unreferenced-asset retention/cleanup must be integrated before production release.
 
@@ -48,7 +48,7 @@ Configuration references are checked for organization ownership and image purpos
 
 Completing the wizard now atomically applies company settings, branding, the selected default document template and optional bank details, then activates the organization. The initial administrator is a normal organization user with independent credentials and a counted member seat. Platform ownership never establishes an organization session. Workspace requests and query caches are scoped to that organization.
 
-The first organization starts a seven-calendar-day trial. Organization and staff admission checks are serialized to prevent concurrent quota bypass. Expired subscriptions and paused organizations block workspace access. Prepared staff invitations are not sent; the administrator can add staff after signing in separately.
+The first organization starts a seven-calendar-day trial. Organization and staff admission checks are serialized to prevent concurrent quota bypass. Expired subscriptions and paused organizations block workspace access. Staff invitations are queued through the organization provisioning interface. Staff management supports inviting, resending and revoking; recipients choose their own organization password with a one-use 48-hour link. A generic onboarding staff invitation grants no roles until an administrator assigns them.
 
 Storage/email allowances and pooled consumption metering are implemented. Payment confirmation administration and verified custom-domain handoff remain pending. This is not a complete production billing rollout.
 
@@ -61,3 +61,5 @@ Storage/email allowances and pooled consumption metering are implemented. Paymen
 ## Current independent-IAM boundary
 
 See [platform and organization boundaries](platform-organization-boundaries.md). Organization creation provisions the initial administrator atomically; after activation an organization-owned worker delivers an expiring temporary password. The platform opens the organization login, not an owner workspace. Organization profiles and passwords are independent. Owner financial visibility uses platform-only read repositories. Staff receive effective entitlements without owner billing dates or pooled usage details.
+
+Staff invitation contracts, lifecycle, security controls and verification are documented in [the implementation plan](../implementation/staff-invitations/README.md).

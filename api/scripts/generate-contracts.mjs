@@ -183,7 +183,12 @@ export async function generateContracts({
   }
   for (const [name, reference] of Object.entries(source.components.schemas))
     add(group(reference.$ref), name, document.components.schemas[name])
-  for (const [url, item] of Object.entries(document.paths)) {
+  // Literal routes must win over parameter routes regardless of OpenAPI declaration order.
+  const parameterCount = (url) => (url.match(/\{[^}]+\}/g) ?? []).length
+  const orderedPaths = Object.entries(document.paths).sort(
+    ([a], [b]) => parameterCount(a) - parameterCount(b),
+  )
+  for (const [url, item] of orderedPaths) {
     const destination = group(source.paths[url].$ref)
     for (const [method, operation] of Object.entries(item)) {
       if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue

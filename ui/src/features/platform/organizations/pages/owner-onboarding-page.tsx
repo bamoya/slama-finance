@@ -234,7 +234,7 @@ function OnboardingWizard({ initial }: { initial?: OwnerOnboarding }) {
         </ol>
         <small>
           {translate(
-            'Your administrator login and temporary password will be emailed to you. Replace that password on first login. Prepared staff invitations have not been sent.',
+            'Your administrator login and temporary password will be emailed to you. Replace that password on first login; staff invitations will then be delivered.',
           )}
         </small>
       </Card>

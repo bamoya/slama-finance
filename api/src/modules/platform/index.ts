@@ -54,6 +54,7 @@ export function createPlatformModule(options: {
     {
       subscriptions: options.subscriptions,
       settings: options.settings,
+      invite: (tx, inputs, language) => options.provisioning().invite(tx, inputs, language),
       provision: (tx, input) => options.provisioning().provision(tx, input),
     },
   )

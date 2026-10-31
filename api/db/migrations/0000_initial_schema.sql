@@ -1187,6 +1187,49 @@ CREATE TABLE IF NOT EXISTS "subscription_storage" (
 ALTER TABLE "subscription_storage" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "staff_invitation_roles" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
+	"invitation_id" uuid NOT NULL,
+	"role_id" uuid
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "staff_invitation_roles" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "staff_invitations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
+	"email" text NOT NULL,
+	"language" text DEFAULT 'fr' NOT NULL,
+	"invited_by" uuid,
+	"accepted_user_id" uuid,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"token_hash" text,
+	"expires_at" timestamp with time zone,
+	"accepted_at" timestamp with time zone,
+	"revoked_at" timestamp with time zone,
+	"delivery_state" text DEFAULT 'queued' NOT NULL,
+	"attempts" integer DEFAULT 0 NOT NULL,
+	"available_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"lease_id" uuid,
+	"lease_expires_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "staff_invitation_email_normalized" CHECK ("staff_invitations"."email"=lower(trim("staff_invitations"."email"))),
+	CONSTRAINT "staff_invitation_status" CHECK ("staff_invitations"."status" in ('pending','accepted','revoked')),
+	CONSTRAINT "staff_invitation_language" CHECK ("staff_invitations"."language" in ('fr','en')),
+	CONSTRAINT "staff_invitation_delivery_state" CHECK ("staff_invitations"."delivery_state" in ('queued','sending','sent','failed','cancelled')),
+	CONSTRAINT "staff_invitation_attempts" CHECK ("staff_invitations"."attempts" between 0 and 5)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "staff_invitations" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE UNIQUE INDEX IF NOT EXISTS "document_artifacts_objectKey_tenant_unique" ON "document_artifacts" USING btree ("organization_id","object_key");
 --> statement-breakpoint
 
@@ -1410,6 +1453,15 @@ CREATE INDEX IF NOT EXISTS "subscription_emails_owner_period" ON "subscription_e
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "subscription_storage_owner" ON "subscription_storage" USING btree ("owner_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_role_unique" ON "staff_invitation_roles" USING btree ("invitation_id","role_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_pending_email" ON "staff_invitations" USING btree ("organization_id","email") WHERE "staff_invitations"."status"='pending';
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_token_hash" ON "staff_invitations" USING btree ("organization_id","token_hash");
 --> statement-breakpoint
 
 DO $$ BEGIN
@@ -2532,6 +2584,54 @@ END $$;
 
 --> statement-breakpoint
 
+DO $$ BEGIN
+ ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "staff_invitation_roles_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "staff_invitation_roles_invitation_id_staff_invitations_id_fk" FOREIGN KEY ("invitation_id") REFERENCES "public"."staff_invitations"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "staff_invitation_roles_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "staff_invitations" ADD CONSTRAINT "staff_invitations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "staff_invitations" ADD CONSTRAINT "staff_invitations_invited_by_users_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "staff_invitations" ADD CONSTRAINT "staff_invitations_accepted_user_id_users_id_fk" FOREIGN KEY ("accepted_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
 CREATE POLICY "actor_scope" ON "actors" AS PERMISSIVE FOR ALL TO public USING (("actors"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and (o.owner_id="actors"."owner_id" or exists(select 1 from users u where u.id="actors"."staff_id" and u.organization_id=o.id)))) WITH CHECK (("actors"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and (o.owner_id="actors"."owner_id" or exists(select 1 from users u where u.id="actors"."staff_id" and u.organization_id=o.id))));
 --> statement-breakpoint
 
@@ -2675,6 +2775,12 @@ CREATE POLICY "usage_owner" ON "subscription_emails" AS PERMISSIVE FOR ALL TO pu
 
 CREATE POLICY "usage_owner" ON "subscription_storage" AS PERMISSIVE FOR ALL TO public USING ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
 --> statement-breakpoint
+
+CREATE POLICY "tenant_isolation" ON "staff_invitation_roles" AS PERMISSIVE FOR ALL TO public USING ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
+
+CREATE POLICY "tenant_isolation" ON "staff_invitations" AS PERMISSIVE FOR ALL TO public USING ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
 ALTER TABLE "actors" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "document_artifacts" FORCE ROW LEVEL SECURITY;
@@ -2761,6 +2867,10 @@ ALTER TABLE "subscription_emails" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "subscription_storage" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
+ALTER TABLE "staff_invitation_roles" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "staff_invitations" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_d7b5c742ff8d4ced" ON "users" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_574882d3a4521890" ON "roles" ("organization_id","id");
@@ -2794,6 +2904,8 @@ CREATE UNIQUE INDEX "tenant_key_c4b8ae4d2e2dea92" ON "notification_rules" ("orga
 CREATE UNIQUE INDEX "tenant_key_29e9c5964dcd6378" ON "outbound_messages" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_b4bd49085acdbbca" ON "report_schedules" ("organization_id","id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "tenant_key_36281e9e595c6016" ON "staff_invitations" ("organization_id","id");
 --> statement-breakpoint
 -- Tenant relationship: password_reset_tokens_user_id_users_id_fk
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "tenant_fk_daa080d0c465d367" FOREIGN KEY ("organization_id","user_id") REFERENCES "public"."users" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
@@ -2932,6 +3044,18 @@ ALTER TABLE "document_templates" ADD CONSTRAINT "tenant_fk_204a02ddc061e469" FOR
 --> statement-breakpoint
 -- Tenant relationship: document_templates_signature_asset_id_media_assets_id_fk
 ALTER TABLE "document_templates" ADD CONSTRAINT "tenant_fk_d92e6e50f4ec8646" FOREIGN KEY ("organization_id","signature_asset_id") REFERENCES "public"."media_assets" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: staff_invitation_roles_invitation_id_staff_invitations_id_fk
+ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "tenant_fk_fa07efa1fb0e3edd" FOREIGN KEY ("organization_id","invitation_id") REFERENCES "public"."staff_invitations" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: staff_invitation_roles_role_id_roles_id_fk
+ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "tenant_fk_b0457b00e60f4f3e" FOREIGN KEY ("organization_id","role_id") REFERENCES "public"."roles" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: staff_invitations_invited_by_users_id_fk
+ALTER TABLE "staff_invitations" ADD CONSTRAINT "tenant_fk_a8e045b34bfdfc69" FOREIGN KEY ("organization_id","invited_by") REFERENCES "public"."users" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: staff_invitations_accepted_user_id_users_id_fk
+ALTER TABLE "staff_invitations" ADD CONSTRAINT "tenant_fk_3d50a335731a8eb3" FOREIGN KEY ("organization_id","accepted_user_id") REFERENCES "public"."users" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
 --> statement-breakpoint
 INSERT INTO permissions (key, description) VALUES
   ('bank_accounts.create', 'Create bank accounts'),

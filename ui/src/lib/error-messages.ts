@@ -23,6 +23,19 @@ export function errorMessage(error: unknown): string {
   if (i18n.language !== 'fr') return error.message
   if (french[error.message]) return translate(error.message)
   if (error instanceof ApiError) {
+    const invitationErrors: Record<string, string> = {
+      INVALID_INVITATION_TOKEN: 'Ce lien d’invitation n’est pas valide.',
+      INVITATION_EXPIRED:
+        'Cette invitation a expiré. Demandez un nouveau lien à votre administrateur.',
+      INVITATION_REVOKED: 'Cette invitation a été révoquée. Contactez votre administrateur.',
+      INVITATION_ALREADY_USED:
+        'Cette invitation a déjà été acceptée. Connectez-vous à votre organisation.',
+      INVITATION_CONFLICT: 'Cette invitation ne peut plus être modifiée.',
+      STAFF_LIMIT: 'La limite de membres est atteinte. Contactez votre administrateur.',
+      EMAIL_UNAVAILABLE: 'L’envoi des invitations est temporairement indisponible.',
+    }
+    if (invitationErrors[error.code]) return invitationErrors[error.code]!
+
     if (error.status === 401)
       return 'Connexion refusée ou session expirée. Vérifiez vos identifiants et reconnectez-vous.'
     if (error.status === 403) return 'Vous n’avez pas la permission d’effectuer cette action.'

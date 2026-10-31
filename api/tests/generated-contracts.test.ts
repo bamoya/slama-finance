@@ -14,8 +14,65 @@ import {
   listStaffQuerySchema,
   UpdateStaffSchema,
 } from '../src/contracts/generated/identity/staff.schemas.js'
+import {
+  AcceptStaffInvitationInputSchema,
+  CreateStaffInvitationSchema,
+  listStaffInvitationsQuerySchema,
+  StaffInvitationSchema,
+} from '../src/contracts/generated/identity/staff-invitations.schemas.js'
+import { validateResponse } from '../src/contracts/generated/responses.js'
 
 describe('generated transport validation', () => {
+  it('validates invitation payloads and excludes credentials from management responses', () => {
+    expect(CreateStaffInvitationSchema.parse({ email: 'staff@example.test' })).toEqual({
+      email: 'staff@example.test',
+      roleIds: [],
+      language: 'fr',
+    })
+    expect(listStaffInvitationsQuerySchema.parse({})).toMatchObject({
+      page: 1,
+      pageSize: 25,
+      status: 'pending',
+    })
+    const accepted = {
+      token: 'a'.repeat(43),
+      firstName: 'Sara',
+      lastName: 'Amrani',
+      password: 'valid-password-2026',
+    }
+    expect(AcceptStaffInvitationInputSchema.safeParse(accepted).success).toBe(true)
+    for (const invalid of [
+      { ...accepted, token: 'short' },
+      { ...accepted, token: '!'.repeat(43) },
+      { ...accepted, password: 'short' },
+      { ...accepted, password: 'a'.repeat(257) },
+      { ...accepted, extra: true },
+    ])
+      expect(AcceptStaffInvitationInputSchema.safeParse(invalid).success).toBe(false)
+    const row = {
+      id: '11111111-1111-4111-8111-111111111111',
+      email: 'staff@example.test',
+      status: 'pending',
+      delivery: { state: 'queued', attempts: 0, updatedAt: '2026-10-31T10:00:00Z' },
+      roles: [],
+      createdAt: '2026-10-31T10:00:00Z',
+      expiresAt: null,
+      acceptedAt: null,
+      revokedAt: null,
+    }
+    expect(StaffInvitationSchema.safeParse(row).success).toBe(true)
+    expect(
+      validateResponse('GET', '/v1/staff/invitations?page=1', 200, {
+        items: [row],
+        total: 1,
+        page: 1,
+        pageSize: 25,
+      }),
+    ).toEqual({ items: [row], total: 1, page: 1, pageSize: 25 })
+    for (const field of ['token', 'tokenHash', 'leaseId'])
+      expect(StaffInvitationSchema.safeParse({ ...row, [field]: 'private' }).success).toBe(false)
+  })
+
   it('rejects unknown fields and preserves defaults, UUIDs and nullable responses', () => {
     const staff = { email: 'staff@example.test', firstName: 'Sara', lastName: 'Amrani' }
     expect(CreateStaffSchema.parse(staff).roleIds).toEqual([])

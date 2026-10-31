@@ -11,10 +11,12 @@ import type {
   EmailProvider,
   ObjectStorage,
   OrganizationAdminDelivery,
+  OrganizationInvitationDelivery,
   OwnerAccountDelivery,
   PasswordResetDelivery,
 } from './integrations/contracts.js'
 import { createOrganizationAdminDelivery } from './integrations/email/organization-admin.js'
+import { createOrganizationInvitationDelivery } from './integrations/email/organization-invitation.js'
 import { createOwnerAccountDelivery } from './integrations/email/owner-account.js'
 import { createResendResetDelivery } from './integrations/email/resend.js'
 import { createProviderResetDelivery } from './integrations/email/reset-delivery.js'
@@ -61,6 +63,7 @@ export interface AppOptions {
   environment?: Environment
   logger?: FastifyServerOptions['logger']
   readinessProbe?: () => Promise<void>
+  organizationInvitationDelivery?: OrganizationInvitationDelivery
   organizationAdminDelivery?: OrganizationAdminDelivery
   ownerAccountDelivery?: OwnerAccountDelivery
   passwordReset?: { adapter: PasswordResetDelivery; resetUrl: string }
@@ -179,6 +182,19 @@ export async function buildApp(options: AppOptions = {}) {
   })
   const identity = createIdentityModule({
     portalOrigin: env.OWNER_PORTAL_ORIGIN ?? env.CORS_ORIGIN[0],
+    invitationDelivery:
+      options.organizationInvitationDelivery ??
+      (env.NOTIFICATION_TRANSPORT === 'smtp'
+        ? createOrganizationInvitationDelivery(
+            createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
+            env.EMAIL_FROM ?? 'security@slama.local',
+          )
+        : env.NOTIFICATION_TRANSPORT === 'resend' && env.RESEND_API_KEY && env.EMAIL_FROM
+          ? createOrganizationInvitationDelivery(
+              createResendEmailProvider({ apiKey: env.RESEND_API_KEY }),
+              env.EMAIL_FROM,
+            )
+          : undefined),
     adminDelivery:
       options.organizationAdminDelivery ??
       (env.NOTIFICATION_TRANSPORT === 'smtp'
@@ -404,7 +420,9 @@ export async function buildApp(options: AppOptions = {}) {
       if (notificationTransport === 'recording' && !options.notificationProvider)
         app.log.warn('Business email uses recording transport; no external messages are sent.')
       notificationTimer = setInterval(() => {
-        runningNotification ??= forEachTenant(() => identity.provisioning.runOne())
+        runningNotification ??= forEachTenant(() =>
+          identity.provisioning.runOne().then(() => identity.invitations.runOne()),
+        )
           .then(() =>
             forEachTenant(
               () => salesNotifications.worker.runOne().then(() => notifications.worker.runOne()),

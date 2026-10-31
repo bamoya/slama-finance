@@ -39,6 +39,10 @@ paths:
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1password-reset~1request
   "/v1/organizations/{organizationId}/auth/password-reset/confirm":
     $ref: ./modules/identity/organization-auth.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1password-reset~1confirm
+  "/v1/organizations/{organizationId}/auth/invitations/inspect":
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1invitations~1inspect
+  "/v1/organizations/{organizationId}/auth/invitations/accept":
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1organizations~1{organizationId}~1auth~1invitations~1accept
   /v1/owner-auth/register:
     $ref: ./modules/identity/owner-auth.yaml#/paths/~1v1~1owner-auth~1register
   /v1/owner-auth/login:
@@ -309,6 +313,12 @@ paths:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1password-reset~1confirm
   /v1/staff/{userId}/temporary-password:
     $ref: ./modules/identity/staff.yaml#/paths/~1v1~1staff~1{userId}~1temporary-password
+  /v1/staff/invitations:
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations
+  "/v1/staff/invitations/{invitationId}/resend":
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations~1{invitationId}~1resend
+  "/v1/staff/invitations/{invitationId}/revoke":
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1v1~1staff~1invitations~1{invitationId}~1revoke
   /v1/auth/change-password:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1change-password
   /v1/owner/subscription:
@@ -722,6 +732,20 @@ components:
       $ref: ./modules/identity/staff.yaml#/components/schemas/StaffOnboarding
     TemporaryPassword:
       $ref: ./modules/identity/staff.yaml#/components/schemas/TemporaryPassword
+    CreateStaffInvitation:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/CreateStaffInvitation
+    StaffInvitation:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/StaffInvitation
+    StaffInvitationPage:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/StaffInvitationPage
+    InspectStaffInvitationInput:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/InspectStaffInvitationInput
+    StaffInvitationPreview:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/StaffInvitationPreview
+    AcceptStaffInvitationInput:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/AcceptStaffInvitationInput
+    StaffInvitationAccepted:
+      $ref: ./modules/identity/staff-invitations.yaml#/components/schemas/StaffInvitationAccepted
     ChangePassword:
       $ref: ./modules/identity/auth.yaml#/components/schemas/ChangePassword
     UpdateProfile:

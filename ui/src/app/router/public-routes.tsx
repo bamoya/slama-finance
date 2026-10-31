@@ -1,5 +1,6 @@
 import { Route } from 'wouter'
 
+import { AcceptInvitationPage } from '../../features/organization/identity'
 import {
   OrganizationStaffAuthPage,
   OrganizationUnavailable,
@@ -45,6 +46,11 @@ export const publicRoutes = (
       <OwnerAccess key="auth-resend" mode="resend" />
     </Route>
     <Route path="/organization-unavailable" component={OrganizationUnavailable} />
+    <Route path="/organizations/:organizationId/accept-invitation">
+      {({ organizationId }) => (
+        <AcceptInvitationPage key={organizationId} organizationId={organizationId} />
+      )}
+    </Route>
     <Route path="/organizations/:organizationId/login">
       {({ organizationId }) => (
         <OrganizationStaffAuthPage

@@ -55,7 +55,9 @@ export function TeamStep({ configuration: c, onChange }: OnboardingFieldsProps) 
             >
               <SelectGroup>
                 <SelectOption value="administrator">{translate('Administrator')}</SelectOption>
-                <SelectOption value="staff">{translate('Staff')}</SelectOption>
+                <SelectOption value="staff">
+                  {translate('Staff — permissions assigned later')}
+                </SelectOption>
               </SelectGroup>
             </Select>
           </label>
@@ -85,7 +87,7 @@ export function TeamStep({ configuration: c, onChange }: OnboardingFieldsProps) 
       </Button>
       <p className="onboarding-hint">
         {translate(
-          'Invitations are prepared here. No email is sent before organization activation.',
+          'Invitations are queued after activation and sent after the administrator changes their temporary password. Staff without roles need permissions assigned in the organization.',
         )}
       </p>
     </div>
