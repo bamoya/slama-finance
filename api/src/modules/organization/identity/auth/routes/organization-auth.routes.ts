@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 
-import { organizationStaffLoginParamsSchema } from '../../../../../contracts/generated/identity/organization-auth.schemas.js'
+import { AppError } from '../../../../../lib/errors.js'
 import type { createAuthController } from '../controllers/auth.controller.js'
 
 type Controller = ReturnType<typeof createAuthController>
@@ -14,7 +14,10 @@ export function registerOrganizationAuthRoutes(
       request: Parameters<Controller['login']>[0],
       reply: Parameters<Controller['login']>[1],
     ) => {
-      const { organizationId } = organizationStaffLoginParamsSchema.parse(request.params)
+      // The organization comes from the host slug (tenant scope), never from the request.
+      const { organizationId } = request
+      if (!organizationId)
+        throw new AppError(404, 'NOT_FOUND', 'The requested resource was not found.')
       const controller = await resolve(organizationId)
       return controller[action](request, reply)
     }

@@ -1,6 +1,5 @@
 import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
-import { organizationStaffInspectInvitationParamsSchema } from '../../../../../contracts/generated/identity/staff-invitations.schemas.js'
 import type { createInvitationController } from '../controllers/invitation.controller.js'
 
 export function registerInvitationRoutes(
@@ -25,17 +24,6 @@ export function registerInvitationRoutes(
     { preHandler: permission('staff.update') },
     controller.revoke,
   )
-  const validate = async (request: Parameters<typeof controller.inspect>[0]) => {
-    organizationStaffInspectInvitationParamsSchema.parse(request.params)
-  }
-  app.post(
-    '/api/v1/organizations/:organizationId/auth/invitations/inspect',
-    { config, preHandler: validate },
-    controller.inspect,
-  )
-  app.post(
-    '/api/v1/organizations/:organizationId/auth/invitations/accept',
-    { config, preHandler: validate },
-    controller.accept,
-  )
+  app.post('/api/v1/organization-auth/invitations/inspect', { config }, controller.inspect)
+  app.post('/api/v1/organization-auth/invitations/accept', { config }, controller.accept)
 }

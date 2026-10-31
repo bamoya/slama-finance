@@ -69,15 +69,10 @@ export function createPlatformModule(options: {
             owners,
           ),
         ),
-        options.ownerAuth.portalOrigin,
       )
       await app.register(
         async (scope) =>
-          registerOwnerAuthRoutes(
-            scope,
-            createOwnerAuthController(owners, options.secure),
-            options.ownerAuth.portalOrigin,
-          ),
+          registerOwnerAuthRoutes(scope, createOwnerAuthController(owners, options.secure)),
         { prefix: '/api/v1/owner-auth' },
       )
       await app.register(
@@ -85,7 +80,6 @@ export function createPlatformModule(options: {
           registerOwnerOrganizationRoutes(
             scope,
             createOwnerOrganizationController(organizations),
-            options.ownerAuth.portalOrigin,
             createOwnerOnboardingController(onboarding),
           ),
         { prefix: '/api/v1/owner' },

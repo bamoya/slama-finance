@@ -43,24 +43,10 @@ describe('Owner security emails and configuration', () => {
     expect(message?.from.name).toBe('B-Finance')
     expect(`${message?.text}${message?.html}`).not.toContain('Slama')
   })
-  it('requires an explicit trusted owner portal and defaults registration to disabled', () => {
+  it('derives the owner portal from the platform domain and defaults registration to disabled', () => {
     expect(loadEnvironment({ NODE_ENV: 'test' }).OWNER_AUTH_ENABLED).toBe(false)
-    expect(() => loadEnvironment({ NODE_ENV: 'test', OWNER_AUTH_ENABLED: 'true' })).toThrow(
-      'OWNER_PORTAL_ORIGIN',
-    )
-    expect(() =>
-      loadEnvironment({
-        NODE_ENV: 'test',
-        OWNER_AUTH_ENABLED: 'true',
-        OWNER_PORTAL_ORIGIN: 'https://untrusted.example',
-      }),
-    ).toThrow('OWNER_PORTAL_ORIGIN')
-    expect(() =>
-      loadEnvironment({
-        NODE_ENV: 'test',
-        OWNER_AUTH_ENABLED: 'true',
-        OWNER_PORTAL_ORIGIN: 'http://localhost:5173/path',
-      }),
-    ).toThrow('OWNER_PORTAL_ORIGIN')
+    expect(
+      loadEnvironment({ NODE_ENV: 'test', OWNER_AUTH_ENABLED: 'true' }).OWNER_AUTH_ENABLED,
+    ).toBe(true)
   })
 })

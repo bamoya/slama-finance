@@ -9,8 +9,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'description': 'Queue a labelled test run using saved settings and the latest completed period as of
                 now. Sends only to the authenticated user. Requires reports.read. Works on disabled,
@@ -55,8 +55,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -244,8 +244,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -433,8 +433,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters': [],
               'responses':
@@ -513,8 +513,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters': [],
               'requestBody':
@@ -610,8 +610,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -714,8 +714,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters': [],
               'requestBody':
@@ -799,8 +799,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -907,8 +907,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -992,8 +992,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1083,8 +1083,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1172,8 +1172,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1265,8 +1265,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1358,8 +1358,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1451,8 +1451,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1544,8 +1544,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1667,8 +1667,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1755,8 +1755,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [
@@ -1843,8 +1843,8 @@
               'tags': [ 'reporting' ],
               'security':
                 [
-                  { sessionCookie: [], organizationScope: [] },
-                  { organizationStaffCookie: [], organizationScope: [] }
+                  { sessionCookie: [] },
+                  { organizationStaffCookie: [] }
                 ],
               'parameters':
                 [

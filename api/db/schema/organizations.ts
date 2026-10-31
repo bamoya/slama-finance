@@ -86,6 +86,11 @@ export const organizations = pgTable(
       using: sql`current_setting('app.actor_type',true)='platform_admin'`,
       withCheck: sql`current_setting('app.actor_type',true)='platform_admin'`,
     }),
+    // Pre-authentication host resolution (slug -> id); callers read identity columns only.
+    pgPolicy('organizations_host_resolution', {
+      for: 'select',
+      using: sql`current_setting('app.actor_type',true)='host_resolver'`,
+    }),
     pgPolicy('organizations_worker_discovery', {
       for: 'select',
       using: sql`current_setting('app.actor_type',true)='worker'`,

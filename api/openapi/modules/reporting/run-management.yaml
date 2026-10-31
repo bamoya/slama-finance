@@ -7,9 +7,7 @@ paths:
       tags: [ reporting ]
       security:
         - sessionCookie: []
-          organizationScope: []
         - organizationStaffCookie: []
-          organizationScope: []
       description: Requires reports.read. Files mode preserves the frozen snapshot; run mode permanently
         removes it. Queued/running production or queued/sending email blocks cleanup. Terminal email
         attachment references are released and those messages cannot be retried. Delivered emails
@@ -39,9 +37,7 @@ paths:
       tags: [ reporting ]
       security:
         - sessionCookie: []
-          organizationScope: []
         - organizationStaffCookie: []
-          organizationScope: []
       description: Requires reports.read. Restores missing PDF/CSV from a succeeded run's frozen snapshot
         and language. Does not recapture business data or send email. Existing files are unchanged.
       parameters:

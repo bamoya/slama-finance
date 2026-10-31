@@ -10,9 +10,7 @@ servers:
     description: Every platform host serves the API under /api/v1 on its own origin.
 security:
   - sessionCookie: []
-    organizationScope: []
   - organizationStaffCookie: []
-    organizationScope: []
 paths:
   '/api/v1/admin/auth/login':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1login
@@ -74,24 +72,24 @@ paths:
     $ref: ./modules/identity/owner-organizations.yaml#/paths/~1api~1v1~1owner~1organizations
   '/api/v1/owner/organizations/{organizationId}':
     $ref: ./modules/identity/owner-organizations.yaml#/paths/~1api~1v1~1owner~1organizations~1{organizationId}
-  '/api/v1/organizations/{organizationId}/auth/login':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1login
-  '/api/v1/organizations/{organizationId}/auth/session':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1session
-  '/api/v1/organizations/{organizationId}/auth/logout':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1logout
-  '/api/v1/organizations/{organizationId}/auth/profile':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1profile
-  '/api/v1/organizations/{organizationId}/auth/change-password':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1change-password
-  '/api/v1/organizations/{organizationId}/auth/password-reset/request':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1password-reset~1request
-  '/api/v1/organizations/{organizationId}/auth/password-reset/confirm':
-    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1password-reset~1confirm
-  '/api/v1/organizations/{organizationId}/auth/invitations/inspect':
-    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1invitations~1inspect
-  '/api/v1/organizations/{organizationId}/auth/invitations/accept':
-    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1api~1v1~1organizations~1{organizationId}~1auth~1invitations~1accept
+  '/api/v1/organization-auth/login':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1login
+  '/api/v1/organization-auth/session':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1session
+  '/api/v1/organization-auth/logout':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1logout
+  '/api/v1/organization-auth/profile':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1profile
+  '/api/v1/organization-auth/change-password':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1change-password
+  '/api/v1/organization-auth/password-reset/request':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1password-reset~1request
+  '/api/v1/organization-auth/password-reset/confirm':
+    $ref: ./modules/identity/organization-auth.yaml#/paths/~1api~1v1~1organization-auth~1password-reset~1confirm
+  '/api/v1/organization-auth/invitations/inspect':
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1api~1v1~1organization-auth~1invitations~1inspect
+  '/api/v1/organization-auth/invitations/accept':
+    $ref: ./modules/identity/staff-invitations.yaml#/paths/~1api~1v1~1organization-auth~1invitations~1accept
   /api/v1/owner-auth/register:
     $ref: ./modules/identity/owner-auth.yaml#/paths/~1api~1v1~1owner-auth~1register
   /api/v1/owner-auth/login:
@@ -401,13 +399,6 @@ components:
     CatalogIncludeFinancial:
       $ref: ./modules/catalog/catalog.yaml#/components/parameters/CatalogIncludeFinancial
   securitySchemes:
-    organizationScope:
-      type: apiKey
-      in: header
-      name: X-Organization-Id
-      description: Required UUID scope for finance endpoints. Selecting a scope grants
-        no access; the staff session and permissions must belong to it.
-        Organization authentication routes select scope in their path instead.
     organizationStaffCookie:
       type: apiKey
       in: cookie

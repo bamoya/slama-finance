@@ -22,7 +22,7 @@ describe('Organization-scoped staff identities', () => {
     fixture = await isolatedDatabase()
     emails = []
     await fixture.client`insert into platform_users (id,email,password_hash,email_verified_at) values (${ownerId},'owner@example.test','test-only',now())`
-    await fixture.client`insert into organizations(id,owner_id,name,slug,activated_at) values (${orgA},${ownerId},'A','a',now()),(${orgB},${ownerId},'B','b',now())`
+    await fixture.client`insert into organizations(id,owner_id,name,slug,activated_at) values (${orgA},${ownerId},'A','org-a',now()),(${orgB},${ownerId},'B','org-b',now())`
     const passwords = createPasswordService()
     await fixture.client`insert into users(organization_id,email,password_hash,must_change_password) values
     (${orgA},${shared},${await passwords.hash(passwordA)},false),(${orgB},${shared},${await passwords.hash(passwordB)},false)`
@@ -47,15 +47,16 @@ describe('Organization-scoped staff identities', () => {
   const post = (id: string, path: string, body: object, cookies?: Record<string, string>) =>
     app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${id}/auth/${path}`,
-      headers,
+      url: `/api/v1/organization-auth/${path}`,
+      headers: { ...headers, 'x-organization-id': id },
       payload: body,
       cookies,
     })
   const session = (id: string, cookie: string) =>
     app.inject({
       method: 'GET',
-      url: `/api/v1/organizations/${id}/auth/session`,
+      url: '/api/v1/organization-auth/session',
+      headers: { 'x-organization-id': id },
       cookies: { slama_staff_session: cookie },
     })
 
@@ -155,5 +156,60 @@ describe('Organization-scoped staff identities', () => {
     await fixture.client`update organizations set paused_at=null where id=${orgA}`
     expect((await session(orgA, cookie)).statusCode).toBe(401)
     expect((await post(orgA, 'login', { email: shared, password: passwordA })).statusCode).toBe(200)
+  })
+
+  it('isolates host-only sessions between organization, owner and admin sites', async () => {
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/v1/organization-auth/login',
+      headers: { host: 'org-a.localhost:5173', origin: 'http://org-a.localhost:5173' },
+      payload: { email: shared, password: passwordA },
+    })
+    expect(login.statusCode, login.body).toBe(200)
+    const cookie = login.cookies.find((c) => c.name === 'slama_staff_session')!
+    expect(cookie.domain).toBeUndefined()
+    expect(cookie.sameSite).toBe('Lax')
+    expect(cookie.secure).toBeUndefined()
+    const sessionOn = (host: string) =>
+      app.inject({
+        url: '/api/v1/organization-auth/session',
+        headers: { host },
+        cookies: { slama_staff_session: cookie.value },
+      })
+    expect((await sessionOn('org-a.localhost:5173')).statusCode).toBe(200)
+    expect((await sessionOn('org-b.localhost:5173')).statusCode).toBe(401)
+    for (const host of ['app.localhost:5173', 'admin.localhost:5173', 'localhost:5173'])
+      expect((await sessionOn(host)).statusCode, host).toBe(404)
+    const clients = await app.inject({
+      url: '/api/v1/clients',
+      headers: { host: 'org-b.localhost:5173' },
+      cookies: { slama_staff_session: cookie.value },
+    })
+    expect(clients.statusCode).not.toBe(200)
+  })
+
+  it('marks session cookies Secure on an HTTPS platform', async () => {
+    const secure = await buildApp({
+      environment: loadEnvironment({
+        NODE_ENV: 'test',
+        PLATFORM_DOMAIN: 'bfinance.test',
+        PLATFORM_SCHEME: 'https',
+      }),
+      logger: false,
+    })
+    secure.database = () => fixture.db
+    try {
+      const login = await secure.inject({
+        method: 'POST',
+        url: '/api/v1/organization-auth/login',
+        headers: { host: 'org-a.bfinance.test', origin: 'https://org-a.bfinance.test' },
+        payload: { email: shared, password: passwordA },
+      })
+      expect(login.statusCode, login.body).toBe(200)
+      expect(login.cookies[0]).toMatchObject({ secure: true, sameSite: 'Lax', httpOnly: true })
+      expect(login.cookies[0]!.domain).toBeUndefined()
+    } finally {
+      await secure.close()
+    }
   })
 })

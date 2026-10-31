@@ -2905,6 +2905,9 @@ CREATE POLICY "organizations_platform_admin_read" ON "organizations" AS PERMISSI
 CREATE POLICY "organizations_platform_admin_update" ON "organizations" AS PERMISSIVE FOR UPDATE TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
+CREATE POLICY "organizations_host_resolution" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='host_resolver');
+--> statement-breakpoint
+
 CREATE POLICY "organizations_worker_discovery" ON "organizations" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker');
 --> statement-breakpoint
 

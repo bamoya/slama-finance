@@ -1,5 +1,5 @@
 {
-  "id": "e0c55bc2-ae0e-4f60-9ab1-7dcb46591c7f",
+  "id": "4a3616b1-f64a-4d08-8c8e-59f35455ef17",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -7217,6 +7217,15 @@
           ],
           "using": "current_setting('app.actor_type',true)='platform_admin'",
           "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "organizations_host_resolution": {
+          "name": "organizations_host_resolution",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='host_resolver'"
         },
         "organizations_worker_discovery": {
           "name": "organizations_worker_discovery",

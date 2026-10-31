@@ -10,7 +10,7 @@ import type { OrganizationAdminDelivery } from '../src/integrations/contracts.js
 import type { Database, Transaction } from '../src/lib/db.js'
 import { tenantDatabase } from '../src/lib/tenant-database.js'
 import { createIdentityModule } from '../src/modules/organization/identity/index.js'
-import { isolatedDatabase } from './helpers/postgres.js'
+import { fixtureSlugs, isolatedDatabase, routeToSites } from './helpers/postgres.js'
 const origin = 'http://localhost:5173'
 describe('Owner activation, workspace access and admission limits', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>,
@@ -52,6 +52,7 @@ describe('Owner activation, workspace access and admission limits', () => {
       }),
     })
     app.database = () => runtime
+    routeToSites(app, fixtureSlugs(fixture))
   })
   afterEach(async () => {
     await app?.close()
@@ -129,8 +130,8 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(deliveries).toHaveLength(1)
     const login = await app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${id}/auth/login`,
-      headers: { origin },
+      url: '/api/v1/organization-auth/login',
+      headers: { origin, 'x-organization-id': id },
       payload: { email: 'owner@company.test', password: deliveries[0]!.temporaryPassword },
     })
     expect(login.statusCode, login.body).toBe(200)
@@ -138,8 +139,8 @@ describe('Owner activation, workspace access and admission limits', () => {
     const restricted = login.cookies.find((c) => c.name === 'slama_staff_session')!.value
     const change = await app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${id}/auth/change-password`,
-      headers: { origin },
+      url: '/api/v1/organization-auth/change-password',
+      headers: { origin, 'x-organization-id': id },
       cookies: { slama_staff_session: restricted },
       payload: {
         currentPassword: deliveries[0]!.temporaryPassword,
@@ -267,8 +268,8 @@ describe('Owner activation, workspace access and admission limits', () => {
     expect(client.statusCode, client.body).toBe(201)
     const replay = await app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${id}/auth/login`,
-      headers: { origin },
+      url: '/api/v1/organization-auth/login',
+      headers: { origin, 'x-organization-id': id },
       payload: { email: admin.initial.to, password: admin.initial.temporaryPassword },
     })
     expect(replay.statusCode).toBe(401)

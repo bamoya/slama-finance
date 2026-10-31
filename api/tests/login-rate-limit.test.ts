@@ -7,6 +7,7 @@ describe('login rate limit', () => {
   it('separates forwarded clients only through an explicitly trusted proxy', async () => {
     const app = await buildApp({
       logger: false,
+      organizationBySlug: async () => ({ id: '10000000-0000-4000-8000-000000000001' }),
       environment: loadEnvironment({ NODE_ENV: 'test', TRUST_PROXY_IPS: '10.0.0.10' }),
     })
     const attempt = (client: string, peer = '10.0.0.10') =>
@@ -15,8 +16,8 @@ describe('login rate limit', () => {
         url: '/api/v1/auth/login',
         remoteAddress: peer,
         headers: {
-          origin: 'http://localhost:5173',
-          'x-organization-id': '10000000-0000-4000-8000-000000000001',
+          host: 'fixture.localhost:5173',
+          origin: 'http://fixture.localhost:5173',
           'x-forwarded-for': client,
         },
         payload: { email: 'invalid', password: 'short' },
@@ -36,12 +37,13 @@ describe('login rate limit', () => {
   it('blocks the sixth attempt, ignores spoofed forwarded IPs and isolates other routes/clients', async () => {
     const app = await buildApp({
       logger: false,
+      organizationBySlug: async () => ({ id: '10000000-0000-4000-8000-000000000001' }),
       environment: loadEnvironment({ NODE_ENV: 'test' }),
     })
     try {
       const headers = {
-        origin: 'http://localhost:5173',
-        'x-organization-id': '10000000-0000-4000-8000-000000000001',
+        host: 'fixture.localhost:5173',
+        origin: 'http://fixture.localhost:5173',
       }
       // Invalid input avoids needing a database; every login attempt still counts.
       for (let attempt = 0; attempt < 5; attempt++) {

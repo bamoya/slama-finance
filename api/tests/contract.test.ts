@@ -104,7 +104,7 @@ describe('OpenAPI source contract', () => {
             { content?: { 'application/json'?: { schema?: InvitationSchema } } }
           >
         }
-        expect(operation.security).toEqual([{ organizationStaffCookie: [], organizationScope: [] }])
+        expect(operation.security).toEqual([{ organizationStaffCookie: [] }])
         for (const [status, response] of Object.entries(operation.responses ?? {})) {
           if (!/^2\d\d$/.test(status)) continue
           const schema = response.content?.['application/json']?.schema
@@ -139,8 +139,8 @@ describe('OpenAPI source contract', () => {
       )['x-permissions'],
     ).toEqual(['staff.update'])
     for (const url of [
-      '/api/v1/organizations/{organizationId}/auth/invitations/inspect',
-      '/api/v1/organizations/{organizationId}/auth/invitations/accept',
+      '/api/v1/organization-auth/invitations/inspect',
+      '/api/v1/organization-auth/invitations/accept',
     ]) {
       expect((document.paths[url]?.post as { security?: unknown[] }).security).toEqual([])
     }

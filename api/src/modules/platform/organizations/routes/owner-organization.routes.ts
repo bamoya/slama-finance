@@ -1,16 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 
-import { createRequirePortalOrigin } from '../../../../middlewares/require-portal-origin.js'
 import type { createOwnerOnboardingController } from '../controllers/owner-onboarding.controller.js'
 import type { createOwnerOrganizationController } from '../controllers/owner-organization.controller.js'
 
 export function registerOwnerOrganizationRoutes(
   app: FastifyInstance,
   controller: ReturnType<typeof createOwnerOrganizationController>,
-  portalOrigin?: string,
   onboarding?: ReturnType<typeof createOwnerOnboardingController>,
 ) {
-  app.addHook('onRequest', createRequirePortalOrigin(portalOrigin))
   if (onboarding) {
     app.post(
       '/organizations',

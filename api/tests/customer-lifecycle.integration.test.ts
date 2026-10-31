@@ -105,8 +105,8 @@ describe('Customer lifecycle administration', () => {
   const staffLogin = (organizationId: string, email: string) =>
     app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${organizationId}/auth/login`,
-      headers,
+      url: '/api/v1/organization-auth/login',
+      headers: { ...headers, 'x-organization-id': organizationId },
       payload: { email, password: staffPassword },
     })
   async function staffSession(organizationId: string, email: string) {
@@ -118,7 +118,8 @@ describe('Customer lifecycle administration', () => {
     (
       await app.inject({
         method: 'GET',
-        url: `/api/v1/organizations/${organizationId}/auth/session`,
+        url: '/api/v1/organization-auth/session',
+        headers: { 'x-organization-id': organizationId },
         cookies: { [c.name]: c.value },
       })
     ).statusCode === 200

@@ -3,7 +3,6 @@ import type { FastifyInstance } from 'fastify'
 import type { OwnerAccountDelivery } from '../../../integrations/contracts.js'
 import type { Database } from '../../../lib/db.js'
 import { createPasswordService } from '../../../lib/password.js'
-import { createRequirePortalOrigin } from '../../../middlewares/require-portal-origin.js'
 import { createAdminAccountsService } from './accounts/services/admin-accounts.service.js'
 import { createAdminAuditController } from './audit/controllers/admin-audit.controller.js'
 import { createAuditRepository } from './audit/repositories/audit.repository.js'
@@ -102,9 +101,8 @@ export function createAdministrationModule(options: {
     createAdminOverviewService(createAdminOverviewRepository(), withAdmin, options.clock),
   )
 
-  /** Mounted at /api/v1/admin. The portal is served by the owner portal origin under /admin. */
+  /** Mounted at /api/v1/admin; the host guard serves it only on the admin. site. */
   async function registerAdminRoutes(app: FastifyInstance) {
-    app.addHook('onRequest', createRequirePortalOrigin(options.portalOrigin))
     registerAdminSignInRoutes(app, auth)
     await app.register(async (scope) => {
       scope.addHook('preHandler', auth.requireAdmin)

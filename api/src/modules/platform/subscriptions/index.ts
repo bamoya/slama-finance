@@ -24,12 +24,8 @@ export function createSubscriptionsModule(database: () => Database) {
       lifecycle: billing.administration,
     },
     storage: (storage: ObjectStorage) => createMeteredStorage(storage, service),
-    async registerRoutes(
-      app: FastifyInstance,
-      owner: (token?: string) => Promise<{ id: string }>,
-      origin?: string,
-    ) {
-      registerSubscriptionRoutes(app, createSubscriptionController(service, billing, owner), origin)
+    async registerRoutes(app: FastifyInstance, owner: (token?: string) => Promise<{ id: string }>) {
+      registerSubscriptionRoutes(app, createSubscriptionController(service, billing, owner))
     },
   }
 }

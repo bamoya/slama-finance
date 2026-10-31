@@ -4,18 +4,6 @@ import { z } from 'zod'
 
 const positive = (fallback: number, max: number) =>
   z.coerce.number().int().min(1).max(max).default(fallback)
-const origin = z
-  .string()
-  .url()
-  .refine((value) => {
-    try {
-      const url = new URL(value)
-      return ['http:', 'https:'].includes(url.protocol) && url.origin === value
-    } catch {
-      return false
-    }
-  }, 'Use an exact HTTP(S) origin without a path or trailing slash')
-
 const environmentSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -40,11 +28,19 @@ const environmentSchema = z
         .refine((value) => /^postgres(ql)?:/.test(value))
         .optional(),
     ),
-    CORS_ORIGIN: z
+    // Every site derives from this one domain: apex (public), app., admin., api., <slug>.
+    PLATFORM_DOMAIN: z
       .string()
-      .default('http://localhost:5173')
-      .transform((value) => value.split(',').map((entry) => entry.trim()))
-      .pipe(z.array(origin).min(1)),
+      .default('localhost:5173')
+      .transform((value) => value.trim().toLowerCase())
+      .refine(
+        (value) =>
+          /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(:[0-9]{1,5})?$/.test(
+            value,
+          ),
+        'Use a bare host name with an optional port (for example bfinance.ma or localhost:5173)',
+      ),
+    PLATFORM_SCHEME: z.enum(['https', 'http']).default('http'),
     BODY_LIMIT_BYTES: positive(1048576, 10485760),
     REQUEST_TIMEOUT_MS: positive(15000, 120000),
     READINESS_TIMEOUT_MS: positive(1000, 10000),
@@ -55,10 +51,6 @@ const environmentSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
-    OWNER_PORTAL_ORIGIN: z.preprocess(
-      (value) => (value === '' ? undefined : value),
-      origin.optional(),
-    ),
     // 32-byte key (base64) encrypting administrator TOTP secrets; admin sign-in is unavailable without it.
     ADMIN_TOTP_KEY: z.preprocess(
       (value) => (value === '' ? undefined : value),
@@ -103,29 +95,6 @@ const environmentSchema = z
       .default('info'),
   })
   .superRefine((env, context) => {
-    if (env.OWNER_AUTH_ENABLED && !env.OWNER_PORTAL_ORIGIN)
-      context.addIssue({
-        code: 'custom',
-        path: ['OWNER_PORTAL_ORIGIN'],
-        message: 'Required for owner authentication',
-      })
-    if (env.OWNER_PORTAL_ORIGIN) {
-      const url = new URL(env.OWNER_PORTAL_ORIGIN)
-      if (
-        !env.CORS_ORIGIN.includes(env.OWNER_PORTAL_ORIGIN) ||
-        (url.protocol !== 'https:' &&
-          !(
-            env.NODE_ENV !== 'production' &&
-            url.protocol === 'http:' &&
-            ['localhost', '127.0.0.1'].includes(url.hostname)
-          ))
-      )
-        context.addIssue({
-          code: 'custom',
-          path: ['OWNER_PORTAL_ORIGIN'],
-          message: 'Use a trusted HTTPS portal origin (HTTP localhost allowed in development)',
-        })
-    }
     if (env.NODE_ENV === 'production' && env.NOTIFICATION_TRANSPORT === 'smtp')
       context.addIssue({
         code: 'custom',
@@ -209,13 +178,10 @@ const environmentSchema = z
         path: ['DATABASE_URL'],
         message: 'Required in production',
       })
-    if (
-      env.NODE_ENV === 'production' &&
-      env.CORS_ORIGIN.some((value) => !value.startsWith('https://'))
-    )
+    if (env.NODE_ENV === 'production' && env.PLATFORM_SCHEME !== 'https')
       context.addIssue({
         code: 'custom',
-        path: ['CORS_ORIGIN'],
+        path: ['PLATFORM_SCHEME'],
         message: 'HTTPS required in production',
       })
   })

@@ -79,16 +79,15 @@ describe('Owner organization portal and shared authorization', () => {
     expect((await get(`/api/v1/owner/organizations/${orgA}`)).json().status).toBe('suspended')
   })
 
-  it('requires owner authentication and rejects another tenant origin', async () => {
+  it('requires owner authentication and serves owner routes only on the owner site', async () => {
     expect((await get('/api/v1/owner/organizations', 'invalid')).statusCode).toBe(401)
     const foreign = await app.inject({
       method: 'GET',
       url: '/api/v1/owner/organizations',
-      headers: { origin: 'http://localhost:5174' },
+      headers: { host: 'fixture.localhost:5173' },
       cookies: { slama_owner_session: ownerToken },
     })
-    expect(foreign.statusCode).toBe(403)
-    expect(foreign.json().code).toBe('UNTRUSTED_ORIGIN')
+    expect(foreign.statusCode).toBe(404)
   })
 
   it('enforces owner-read RLS even when the query has no owner filter', async () => {

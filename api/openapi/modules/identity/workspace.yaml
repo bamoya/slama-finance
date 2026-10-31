@@ -5,7 +5,7 @@ paths:
       tags: [ identity ]
       security:
         [
-          { organizationStaffCookie: [], organizationScope: [] }
+          { organizationStaffCookie: [] }
         ]
       responses:
         '200':

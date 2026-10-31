@@ -15,7 +15,9 @@ import { createTenantWorkerRunner } from '../src/lib/tenant-workers.js'
 import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
 import { createOwnerOrganizationRepository } from '../src/modules/platform/organizations/repositories/owner-organization.repository.js'
 import {
+  fixtureSlugs,
   isolatedDatabase,
+  routeToSites,
   testOrganizationId as orgA,
   testOwnerId,
   testUserId,
@@ -156,11 +158,12 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
       logger: false,
     })
     app.database = () => runtime
+    routeToSites(app, fixtureSlugs(fixture))
     try {
       const login = await app.inject({
         method: 'POST',
-        url: `/api/v1/organizations/${orgA}/auth/login`,
-        headers: { origin: 'http://localhost:5173' },
+        url: '/api/v1/organization-auth/login',
+        headers: { origin: 'http://localhost:5173', 'x-organization-id': orgA },
         payload: { email: 'operator@example.test', password },
       })
       expect(login.statusCode, login.body).toBe(200)
@@ -175,7 +178,13 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
       expect(own.statusCode, own.body).toBe(200)
       expect(own.json().items.map((row: { id: string }) => row.id)).toEqual([clientA])
       expect((await get(orgB)).statusCode).toBe(403)
-      expect((await get()).statusCode).toBe(400)
+      // A host without a known organization never reaches tenant data.
+      const unknownHost = await app.inject({
+        url: '/api/v1/clients',
+        cookies,
+        headers: { host: 'missing-organization.localhost:5173' },
+      })
+      expect(unknownHost.statusCode).toBe(404)
       const foreign = await app.inject({
         url: `/api/v1/clients/${clientB}`,
         cookies,

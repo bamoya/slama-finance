@@ -11,7 +11,6 @@ paths:
         delivery lease internals.
       security:
         - organizationStaffCookie: []
-          organizationScope: []
       parameters:
         - name: page
           in: query
@@ -87,7 +86,6 @@ paths:
         transport is not configured.
       security:
         - organizationStaffCookie: []
-          organizationScope: []
       requestBody:
         required: true
         content:
@@ -117,7 +115,6 @@ paths:
         EMAIL_UNAVAILABLE when the security-email transport is not configured.
       security:
         - organizationStaffCookie: []
-          organizationScope: []
       parameters:
         - &invitationId
           name: invitationId
@@ -145,7 +142,6 @@ paths:
         INVITATION_CONFLICT when the invitation has been accepted.
       security:
         - organizationStaffCookie: []
-          organizationScope: []
       parameters:
         - *invitationId
       responses:
@@ -156,14 +152,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/api/v1/organizations/{organizationId}/auth/invitations/inspect":
-    parameters:
-      - name: organizationId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+  "/api/v1/organization-auth/invitations/inspect":
     post:
       operationId: organizationStaffInspectInvitation
       tags: [identity]
@@ -191,14 +180,7 @@ paths:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPreview
         default: *standardError
-  "/api/v1/organizations/{organizationId}/auth/invitations/accept":
-    parameters:
-      - name: organizationId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+  "/api/v1/organization-auth/invitations/accept":
     post:
       operationId: organizationStaffAcceptInvitation
       tags: [identity]

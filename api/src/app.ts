@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
 import cookie from '@fastify/cookie'
-import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import Fastify, { type FastifyServerOptions, LogController } from 'fastify'
@@ -30,7 +29,9 @@ import { createS3Storage } from './integrations/storage/s3.js'
 import { createDatabase, type Database } from './lib/db.js'
 import { AppError, registerErrorHandlers } from './lib/errors.js'
 import { loggerOptions } from './lib/logging.js'
+import { createOrganizationHosts } from './lib/organization-hosts.js'
 import { organizationSessionToken } from './lib/organization-session.js'
+import { createPlatformSites, type PlatformSites } from './lib/platform-sites.js'
 import { tenantDatabase } from './lib/tenant-database.js'
 import { createTenantWorkerRunner } from './lib/tenant-workers.js'
 import type { WorkerObserver } from './lib/worker-observer.js'
@@ -57,6 +58,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     database: () => Database
     environment: Environment
+    sites: PlatformSites
   }
 }
 
@@ -70,6 +72,8 @@ export interface AppOptions {
   passwordReset?: { adapter: PasswordResetDelivery; resetUrl: string }
   mediaStorage?: ObjectStorage
   notificationProvider?: EmailProvider
+  /** Test seam for host slug resolution without a database. */
+  organizationBySlug?: (slug: string) => Promise<{ id: string } | undefined>
 }
 
 export async function buildApp(options: AppOptions = {}) {
@@ -108,19 +112,16 @@ export async function buildApp(options: AppOptions = {}) {
   app.addHook('onRequest', async (request, reply) => {
     reply.header('x-request-id', request.id)
     reply.header('cache-control', 'no-store')
-    // All browser mutations, including login/logout, must carry an exact trusted Origin.
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
-      if (!request.headers.origin || !env.CORS_ORIGIN.includes(request.headers.origin)) {
-        throw new AppError(403, 'UNTRUSTED_ORIGIN', 'This request origin is not allowed.')
-      }
-    }
   })
 
-  await app.register(cors, {
-    origin: env.CORS_ORIGIN,
-    credentials: true,
-    exposedHeaders: ['x-request-id', 'content-disposition'],
-  })
+  const sites = createPlatformSites(env.PLATFORM_DOMAIN, env.PLATFORM_SCHEME)
+  const organizationHosts = createOrganizationHosts(() => app.database())
+  app.decorate('sites', sites)
+  registerTenantScope(
+    app,
+    sites,
+    options.organizationBySlug ?? ((slug) => organizationHosts.bySlug(slug)),
+  )
   await app.register(cookie)
   await app.register(helmet)
   await app.register(rateLimit, {
@@ -153,7 +154,6 @@ export async function buildApp(options: AppOptions = {}) {
       clearTimeout(timer)
     }
   })
-  registerTenantScope(app)
   app.decorateRequest('actor', null)
   const ownerAccountDelivery =
     options.ownerAccountDelivery ??
@@ -176,15 +176,15 @@ export async function buildApp(options: AppOptions = {}) {
     ownerBranding: () => media.ownerBranding,
     database: () => tenantDatabase(app.database()),
     ttlDays: env.SESSION_TTL_DAYS,
-    secure: env.NODE_ENV === 'production',
+    secure: sites.secureCookies,
     ownerAuth: {
       enabled: env.OWNER_AUTH_ENABLED,
-      portalOrigin: env.OWNER_PORTAL_ORIGIN,
+      portalOrigin: sites.origins.owner,
       delivery: ownerAccountDelivery,
     },
   })
   const identity = createIdentityModule({
-    portalOrigin: env.OWNER_PORTAL_ORIGIN ?? env.CORS_ORIGIN[0],
+    portalOrigin: sites.origins.owner,
     invitationDelivery:
       options.organizationInvitationDelivery ??
       (env.NOTIFICATION_TRANSPORT === 'smtp'
@@ -214,7 +214,7 @@ export async function buildApp(options: AppOptions = {}) {
     subscriptions: subscriptions.publicApi,
     database: () => tenantDatabase(app.database()),
     ttlDays: env.SESSION_TTL_DAYS,
-    secure: env.NODE_ENV === 'production',
+    secure: sites.secureCookies,
     onAuthorizationChange: async (tx, userIds) => {
       await reporting.invalidateStaff(tx, userIds)
       await salesNotifications.invalidate(tx)
@@ -270,17 +270,13 @@ export async function buildApp(options: AppOptions = {}) {
   await createAdministrationModule({
     database: () => tenantDatabase(app.database()),
     billing: { ...subscriptions.administration, summary: subscriptions.publicApi.summary },
-    secure: env.NODE_ENV === 'production',
-    portalOrigin: env.OWNER_PORTAL_ORIGIN,
+    secure: sites.secureCookies,
+    portalOrigin: sites.origins.owner,
     totpKey: env.ADMIN_TOTP_KEY ? Buffer.from(env.ADMIN_TOTP_KEY, 'base64') : undefined,
     ownerDelivery: ownerAccountDelivery,
   }).registerRoutes(app)
   await identity.registerRoutes(app, permission)
-  await subscriptions.registerRoutes(
-    app,
-    platform.publicApi.resolveOwnerSession,
-    env.OWNER_PORTAL_ORIGIN,
-  )
+  await subscriptions.registerRoutes(app, platform.publicApi.resolveOwnerSession)
   const unavailableStorage: ObjectStorage = {
     async putImmutable() {
       throw new AppError(503, 'STORAGE_UNAVAILABLE', 'Configure private company asset storage.')
@@ -345,7 +341,7 @@ export async function buildApp(options: AppOptions = {}) {
     storage,
     notifications,
     sender: { email: senderEmail, name: 'B-Finance' },
-    uiOrigin: env.CORS_ORIGIN[0],
+    uiOrigin: sites.origins.public,
     observe,
   })
   const notificationSettings = createNotificationSettingsModule(

@@ -253,14 +253,23 @@ describe('Independent platform-owner authentication', () => {
     ).toBe(401)
   })
 
-  it('rejects another trusted tenant origin for owner endpoints', async () => {
-    const result = await app.inject({
-      method: 'GET',
-      url: '/api/v1/owner-auth/session',
-      headers: { origin: 'http://localhost:5174' },
+  it('serves owner endpoints only on the owner site', async () => {
+    for (const host of ['fixture.localhost:5173', 'admin.localhost:5173', 'localhost:5173']) {
+      const result = await app.inject({
+        method: 'GET',
+        url: '/api/v1/owner-auth/session',
+        headers: { host },
+      })
+      expect(result.statusCode).toBe(404)
+      expect(result.json().code).toBe('NOT_FOUND')
+    }
+    const foreign = await app.inject({
+      method: 'POST',
+      url: '/api/v1/owner-auth/logout',
+      headers: { host: 'app.localhost:5173', origin: 'http://fixture.localhost:5173' },
     })
-    expect(result.statusCode).toBe(403)
-    expect(result.json().code).toBe('UNTRUSTED_ORIGIN')
+    expect(foreign.statusCode).toBe(403)
+    expect(foreign.json().code).toBe('UNTRUSTED_ORIGIN')
   })
 
   it('disables public registration by default without touching the database', async () => {
@@ -272,7 +281,7 @@ describe('Independent platform-owner authentication', () => {
       const result = await disabled.inject({
         method: 'POST',
         url: '/api/v1/owner-auth/register',
-        headers,
+        headers: { host: 'app.localhost:5173', origin: 'http://app.localhost:5173' },
         payload: { email, password, ...names },
       })
       expect(result.statusCode).toBe(503)

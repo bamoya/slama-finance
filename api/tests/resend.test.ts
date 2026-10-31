@@ -64,7 +64,8 @@ describe('Resend production adapter (mocked network)', () => {
     const base = {
       NODE_ENV: 'production',
       DATABASE_URL: 'postgres://user:pass@db/test',
-      CORS_ORIGIN: 'https://finance.example',
+      PLATFORM_DOMAIN: 'finance.example',
+      PLATFORM_SCHEME: 'https',
       S3_ENDPOINT: 'https://storage.example.test',
       S3_BUCKET: 'private-finance',
       S3_ACCESS_KEY_ID: 'test-access',

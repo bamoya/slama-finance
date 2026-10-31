@@ -27,6 +27,8 @@ afterEach(async () => {
 })
 async function appFor(overrides: NodeJS.ProcessEnv = {}, probe?: () => Promise<void>) {
   const app = await buildApp({
+    organizationBySlug: async (slug) =>
+      slug === 'fixture' ? { id: '10000000-0000-4000-8000-000000000001' } : undefined,
     environment: loadEnvironment({ NODE_ENV: 'test', ...overrides }),
     logger: false,
     readinessProbe: probe,
@@ -35,8 +37,8 @@ async function appFor(overrides: NodeJS.ProcessEnv = {}, probe?: () => Promise<v
   return app
 }
 const trusted = {
-  origin: 'http://localhost:5173',
-  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+  host: 'fixture.localhost:5173',
+  origin: 'http://fixture.localhost:5173',
 }
 
 describe('environment configuration', () => {
@@ -57,8 +59,9 @@ describe('environment configuration', () => {
     expect(loadEnvironment({}).PORT).toBe(3000)
     for (const input of [
       { PORT: 'NaN' },
-      { CORS_ORIGIN: '*' },
-      { CORS_ORIGIN: 'https://site.test/path' },
+      { PLATFORM_DOMAIN: 'https://site.test' },
+      { PLATFORM_DOMAIN: 'site.test/path' },
+      { PLATFORM_SCHEME: 'ftp' },
       { NODE_ENV: 'production' },
       { TRUST_PROXY_IPS: 'true' },
       { TRUST_PROXY_IPS: '*' },
@@ -72,7 +75,8 @@ describe('environment configuration', () => {
       loadEnvironment({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgres://app:secret@db/finance',
-        CORS_ORIGIN: 'https://finance.test',
+        PLATFORM_DOMAIN: 'finance.test',
+        PLATFORM_SCHEME: 'https',
         RESEND_API_KEY: 'test-key',
         EMAIL_FROM: 'security@finance.test',
         PASSWORD_RESET_URL: 'https://finance.test/reset-password',
@@ -80,15 +84,16 @@ describe('environment configuration', () => {
         S3_BUCKET: 'private-finance',
         S3_ACCESS_KEY_ID: 'test-access',
         S3_SECRET_ACCESS_KEY: 'test-secret',
-      }).CORS_ORIGIN,
-    ).toEqual(['https://finance.test'])
+      }).PLATFORM_DOMAIN,
+    ).toBe('finance.test')
   })
   it('fails production startup when private object storage is absent', () => {
     expect(() =>
       loadEnvironment({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgres://app:secret@db/finance',
-        CORS_ORIGIN: 'https://finance.test',
+        PLATFORM_DOMAIN: 'finance.test',
+        PLATFORM_SCHEME: 'https',
         RESEND_API_KEY: 'test-key',
         EMAIL_FROM: 'security@finance.test',
         PASSWORD_RESET_URL: 'https://finance.test/reset-password',
@@ -123,15 +128,18 @@ describe('HTTP boundaries', () => {
     for (const origin of [
       undefined,
       'null',
-      'http://localhost:5173.evil.test',
-      'http://localhost:5173/',
+      'http://localhost:5173',
+      'http://other.localhost:5173',
+      'http://fixture.localhost:5173.evil.test',
+      'http://fixture.localhost:5173/',
+      'https://fixture.localhost:5173',
     ]) {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/auth/logout',
         headers: {
+          host: trusted.host,
           ...(origin ? { origin } : {}),
-          'x-organization-id': '10000000-0000-4000-8000-000000000001',
         },
       })
       expect(response.statusCode).toBe(403)
@@ -146,8 +154,8 @@ describe('HTTP boundaries', () => {
       url: '/api/v1/auth/login',
       headers: { ...trusted, 'access-control-request-method': 'POST' },
     })
-    expect(preflight.statusCode).toBe(204)
-    expect(preflight.headers['access-control-allow-origin']).toBe(trusted.origin)
+    // Every site calls the API on its own origin; no cross-origin access is ever granted.
+    expect(preflight.headers['access-control-allow-origin']).toBeUndefined()
     const untrusted = await app.inject({ url: '/health', headers: { origin: 'https://evil.test' } })
     expect(untrusted.headers['access-control-allow-origin']).toBeUndefined()
   })

@@ -74,8 +74,8 @@ describe('Organization staff invitations', () => {
   const publicPost = (action: string, token: string, extra = {}, org = testOrganizationId) =>
     app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${org}/auth/invitations/${action}`,
-      headers: { origin },
+      url: `/api/v1/organization-auth/invitations/${action}`,
+      headers: { origin, 'x-organization-id': org },
       payload: { token, ...extra },
     })
   const create = async (email = 'invite@example.test', roleIds: string[] = [adminRole]) => {
@@ -112,8 +112,8 @@ describe('Organization staff invitations', () => {
     expect((await publicPost('accept', token, details)).json().code).toBe('INVITATION_ALREADY_USED')
     const login = await app.inject({
       method: 'POST',
-      url: `/api/v1/organizations/${testOrganizationId}/auth/login`,
-      headers: { origin },
+      url: '/api/v1/organization-auth/login',
+      headers: { origin, 'x-organization-id': testOrganizationId },
       payload: { email: invitation.email, password: details.password },
     })
     expect(login.statusCode, login.body).toBe(200)

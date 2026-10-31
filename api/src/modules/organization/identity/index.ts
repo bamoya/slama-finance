@@ -238,7 +238,7 @@ export function createIdentityModule(options: {
             )
           })
         },
-        { prefix: '/api/v1/organizations/:organizationId/auth' },
+        { prefix: '/api/v1/organization-auth' },
       )
       await app.register(
         async (scope) => {

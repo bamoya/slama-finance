@@ -78,24 +78,50 @@ export async function isolatedDatabase() {
   }
 }
 
-/** Explicit tenant selection for existing finance regression fixtures; isolation tests opt out. */
+/**
+ * Routes every injected request to its platform site by setting the Host header: owner and admin
+ * routes go to app./admin., public routes to the apex and organization routes to <slug>. of the
+ * organization named by the test-only `x-organization-id` header (default: the fixture). The
+ * legacy test origin is rewritten to the request's own site origin; explicit hosts are kept.
+ */
+export function routeToSites(
+  app: FastifyInstance,
+  slugOf: (organizationId: string) => Promise<string | undefined>,
+) {
+  const inject = app.inject.bind(app)
+  const domain = app.sites.domain
+  app.inject = (async (options: string | { url?: string; headers?: Record<string, unknown> }) => {
+    const input = typeof options === 'string' ? { url: options } : options
+    const headers: Record<string, unknown> = { ...input.headers }
+    const url = input.url ?? ''
+    const organizationId =
+      (headers['x-organization-id'] as string | undefined) ?? testOrganizationId
+    delete headers['x-organization-id']
+    let host = headers.host as string | undefined
+    if (!host) {
+      if (url.startsWith('/api/v1/owner')) host = `app.${domain}`
+      else if (url.startsWith('/api/v1/admin/')) host = `admin.${domain}`
+      else if (url.startsWith('/api/v1/public/')) host = domain
+      else host = `${(await slugOf(organizationId)) ?? 'missing-organization'}.${domain}`
+    }
+    if (headers.origin === 'http://localhost:5173') headers.origin = app.sites.originOf(host)
+    return inject({ ...input, headers: { ...headers, host } } as never)
+  }) as typeof app.inject
+}
+
 export function attachTestDatabase(
   app: FastifyInstance,
   fixture: Awaited<ReturnType<typeof isolatedDatabase>>,
 ) {
   app.database = () => fixture.db
-  const inject = app.inject.bind(app)
-  app.inject = ((options: string | { url?: string; headers?: Record<string, unknown> }) => {
-    const input = typeof options === 'string' ? { url: options } : options
-    if (
-      input.url?.startsWith('/api/v1/organizations/') ||
-      input.url?.startsWith('/api/v1/owner') ||
-      input.url?.startsWith('/api/v1/admin/')
-    )
-      return inject(input as never)
-    return inject({
-      ...input,
-      headers: { 'x-organization-id': testOrganizationId, ...input.headers },
-    } as never)
-  }) as typeof app.inject
+  routeToSites(app, fixtureSlugs(fixture))
+}
+
+export function fixtureSlugs(fixture: Awaited<ReturnType<typeof isolatedDatabase>>) {
+  return async (id: string) => {
+    const [row] = await fixture.client<
+      { slug: string }[]
+    >`select slug from organizations where id=${id}`
+    return row?.slug
+  }
 }
