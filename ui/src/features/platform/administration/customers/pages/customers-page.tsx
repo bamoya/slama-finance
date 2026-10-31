@@ -23,22 +23,34 @@ import { ownerFullName } from '../components/owner-full-name'
 import { customerStatusFilters, subscriptionStatusLabel } from '../components/subscription-labels'
 import { SubscriptionStatusBadge } from '../components/subscription-status-badge'
 
+function CustomerLink({ customer, children }: { customer: AdminOwnerSummary; children: string }) {
+  return (
+    <Link
+      href={`${adminPaths.customers}/${customer.id}`}
+      className="break-all font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+    >
+      {children}
+    </Link>
+  )
+}
+
 const columns = [
   {
-    title: 'Customer',
-    render: (customer: AdminOwnerSummary) => (
-      <>
-        <Link
-          href={`${adminPaths.customers}/${customer.id}`}
-          className="break-all font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
-        >
-          {ownerFullName(customer) ?? customer.email}
-        </Link>
-        {ownerFullName(customer) && (
-          <p className="break-all text-xs text-[var(--muted)]">{customer.email}</p>
-        )}
-      </>
-    ),
+    title: 'Full name',
+    render: (customer: AdminOwnerSummary) => {
+      const name = ownerFullName(customer)
+      return name ? <CustomerLink customer={customer}>{name}</CustomerLink> : '—'
+    },
+  },
+  {
+    title: 'Email',
+    // Accounts without a name keep a link to their page through the email.
+    render: (customer: AdminOwnerSummary) =>
+      ownerFullName(customer) ? (
+        <span className="break-all">{customer.email}</span>
+      ) : (
+        <CustomerLink customer={customer}>{customer.email}</CustomerLink>
+      ),
   },
   {
     title: 'Plan',

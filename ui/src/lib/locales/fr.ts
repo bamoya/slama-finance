@@ -1555,6 +1555,7 @@ export const french: Record<string, string> = {
   'Effective permissions': 'Permissions effectives',
   'Effective: {{state}}': 'État effectif : {{state}}',
   Email: 'E-mail',
+  'Full name': 'Nom complet',
   'Email address': 'Adresse e-mail',
   'Email attachments can be saved or forwarded and cannot be revoked after sending. Only eligible staff receive them.':
     'Les pièces jointes peuvent être enregistrées ou transférées et ne peuvent pas être révoquées après l’envoi. Seul le personnel autorisé les reçoit.',
