@@ -166,6 +166,7 @@
   font-weight: 600;
 }
 .portal-main {
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   max-width: 1556px;
   margin-inline: auto;

@@ -1,6 +1,7 @@
 import { useGetAdminOwner } from '../../../../../api/generated/administration/administration'
 import type { AdminOwnerDetailPaymentsItem } from '../../../../../api/generated/models'
 import { type DataColumn, DataTable } from '../../../../../components/management/data-table'
+import { PageHeader } from '../../../../../components/management/page-header'
 import { RequestState } from '../../../../../components/management/request-state'
 import { StatusBadge } from '../../../../../components/management/status-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
@@ -87,15 +88,19 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
         </>
       ) : (
         <>
-          <AdministrationPageHeader
-            title="Customer"
-            description="Subscription, organizations and payment history of this customer."
+          <PageHeader
+            brandName="BaMoYa Finance"
+            eyebrow={translate('Customer')}
+            title={detail.owner.email}
+            description={translate(
+              'Subscription, organizations and payment history of this customer.',
+            )}
             backHref={adminPaths.customers}
             status={<SubscriptionStatusBadge status={detail.subscription.status} />}
           />
           <Card>
             <CardHeader>
-              <CardTitle className="break-all">{detail.owner.email}</CardTitle>
+              <CardTitle>{translate('Profile')}</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="grid gap-4 sm:grid-cols-3">

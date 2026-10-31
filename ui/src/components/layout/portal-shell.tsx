@@ -153,7 +153,7 @@ export function PortalShell({
                   {translate(badge.label)}
                 </span>
               )}
-              <Link href={homeHref}>{translate(portalLabel)}</Link>
+              {!badge && <Link href={homeHref}>{translate(portalLabel)}</Link>}
               <ChevronRight size={14} />
               <span>{translate(currentLabel)}</span>
             </div>

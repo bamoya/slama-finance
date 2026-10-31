@@ -58,14 +58,23 @@ export function AdminPaymentsPage() {
     {
       title: 'Plan',
       render: (p) => (
-        <span className="whitespace-nowrap">
-          {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
-        </span>
+        <>
+          <span className="whitespace-nowrap">
+            {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
+          </span>
+          <p className="text-xs text-[var(--muted)]">{paymentKindLabel(p.kind)}</p>
+        </>
       ),
     },
-    { title: 'Type', render: (p) => paymentKindLabel(p.kind) },
-    { title: 'Method', render: (p) => p.method },
-    { title: 'Reference', render: (p) => <span className="break-all">{p.reference}</span> },
+    {
+      title: 'Reference',
+      render: (p) => (
+        <>
+          <span className="break-all">{p.reference}</span>
+          <p className="text-xs text-[var(--muted)]">{p.method}</p>
+        </>
+      ),
+    },
     {
       title: 'Total incl. tax',
       align: 'right',
@@ -118,23 +127,25 @@ export function AdminPaymentsPage() {
       <section aria-label={translate('Payments')}>
         <Card className="gap-0 overflow-hidden p-0">
           <DataTableToolbar>
-            <Select
-              aria-label={translate('Payment status')}
-              value={status}
-              className="w-full sm:w-64"
-              onValueChange={(value) => {
-                setStatus(value as PaymentStatus)
-                setPage(1)
-              }}
-            >
-              <SelectGroup>
-                {statuses.map((item) => (
-                  <SelectOption key={item.value} value={item.value}>
-                    {translate(item.label)}
-                  </SelectOption>
-                ))}
-              </SelectGroup>
-            </Select>
+            <label className="table-filter grid min-w-56">
+              <span className="sr-only">{translate('Payment status')}</span>
+              <Select
+                aria-label={translate('Payment status')}
+                value={status}
+                onValueChange={(value) => {
+                  setStatus(value as PaymentStatus)
+                  setPage(1)
+                }}
+              >
+                <SelectGroup>
+                  {statuses.map((item) => (
+                    <SelectOption key={item.value} value={item.value}>
+                      {translate(item.label)}
+                    </SelectOption>
+                  ))}
+                </SelectGroup>
+              </Select>
+            </label>
           </DataTableToolbar>
           {query.isPending || query.isError ? (
             <div className="p-4">

@@ -240,7 +240,7 @@
   border-radius: 12px;
   background: var(--surface-muted);
 }
-.admin-auth-qr-card svg {
+.admin-auth-qr-card > svg[role='img'] {
   border: 1px solid var(--border);
   width: min(100%, 176px);
   height: auto;
