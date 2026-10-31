@@ -2352,4 +2352,6 @@ export const french: Record<string, string> = {
   'Active subscriptions': 'Abonnements actifs',
   'Customers with a current paid period.': 'Clients avec une période payée en cours.',
   'Customers whose access is blocked.': 'Clients dont l’accès est bloqué.',
+  'Invoicing and finance, in one place.': 'Facturation et finance, au même endroit.',
+  'Sign in': 'Connexion',
 }

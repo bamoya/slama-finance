@@ -76,13 +76,11 @@ export function AdminCustomersPage() {
       <section aria-label={translate('Customers')}>
         <Card className="gap-0 overflow-hidden p-0">
           <DataTableToolbar>
-            <div className="table-search flex gap-2" role="search">
-              <SearchField
-                label="Search customers"
-                placeholder="Search by email or name"
-                onSearch={changeSearch}
-              />
-            </div>
+            <SearchField
+              label="Search customers"
+              placeholder="Search by email or name"
+              onSearch={changeSearch}
+            />
           </DataTableToolbar>
           {query.isPending || query.isError ? (
             <div className="p-4">

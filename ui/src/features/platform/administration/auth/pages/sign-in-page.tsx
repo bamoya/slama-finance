@@ -28,13 +28,11 @@ export function AdminSignInPage() {
   return (
     <SignInLayout
       step={challenge ? 'code' : 'credentials'}
-      title={translate(challenge ? 'Two-factor verification' : 'Administrator sign in')}
+      title={translate('Sign in')}
       description={translate(
         enrollment
           ? 'Scan the QR code with your authenticator app, then enter the 6-digit code to finish setting up your account.'
-          : challenge
-            ? 'Enter the 6-digit code from your authenticator app.'
-            : 'Restricted access for platform administrators.',
+          : '',
       )}
     >
       {notice && (

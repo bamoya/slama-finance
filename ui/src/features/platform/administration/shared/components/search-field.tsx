@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Input } from '../../../../../components/ui/input'
 import { translate } from '../../../../../lib/i18n'
 
-/** Debounced search input shared by the administration lists. */
+/** Debounced search control using the same markup as the other list pages' toolbar search. */
 export function SearchField({
   label,
   placeholder,
@@ -20,20 +20,20 @@ export function SearchField({
     return () => clearTimeout(timer)
   }, [text, onSearch])
   return (
-    <div className="relative min-w-48 flex-1">
-      <Search
-        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]"
-        aria-hidden="true"
-      />
-      <Input
-        type="search"
-        aria-label={translate(label)}
-        placeholder={translate(placeholder)}
-        className="pl-9"
-        value={text}
-        maxLength={120}
-        onChange={(event) => setText(event.target.value)}
-      />
-    </div>
+    <label className="table-search grid">
+      <span className="sr-only">{translate(label)}</span>
+      <div className="relative">
+        <Search size={17} className="absolute left-3 top-4" />
+        <Input
+          type="search"
+          aria-label={translate(label)}
+          className="pl-10"
+          value={text}
+          maxLength={120}
+          onChange={(event) => setText(event.target.value)}
+          placeholder={translate(placeholder)}
+        />
+      </div>
+    </label>
   )
 }

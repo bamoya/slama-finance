@@ -60,7 +60,7 @@ function BillingSettingsForm({
         <form
           id="billing-settings-form"
           noValidate
-          className="max-w-2xl space-y-5"
+          className="space-y-5"
           onSubmit={(event) => {
             event.preventDefault()
             setSaved(false)
