@@ -1,14 +1,10 @@
 import axios, { type AxiosRequestConfig } from 'axios'
 
 import { ApiError, decodeApiError } from '../lib/api-error'
-import { configuredApiBaseUrl, resolveApiBaseUrl } from './base-url'
 import { validateResponse } from './generated/schemas/responses'
-import { documentWorkspace } from './workspace-scope'
 
-const apiBaseUrl = resolveApiBaseUrl(
-  configuredApiBaseUrl(import.meta.env.VITE_API_BASE_URL),
-  import.meta.env.PROD,
-)
+/** Browser calls always target the current origin; generated paths already start with /api/v1. */
+const apiBaseUrl = ''
 
 export const httpClient = axios.create({
   baseURL: apiBaseUrl,
@@ -32,15 +28,6 @@ export async function apiRequest<T>(
   try {
     const response = await httpClient.request({
       ...request,
-      headers: {
-        ...request.headers,
-        ...(documentWorkspace && !path.startsWith('/v1/owner') && !path.startsWith('/v1/admin')
-          ? {
-              'X-Organization-Id': documentWorkspace.organizationId,
-              'X-Workspace-Identity': documentWorkspace.identityType,
-            }
-          : {}),
-      },
       baseURL: apiBaseUrl,
       withCredentials: true,
       validateStatus: () => true,
@@ -81,11 +68,12 @@ export async function apiRequest<T>(
     }
     if (
       response.status === 401 &&
-      !path.startsWith('/v1/auth/') &&
-      !path.startsWith('/v1/owner-auth/') &&
-      !path.startsWith('/v1/owner/') &&
-      !path.startsWith('/v1/admin/') &&
-      !/^\/v1\/organizations\/[^/]+\/auth\//.test(path) &&
+      !path.startsWith('/api/v1/auth/') &&
+      !path.startsWith('/api/v1/organization-auth/') &&
+      !path.startsWith('/api/v1/owner-auth/') &&
+      !path.startsWith('/api/v1/owner/') &&
+      !path.startsWith('/api/v1/admin/') &&
+      !path.startsWith('/api/v1/public/') &&
       typeof window !== 'undefined'
     )
       window.dispatchEvent(new Event('slama:session-expired'))

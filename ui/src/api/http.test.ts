@@ -25,9 +25,10 @@ describe('shared Axios transport', () => {
   it('serializes array filters using repeated OpenAPI query keys', () => {
     const url = new URL(
       httpClient.getUri({
-        url: '/v1/reports/analysis',
+        url: '/api/v1/reports/analysis',
         params: { sections: ['revenue', 'collections'] },
       }),
+      'http://localhost',
     )
     expect(url.searchParams.getAll('sections')).toEqual(['revenue', 'collections'])
     expect(url.searchParams.has('sections[]')).toBe(false)
@@ -61,7 +62,7 @@ describe('shared Axios transport', () => {
     const adapter = mockResponse('{"status":"ok"}')
     expect(await healthCheck()).toEqual({ status: 'ok' })
     expect(adapter.mock.calls[0]?.[0]).toMatchObject({
-      baseURL: 'http://localhost:3000',
+      baseURL: '',
       url: '/health',
       withCredentials: true,
       timeout: 15_000,
@@ -80,12 +81,12 @@ describe('shared Axios transport', () => {
         { 'x-request-id': 'download-request' },
       )
       await expect(
-        apiRequest({ url: '/v1/reports/exports', responseType: 'blob' }),
+        apiRequest({ url: '/api/v1/reports/exports', responseType: 'blob' }),
       ).rejects.toMatchObject({ status, code, requestId: 'download-request' })
     }
     mockResponse(new Blob(['<html>private error</html>']), 502)
     await expect(
-      apiRequest({ url: '/v1/reports/exports', responseType: 'blob' }),
+      apiRequest({ url: '/api/v1/reports/exports', responseType: 'blob' }),
     ).rejects.toMatchObject({ status: 502, message: 'The request could not be completed.' })
   })
   it('serializes authentication JSON through the same instance', async () => {
@@ -104,7 +105,7 @@ describe('shared Axios transport', () => {
     )
     await login({ email: 'staff@example.com', password: 'test-password' })
     expect(adapter.mock.calls[0]?.[0]).toMatchObject({
-      url: '/v1/auth/login',
+      url: '/api/v1/auth/login',
       method: 'post',
       data: JSON.stringify({ email: 'staff@example.com', password: 'test-password' }),
     })
@@ -162,7 +163,7 @@ describe('shared Axios transport', () => {
     expect(adapter).not.toHaveBeenCalled()
     await apiRequest({ url: '/test', baseURL: 'https://evil.test', withCredentials: false })
     expect(adapter.mock.calls[0]?.[0]).toMatchObject({
-      baseURL: 'http://localhost:3000',
+      baseURL: '',
       withCredentials: true,
     })
   })

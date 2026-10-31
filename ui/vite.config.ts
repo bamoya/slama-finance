@@ -6,4 +6,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [react(), tailwindcss()],
+  server: {
+    // Sites are subdomains of localhost (app., admin., <slug>.); the API sees the original Host.
+    allowedHosts: ['.localhost'],
+    proxy: { '/api': { target: 'http://localhost:3000', changeOrigin: false } },
+  },
 })
