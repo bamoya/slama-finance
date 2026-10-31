@@ -2,8 +2,11 @@ paths:
   /v1/workspace/session:
     get:
       operationId: getWorkspaceSession
-      tags: [identity]
-      security: [{ organizationStaffCookie: [], organizationScope: [] }]
+      tags: [ identity ]
+      security:
+        [
+          { organizationStaffCookie: [], organizationScope: [] }
+        ]
       responses:
         '200':
           description: Verified organization workspace identity. Only independent organization sessions are accepted.
@@ -20,10 +23,10 @@ components:
     WorkspaceSession:
       type: object
       additionalProperties: false
-      required: [organization, identityType, session, subscription, defaultVatRate]
+      required: [ organization, identityType, session, subscription, defaultVatRate ]
       properties:
         organization: { $ref: ./owner-organizations.yaml#/components/schemas/OwnerOrganization }
-        identityType: { type: string, enum: [staff] }
+        identityType: { type: string, enum: [ staff ] }
         session: { $ref: ./auth.yaml#/components/schemas/Session }
         subscription:
           type: object
@@ -35,4 +38,4 @@ components:
         defaultVatRate:
           type:
             - string
-            - 'null'
+            - "null"

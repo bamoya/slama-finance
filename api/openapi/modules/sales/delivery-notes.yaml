@@ -21,7 +21,12 @@ paths:
         - {
             name: status,
             in: query,
-            schema: { type: string, enum: [all, draft, delivered, cancelled], default: all },
+            schema:
+              {
+                type: string,
+                enum: [all, draft, delivered, cancelled],
+                default: all,
+              },
           }
         - { name: clientId, in: query, schema: { type: string, format: uuid } }
         - { name: invoiceId, in: query, schema: { type: string, format: uuid } }

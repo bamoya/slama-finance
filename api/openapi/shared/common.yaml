@@ -4,15 +4,14 @@ paths:
       operationId: healthCheck
       security: []
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../openapi.yaml#/components/schemas/Health
         default:
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -23,21 +22,20 @@ paths:
       operationId: readinessCheck
       security: []
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../openapi.yaml#/components/schemas/Readiness
-        '503':
+        "503":
           description: Database unavailable or readiness deadline exceeded
           content:
             application/json:
               schema:
                 $ref: ../openapi.yaml#/components/schemas/Error
         default:
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:

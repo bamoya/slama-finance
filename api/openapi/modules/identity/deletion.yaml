@@ -31,10 +31,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ConfirmStaffDeletion' }
       responses:
-        '204':
-          {
-            description: Accounts removed and access revoked atomically. Audit/business history is preserved under anonymous attribution.,
-          }
+        '204': { description: Accounts removed and access revoked atomically. Audit/business history is preserved under anonymous attribution. }
         default:
           description: Nothing changed; refresh the preview.
           content:

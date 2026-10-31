@@ -28,8 +28,7 @@ paths:
   /v1/auth/login:
     post:
       operationId: login
-      description:
-        Limited to five attempts per minute per client IP per API instance. Excess attempts
+      description: Limited to five attempts per minute per client IP per API instance. Excess attempts
         return 429 with Retry-After. Temporary staff passwords expire after 24 hours and can log in
         once, creating a restricted 15-minute password_change session.
       security:
@@ -41,15 +40,14 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/Login
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Session
         default: &a2
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -59,15 +57,14 @@ paths:
     get:
       operationId: getSession
       responses:
-        '200':
+        "200":
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Session
         default:
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -77,11 +74,10 @@ paths:
     post:
       operationId: logout
       responses:
-        '204':
+        "204":
           description: Completed without response body
         default:
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -92,8 +88,7 @@ paths:
       operationId: requestPasswordReset
       security:
         - organizationScope: []
-      description:
-        Generic response for eligible, unknown and inactive accounts; requires configured email
+      description: Generic response for eligible, unknown and inactive accounts; requires configured email
         adapter. Five requests per minute per IP, one email per account per minute.
       requestBody:
         required: true
@@ -102,15 +97,14 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/PasswordResetRequest
       responses:
-        '202':
+        "202":
           description: Request accepted
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/PasswordResetAccepted
         default: &a1
-          description:
-            Standard error envelope, including validation, authorization, conflict, request size,
+          description: Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -129,14 +123,13 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/PasswordResetConfirm
       responses:
-        '204':
+        "204":
           description: Password changed; sign in again
         default: *a1
   /v1/auth/change-password:
     post:
       operationId: changePassword
-      description:
-        Requires an active full or password_change session. Rotates all sessions; returns a new
+      description: Requires an active full or password_change session. Rotates all sessions; returns a new
         full-session cookie. Five attempts per minute per IP.
       requestBody:
         required: true
@@ -145,7 +138,7 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/ChangePassword
       responses:
-        '200':
+        "200":
           description: Password changed and full session issued
           content:
             application/json:
@@ -157,7 +150,7 @@ components:
     UpdateProfile:
       type: object
       additionalProperties: false
-      required: [firstName, lastName, email, currentPassword]
+      required: [ firstName, lastName, email, currentPassword ]
       properties:
         firstName:
           type: string
@@ -187,17 +180,17 @@ components:
         firstName:
           type:
             - string
-            - 'null'
+            - "null"
           maxLength: 100
         lastName:
           type:
             - string
-            - 'null'
+            - "null"
           maxLength: 100
         avatarUrl:
           type:
             - string
-            - 'null'
+            - "null"
       required:
         - id
         - email

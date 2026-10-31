@@ -292,11 +292,7 @@ components:
         bodyTemplate: { type: string, minLength: 1, maxLength: 50000 }
         bodyFormat: { type: string, enum: [text, html] }
         locale:
-          {
-            type: string,
-            enum: [company, fr-MA, en-GB],
-            description: Defaults to the saved rule language.,
-          }
+          { type: string, enum: [company, fr-MA, en-GB], description: Defaults to the saved rule language. }
     NotificationRulePreview:
       type: object
       additionalProperties: false

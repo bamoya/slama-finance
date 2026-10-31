@@ -155,18 +155,7 @@ components:
     ClientNotificationPreference:
       type: object
       additionalProperties: false
-      required:
-        [
-          ruleId,
-          eventKey,
-          globalEnabled,
-          overrideEnabled,
-          cc,
-          version,
-          effectiveEnabled,
-          reason,
-          recipient,
-        ]
+      required: [ruleId, eventKey, globalEnabled, overrideEnabled, cc, version, effectiveEnabled, reason, recipient]
       properties:
         ruleId: { type: string, format: uuid }
         eventKey: { type: string }
@@ -175,11 +164,7 @@ components:
         cc: { type: array, maxItems: 10, uniqueItems: true, items: { type: string, format: email } }
         version: { type: integer, minimum: 0 }
         effectiveEnabled: { type: boolean }
-        reason:
-          {
-            type: [string, 'null'],
-            enum: [RULE_DISABLED, CLIENT_OPT_OUT, MISSING_EMAIL, CLIENT_ARCHIVED, null],
-          }
+        reason: { type: [string, 'null'], enum: [RULE_DISABLED, CLIENT_OPT_OUT, MISSING_EMAIL, CLIENT_ARCHIVED, null] }
         recipient: { type: [string, 'null'] }
     ClientNotificationPreferenceList:
       type: object
