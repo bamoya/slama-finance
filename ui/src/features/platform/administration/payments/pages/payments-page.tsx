@@ -21,6 +21,7 @@ import {
   cycleLabel,
   formatDh,
   paymentKindLabel,
+  paymentMethodLabel,
   paymentStatusTone,
   planLabel,
 } from '../../../subscriptions/components/billing-format'
@@ -74,7 +75,7 @@ export function AdminPaymentsPage() {
       render: (p) => (
         <>
           <span className="break-all">{p.reference}</span>
-          <p className="text-xs text-[var(--muted)]">{p.method}</p>
+          <p className="text-xs text-[var(--muted)]">{paymentMethodLabel(p.method)}</p>
         </>
       ),
     },

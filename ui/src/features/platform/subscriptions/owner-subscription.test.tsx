@@ -188,6 +188,9 @@ it('shows exact coverage, grace, retention, next plan and a pending payment noti
   expect(screen.getByText(/Next plan/).parentElement).toHaveTextContent('Business')
   expect(screen.getByTestId('pending-payment')).toHaveTextContent('Payment awaiting verification')
   expect(await screen.findByRole('button', { name: 'Submit payment' })).toBeDisabled()
+  // A paid plan no longer shows the trial explanation.
+  expect(screen.queryByText(/Trial ends/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/free trial lasts/)).not.toBeInTheDocument()
 })
 
 it('shows HT, VAT and TTC from the quote before submitting, and posts the payment', async () => {
@@ -217,6 +220,12 @@ it('shows HT, VAT and TTC from the quote before submitting, and posts the paymen
   expect(screen.getByTestId('payment-instructions')).toHaveTextContent('Transfer to RIB 123')
   expect(screen.getByText(/only after an administrator verifies/)).toBeInTheDocument()
   expect(await screen.findByText('OLD-1')).toBeInTheDocument()
+  // Payment method codes are shown with readable names.
+  expect(screen.getByRole('combobox', { name: 'Payment method' })).toHaveTextContent(
+    'Bank transfer',
+  )
+  expect(screen.getByRole('cell', { name: 'Cash' })).toBeInTheDocument()
+  expect(screen.getByText(/free trial lasts/)).toBeInTheDocument()
   const submit = screen.getByRole('button', { name: 'Submit payment' })
   expect(submit).toBeDisabled()
   fireEvent.change(screen.getByLabelText('Payment reference'), { target: { value: ' REF-9 ' } })

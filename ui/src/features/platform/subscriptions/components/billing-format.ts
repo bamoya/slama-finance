@@ -17,6 +17,25 @@ export function paymentKindLabel(kind: string) {
   )
 }
 
+/** Payment methods are configurable codes (bank_transfer, cash, ...); known codes get a readable name. */
+export function paymentMethodLabel(code: string) {
+  switch (code) {
+    case 'bank_transfer':
+      return translate('Bank transfer')
+    case 'cash':
+      return translate('Cash')
+    case 'cheque':
+      return translate('Cheque')
+    case 'admin_adjustment':
+      return translate('Admin adjustment')
+    default:
+      return code
+  }
+}
+
+/** Free administrator adjustments carry a technical marker instead of a payer reference. */
+export const isAdjustmentMarker = (value: string) => value === 'admin_adjustment'
+
 export function cycleLabel(cycle: string) {
   return translate(cycle === 'annual' ? 'Annual' : 'Monthly')
 }

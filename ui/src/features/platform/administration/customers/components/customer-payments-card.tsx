@@ -7,6 +7,7 @@ import { translate } from '../../../../../lib/i18n'
 import {
   cycleLabel,
   formatDh,
+  isAdjustmentMarker,
   paymentKindLabel,
   paymentStatusTone,
   planLabel,
@@ -42,7 +43,12 @@ const columns: DataColumn<CustomerPayment>[] = [
       </span>
     ),
   },
-  { title: 'Reference', render: (p) => <span className="break-all">{p.reference}</span> },
+  {
+    title: 'Reference',
+    render: (p) => (
+      <span className="break-all">{isAdjustmentMarker(p.reference) ? '—' : p.reference}</span>
+    ),
+  },
   {
     title: 'Total incl. tax',
     align: 'right',
@@ -54,7 +60,7 @@ const columns: DataColumn<CustomerPayment>[] = [
       <>
         <StatusBadge label={paymentStatus[p.status]} tone={paymentStatusTone(p.status)} />
         {p.rejectionReason && (
-          <p className="mt-1 text-xs text-[var(--muted)]">
+          <p className="mt-1 max-w-xs whitespace-normal break-words text-xs text-[var(--muted)]">
             {translate('Reason:')} {p.rejectionReason}
           </p>
         )}

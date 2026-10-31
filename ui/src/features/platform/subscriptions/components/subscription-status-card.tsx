@@ -26,6 +26,8 @@ function DateLine({ label, value }: { label: string; value: string | null | unde
 
 export function SubscriptionStatusCard({ s }: { s: OwnerSubscription }) {
   const pending = s.pendingPayment
+  /** The trial is only relevant until a paid plan starts. */
+  const inTrial = s.planCode === 'trial'
   return (
     <Card>
       <CardHeader>
@@ -48,9 +50,13 @@ export function SubscriptionStatusCard({ s }: { s: OwnerSubscription }) {
             </span>
           )}
         </div>
-        <p>{translate('The free trial lasts seven calendar days from your first organization.')}</p>
+        {inTrial && (
+          <p>
+            {translate('The free trial lasts seven calendar days from your first organization.')}
+          </p>
+        )}
         <div className="space-y-1">
-          <DateLine label={translate('Trial ends')} value={s.trialEndsAt} />
+          {inTrial && <DateLine label={translate('Trial ends')} value={s.trialEndsAt} />}
           <DateLine label={translate('Covered until')} value={s.paidThroughAt} />
           <DateLine label={translate('Grace period ends')} value={s.graceEndsAt} />
           <DateLine label={translate('Access blocked since')} value={s.blockedAt} />

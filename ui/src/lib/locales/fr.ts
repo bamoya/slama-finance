@@ -2462,6 +2462,7 @@ export const french: Record<string, string> = {
     'Codes en minuscules comme bank_transfer ou cash. Appuyez sur Entrée pour en ajouter un.',
   'Payments submitted by this customer appear here.':
     'Les paiements soumis par ce client apparaissent ici.',
+  'Payments you submit appear here.': 'Les paiements que vous soumettez apparaissent ici.',
   'Try adjusting the search.': 'Essayez de modifier la recherche.',
   'Payments appear here once customers submit them.':
     'Les paiements apparaissent ici dès que les clients les soumettent.',

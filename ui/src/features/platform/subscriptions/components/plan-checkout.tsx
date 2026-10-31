@@ -18,7 +18,7 @@ import { Input } from '../../../../components/ui/input'
 import { Select, SelectOption } from '../../../../components/ui/select'
 import { displayDateTime } from '../../../../lib/dates'
 import { translate } from '../../../../lib/i18n'
-import { cycleLabel, formatDh, paymentKindLabel } from './billing-format'
+import { cycleLabel, formatDh, paymentKindLabel, paymentMethodLabel } from './billing-format'
 
 type PlanCode = 'essential' | 'business' | 'pro'
 type Cycle = 'monthly' | 'annual'
@@ -160,7 +160,7 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
               >
                 {catalog.paymentMethods.map((m) => (
                   <SelectOption key={m} value={m}>
-                    {m}
+                    {paymentMethodLabel(m)}
                   </SelectOption>
                 ))}
               </Select>
