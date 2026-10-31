@@ -518,7 +518,7 @@ export async function renderVisualPdf(snapshot: ReportAnalysis, language: 'fr' |
   for (let index = 0; index < c.pageCount; index++) {
     c.selectPage(index)
     c.text(
-      tr('Slama Finance · Rapport financier figé', 'Slama Finance · Frozen financial report'),
+      tr('B-Finance · Rapport financier figé', 'B-Finance · Frozen financial report'),
       left,
       H - 28,
       8,

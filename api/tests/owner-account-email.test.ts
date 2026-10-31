@@ -29,7 +29,7 @@ describe('Owner security emails and configuration', () => {
       }
     },
   )
-  it('brands owner invitation emails as BaMoYa Finance', async () => {
+  it('brands owner invitation emails as B-Finance', async () => {
     const provider = createRecordingEmailProvider()
     await createOwnerAccountDelivery(provider, 'security@example.test').send({
       to: 'owner@example.test',
@@ -39,8 +39,8 @@ describe('Owner security emails and configuration', () => {
       purpose: 'invitation',
     })
     const [message] = provider.messages
-    expect(message?.subject).toBe('Activez votre compte BaMoYa Finance')
-    expect(message?.from.name).toBe('BaMoYa Finance')
+    expect(message?.subject).toBe('Activez votre compte B-Finance')
+    expect(message?.from.name).toBe('B-Finance')
     expect(`${message?.text}${message?.html}`).not.toContain('Slama')
   })
   it('requires an explicit trusted owner portal and defaults registration to disabled', () => {

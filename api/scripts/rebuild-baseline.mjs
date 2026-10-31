@@ -87,7 +87,7 @@ try {
       await rm(path.join(target, name), { recursive: true, force: true })
   await writeFile(
     path.join(target, '0000_initial_schema.sql'),
-    '-- BaMoYa Finance: fresh SaaS schema; no demo accounts or business data.\n' + sql + '\n',
+    '-- B-Finance: fresh SaaS schema; no demo accounts or business data.\n' + sql + '\n',
   )
   await cp(path.join(out, 'meta'), path.join(target, 'meta'), { recursive: true })
 } finally {

@@ -38,7 +38,7 @@ export const notificationRules = pgTable(
     enabled: boolean('enabled').notNull().default(false),
     offsetDays: integer('offset_days').notNull().default(0),
     repeatEveryDays: integer('repeat_every_days'),
-    senderName: text('sender_name').notNull().default('Slama Finance'),
+    senderName: text('sender_name').notNull().default('B-Finance'),
     senderEmail: text('sender_email').notNull().default('notifications@example.invalid'),
     locale: text('locale').notNull().default('company'),
     englishSubjectTemplate: text('english_subject_template'),

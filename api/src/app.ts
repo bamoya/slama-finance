@@ -343,7 +343,7 @@ export async function buildApp(options: AppOptions = {}) {
     identity: identity.publicApi,
     storage,
     notifications,
-    sender: { email: senderEmail, name: 'Slama Finance' },
+    sender: { email: senderEmail, name: 'B-Finance' },
     uiOrigin: env.CORS_ORIGIN[0],
     observe,
   })

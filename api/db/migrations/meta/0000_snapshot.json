@@ -6045,7 +6045,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'Slama Finance'"
+          "default": "'B-Finance'"
         },
         "sender_email": {
           "name": "sender_email",

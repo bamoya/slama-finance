@@ -29,11 +29,11 @@ export function createResendResetDelivery(options: {
               from: options.from,
               to: [message.to],
               subject: fr
-                ? 'Réinitialisez votre mot de passe Slama Finance'
-                : 'Reset your Slama Finance password',
+                ? 'Réinitialisez votre mot de passe B-Finance'
+                : 'Reset your B-Finance password',
               text: fr
-                ? `Une réinitialisation du mot de passe de votre compte Slama Finance a été demandée.\n\nChoisissez un nouveau mot de passe :\n${message.resetUrl}\n\nCe lien expire le ${message.expiresAt.toISOString()} et ne peut être utilisé qu’une fois. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.`
-                : `A password reset was requested for your Slama Finance account.\n\nOpen this link to choose a new password:\n${message.resetUrl}\n\nThis link expires at ${message.expiresAt.toISOString()} and can only be used once. If you did not request this, ignore this email.`,
+                ? `Une réinitialisation du mot de passe de votre compte B-Finance a été demandée.\n\nChoisissez un nouveau mot de passe :\n${message.resetUrl}\n\nCe lien expire le ${message.expiresAt.toISOString()} et ne peut être utilisé qu’une fois. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.`
+                : `A password reset was requested for your B-Finance account.\n\nOpen this link to choose a new password:\n${message.resetUrl}\n\nThis link expires at ${message.expiresAt.toISOString()} and can only be used once. If you did not request this, ignore this email.`,
             }),
           })
           if (response.ok) {

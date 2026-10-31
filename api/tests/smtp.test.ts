@@ -13,7 +13,7 @@ beforeEach(() => {
 })
 const message: ReadyEmail = {
   idempotencyKey: 'test:local-email',
-  from: { name: 'Slama Finance', email: 'sender@example.test' },
+  from: { name: 'B-Finance', email: 'sender@example.test' },
   to: 'recipient@example.test',
   cc: [],
   subject: 'Local test',

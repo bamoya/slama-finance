@@ -19,7 +19,7 @@ describe('Organization invitation email', () => {
       })
       const message = provider.messages[0]!
       expect(message.html).toContain(`<html lang="${language}">`)
-      expect(message.html).toContain('BaMoYa Finance')
+      expect(message.html).toContain('B-Finance')
       expect(message.html).toContain('&lt;script&gt;')
       expect(message.html).not.toContain('<script>')
       expect(message.html).toContain('secret&amp;x=one')

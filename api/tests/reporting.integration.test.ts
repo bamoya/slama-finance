@@ -600,7 +600,7 @@ describe('Live and frozen reporting', () => {
       storage,
       clock: () => clock,
       notifications,
-      sender: { email: 'reports@example.test', name: 'Slama Finance' },
+      sender: { email: 'reports@example.test', name: 'B-Finance' },
       uiOrigin: 'http://localhost:5173',
     })
     const response = await post('/v1/report-schedules', {

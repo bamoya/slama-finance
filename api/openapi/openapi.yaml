@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: BaMoYa Finance API
+  title: B-Finance API
   version: 0.1.0
   description: Foundation contracts plus existing auth/RBAC scaffolding.
     Temporary-password onboarding and full RBAC safety are implemented in

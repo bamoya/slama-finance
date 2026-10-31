@@ -9,7 +9,7 @@ import { reportLabel } from './visual-pdf.service.js'
 
 export async function renderReportExcel(snapshot: ReportAnalysis, language: 'fr' | 'en') {
   const book = new ExcelJS.Workbook()
-  book.creator = 'Slama Finance'
+  book.creator = 'B-Finance'
   book.created = new Date(snapshot.capturedAt)
   const fr = language === 'fr',
     label = fr ? frenchReportLabel : reportLabel
@@ -292,7 +292,7 @@ export async function renderReportExcel(snapshot: ReportAnalysis, language: 'fr'
       margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.15, footer: 0.15 },
       printTitlesRow: sheet === cover ? '1:8' : '1:3',
     }
-    sheet.headerFooter.oddFooter = '&LSlama Finance&R&P / &N'
+    sheet.headerFooter.oddFooter = '&LB-Finance&R&P / &N'
     sheet.eachRow((row) =>
       row.eachCell((cell) => {
         cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF26322E' } }
