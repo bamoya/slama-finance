@@ -6,6 +6,7 @@ const labels: Record<string, string> = {
   expired: 'Expired',
   past_due: 'Payment overdue',
   active: 'Active',
+  suspended: 'Subscription suspended',
 }
 
 export const subscriptionStatusTones = {
@@ -14,8 +15,17 @@ export const subscriptionStatusTones = {
   not_started: 'archived',
   past_due: 'draft',
   expired: 'overdue',
+  suspended: 'draft',
 } as const
 
 export function subscriptionStatusLabel(status: string | null | undefined) {
   return status ? translate(labels[status] ?? status) : '—'
 }
+
+export const customerStatusFilters = [
+  'trial',
+  'active',
+  'past_due',
+  'expired',
+  'suspended',
+] as const

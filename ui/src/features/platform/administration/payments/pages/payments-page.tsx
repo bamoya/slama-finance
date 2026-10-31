@@ -26,6 +26,7 @@ import {
 } from '../../../subscriptions/components/billing-format'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
+import { useUrlFilters } from '../../shared/hooks/use-url-filters'
 import { type Decision, PaymentDecisionDialog } from '../components/payment-decision-dialog'
 
 const statuses = [
@@ -39,8 +40,10 @@ type PaymentStatus = (typeof statuses)[number]['value']
 export function AdminPaymentsPage() {
   useUiLanguage()
   const client = useQueryClient()
-  const [status, setStatus] = useState<PaymentStatus>('submitted')
-  const [page, setPage] = useState(1)
+  const { values, change } = useUrlFilters(['status', 'page'])
+  const status: PaymentStatus =
+    statuses.find((item) => item.value === values.status)?.value ?? 'submitted'
+  const page = Math.max(1, Number.parseInt(values.page, 10) || 1)
   const [active, setActive] = useState<{ payment: AdminPayment; decision: Decision } | null>(null)
   const query = useListAdminPayments({ status, page }, { query: { retry: false } })
   const confirm = useConfirmAdminPayment()
@@ -132,10 +135,7 @@ export function AdminPaymentsPage() {
               <Select
                 aria-label={translate('Payment status')}
                 value={status}
-                onValueChange={(value) => {
-                  setStatus(value as PaymentStatus)
-                  setPage(1)
-                }}
+                onValueChange={(value) => change({ status: value })}
               >
                 <SelectGroup>
                   {statuses.map((item) => (
@@ -163,7 +163,7 @@ export function AdminPaymentsPage() {
                 total={query.data.total}
                 page={query.data.page}
                 pageSize={query.data.pageSize}
-                onPage={setPage}
+                onPage={(next) => change({ page: String(next) })}
                 disabled={query.isFetching}
               />
             </>

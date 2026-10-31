@@ -9,12 +9,14 @@ export function SearchField({
   label,
   placeholder,
   onSearch,
+  initialValue = '',
 }: {
   label: string
   placeholder: string
   onSearch: (search: string) => void
+  initialValue?: string
 }) {
-  const [text, setText] = useState('')
+  const [text, setText] = useState(initialValue)
   useEffect(() => {
     const timer = setTimeout(() => onSearch(text.trim()), 300)
     return () => clearTimeout(timer)

@@ -21,7 +21,14 @@ export function InputOTP({
 
 export function InputOTPGroup({ className, ...props }: ComponentProps<'div'>) {
   return (
-    <div data-slot="input-otp-group" className={cn('flex items-center', className)} {...props} />
+    <div
+      data-slot="input-otp-group"
+      className={cn(
+        'flex items-center [&>[data-slot=input-otp-slot]:first-child]:rounded-l-lg [&>[data-slot=input-otp-slot]:first-child]:border-l [&>[data-slot=input-otp-slot]:last-child]:rounded-r-lg',
+        className,
+      )}
+      {...props}
+    />
   )
 }
 
@@ -37,7 +44,7 @@ export function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={isActive}
       className={cn(
-        'relative flex size-11 items-center justify-center border-y border-r border-[var(--border)] bg-[var(--surface)] text-base font-semibold text-[var(--text)] transition-colors first:rounded-l-lg first:border-l last:rounded-r-lg data-[active=true]:z-10 data-[active=true]:border-[var(--accent)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--accent)]',
+        'relative flex size-11 items-center justify-center border-y border-r border-[var(--border)] bg-[var(--surface)] text-base font-semibold text-[var(--text)] transition-colors data-[active=true]:z-10 data-[active=true]:border-[var(--accent)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--accent)]',
         className,
       )}
       {...props}

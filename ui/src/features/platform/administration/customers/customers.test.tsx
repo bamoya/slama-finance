@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { mockApi, renderAt, session, useAdminTestLifecycle } from '../shared/api-mock'
+import { calls, mockApi, renderAt, session, useAdminTestLifecycle } from '../shared/api-mock'
 import { AdminCustomersPage } from './pages/customers-page'
 
 useAdminTestLifecycle()
@@ -24,6 +24,9 @@ describe('admin customers', () => {
                 planCode: 'essential',
                 paidThroughAt: '2026-11-01T09:00:00Z',
                 organizationCount: 2,
+                blockedAt: null,
+                deletionDueAt: null,
+                invitationPending: false,
               },
             ],
             page: 1,
@@ -36,5 +39,37 @@ describe('admin customers', () => {
     const link = await screen.findByRole('link', { name: 'owner@example.test' })
     expect(link).toHaveAttribute('href', '/admin/customers/22222222-2222-4222-8222-222222222222')
     expect(screen.getByText('Owner One')).toBeInTheDocument()
+  })
+
+  it('reads status, search and page from the address and sends them to the API', async () => {
+    mockApi((key) => {
+      if (key === 'GET /v1/admin/auth/me') return { body: session }
+      if (key === 'GET /v1/admin/owners')
+        return { body: { items: [], page: 2, pageSize: 20, total: 25 } }
+    })
+    renderAt('/admin/customers?status=suspended&search=sara&page=2', <AdminCustomersPage />)
+    await screen.findByText('No customers found.')
+    const params = (
+      calls.filter((c) => c.url === '/v1/admin/owners').at(-1) as { params?: unknown }
+    ).params
+    expect(params).toEqual({ search: 'sara', status: 'suspended', page: 2 })
+  })
+
+  it('resets the filters and stores the status in the address', async () => {
+    mockApi((key) => {
+      if (key === 'GET /v1/admin/auth/me') return { body: session }
+      if (key === 'GET /v1/admin/owners')
+        return { body: { items: [], page: 1, pageSize: 20, total: 0 } }
+    })
+    renderAt('/admin/customers?status=expired', <AdminCustomersPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear filters' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(/^\/admin\/customers$/),
+    )
+    expect(
+      within(screen.getByRole('region', { name: 'Customers' })).queryByRole('button', {
+        name: 'Clear filters',
+      }),
+    ).toBeNull()
   })
 })

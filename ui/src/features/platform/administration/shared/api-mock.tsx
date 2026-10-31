@@ -9,7 +9,7 @@ import { memoryLocation } from 'wouter/memory-location'
 import { httpClient } from '../../../../api/http'
 
 export type Reply = { status?: number; body?: unknown }
-export const calls: { url?: string; method?: string; data?: unknown }[] = []
+export const calls: { url?: string; method?: string; data?: unknown; params?: unknown }[] = []
 const clients: QueryClient[] = []
 export const adminId = '11111111-1111-4111-8111-111111111111'
 export const session = {
@@ -52,7 +52,12 @@ export const apiError = (status: number, code: string) => ({
 export function mockApi(handler: (key: string, data: unknown) => Reply | undefined) {
   calls.length = 0
   vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
-    calls.push({ url: config.url, method: config.method, data: config.data })
+    calls.push({
+      url: config.url,
+      method: config.method,
+      data: config.data,
+      params: config.params,
+    })
     const reply = handler(`${config.method ?? 'GET'} ${config.url}`, config.data) ?? {}
     return {
       data: reply.status === 204 ? '' : JSON.stringify(reply.body ?? {}),
@@ -68,9 +73,10 @@ function Location() {
 export function renderAt(path: string, ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   clients.push(client)
+  const location = memoryLocation({ path })
   render(
     <QueryClientProvider client={client}>
-      <Router hook={memoryLocation({ path }).hook}>
+      <Router hook={location.hook} searchHook={location.searchHook}>
         {ui}
         <Location />
       </Router>

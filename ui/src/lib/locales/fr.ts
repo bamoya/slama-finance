@@ -1,5 +1,10 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Suspended subscriptions': 'Abonnements suspendus',
+  'Customer status': 'Statut du client',
+  'Subscription suspended': 'Abonnement suspendu',
+  'Customers whose subscription was suspended by an administrator.':
+    'Clients dont l’abonnement a été suspendu par un administrateur.',
   'Resume setup': 'Reprendre la configuration',
   Required: 'Obligatoire',
   'The workspace name can differ from your legal company name.':

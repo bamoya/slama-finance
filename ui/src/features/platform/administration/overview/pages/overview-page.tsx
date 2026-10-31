@@ -1,4 +1,4 @@
-import { CalendarClock, CircleCheck, CircleX, Hourglass, Wallet } from 'lucide-react'
+import { CalendarClock, CircleCheck, CirclePause, CircleX, Hourglass, Wallet } from 'lucide-react'
 
 import { useGetAdminOverview } from '../../../../../api/generated/administration/administration'
 import { RequestState } from '../../../../../components/management/request-state'
@@ -29,7 +29,7 @@ export function AdminOverviewPage() {
             label="Payments to verify"
             hint="Submitted payments awaiting confirmation or rejection."
             value={overview.pendingPayments}
-            href={adminPaths.payments}
+            href={`${adminPaths.payments}?status=submitted`}
             icon={Wallet}
             emphasized={overview.pendingPayments > 0}
           />
@@ -37,29 +37,36 @@ export function AdminOverviewPage() {
             label="Trials ending soon"
             hint="Free trials ending within 7 days."
             value={overview.trialsEndingSoon}
-            href={adminPaths.customers}
+            href={`${adminPaths.customers}?status=trial`}
             icon={CalendarClock}
           />
           <OverviewCard
             label="In grace period"
             hint="Coverage ended; access continues for up to 7 days."
             value={overview.inGracePeriod}
-            href={adminPaths.customers}
+            href={`${adminPaths.customers}?status=past_due`}
             icon={Hourglass}
           />
           <OverviewCard
             label="Active subscriptions"
             hint="Customers with a current paid period."
             value={overview.activeSubscriptions}
-            href={adminPaths.customers}
+            href={`${adminPaths.customers}?status=active`}
             icon={CircleCheck}
           />
           <OverviewCard
             label="Expired"
             hint="Customers whose access is blocked."
             value={overview.expired}
-            href={adminPaths.customers}
+            href={`${adminPaths.customers}?status=expired`}
             icon={CircleX}
+          />
+          <OverviewCard
+            label="Suspended subscriptions"
+            hint="Customers whose subscription was suspended by an administrator."
+            value={overview.suspended}
+            href={`${adminPaths.customers}?status=suspended`}
+            icon={CirclePause}
           />
         </section>
       )}

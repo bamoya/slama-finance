@@ -64,4 +64,16 @@ describe('admin payments', () => {
       }),
     )
   })
+
+  it('takes the status filter from the address', async () => {
+    mockApi((key) => {
+      if (key === 'GET /v1/admin/auth/me') return { body: session }
+      if (key === 'GET /v1/admin/payments')
+        return { body: { items: [], page: 1, pageSize: 20, total: 0 } }
+    })
+    renderAt('/admin/payments?status=rejected', <AdminPaymentsPage />)
+    await screen.findByText('No payments for this status.')
+    const last = calls.filter((c) => c.url === '/v1/admin/payments').at(-1)
+    expect(last?.params).toEqual({ status: 'rejected', page: 1 })
+  })
 })

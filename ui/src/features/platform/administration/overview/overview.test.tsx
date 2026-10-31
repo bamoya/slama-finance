@@ -18,13 +18,22 @@ describe('admin overview', () => {
             trialsEndingSoon: 2,
             inGracePeriod: 1,
             expired: 4,
+            suspended: 5,
           },
         }
     })
     renderAt('/admin', <AdminOverviewPage />)
     const pending = await screen.findByRole('link', { name: /Payments to verify/ })
-    expect(pending).toHaveAttribute('href', '/admin/payments')
+    expect(pending).toHaveAttribute('href', '/admin/payments?status=submitted')
     expect(pending).toHaveTextContent('3')
     expect(screen.getByRole('link', { name: /Expired/ })).toHaveTextContent('4')
+    expect(screen.getByRole('link', { name: /Expired/ })).toHaveAttribute(
+      'href',
+      '/admin/customers?status=expired',
+    )
+    expect(screen.getByRole('link', { name: /Suspended subscriptions/ })).toHaveAttribute(
+      'href',
+      '/admin/customers?status=suspended',
+    )
   })
 })

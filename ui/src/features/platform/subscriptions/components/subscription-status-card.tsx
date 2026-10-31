@@ -11,6 +11,7 @@ const statusLabel = {
   expired: 'Expired',
   past_due: 'Payment overdue',
   active: 'Active',
+  suspended: 'Subscription suspended',
 } as const
 
 function DateLine({ label, value }: { label: string; value: string | null | undefined }) {
