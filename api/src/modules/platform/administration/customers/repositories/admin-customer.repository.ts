@@ -20,6 +20,8 @@ export function createAdminCustomerRepository() {
       const matches = term
         ? or(
             ilike(platformUsers.email, like(term)),
+            ilike(platformUsers.firstName, like(term)),
+            ilike(platformUsers.lastName, like(term)),
             ilike(
               sql`concat_ws(' ',${platformUsers.firstName},${platformUsers.lastName})`,
               like(term),

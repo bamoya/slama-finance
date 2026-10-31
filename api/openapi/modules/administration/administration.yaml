@@ -671,7 +671,8 @@ components:
         [
           id,
           email,
-          name,
+          firstName,
+          lastName,
           createdAt,
           disabledAt,
           subscriptionStatus,
@@ -685,7 +686,8 @@ components:
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
-        name: { type: [string, 'null'] }
+        firstName: { type: [string, 'null'] }
+        lastName: { type: [string, 'null'] }
         createdAt: { type: string, format: date-time }
         disabledAt: { type: [string, 'null'], format: date-time }
         subscriptionStatus:

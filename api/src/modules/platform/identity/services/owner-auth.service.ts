@@ -59,11 +59,15 @@ export function createOwnerAuthService(
   return {
     async register(input: OwnerRegister) {
       emailAvailable()
+      const firstName = input.firstName.trim()
+      const lastName = input.lastName.trim()
+      if (!firstName || !lastName)
+        throw new AppError(400, 'VALIDATION_ERROR', 'First and last names are required.')
       await repository.register({
         email: normalize(input.email),
         passwordHash: await passwords.hash(input.password),
-        firstName: input.firstName?.trim() || null,
-        lastName: input.lastName?.trim() || null,
+        firstName,
+        lastName,
         locale: input.locale,
       })
       await sendToken(input.email, 'verify_email')

@@ -35,11 +35,11 @@ export function createAdminCustomersService(
       const items = await Promise.all(
         rows.map(async ({ owner, organizationCount }) => {
           const s = await billing.summary(owner.id)
-          const name = [owner.firstName, owner.lastName].filter(Boolean).join(' ')
           return {
             id: owner.id,
             email: owner.email,
-            name: name || null,
+            firstName: owner.firstName,
+            lastName: owner.lastName,
             createdAt: owner.createdAt.toISOString(),
             disabledAt: iso(owner.disabledAt),
             subscriptionStatus: s.status,

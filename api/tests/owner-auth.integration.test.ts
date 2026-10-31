@@ -41,10 +41,35 @@ describe('Independent platform-owner authentication', () => {
     await app?.close()
     await fixture?.cleanup()
   })
+  const names = { firstName: 'Amel', lastName: 'Ben Salah' }
   const post = (path: string, payload: object) =>
     app.inject({ method: 'POST', url: `/v1/owner-auth/${path}`, headers, payload })
+  it('requires trimmed first and last names at registration', async () => {
+    for (const payload of [
+      { email, password },
+      { email, password, firstName: 'Amel' },
+      { email, password, lastName: 'Ben Salah' },
+      { email, password, firstName: 'Amel', lastName: '   ' },
+    ])
+      expect((await post('register', payload)).statusCode).toBe(400)
+    expect(messages).toHaveLength(0)
+    await post('register', { email, password, firstName: '  Amel ', lastName: ' Ben Salah ' })
+    const [row] =
+      await fixture.client`select first_name, last_name from platform_users where email=${email}`
+    expect(row).toMatchObject({ first_name: 'Amel', last_name: 'Ben Salah' })
+  })
+
+  it('rejects empty and over-long names at registration', async () => {
+    for (const payload of [
+      { email, password, firstName: '', lastName: 'Ben Salah' },
+      { email, password, firstName: 'x'.repeat(101), lastName: 'Ben Salah' },
+    ])
+      expect((await post('register', payload)).statusCode).toBe(400)
+    expect(messages).toHaveLength(0)
+  })
+
   async function verifiedOwner() {
-    expect((await post('register', { email, password })).statusCode).toBe(202)
+    expect((await post('register', { email, password, ...names })).statusCode).toBe(202)
     expect((await post('verification/confirm', { token: token(messages[0]!) })).statusCode).toBe(
       204,
     )
@@ -54,7 +79,12 @@ describe('Independent platform-owner authentication', () => {
   }
 
   it('registers separately, requires verification and never returns hashes or tokens in JSON', async () => {
-    const result = await post('register', { email: 'Owner@Example.Test', password, locale: 'en' })
+    const result = await post('register', {
+      email: 'Owner@Example.Test',
+      password,
+      ...names,
+      locale: 'en',
+    })
     expect(result.statusCode).toBe(202)
     expect(result.body).not.toContain('token')
     expect(messages).toHaveLength(1)
@@ -129,7 +159,11 @@ describe('Independent platform-owner authentication', () => {
 
   it('uses generic requests and prevents duplicate signup from replacing credentials', async () => {
     await verifiedOwner()
-    const duplicate = await post('register', { email, password: 'different-password-2026' })
+    const duplicate = await post('register', {
+      email,
+      password: 'different-password-2026',
+      ...names,
+    })
     expect(duplicate.statusCode).toBe(202)
     expect(messages).toHaveLength(1)
     expect((await login()).statusCode).toBe(200)
@@ -168,7 +202,7 @@ describe('Independent platform-owner authentication', () => {
   })
 
   it('rejects expired tokens, disabled owners, weak passwords and untrusted origins', async () => {
-    expect((await post('register', { email, password: 'short' })).statusCode).toBe(400)
+    expect((await post('register', { email, password: 'short', ...names })).statusCode).toBe(400)
     await verifiedOwner()
     await post('password-reset/request', { email })
     await fixture.client`update owner_account_tokens set expires_at=now()-interval '1 minute' where purpose='reset_password'`
@@ -239,7 +273,7 @@ describe('Independent platform-owner authentication', () => {
         method: 'POST',
         url: '/v1/owner-auth/register',
         headers,
-        payload: { email, password },
+        payload: { email, password, ...names },
       })
       expect(result.statusCode).toBe(503)
       expect(result.json().code).toBe('OWNER_AUTH_UNAVAILABLE')
