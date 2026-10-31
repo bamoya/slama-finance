@@ -14,17 +14,19 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { products, productVariants } from './catalog.js'
 import { clients } from './clients.js'
 import { invoiceLines, invoices } from './invoices.js'
 import { documentTemplates } from './settings.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const deliveryNotes = pgTable(
   'delivery_notes',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
-    number: text('number').unique(),
+    number: text('number'),
     clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     invoiceId: uuid('invoice_id').references(() => invoices.id, { onDelete: 'restrict' }),
     templateId: uuid('template_id').references(() => documentTemplates.id, {
@@ -50,16 +52,18 @@ export const deliveryNotes = pgTable(
     contentVersion: integer('content_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    index('delivery_notes_client_status_idx').on(t.clientId, t.status),
-    index('delivery_notes_invoice_idx').on(t.invoiceId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('delivery_notes_number_tenant_unique').on(t.organizationId, t.number),
+    index('delivery_notes_client_status_idx').on(t.organizationId, t.clientId, t.status),
+    index('delivery_notes_invoice_idx').on(t.organizationId, t.invoiceId),
     check('delivery_notes_status', sql`${t.status} in ('draft','delivered','cancelled')`),
     check('delivery_notes_versions', sql`${t.version} > 0 and ${t.contentVersion} > 0`),
     check(
@@ -71,11 +75,12 @@ export const deliveryNotes = pgTable(
       sql`(${t.status} = 'draft' and ${t.number} is null) or (${t.status} = 'delivered' and ${t.number} is not null) or ${t.status} = 'cancelled'`,
     ),
   ],
-)
+).enableRLS()
 
 export const deliveryNoteLines = pgTable(
   'delivery_note_lines',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     deliveryNoteId: uuid('delivery_note_id')
       .notNull()
@@ -94,16 +99,21 @@ export const deliveryNoteLines = pgTable(
     quantity: integer('quantity').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    uniqueIndex('delivery_note_lines_position_uq').on(t.deliveryNoteId, t.position),
-    index('delivery_note_lines_source_invoice_idx').on(t.sourceInvoiceLineId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('delivery_note_lines_position_uq').on(
+      t.organizationId,
+      t.deliveryNoteId,
+      t.position,
+    ),
+    index('delivery_note_lines_source_invoice_idx').on(t.organizationId, t.sourceInvoiceLineId),
     check('delivery_note_lines_position', sql`${t.position} >= 0`),
     check('delivery_note_lines_quantity', sql`${t.quantity} > 0`),
     check('delivery_note_lines_name', sql`length(trim(${t.productName})) > 0`),
@@ -116,11 +126,12 @@ export const deliveryNoteLines = pgTable(
       sql`${t.productVariantId} is null or ${t.productId} is not null`,
     ),
   ],
-)
+).enableRLS()
 
 export const deliveryInvoiceAllocations = pgTable(
   'delivery_invoice_allocations',
   {
+    organizationId: organizationColumn(),
     invoiceLineId: uuid('invoice_line_id')
       .notNull()
       .references(() => invoiceLines.id, { onDelete: 'cascade' }),
@@ -130,8 +141,9 @@ export const deliveryInvoiceAllocations = pgTable(
     quantity: integer('quantity').notNull(),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     primaryKey({ columns: [t.invoiceLineId, t.deliveryNoteLineId] }),
-    index('delivery_invoice_allocations_delivery_idx').on(t.deliveryNoteLineId),
+    index('delivery_invoice_allocations_delivery_idx').on(t.organizationId, t.deliveryNoteLineId),
     check('delivery_invoice_allocations_quantity', sql`${t.quantity} > 0`),
   ],
-)
+).enableRLS()

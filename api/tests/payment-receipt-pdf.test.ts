@@ -5,10 +5,11 @@ import { PDFDocument } from 'pdf-lib'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 
-import type { PaymentRow } from '../src/modules/sales/payments/repositories/payment.repository.js'
-import { renderPaymentReceiptPdf } from '../src/modules/sales/payments/services/payment-receipt-pdf.service.js'
+import type { PaymentRow } from '../src/modules/organization/sales/payments/repositories/payment.repository.js'
+import { renderPaymentReceiptPdf } from '../src/modules/organization/sales/payments/services/payment-receipt-pdf.service.js'
 
 const row: PaymentRow = {
+  organizationId: '10000000-0000-4000-8000-000000000001',
   id: '11111111-1111-4111-8111-111111111111',
   number: 'PAY-2026-3188460612',
   operationId: '22222222-2222-4222-8222-222222222222',
@@ -31,8 +32,8 @@ const row: PaymentRow = {
   version: 1,
   createdAt: new Date('2026-10-02T10:00:00Z'),
   updatedAt: new Date('2026-10-02T10:00:00Z'),
-  createdByUserId: null,
-  updatedByUserId: null,
+  createdByActorId: null,
+  updatedByActorId: null,
   receiptIssuedAt: null,
   receiptSnapshot: {
     invoiceNumber: 'FAC-2026-4919302341',

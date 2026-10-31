@@ -1,0 +1,52 @@
+paths:
+  /v1/owner/subscription:
+    get:
+      operationId: getOwnerSubscription
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      responses:
+        '200':
+          description: Effective plan, exact coverage and admission limits. No payment is implied.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OwnerSubscription'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+components:
+  schemas:
+    SubscriptionEntitlements:
+      type: object
+      additionalProperties: false
+      required: [organizations, staffPerOrganization, features, storageBytes, businessEmails]
+      properties:
+        organizations: {type: [integer, 'null'], minimum: 1}
+        staffPerOrganization: {type: [integer, 'null'], minimum: 0}
+        features:
+          type: array
+          items: {type: string, enum: [custom_templates, business_emails, scheduled_reports, report_exports, staff_roles, advanced_analytics, custom_domains]}
+        storageBytes: {type: integer, minimum: 0}
+        businessEmails: {type: integer, minimum: 0}
+    OwnerSubscription:
+      type: object
+      additionalProperties: false
+      required: [planCode, planName, status, trialEndsAt, paidThroughAt, entitlements, organizationCount, usage]
+      properties:
+        planCode: {type: string, enum: [trial, essential, business, pro]}
+        planName: {type: string}
+        status: {type: string, enum: [not_started, trial, active, past_due, expired]}
+        trialEndsAt: {type: [string, 'null'], format: date-time}
+        paidThroughAt: {type: [string, 'null'], format: date-time}
+        entitlements: {$ref: '#/components/schemas/SubscriptionEntitlements'}
+        organizationCount: {type: integer, minimum: 0}
+        usage:
+          type: object
+          additionalProperties: false
+          required: [storageBytes, businessEmails, emailPeriodStart, emailPeriodEnd]
+          properties:
+            storageBytes: {type: integer, minimum: 0}
+            businessEmails: {type: integer, minimum: 0}
+            emailPeriodStart: {type: [string, 'null'], format: date-time}
+            emailPeriodEnd: {type: [string, 'null'], format: date-time}

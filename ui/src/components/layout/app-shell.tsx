@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { type CSSProperties, type ReactNode } from 'react'
 import { useLocation } from 'wouter'
 
-import { AccountMenu } from '../../features/identity'
+import { AccountMenu } from '../../features/organization/identity'
 import { translate, useUiLanguage } from '../../lib/i18n'
 import { useTheme } from '../../lib/use-theme'
 import { PageActionsProvider } from '../management/page-actions-context'

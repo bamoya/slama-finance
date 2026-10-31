@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createPasswordRecoveryService } from '../src/modules/identity/auth/services/password-recovery.service.js'
+import { createPasswordRecoveryService } from '../src/modules/organization/identity/auth/services/password-recovery.service.js'
 
 describe('password recovery delivery boundary', () => {
   function fixture() {

@@ -13,7 +13,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['src/modules/**/*.{ts,js,mjs}'],
-    ignores: ['src/modules/audit/writer.ts'], // Internal audit-event validation, not HTTP contracts.
+    ignores: ['src/modules/organization/audit/writer.ts'], // Internal audit-event validation, not HTTP contracts.
     rules: {
       'no-restricted-imports': [
         'error',

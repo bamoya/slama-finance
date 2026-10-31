@@ -9,14 +9,17 @@ import {
   ReportFiltersSchema,
 } from '../src/contracts/generated/reporting/reporting.schemas.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createIdentityModule } from '../src/modules/identity/index.js'
-import { createReportingModule } from '../src/modules/reporting/index.js'
-import { createReportingReadRepository } from '../src/modules/sales/shared/repositories/reporting-read.repository.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createIdentityModule } from '../src/modules/organization/identity/index.js'
+import { createReportingModule } from '../src/modules/organization/reporting/index.js'
+import { createReportingReadRepository } from '../src/modules/organization/sales/shared/repositories/reporting-read.repository.js'
 import { createNotificationSupport } from '../src/support/notifications/index.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 describe('Live and frozen reporting', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>,
     app: Awaited<ReturnType<typeof buildApp>>,
@@ -59,7 +62,7 @@ describe('Live and frozen reporting', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',

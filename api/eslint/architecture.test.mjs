@@ -6,7 +6,7 @@ import { ESLint } from 'eslint'
 
 const root = path.resolve(import.meta.dirname, '..')
 const eslint = new ESLint({ cwd: root })
-const invoice = 'src/modules/sales/invoices/services/invoice.service.ts'
+const invoice = 'src/modules/organization/sales/invoices/services/invoice.service.ts'
 const cases = [
   [
     'same-module service collaboration',
@@ -39,37 +39,47 @@ const cases = [
   ['service to controller', invoice, "import '../controllers/invoice.controller.js'", true],
   [
     'controller to repository',
-    'src/modules/clients/controllers/client.controller.ts',
+    'src/modules/organization/clients/controllers/client.controller.ts',
     "import '../repositories/client.repository.js'",
     true,
   ],
   [
     'repository to service',
-    'src/modules/clients/repositories/client.repository.ts',
+    'src/modules/organization/clients/repositories/client.repository.ts',
     "import '../services/client.service.js'",
     true,
   ],
   ['service to Fastify', invoice, "import 'fastify'", true],
-  ['service to tables', invoice, "import '../../../../../db/schema/sales.js'", true],
+  ['service to tables', invoice, "import '../../../../../../db/schema/invoices.js'", true],
   [
     'repository to tables',
-    'src/modules/clients/repositories/client.repository.ts',
+    'src/modules/organization/clients/repositories/client.repository.ts',
     "import '../../../../db/schema/clients.js'",
     false,
   ],
-  ['infrastructure to domain', 'src/lib/example.ts', "import '../modules/clients/index.js'", true],
+  [
+    'infrastructure to domain',
+    'src/lib/example.ts',
+    "import '../modules/organization/clients/index.js'",
+    true,
+  ],
   ['new unapproved module', 'src/modules/products/index.ts', 'export {}', true],
-  ['composition to public entry', 'src/app.ts', "import './modules/sales/index.js'", false],
+  [
+    'composition to public entry',
+    'src/app.ts',
+    "import './modules/organization/sales/index.js'",
+    false,
+  ],
   [
     'composition to internal file',
     'src/app.ts',
-    "import './modules/sales/invoices/services/invoice.service.js'",
+    "import './modules/organization/sales/invoices/services/invoice.service.js'",
     true,
   ],
 ]
 test('module validators cannot define independent Zod contracts', async () => {
   const [result] = await eslint.lintText("import { z } from 'zod'", {
-    filePath: path.join(root, 'src/modules/identity/auth/schemas/auth.schemas.ts'),
+    filePath: path.join(root, 'src/modules/organization/identity/auth/schemas/auth.schemas.ts'),
   })
   assert.equal(
     result.messages.some((message) => message.ruleId === 'no-restricted-imports'),

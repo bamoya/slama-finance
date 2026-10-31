@@ -1,0 +1,195 @@
+paths:
+  /v1/organizations/{organizationId}/auth/login:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffLogin
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/Login
+  /v1/organizations/{organizationId}/auth/session:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: organizationStaffSession
+      security:
+        - organizationStaffCookie: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/organizations/{organizationId}/auth/logout:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffLogout
+      security:
+        - organizationStaffCookie: []
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/organizations/{organizationId}/auth/profile:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: organizationStaffUpdateProfile
+      security:
+        - organizationStaffCookie: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/UpdateProfile
+  /v1/organizations/{organizationId}/auth/change-password:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffChangePassword
+      security:
+        - organizationStaffCookie: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/ChangePassword
+  /v1/organizations/{organizationId}/auth/password-reset/request:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffRequestReset
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/PasswordResetAccepted
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/PasswordResetRequest
+  /v1/organizations/{organizationId}/auth/password-reset/confirm:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: organizationStaffConfirmReset
+      security: []
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../openapi.yaml#/components/schemas/PasswordResetConfirm

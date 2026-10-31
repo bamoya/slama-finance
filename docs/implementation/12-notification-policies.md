@@ -88,7 +88,7 @@ document state, permissions, active client, valid recipient/CC and printable con
 are still checked, so confirmation does not bypass security or recipient changes.
 The pre-production baseline defines the flag directly; no additional migration is added.
 
-`0001_required_defaults.sql` inserts six bilingual Slama HTML email rules, including
+`0000_initial_schema.sql` inserts six bilingual Slama HTML email rules, including
 the BL rule. French examples live in `docs/notification-email-examples`.
 Rules inherit company language and start disabled. Required-default inserts are
 idempotent: reapplying them does not overwrite customized templates, sender settings,

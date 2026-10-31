@@ -1,6 +1,6 @@
 # 04 — Clients
 
-Status: implemented in the API and UI. Baseline schema is in `0000_fresh_baseline.sql`; deployed databases receive flexible client fields through forward migration `0004_flexible_client_details.sql`.
+Status: implemented in the API and UI. Baseline schema is in `0000_initial_schema.sql`; deployed databases receive flexible client fields through forward migration `0000_initial_schema.sql`.
 
 [Index](README.md) · Depends on 02/03 · Next: [Catalog](05-catalog.md)
 

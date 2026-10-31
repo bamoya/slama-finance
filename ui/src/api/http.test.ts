@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { type AxiosAdapter, AxiosError } from 'axios'
 import { describe, expect, it, vi } from 'vitest'
 
-import { login } from '../features/identity/auth/api/auth-client'
+import { login } from '../features/organization/identity/auth/api/auth-client'
 import { ApiError, shouldRetryQuery } from '../lib/api-error'
 import { getListStaffQueryOptions } from './generated/identity/identity'
 import { downloadMedia } from './generated/media/media'

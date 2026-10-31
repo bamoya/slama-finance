@@ -8,10 +8,13 @@ import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
 import { companyDate } from '../src/lib/validation.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 const clientId = '33333333-3333-4333-8333-333333333333'
 const files = new Map<string, Uint8Array>()
 const storage: ObjectStorage = {
@@ -58,7 +61,7 @@ describe('Payments lifecycle', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -334,7 +337,7 @@ describe('Payments lifecycle', () => {
     const ids: string[] = []
     for (const purpose of ['company_logo', 'company_signature']) {
       const id = randomUUID()
-      const key = `media/${id}.png`
+      const key = `organizations/10000000-0000-4000-8000-000000000001/media/${id}.png`
       files.set(key, bytes)
       await fixture.client`insert into media_assets (id,object_key,original_filename,content_type,byte_size,sha256,purpose,status) values (${id},${key},'brand.png','image/png',${bytes.length},${createHash('sha256').update(bytes).digest('hex')},${purpose},'ready')`
       ids.push(id)

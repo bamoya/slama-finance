@@ -4,15 +4,15 @@ import {
   createRecordingEmailProvider,
   createResendEmailProvider,
 } from '../src/integrations/email/transport.js'
-import { clientNotificationEligibility } from '../src/modules/clients/services/client-notification.service.js'
+import { clientNotificationEligibility } from '../src/modules/organization/clients/services/client-notification.service.js'
 import {
   assertSendable,
   reminderOccurs,
-} from '../src/modules/sales/notifications/services/sales-notification.service.js'
+} from '../src/modules/organization/sales/notifications/services/sales-notification.service.js'
 import {
   composeNotification,
   validateRuleTemplates,
-} from '../src/modules/settings/notifications/services/notification-rule.service.js'
+} from '../src/modules/organization/settings/notifications/services/notification-rule.service.js'
 import type { ComposedMessage } from '../src/support/notifications/index.js'
 import {
   canonicalMessageHash,
@@ -95,7 +95,8 @@ describe('notification policies and transport', () => {
           ...message,
           attachments: [
             {
-              objectKey: 'artifacts/invoice/11111111-1111-4111-8111-111111111111.pdf',
+              objectKey:
+                'organizations/10000000-0000-4000-8000-000000000001/artifacts/invoice/11111111-1111-4111-8111-111111111111.pdf',
               filename: '../secret',
               contentType: 'application/pdf',
               byteSize: 8,

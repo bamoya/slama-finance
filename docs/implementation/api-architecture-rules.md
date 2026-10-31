@@ -1,5 +1,7 @@
 # API architecture enforcement
 
+Current application areas are `platform` and `organization`, with domain submodules beneath them. Preserve controller/service/repository direction and public submodule interfaces. Platform submodules may collaborate internally; cross-area internal imports remain forbidden. The dedicated platform analytics repository is allowed to query shared financial tables in ownership-scoped, read-only transactions. Organization IAM never accepts a platform session. See [the boundary agreement](../saas/platform-organization-boundaries.md).
+
 The target is a modular monolith with six business modules:
 `identity`, `settings`, `clients`, `catalog`, `sales`, and `reporting`.
 Features inside a module collaborate directly through services. Different

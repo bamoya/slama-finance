@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 
 import { drizzle } from 'drizzle-orm/postgres-js'
+import type { FastifyInstance } from 'fastify'
 import postgres from 'postgres'
 
 import * as tables from '../../db/schema/index.js'
 
+export const testOrganizationId = '10000000-0000-4000-8000-000000000001'
+export const testOwnerId = '10000000-0000-4000-8000-000000000002'
+
 export const testUserId = '11111111-1111-4111-8111-111111111111'
-export async function isolatedDatabase(options: { migrationCount?: number } = {}) {
+export async function isolatedDatabase() {
   const value = process.env.TEST_DATABASE_URL
   if (!value)
     throw new Error(
@@ -25,7 +29,7 @@ export async function isolatedDatabase(options: { migrationCount?: number } = {}
   const admin = postgres(value, { max: 1, onnotice: () => {} })
   const client = postgres(value, {
     max: 4,
-    connection: { search_path: `${schema},pg_catalog` },
+    connection: { search_path: `${schema},pg_catalog`, 'app.organization_id': testOrganizationId },
     onnotice: () => {},
   })
   const cleanup = async () => {
@@ -49,8 +53,7 @@ export async function isolatedDatabase(options: { migrationCount?: number } = {}
     const migrationDir = new URL('../../db/migrations/', import.meta.url)
     for (const name of (await readdir(migrationDir))
       .filter((name) => name.endsWith('.sql'))
-      .sort()
-      .slice(0, options.migrationCount)) {
+      .sort()) {
       const baseline = await readFile(new URL(name, migrationDir), 'utf8')
       // gen_random_uuid is native in supported PostgreSQL; do not mutate cluster extensions.
       await client.unsafe(
@@ -59,8 +62,13 @@ export async function isolatedDatabase(options: { migrationCount?: number } = {}
           .replaceAll('"public".', `"${schema}".`),
       )
     }
+    await client`insert into platform_users (id,email,password_hash) values (${testOwnerId},'fixture-owner@example.test','not-a-login-hash')`
+    await client`insert into organizations(id,owner_id,name,slug,activated_at) values (${testOrganizationId},${testOwnerId},'Fixture','fixture',now())`
+    await client`update owner_subscriptions set plan_code='pro',paid_through_at=now()+interval '30 days' where owner_id=${testOwnerId}`
     await client`INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password) VALUES (${testUserId}, 'operator@example.test', 'fixture-not-a-login-hash', 'Test', 'Operator', false)`
     await admin.unsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`)
+    await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".actors TO "${role}"`)
+    await admin.unsafe(`GRANT SELECT ON "${schema}".organizations TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT, UPDATE ON "${schema}".users TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".audit_events TO "${role}"`)
     return { db: drizzle(client, { schema: tables }), client, role, cleanup }
@@ -68,4 +76,22 @@ export async function isolatedDatabase(options: { migrationCount?: number } = {}
     await cleanup()
     throw error
   }
+}
+
+/** Explicit tenant selection for existing finance regression fixtures; isolation tests opt out. */
+export function attachTestDatabase(
+  app: FastifyInstance,
+  fixture: Awaited<ReturnType<typeof isolatedDatabase>>,
+) {
+  app.database = () => fixture.db
+  const inject = app.inject.bind(app)
+  app.inject = ((options: string | { url?: string; headers?: Record<string, unknown> }) => {
+    const input = typeof options === 'string' ? { url: options } : options
+    if (input.url?.startsWith('/v1/organizations/') || input.url?.startsWith('/v1/owner'))
+      return inject(input as never)
+    return inject({
+      ...input,
+      headers: { 'x-organization-id': testOrganizationId, ...input.headers },
+    } as never)
+  }) as typeof app.inject
 }

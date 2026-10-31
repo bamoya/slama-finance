@@ -1,5 +1,244 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'Resume setup': 'Reprendre la configuration',
+  Required: 'Obligatoire',
+  'The workspace name can differ from your legal company name.':
+    'Le nom de l’espace peut être différent de la raison sociale.',
+  'Business activity': 'Activité professionnelle',
+  'This creates an independent workspace for its clients, products and documents.':
+    'Un espace indépendant pour ses clients, produits et documents.',
+  'Add only the information you have. Empty fields will not appear on documents.':
+    'Ajoutez uniquement les informations disponibles. Les champs vides n’apparaîtront pas sur les documents.',
+  'Signature or stamp': 'Signature ou cachet',
+  'Optional · PNG, JPEG or WebP · up to 2 MB': 'Facultatif · PNG, JPEG ou WebP · jusqu’à 2 Mo',
+  'Replace image': 'Remplacer l’image',
+  'Upload image': 'Importer une image',
+  'Upload company logo': 'Importer le logo',
+  'Upload signature': 'Importer la signature',
+  'Remove image': 'Retirer l’image',
+  'Image uploaded. See the document preview.': 'Image importée. Consultez l’aperçu du document.',
+  'Document accent color': 'Couleur des documents',
+  'Document layout': 'Mise en page des documents',
+  'Compact documents': 'Documents compacts',
+  'Fit more product lines while keeping the selected layout.':
+    'Affichez davantage de lignes tout en conservant la mise en page choisie.',
+  'Apply VAT by default': 'Appliquer la TVA par défaut',
+  'Disabled unless you explicitly enable it.':
+    'Désactivée tant que vous ne l’activez pas explicitement.',
+  'VAT rate (%)': 'Taux de TVA (%)',
+  'Bank details & document footer': 'Coordonnées bancaires et pied de page',
+  'Document footer': 'Pied de page des documents',
+  'Owner · administrator access included': 'Propriétaire · accès administrateur inclus',
+  'You can start alone. Staff access is limited to this organization.':
+    'Vous pouvez commencer seul. L’accès des collaborateurs se limite à cette organisation.',
+  Administrator: 'Administrateur',
+  'Remove invitation': 'Retirer l’invitation',
+  'Add an invitation': 'Ajouter une invitation',
+  'Invitations are prepared here. No email is sent before organization activation.':
+    'Les invitations sont préparées ici. Aucun e-mail n’est envoyé avant l’activation de l’organisation.',
+  'No optional details added.': 'Aucune information facultative ajoutée.',
+  Uploaded: 'Importé',
+  'Not added': 'Non ajouté',
+  'Invoice payment deadline (days)': 'Délai de paiement des factures (jours)',
+  Example: 'Exemple',
+  'Layout preview only. Missing company details are omitted.':
+    'Aperçu de mise en page. Les informations manquantes sont omises.',
+  'Images must be at most 2 MB.': 'Les images ne doivent pas dépasser 2 Mo.',
+  'Use a PNG, JPEG or WebP image.': 'Choisissez une image PNG, JPEG ou WebP.',
+  'The image could not be read.': 'Impossible de lire cette image.',
+  'Configuration saved': 'Configuration enregistrée',
+  'Your organization is created.': 'Votre organisation est créée.',
+  'Your identity, branding and document defaults are saved. The organization remains in setup until workspace activation is available.':
+    'Votre identité, votre image de marque et vos préférences sont enregistrées. L’organisation reste en configuration jusqu’à ce que l’activation de l’espace soit disponible.',
+  'View organization': 'Voir l’organisation',
+  'Add a client.': 'Ajouter un client.',
+  'Add a product and its variant.': 'Ajouter un produit et sa variante.',
+  'Create an estimate or invoice.': 'Créer un devis ou une facture.',
+  'These are your first steps after workspace activation. Prepared invitations have not been sent.':
+    'Voici vos premières étapes après l’activation de l’espace. Les invitations préparées n’ont pas été envoyées.',
+  'Let’s prepare your workspace.': 'Préparons votre espace.',
+  'Six clear steps. Start with the essentials and add optional details at your pace.':
+    'Six étapes claires. Commencez par l’essentiel, puis ajoutez les informations facultatives à votre rythme.',
+  'Save & exit': 'Enregistrer et quitter',
+  'Step {{step}} of 6': 'Étape {{step}} sur 6',
+  'Organization setup steps': 'Étapes de configuration de l’organisation',
+  'Review your information. You can still edit each section.':
+    'Vérifiez vos informations. Vous pouvez encore modifier chaque section.',
+  'All fields are optional. Do not invent missing information.':
+    'Tous les champs sont facultatifs. N’inventez pas les informations manquantes.',
+  'Your owner account is already an administrator.':
+    'Votre compte propriétaire est déjà administrateur.',
+  'Your progress is saved when you continue.': 'Votre progression est enregistrée à chaque étape.',
+  'Create my organization': 'Créer mon organisation',
+  Continue: 'Continuer',
+  'Organization setup': 'Configuration de l’organisation',
+  Team: 'Équipe',
+  'Review & create': 'Vérifier et créer',
+  'Phone numbers': 'Numéros de téléphone',
+  'Each staff email can only be invited once.':
+    'Chaque adresse e-mail ne peut être invitée qu’une seule fois.',
+  'The owner already has administrator access.':
+    'Le propriétaire dispose déjà d’un accès administrateur.',
+  'Organization setup cannot be changed in its current state.':
+    'La configuration ne peut pas être modifiée dans l’état actuel de l’organisation.',
+  'Organization setup has already been completed.':
+    'La configuration de cette organisation est déjà terminée.',
+  'This setup was changed in another tab. Reload the saved version before continuing.':
+    'Cette configuration a été modifiée dans un autre onglet. Rechargez la version enregistrée avant de continuer.',
+  'Brand image not found.': 'Image de marque introuvable.',
+  'Brand image storage is unavailable.': 'Le stockage des images est indisponible.',
+  'Invalid image purpose.': 'Cette image ne correspond pas à l’usage prévu.',
+  PRIORITIES: 'PRIORITÉS',
+  'No organization access issues.': 'Aucun problème d’accès aux organisations.',
+  'All your organizations are active.': 'Toutes vos organisations sont actives.',
+  'View all organizations': 'Voir toutes les organisations',
+  'Financial summary': 'Synthèse financière',
+  'Data unavailable': 'Données indisponibles',
+  'FINANCIAL OVERVIEW': 'VUE FINANCIÈRE',
+  'Invoiced revenue and collections': 'Chiffre d’affaires et encaissements',
+  'Compare sales and payments across your organizations.':
+    'Comparez les ventes et les paiements de vos organisations.',
+  'Consolidated finances are not available yet.':
+    'Les finances consolidées ne sont pas encore disponibles.',
+  'Your organizations are connected. Financial totals and trends will appear here when consolidation is available.':
+    'Vos organisations sont bien reliées. Les totaux et tendances apparaîtront ici lorsque la consolidation sera disponible.',
+  'Unavailable figures are shown as a dash, never as a zero balance.':
+    'Un tiret indique une donnée indisponible, pas un solde nul.',
+  'Guided organization creation is coming soon.':
+    'La création guidée d’organisation sera bientôt disponible.',
+  'New organization': 'Nouvelle organisation',
+  'YOUR PORTFOLIO': 'VOTRE PORTEFEUILLE',
+  'Organization availability': 'Disponibilité des organisations',
+  'Your organization overview will appear here.': 'L’aperçu de vos organisations apparaîtra ici.',
+  'View details': 'Voir les détails',
+  'Owner navigation': 'Navigation propriétaire',
+  'One account. Independent organizations.': 'Un compte. Des organisations indépendantes.',
+  Help: 'Aide',
+  'Owner mobile navigation': 'Navigation mobile propriétaire',
+  'Hello {{name}}, here is your overview.': 'Bonjour {{name}}, voici l’essentiel.',
+  'Your business, at a glance.': 'Vos entreprises, en un coup d’œil.',
+  'A clear view of your organizations. A direct route to each business.':
+    'Une vue claire de vos organisations. Un accès direct à chaque entreprise.',
+  'Dashboard scope': 'Périmètre du tableau de bord',
+  'All your organizations': 'Toutes vos organisations',
+  'Organization scope': 'Organisation affichée',
+  'All organizations': 'Toutes les organisations',
+  'YOUR ORGANIZATIONS': 'VOS ORGANISATIONS',
+  'Independent spaces, one account.': 'Des espaces indépendants, un seul compte.',
+  'Manage all': 'Tout gérer',
+  'Your subscription': 'Votre abonnement',
+  'Plan details and usage are not available yet.':
+    'Les détails de votre offre et de votre consommation ne sont pas encore disponibles.',
+  'View subscription': 'Voir l’abonnement',
+  'Your first organization starts here.': 'Votre première organisation commence ici.',
+  'Each organization has its own clients, documents and staff. Your owner account includes administrator access.':
+    'Chaque organisation dispose de ses clients, documents et collaborateurs. Votre compte propriétaire inclut l’accès administrateur.',
+  'Your plan, allowances and usage in one place.':
+    'Votre offre, vos limites et votre consommation au même endroit.',
+  'Subscription management is coming soon.': 'La gestion de l’abonnement sera bientôt disponible.',
+  'Your plan and usage will appear here once available. No subscription or payment is changed on this page.':
+    'Votre offre et votre consommation apparaîtront ici dès qu’elles seront disponibles. Cette page ne modifie aucun abonnement ni paiement.',
+  'Compare plans': 'Comparer les offres',
+  'Of which overdue': 'Dont en retard',
+  'Invoiced in the period': 'Facturé sur la période',
+  'Revenue is invoiced sales, not profit. Expenses are not tracked.':
+    'Le chiffre d’affaires correspond aux ventes facturées, pas au bénéfice. Les dépenses ne sont pas suivies.',
+  'Payments in the period': 'Paiements sur la période',
+  'Payments recorded during the selected period.':
+    'Paiements enregistrés pendant la période sélectionnée.',
+  'Current unpaid balance': 'Solde impayé actuel',
+  'Current outstanding balance, independent of the reporting period.':
+    'Solde impayé actuel, indépendant de la période du rapport.',
+  'Included in outstanding': 'Inclus dans le reste à encaisser',
+  'Overdue balances are already included in outstanding.':
+    'Les montants en retard sont déjà inclus dans le reste à encaisser.',
+  Subscription: 'Abonnement',
+  'Hide password': 'Masquer le mot de passe',
+  'Show password': 'Afficher le mot de passe',
+  'Estimates and invoices': 'Devis et factures',
+  'Payments and receipts': 'Paiements et reçus',
+
+  'Each organization keeps its own data and access.':
+    'Chaque organisation garde ses données et ses accès.',
+  'Clients and teams': 'Clients et équipes',
+  'Administrator access included for the owner.':
+    'Accès administrateur inclus pour le propriétaire.',
+  'Your estimates, invoices and payments, in one clear view.':
+    'Vos devis, factures et paiements, dans une vue claire.',
+  'Everything connects.': 'Tout se retrouve.',
+  'YOUR OWNER PORTAL': 'VOTRE ESPACE PROPRIÉTAIRE',
+  'One owner account. Independent organizations.':
+    'Un compte propriétaire. Des organisations indépendantes.',
+  'The trial starts with your first organization.':
+    'L’essai débute avec votre première organisation.',
+  '7 days to discover your workspace.': '7 jours pour découvrir votre espace.',
+  'Created on': 'Créée le',
+  Organizations: 'Organisations',
+  'Owner portal': 'Espace propriétaire',
+  'Your organizations': 'Vos organisations',
+  'Choose an organization to view its details and access status.':
+    'Choisissez une organisation pour consulter ses informations et son état d’accès.',
+  'Owner account menu': 'Menu du compte propriétaire',
+  'Search organizations': 'Rechercher une organisation',
+  'Organization status': 'Statut de l’organisation',
+  'Additional staff': 'Membres du personnel',
+  'No organizations found': 'Aucune organisation trouvée',
+  'Your owned organizations will appear here. Try adjusting the search or status filter.':
+    'Vos organisations apparaîtront ici. Essayez de modifier la recherche ou le filtre de statut.',
+  'Organization identity and owner access.': 'Identité de l’organisation et accès du propriétaire.',
+  'Organization details': 'Informations de l’organisation',
+  'Organization name': 'Nom de l’organisation',
+  'Organization slug': 'Identifiant de l’organisation',
+  'Your access': 'Votre accès',
+  'Organization owner': 'Propriétaire de l’organisation',
+  'Owner access does not consume a staff slot. Staff use independent accounts for this organization.':
+    'L’accès du propriétaire n’utilise pas de place de personnel. Les membres du personnel utilisent des comptes indépendants pour cette organisation.',
+  Setup: 'Configuration',
+  Paused: 'En pause',
+  Suspended: 'Suspendue',
+  'Pending deletion': 'Suppression en attente',
+
+  'Staff account': 'Compte du personnel',
+  'Use the staff account created for this organization.':
+    'Utilisez le compte du personnel créé pour cette organisation.',
+  'Organization not found.': 'Organisation introuvable.',
+  'Organization temporarily unavailable': 'Organisation temporairement indisponible',
+  'This organization is currently paused. Please contact your organization administrator.':
+    'Cette organisation est actuellement suspendue. Veuillez contacter votre administrateur.',
+  'This organization is temporarily unavailable.':
+    'Cette organisation est temporairement indisponible.',
+
+  'Confirm password': 'Confirmer le mot de passe',
+  'Save password': 'Enregistrer le mot de passe',
+  'Owner sign in': 'Connexion propriétaire',
+  'Create your owner account': 'Créez votre compte propriétaire',
+  'Reset your owner password': 'Réinitialisez votre mot de passe propriétaire',
+  'Choose a new owner password': 'Choisissez un nouveau mot de passe propriétaire',
+  'Verify your owner email': 'Vérifiez votre adresse e-mail propriétaire',
+  'Resend verification email': 'Renvoyer l’e-mail de vérification',
+  'Manage your organizations with your independent owner account.':
+    'Gérez vos organisations avec votre compte propriétaire indépendant.',
+  'Email verified. You can now sign in.':
+    'Adresse vérifiée. Vous pouvez maintenant vous connecter.',
+  'Password updated. Sign in with your new password.':
+    'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.',
+  'If the account is eligible, an email will arrive shortly. Check your inbox and spam folder.':
+    'Si le compte est éligible, vous recevrez un e-mail prochainement. Consultez votre boîte de réception et vos courriers indésirables.',
+  'This link is incomplete. Request a new email below.':
+    'Ce lien est incomplet. Demandez un nouvel e-mail ci-dessous.',
+  'Verify email': 'Vérifier l’adresse e-mail',
+  'Owner account': 'Compte propriétaire',
+  'Staff sign in': 'Connexion du personnel',
+  'Create account': 'Créer un compte',
+  'Verify your email before signing in.': 'Vérifiez votre adresse e-mail avant de vous connecter.',
+  'Owner authentication is not enabled.': 'La connexion propriétaire n’est pas activée.',
+  'Owner account email is not configured.':
+    'L’envoi des e-mails du compte propriétaire n’est pas configuré.',
+  'This verification link is invalid or has expired.':
+    'Ce lien de vérification est invalide ou a expiré.',
+  'Sign in to your owner account.': 'Connectez-vous à votre compte propriétaire.',
+  'Invalid email or password.': 'Adresse e-mail ou mot de passe incorrect.',
+
   'Spaces, hyphens and underscores are allowed. The internal key is generated automatically.':
     'Les espaces, tirets et tirets bas sont autorisés. La clé interne est générée automatiquement.',
   'DD-MM-YYYY': 'JJ-MM-AAAA',
@@ -1845,4 +2084,70 @@ export const french: Record<string, string> = {
   'Cancel estimate': 'Annuler le devis',
   'Cancel invoice': 'Annuler la facture',
   'Cancel payment': 'Annuler le paiement',
+  'Open organization': 'Ouvrir l’organisation',
+  'Your company identity, branding and document defaults are ready in your independent workspace.':
+    'Votre identité, votre marque et vos documents sont prêts dans votre espace indépendant.',
+  'Activate organization': 'Activer l’organisation',
+  'You already have administrator access. Prepared invitations have not been sent; staff can be added from your workspace.':
+    'Vous disposez déjà des droits administrateur. Les invitations préparées ne sont pas envoyées ; ajoutez votre équipe depuis votre espace.',
+  'Free trial': 'Essai gratuit',
+  'Trial not started': 'Essai non démarré',
+  'Payment overdue': 'Paiement en retard',
+  'The free trial lasts seven calendar days from your first organization.':
+    'L’essai gratuit dure sept jours calendaires à compter de votre première organisation.',
+  'Trial ends': 'Fin de l’essai',
+  'Paid through': 'Payé jusqu’au',
+  'Paid activation requires payment confirmation. No automatic payment is taken.':
+    'L’activation payante nécessite une confirmation du paiement. Aucun prélèvement automatique.',
+  'Contact us': 'Nous contacter',
+  'Plan allowances': 'Limites de l’offre',
+  Unlimited: 'Illimité',
+  'Additional staff per organization': 'Collaborateurs supplémentaires par organisation',
+  'Storage allowance': 'Stockage inclus',
+  'Business emails during trial': 'E-mails professionnels pendant l’essai',
+  'Business emails per month': 'E-mails professionnels par mois',
+  'Owners do not consume a staff slot. Disabled staff count; archived staff do not.':
+    'Les propriétaires ne consomment pas de place. Les comptes désactivés comptent ; les comptes archivés ne comptent pas.',
+  'Organization unavailable': 'Organisation indisponible',
+  Back: 'Retour',
+  Selected: 'Sélectionné',
+  'Back to owner portal': 'Retour au portail propriétaire',
+  'Storage used': 'Stockage utilisé',
+  'Business emails queued': 'E-mails professionnels mis en file',
+  'Allowance reached': 'Limite atteinte',
+  'Approaching your allowance': 'Vous approchez de votre limite',
+  'Trial allowance ends': 'Fin de la période d’essai',
+  'Next email reset': 'Prochaine remise à zéro des e-mails',
+  'Usage is shared across your organizations. Security emails do not count. Pending files count until deletion is confirmed.':
+    'L’utilisation est partagée entre vos organisations. Les e-mails de sécurité ne comptent pas. Les fichiers en attente comptent jusqu’à confirmation de leur suppression.',
+  'Your storage allowance has been reached. Remove unused files or upgrade your plan.':
+    'Votre limite de stockage est atteinte. Supprimez les fichiers inutilisés ou changez d’offre.',
+  'Your business email allowance has been reached.':
+    'Votre quota d’e-mails professionnels est atteint.',
+  'Business emails are not included in your plan.':
+    'Les e-mails professionnels ne sont pas inclus dans votre offre.',
+  'Your plan staff limit has been reached.':
+    'Le nombre de collaborateurs autorisés par votre offre est atteint.',
+  'Your plan organization limit has been reached.':
+    'Le nombre d’organisations autorisées par votre offre est atteint.',
+  'Your subscription has expired. Manage it from your owner portal.':
+    'Votre abonnement a expiré. Gérez-le depuis votre portail propriétaire.',
+  'View your plan and shared storage and email usage.':
+    'Consultez votre offre et l’utilisation partagée du stockage et des e-mails.',
+  'Switch organization': 'Changer d’organisation',
+  'Manage organizations': 'Gérer mes organisations',
+  'Initial administrator · independent organization account':
+    'Administrateur initial · compte organisation indépendant',
+  'Financial summaries are read-only. Log in separately to manage organization records.':
+    'Ces synthèses sont en lecture seule. Connectez-vous séparément pour gérer les données de l’organisation.',
+  Members: 'Membres',
+  'Your administrator login and temporary password will be emailed to you. Replace that password on first login. Prepared staff invitations have not been sent.':
+    'Vous recevrez votre identifiant administrateur et un mot de passe temporaire par e-mail. Remplacez-le à la première connexion. Les invitations préparées ne sont pas envoyées.',
+  'An independent administrator account is created using your email.':
+    'Un compte administrateur indépendant est créé avec votre adresse e-mail.',
+  'Your platform account and organization administrator account have separate credentials. The administrator counts toward the member limit.':
+    'Votre compte plateforme et votre compte administrateur organisation ont des identifiants indépendants. L’administrateur compte dans la limite de membres.',
+  'Members per organization': 'Membres par organisation',
+  'The initial administrator counts toward the member limit. Disabled members count; archived members do not.':
+    'L’administrateur initial compte dans la limite de membres. Les membres désactivés comptent ; les membres archivés ne comptent pas.',
 }

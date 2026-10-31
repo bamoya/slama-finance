@@ -2,7 +2,7 @@
 # WARNING: database password defaults are PUBLIC, insecure development placeholders.
 # Override both passwords in Dokploy before deployment. Use URL-safe passwords.
 # Changing env passwords after database initialization does NOT rotate database roles.
-# Initialization runs before API startup. Admin bootstrap and real S3/Resend credentials remain required.
+# Initialization runs before API startup. Configure owner authentication and real S3/Resend credentials separately.
 # From repository root, explicitly pass --env-file .env.production for CLI use.
 # Dokploy Domains: slama-finance.bamoya.com -> ui:8080;
 # api-slama-finance.bamoya.com -> api:3000. Enable HTTPS for both.
@@ -49,6 +49,8 @@ services:
       TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set the Resend API key}
       EMAIL_FROM: ${EMAIL_FROM:?Set the verified sender email address}
+      OWNER_AUTH_ENABLED: ${OWNER_AUTH_ENABLED:-false}
+      OWNER_PORTAL_ORIGIN: ${OWNER_PORTAL_ORIGIN:-}
       PASSWORD_RESET_URL: ${PUBLIC_ORIGIN:-https://slama-finance.bamoya.com}/reset-password
       NOTIFICATION_TRANSPORT: resend
       # PostgreSQL-backed workers run inside this single API process; no Redis needed.
@@ -90,6 +92,8 @@ services:
     image: ${UI_IMAGE:-ghcr.io/bamoya/slama-finance-ui@sha256:a903ccf9d7f9c2bda20b81e71804420980e58f3e03feddfa50eb17a91d30cd84}
     environment:
       API_BASE_URL: ${API_BASE_URL:-https://api-slama-finance.bamoya.com}
+      PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:-}
+      PUBLIC_WHATSAPP_NUMBER: ${PUBLIC_WHATSAPP_NUMBER:-}
     restart: unless-stopped
     expose: ['8080']
     networks: [default, application]
@@ -112,8 +116,6 @@ services:
     command: ['node', 'scripts/initialize-database.mjs']
     restart: 'no'
     environment:
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-yassin.bassim11@gmail.com}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       MIGRATION_DATABASE_URL: postgres://slama_owner:${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}@postgres:5432/slama_finance
       DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@postgres:5432/slama_finance
     networks: [database]

@@ -339,7 +339,7 @@ components:
     Category:
       type: object
       additionalProperties: false
-      required: [id, name, description, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId]
+      required: [id, name, description, archivedAt, version, createdAt, updatedAt, createdByActorId, updatedByActorId]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -348,8 +348,8 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        createdByUserId: { type: [string, 'null'], format: uuid }
-        updatedByUserId: { type: [string, 'null'], format: uuid }
+        createdByActorId: { type: [string, 'null'], format: uuid }
+        updatedByActorId: { type: [string, 'null'], format: uuid }
     VariantInput:
       type: object
       additionalProperties: false
@@ -388,7 +388,7 @@ components:
     ProductVariant:
       type: object
       additionalProperties: false
-      required: [id, productId, weightG, pricePerItem, costPerItem, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId]
+      required: [id, productId, weightG, pricePerItem, costPerItem, archivedAt, version, createdAt, updatedAt, createdByActorId, updatedByActorId]
       properties:
         id: { type: string, format: uuid }
         productId: { type: string, format: uuid }
@@ -399,12 +399,12 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        createdByUserId: { type: [string, 'null'], format: uuid }
-        updatedByUserId: { type: [string, 'null'], format: uuid }
+        createdByActorId: { type: [string, 'null'], format: uuid }
+        updatedByActorId: { type: [string, 'null'], format: uuid }
     Product:
       type: object
       additionalProperties: false
-      required: [id, reference, name, description, categoryId, imageAssetId, suggestedVatRate, archivedAt, version, createdAt, updatedAt, createdByUserId, updatedByUserId, variants]
+      required: [id, reference, name, description, categoryId, imageAssetId, suggestedVatRate, archivedAt, version, createdAt, updatedAt, createdByActorId, updatedByActorId, variants]
       properties:
         id: { type: string, format: uuid }
         reference: { type: string }
@@ -417,6 +417,6 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        createdByUserId: { type: [string, 'null'], format: uuid }
-        updatedByUserId: { type: [string, 'null'], format: uuid }
+        createdByActorId: { type: [string, 'null'], format: uuid }
+        updatedByActorId: { type: [string, 'null'], format: uuid }
         variants: { type: array, items: { $ref: '#/components/schemas/ProductVariant' } }

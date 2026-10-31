@@ -1,0 +1,289 @@
+paths:
+  /v1/owner-auth/register:
+    post:
+      operationId: registerOwner
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerRequestAccepted"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerRegister"
+  /v1/owner-auth/login:
+    post:
+      operationId: loginOwner
+      security: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerSession"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerLogin"
+  /v1/owner-auth/session:
+    get:
+      operationId: getOwnerSession
+      security:
+        - ownerSessionCookie: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerSession"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/owner-auth/logout:
+    post:
+      operationId: logoutOwner
+      security:
+        - ownerSessionCookie: []
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/owner-auth/verification/request:
+    post:
+      operationId: requestOwnerVerification
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerRequestAccepted"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerEmailRequest"
+  /v1/owner-auth/verification/confirm:
+    post:
+      operationId: confirmOwnerVerification
+      security: []
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerToken"
+  /v1/owner-auth/password-reset/request:
+    post:
+      operationId: requestOwnerPasswordReset
+      security: []
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerRequestAccepted"
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerEmailRequest"
+  /v1/owner-auth/password-reset/confirm:
+    post:
+      operationId: confirmOwnerPasswordReset
+      security: []
+      responses:
+        "204":
+          description: Success
+        default:
+          description: Standard error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerResetPassword"
+components:
+  schemas:
+    OwnerRegister:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        locale:
+          type: string
+          enum:
+            - fr
+            - en
+          default: fr
+    OwnerLogin:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    OwnerEmailRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+    OwnerToken:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          minLength: 43
+          maxLength: 43
+          pattern: ^[A-Za-z0-9_-]+$
+    OwnerResetPassword:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+        - password
+      properties:
+        token:
+          type: string
+          minLength: 43
+          maxLength: 43
+          pattern: ^[A-Za-z0-9_-]+$
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+    OwnerSession:
+      type: object
+      additionalProperties: false
+      required:
+        - owner
+      properties:
+        owner:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - email
+            - firstName
+            - lastName
+            - locale
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            firstName:
+              type:
+                - string
+                - "null"
+            lastName:
+              type:
+                - string
+                - "null"
+            locale:
+              type: string
+              enum:
+                - fr
+                - en
+    OwnerRequestAccepted:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string

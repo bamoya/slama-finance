@@ -1,26 +1,34 @@
-import { Redirect, Route } from 'wouter'
+import { Route } from 'wouter'
 
-import { ClientDetailPage } from '../../features/clients'
-import { ClientFormPage } from '../../features/clients'
-import { ClientsPage } from '../../features/clients'
-import { DashboardPage } from '../../features/dashboard'
-import { ChangePasswordPage } from '../../features/identity'
-import { ProfilePage } from '../../features/identity'
-import { RoleCreatePage } from '../../features/identity'
-import { RolesPage } from '../../features/identity'
-import { StaffDetailPage } from '../../features/identity'
-import { StaffFormPage } from '../../features/identity'
-import { StaffPage } from '../../features/identity'
-import { NotificationRulePage, NotificationsPage } from '../../features/notifications'
-import { ProductDetailPage } from '../../features/products'
-import { ProductFormPage } from '../../features/products'
-import { ProductsPage } from '../../features/products'
-import { CategoriesPage, CategoryDetailPage, CategoryFormPage } from '../../features/products'
-import { ReportScheduleFormPage } from '../../features/reports'
-import { ReportSchedulesPage } from '../../features/reports'
-import { LiveReportsPage, ReportsPage } from '../../features/reports'
-import { ReportRunPage, ReportScheduleDetailPage } from '../../features/reports'
-import { PaymentCreatePage, PaymentDetailPage, PaymentsPage } from '../../features/sales'
+import { ProductDetailPage } from '../../features/organization/catalog'
+import { ProductFormPage } from '../../features/organization/catalog'
+import { ProductsPage } from '../../features/organization/catalog'
+import {
+  CategoriesPage,
+  CategoryDetailPage,
+  CategoryFormPage,
+} from '../../features/organization/catalog'
+import { ClientDetailPage } from '../../features/organization/clients'
+import { ClientFormPage } from '../../features/organization/clients'
+import { ClientsPage } from '../../features/organization/clients'
+import { DashboardPage } from '../../features/organization/dashboard'
+import { ChangePasswordPage } from '../../features/organization/identity'
+import { ProfilePage } from '../../features/organization/identity'
+import { RoleCreatePage } from '../../features/organization/identity'
+import { RolesPage } from '../../features/organization/identity'
+import { StaffDetailPage } from '../../features/organization/identity'
+import { StaffFormPage } from '../../features/organization/identity'
+import { StaffPage } from '../../features/organization/identity'
+import { NotificationRulePage, NotificationsPage } from '../../features/organization/notifications'
+import { ReportScheduleFormPage } from '../../features/organization/reports'
+import { ReportSchedulesPage } from '../../features/organization/reports'
+import { LiveReportsPage, ReportsPage } from '../../features/organization/reports'
+import { ReportRunPage, ReportScheduleDetailPage } from '../../features/organization/reports'
+import {
+  PaymentCreatePage,
+  PaymentDetailPage,
+  PaymentsPage,
+} from '../../features/organization/sales'
 import {
   DeliveryConvertPage,
   DeliveryNoteDetailPage,
@@ -33,11 +41,11 @@ import {
   InvoiceDetailPage,
   InvoiceFormPage,
   InvoicesPage,
-} from '../../features/sales'
-import { BankAccountsPage } from '../../features/settings'
-import { CompanySettingsPage } from '../../features/settings'
-import { DocumentTemplatesPage } from '../../features/settings'
-import { SettingsRecordPage } from '../../features/settings'
+} from '../../features/organization/sales'
+import { BankAccountsPage } from '../../features/organization/settings'
+import { CompanySettingsPage } from '../../features/organization/settings'
+import { DocumentTemplatesPage } from '../../features/organization/settings'
+import { SettingsRecordPage } from '../../features/organization/settings'
 import { ProtectedRoute } from './protected-route'
 
 export const protectedRoutes = (
@@ -56,9 +64,6 @@ export const protectedRoutes = (
       <ProtectedRoute>
         <ProfilePage />
       </ProtectedRoute>
-    </Route>
-    <Route path="/">
-      <Redirect to="/dashboard" />
     </Route>
     <Route path="/dashboard">
       <ProtectedRoute>

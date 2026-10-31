@@ -4,8 +4,8 @@ import { PDFDocument, PDFPage } from 'pdf-lib'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ReportAnalysisSchema } from '../src/contracts/generated/reporting/reporting.schemas.js'
-import { frenchReportLabel } from '../src/modules/reporting/shared/services/report-labels.js'
-import { renderReport } from '../src/modules/reporting/shared/services/report-renderer.service.js'
+import { frenchReportLabel } from '../src/modules/organization/reporting/shared/services/report-labels.js'
+import { renderReport } from '../src/modules/organization/reporting/shared/services/report-renderer.service.js'
 
 const snapshot = (outstanding: string[] | null, overdue: string[]) =>
   ReportAnalysisSchema.parse({

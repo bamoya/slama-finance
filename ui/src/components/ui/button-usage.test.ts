@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { expect, it } from 'vitest'
 
-const sources = import.meta.glob<string>(['../../features/**/*.tsx', '../management/**/*.tsx'], {
+const sources = import.meta.glob<string>(['../../features/**/*', '../management/**/*'], {
   query: '?raw',
   import: 'default',
   eager: true,

@@ -22,6 +22,8 @@ function fixture() {
   const assertReadable = vi.fn(async () => undefined)
   const owners = { assertPublishable, assertReadable } as ArtifactOwnerAccess
   const repo = {
+    storageKey: async (path: string) =>
+      `organizations/10000000-0000-4000-8000-000000000001/${path}`,
     deleteIfUnreferenced: vi.fn(async (_key: string, remove: () => Promise<void>) => remove()),
     transaction: async <T>(work: (tx: Transaction) => Promise<T>) => work({} as Transaction),
     findOwnerVersion: vi.fn(async () => saved),

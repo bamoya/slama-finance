@@ -2,13 +2,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 describe('identity HTTP and persistence regression', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
-  const headers = { origin: 'http://localhost:5173' }
+  const headers = {
+    origin: 'http://localhost:5173',
+    'x-organization-id': '10000000-0000-4000-8000-000000000001',
+  }
   beforeAll(async () => {
     fixture = await isolatedDatabase()
     const hash = await createPasswordService().hash('test-password-123')
@@ -18,7 +21,7 @@ describe('identity HTTP and persistence regression', () => {
       environment: loadEnvironment({ NODE_ENV: 'test', CORS_ORIGIN: headers.origin }),
       logger: false,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
   })
   afterAll(async () => {
     await app?.close()

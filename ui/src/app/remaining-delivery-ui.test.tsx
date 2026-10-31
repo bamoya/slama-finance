@@ -5,10 +5,10 @@ import { Route, Router, Switch } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
 import { PageActionsProvider } from '../components/management/page-actions-context'
-import { ClientNotificationPreferences } from '../features/clients/components/client-notification-preferences'
-import { NotificationRulePage, NotificationsPage } from '../features/notifications'
-import { DocumentNotificationHistory } from '../features/sales/notifications/components/document-notification-history'
-import { SendDocumentDialog } from '../features/sales/notifications/components/send-document-dialog'
+import { ClientNotificationPreferences } from '../features/organization/clients/components/client-notification-preferences'
+import { NotificationRulePage, NotificationsPage } from '../features/organization/notifications'
+import { DocumentNotificationHistory } from '../features/organization/sales/notifications/components/document-notification-history'
+import { SendDocumentDialog } from '../features/organization/sales/notifications/components/send-document-dialog'
 import { ApiError } from '../lib/api-error'
 
 const state = vi.hoisted(() => ({
@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
   sendInvoice: vi.fn(),
   listDocumentNotifications: vi.fn(),
 }))
-vi.mock('../features/identity/auth/hooks/use-session', () => ({
+vi.mock('../features/organization/identity/auth/hooks/use-session', () => ({
   useSession: () => ({ data: { purpose: 'full', permissionKeys: state.keys }, isError: false }),
 }))
 vi.mock('../api/http', async () => {

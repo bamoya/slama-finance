@@ -1,0 +1,21 @@
+import type { FastifyInstance } from 'fastify'
+
+import { createRequirePortalOrigin } from '../../../../middlewares/require-portal-origin.js'
+import type { createOwnerAuthController } from '../controllers/owner-auth.controller.js'
+
+export function registerOwnerAuthRoutes(
+  app: FastifyInstance,
+  controller: ReturnType<typeof createOwnerAuthController>,
+  portalOrigin?: string,
+) {
+  app.addHook('onRequest', createRequirePortalOrigin(portalOrigin))
+  const limited = { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }
+  app.post('/register', limited, controller.register)
+  app.post('/login', limited, controller.login)
+  app.get('/session', controller.session)
+  app.post('/logout', controller.logout)
+  app.post('/verification/request', limited, controller.requestVerification)
+  app.post('/verification/confirm', limited, controller.confirmVerification)
+  app.post('/password-reset/request', limited, controller.requestReset)
+  app.post('/password-reset/confirm', limited, controller.confirmReset)
+}

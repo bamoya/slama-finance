@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderDocument } from '../src/lib/documents/render-document.js'
-import type { EstimateRow } from '../src/modules/sales/estimates/repositories/estimate.repository.js'
-import { renderSalesPdf } from '../src/modules/sales/shared/services/sales-pdf.service.js'
+import type { EstimateRow } from '../src/modules/organization/sales/estimates/repositories/estimate.repository.js'
+import { renderSalesPdf } from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
 
 vi.mock('../src/lib/documents/render-document.js', () => ({
   renderDocument: vi.fn(async () => ({ pdf: { save: async () => new Uint8Array([1]) } })),

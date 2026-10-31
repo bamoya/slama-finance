@@ -22,8 +22,7 @@ long-running application or public service. Runtime images do not auto-migrate.
 For the current Hostinger/Dokploy deployment, runtime-role provisioning, explicit
 grants, and migrations are now automated by the one-shot startup initializer;
 see [Dokploy startup](dokploy-startup.md). The historical production Compose below
-still uses manual release-profile migrations. Dokploy's initializer also supports
-empty-installation administrator bootstrap using deployment secrets.
+still uses manual release-profile migrations. Dokploy's initializer provisions schema and runtime access without default credentials.
 
 1. Initialize PostgreSQL in its persistent external volume. Keep its owner
    credential only in database/release administration, never in API settings.
@@ -33,10 +32,8 @@ empty-installation administrator bootstrap using deployment secrets.
    Do not mistake successful execution for a complete production access policy.
 3. Run reviewed migrations using `MIGRATION_DATABASE_URL` through the release
    profile. Verify the migration journal before starting the API.
-4. For Dokploy, configure `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
-   for the initializer, then complete mandatory password replacement on first login.
-   Existing users are never overwritten. Remove the bootstrap password afterward.
-   The existing `bootstrap-admin.ts` remains local-only.
+4. Register the owner through owner authentication. No global staff administrator is bootstrapped.
+   Complete tenant activation/isolation work before opening finance workspaces to customers.
 5. Verify all CRUD domains and protected issued-document behavior using the
    runtime role, including jobs, notification rules and scheduled reports.
 6. Configure Resend's verified sender, trusted HTTPS reset URL and company identity.

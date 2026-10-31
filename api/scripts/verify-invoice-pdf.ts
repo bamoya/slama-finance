@@ -8,9 +8,9 @@ import { loadEnvironment } from '../src/config/env.js'
 import { createLocalStorage } from '../src/integrations/storage/local.js'
 import { createS3Storage } from '../src/integrations/storage/s3.js'
 import { createDatabase } from '../src/lib/db.js'
-import { createMediaModule } from '../src/modules/media/index.js'
-import { createInvoiceRepository } from '../src/modules/sales/invoices/repositories/invoice.repository.js'
-import { renderSalesPdf } from '../src/modules/sales/shared/services/sales-pdf.service.js'
+import { createMediaModule } from '../src/modules/organization/media/index.js'
+import { createInvoiceRepository } from '../src/modules/organization/sales/invoices/repositories/invoice.repository.js'
+import { renderSalesPdf } from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
 
 const [number, output] = process.argv.slice(2)
 if (!number || !output) throw new Error('Usage: verify-invoice-pdf <invoice-number> <output.pdf>')

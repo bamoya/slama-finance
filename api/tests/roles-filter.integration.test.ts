@@ -4,14 +4,17 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 describe('role deletion and staff role filters', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
   let cookies: { slama_session: string }
   let passwordHash: string
-  const headers = { origin: 'http://localhost:5173' }
+  const headers = {
+    origin: 'http://localhost:5173',
+    'x-organization-id': '10000000-0000-4000-8000-000000000001',
+  }
   beforeEach(async () => {
     fixture = await isolatedDatabase()
     passwordHash = await createPasswordService().hash('test-password-123')
@@ -21,7 +24,7 @@ describe('role deletion and staff role filters', () => {
       environment: loadEnvironment({ NODE_ENV: 'test', CORS_ORIGIN: headers.origin }),
       logger: false,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     cookies = await login('operator@example.test')
   })
   afterEach(async () => {

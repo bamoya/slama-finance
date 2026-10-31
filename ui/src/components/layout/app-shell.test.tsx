@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
-import { useSession } from '../../features/identity/auth/hooks/use-session'
+import { useSession } from '../../features/organization/identity/auth/hooks/use-session'
 import { AppShell } from './app-shell'
 
-vi.mock('../../features/identity/auth/hooks/use-session', () => ({
+vi.mock('../../features/organization/identity/auth/hooks/use-session', () => ({
   useSession: vi.fn(),
   useAuthTransition: () => vi.fn(),
 }))

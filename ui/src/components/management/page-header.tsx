@@ -12,6 +12,7 @@ import { usePageActions } from './use-page-actions'
 
 export function PageHeader({
   eyebrow,
+  brandName,
   title,
   description,
   actions,
@@ -19,6 +20,7 @@ export function PageHeader({
   backHref,
 }: {
   eyebrow?: string
+  brandName?: string
   title: string
   description: string
   actions?: ReactNode
@@ -57,7 +59,7 @@ export function PageHeader({
               data-slot="page-breadcrumbs"
               className="mb-1 flex items-center gap-1 text-[10px] font-semibold text-[var(--muted)] lg:mb-2 lg:gap-2 lg:text-xs"
             >
-              <span>{translate('Slama Finance')}</span>
+              <span>{brandName ?? translate('Slama Finance')}</span>
               <span className="text-[var(--border)]">/</span>
               <span className="text-[var(--accent)]">{eyebrow}</span>
             </div>

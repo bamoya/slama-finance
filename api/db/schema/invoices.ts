@@ -13,17 +13,19 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { products, productVariants } from './catalog.js'
 import { clients } from './clients.js'
 import { estimates } from './estimates.js'
 import { bankAccounts, documentTemplates } from './settings.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const invoices = pgTable(
   'invoices',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
-    number: text('number').unique(),
+    number: text('number'),
     status: text('status').notNull().default('draft'),
     clientId: uuid('client_id').references(() => clients.id, { onDelete: 'restrict' }),
     templateId: uuid('template_id').references(() => documentTemplates.id, {
@@ -33,7 +35,7 @@ export const invoices = pgTable(
       onDelete: 'restrict',
     }),
     sourceEstimateNumberSnapshot: text('source_estimate_number_snapshot'),
-    conversionOperationId: uuid('conversion_operation_id').unique(),
+    conversionOperationId: uuid('conversion_operation_id'),
     conversionRequest: jsonb('conversion_request'),
     issueDate: date('issue_date').notNull(),
     dueDate: date('due_date'),
@@ -63,16 +65,22 @@ export const invoices = pgTable(
     contentVersion: integer('content_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    index('invoices_client_status_idx').on(t.clientId, t.status),
-    index('invoices_source_estimate_idx').on(t.sourceEstimateId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('invoices_number_tenant_unique').on(t.organizationId, t.number),
+    uniqueIndex('invoices_conversionOperationId_tenant_unique').on(
+      t.organizationId,
+      t.conversionOperationId,
+    ),
+    index('invoices_client_status_idx').on(t.organizationId, t.clientId, t.status),
+    index('invoices_source_estimate_idx').on(t.organizationId, t.sourceEstimateId),
     check('invoices_status', sql`${t.status} in ('draft','issued','sent','cancelled')`),
     check('invoices_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
     check(
@@ -98,11 +106,12 @@ export const invoices = pgTable(
       sql`(${t.conversionOperationId} is null) = (${t.conversionRequest} is null) and (${t.sourceEstimateId} is null or ${t.conversionOperationId} is not null)`,
     ),
   ],
-)
+).enableRLS()
 
 export const invoiceLines = pgTable(
   'invoice_lines',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     invoiceId: uuid('invoice_id')
       .notNull()
@@ -123,16 +132,17 @@ export const invoiceLines = pgTable(
     totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    uniqueIndex('invoice_lines_position_uq').on(t.invoiceId, t.position),
-    index('invoice_lines_product_idx').on(t.productId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('invoice_lines_position_uq').on(t.organizationId, t.invoiceId, t.position),
+    index('invoice_lines_product_idx').on(t.organizationId, t.productId),
     check('invoice_lines_position', sql`${t.position} >= 0`),
     check('invoice_lines_product_name', sql`length(trim(${t.productName})) > 0`),
     check('invoice_lines_quantity', sql`${t.quantity} > 0`),
@@ -151,4 +161,4 @@ export const invoiceLines = pgTable(
       sql`${t.productVariantId} is null or ${t.productId} is not null`,
     ),
   ],
-)
+).enableRLS()

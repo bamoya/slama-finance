@@ -13,16 +13,18 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { invoices } from './invoices.js'
 import { bankAccounts } from './settings.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const payments = pgTable(
   'payments',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
-    number: text('number').notNull().unique(),
-    operationId: uuid('operation_id').notNull().unique(),
+    number: text('number').notNull(),
+    operationId: uuid('operation_id').notNull(),
     creationRequest: jsonb('creation_request').notNull(),
     receiptSnapshot: jsonb('receipt_snapshot'),
     receiptIssuedAt: timestamp('receipt_issued_at', { withTimezone: true }),
@@ -48,18 +50,21 @@ export const payments = pgTable(
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    index('payments_invoice_status_idx').on(t.invoiceId, t.status),
-    index('payments_collection_idx').on(t.collectedOn, t.status),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('payments_number_tenant_unique').on(t.organizationId, t.number),
+    uniqueIndex('payments_operationId_tenant_unique').on(t.organizationId, t.operationId),
+    index('payments_invoice_status_idx').on(t.organizationId, t.invoiceId, t.status),
+    index('payments_collection_idx').on(t.organizationId, t.collectedOn, t.status),
     uniqueIndex('payments_cheque_identity_idx')
-      .on(t.chequeBank, t.chequeNumber)
+      .on(t.organizationId, t.chequeBank, t.chequeNumber)
       .where(sql`${t.status} <> 'cancelled' and ${t.method} = 'cheque'`),
     check('payments_amount_positive', sql`${t.amount} > 0`),
     check('payments_currency', sql`${t.currency} ~ '^[A-Z]{3}$'`),
@@ -83,4 +88,4 @@ export const payments = pgTable(
     )`,
     ),
   ],
-)
+).enableRLS()

@@ -14,11 +14,13 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const reportSchedules = pgTable(
   'report_schedules',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     frequency: text('frequency').notNull(),
@@ -36,14 +38,15 @@ export const reportSchedules = pgTable(
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'restrict',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'restrict',
     }),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     index('report_schedules_due_idx')
       .on(t.nextRunAt)
       .where(sql`${t.enabled} and ${t.archivedAt} is null`),
@@ -73,29 +76,32 @@ export const reportSchedules = pgTable(
       sql`(${t.enabled} and ${t.nextRunAt} is not null and ${t.archivedAt} is null) or (not ${t.enabled} and ${t.nextRunAt} is null)`,
     ),
   ],
-)
+).enableRLS()
 export const reportScheduleRecipients = pgTable(
   'report_schedule_recipients',
   {
+    organizationId: organizationColumn(),
     scheduleId: uuid('schedule_id')
       .notNull()
       .references(() => reportSchedules.id, { onDelete: 'cascade' }),
     userId: uuid('user_id')
       .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
+      .references(() => actors.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'restrict',
     }),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     primaryKey({ columns: [t.scheduleId, t.userId] }),
-    index('report_schedule_recipients_user_idx').on(t.userId),
+    index('report_schedule_recipients_user_idx').on(t.organizationId, t.userId),
   ],
-)
+).enableRLS()
 export const reportRuns = pgTable(
   'report_runs',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     scheduleId: uuid('schedule_id')
       .notNull()
@@ -118,19 +124,20 @@ export const reportRuns = pgTable(
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     errorCode: text('error_code'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'restrict',
     }),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     uniqueIndex('report_runs_occurrence_uq')
-      .on(t.scheduleId, t.scheduledFor)
+      .on(t.organizationId, t.scheduleId, t.scheduledFor)
       .where(sql`${t.trigger} = 'scheduled'`),
     check(
       'report_runs_trigger',
-      sql`${t.trigger} in ('scheduled', 'test') and (${t.trigger} <> 'test' or ${t.createdByUserId} is not null)`,
+      sql`${t.trigger} in ('scheduled', 'test') and (${t.trigger} <> 'test' or ${t.createdByActorId} is not null)`,
     ),
-    index('report_runs_retry_idx').on(t.status, t.nextAttemptAt),
+    index('report_runs_retry_idx').on(t.organizationId, t.status, t.nextAttemptAt),
     index('report_runs_lease_idx')
       .on(t.lockedUntil)
       .where(sql`${t.status}='running'`),
@@ -160,4 +167,4 @@ export const reportRuns = pgTable(
       sql`${t.status}<>'succeeded' or ${t.dataSnapshot} is not null`,
     ),
   ],
-)
+).enableRLS()

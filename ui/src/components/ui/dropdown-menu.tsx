@@ -1,5 +1,5 @@
 import * as Menu from '@radix-ui/react-dropdown-menu'
-import type { ComponentProps } from 'react'
+import { type ComponentProps, type ElementRef, forwardRef } from 'react'
 
 import { useUiLanguage } from '../../lib/i18n'
 import { cn } from '../../lib/utils'
@@ -8,16 +8,16 @@ export const DropdownMenu = Menu.Root
 export const DropdownMenuTrigger = Menu.Trigger
 export const DropdownMenuGroup = Menu.Group
 
-export function DropdownMenuContent({
-  className,
-  sideOffset = 6,
-  ...props
-}: ComponentProps<typeof Menu.Content>) {
+export const DropdownMenuContent = forwardRef<
+  ElementRef<typeof Menu.Content>,
+  ComponentProps<typeof Menu.Content>
+>(({ className, sideOffset = 6, ...props }, ref) => {
   useUiLanguage()
 
   return (
     <Menu.Portal>
       <Menu.Content
+        ref={ref}
         sideOffset={sideOffset}
         className={cn(
           'z-50 min-w-48 max-w-[calc(100vw-2rem)] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text)] shadow-lg',
@@ -27,7 +27,10 @@ export function DropdownMenuContent({
       />
     </Menu.Portal>
   )
-}
+})
+DropdownMenuContent.displayName = 'DropdownMenuContent'
+export const DropdownMenuLabel = Menu.Label
+export const DropdownMenuArrow = Menu.Arrow
 
 export function DropdownMenuItem({
   className,

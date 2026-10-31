@@ -7,11 +7,14 @@ import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
 import { createS3Storage } from '../src/integrations/storage/s3.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createMediaModule } from '../src/modules/media/index.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createMediaModule } from '../src/modules/organization/media/index.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 describe('media lifecycle and settings attachments', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
@@ -56,7 +59,7 @@ describe('media lifecycle and settings attachments', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -96,8 +99,8 @@ describe('media lifecycle and settings attachments', () => {
       version,
       createdAt: _ca,
       updatedAt: _ua,
-      createdByUserId: _cb,
-      updatedByUserId: _ub,
+      createdByActorId: _cb,
+      updatedByActorId: _ub,
       ...fields
     } = (await app.inject({ url: '/v1/company-settings', cookies })).json()
     return app.inject({
@@ -201,8 +204,12 @@ describe('media lifecycle and settings attachments', () => {
     ).toBe('deleting')
     expect((await companyPatch(abandoned.id)).statusCode).toBe(404)
     expect(await cleanup()).toEqual({ removed: 1, failed: 0 })
-    expect(objects.has(`media/${attached.id}.png`)).toBe(true)
-    expect(objects.has(`media/${abandoned.id}.png`)).toBe(false)
+    expect(
+      objects.has(`organizations/10000000-0000-4000-8000-000000000001/media/${attached.id}.png`),
+    ).toBe(true)
+    expect(
+      objects.has(`organizations/10000000-0000-4000-8000-000000000001/media/${abandoned.id}.png`),
+    ).toBe(false)
   })
   it('retains a pending record for failed uploads so cleanup can recover', async () => {
     vi.mocked(storage.putImmutable).mockImplementationOnce(async (input) => {
@@ -227,7 +234,9 @@ describe('media lifecycle and settings attachments', () => {
     ])
     if (attached.statusCode === 200) {
       expect(deleted.statusCode).toBe(409)
-      expect(objects.has(`media/${asset.id}.png`)).toBe(true)
+      expect(
+        objects.has(`organizations/10000000-0000-4000-8000-000000000001/media/${asset.id}.png`),
+      ).toBe(true)
     } else {
       expect(deleted.statusCode).toBe(204)
       expect(attached.statusCode).toBe(404)
@@ -252,7 +261,7 @@ describe('media lifecycle and settings attachments', () => {
         logger: false,
         mediaStorage: liveStorage,
       })
-      app.database = () => fixture.db
+      attachTestDatabase(app, fixture)
       const result = await upload()
       expect(result.statusCode).toBe(201)
       const asset = result.json()
@@ -266,7 +275,9 @@ describe('media lifecycle and settings attachments', () => {
         expect((await remove(asset.id, metadata.version)).statusCode).toBe(204)
       } finally {
         // Only the unique object created by this test is removed.
-        await liveStorage.deleteUnreferenced(`media/${asset.id}.png`)
+        await liveStorage.deleteUnreferenced(
+          `organizations/10000000-0000-4000-8000-000000000001/media/${asset.id}.png`,
+        )
       }
     },
   )

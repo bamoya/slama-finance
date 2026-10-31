@@ -44,3 +44,25 @@ export interface EmailProvider {
   supportsIdempotency: boolean
   send(message: ReadyEmail, signal?: AbortSignal): Promise<{ providerMessageId: string }>
 }
+
+export interface OwnerAccountDelivery {
+  send(input: {
+    to: string
+    url: string
+    purpose: 'verify_email' | 'reset_password'
+    expiresAt: Date
+    language: 'fr' | 'en'
+  }): Promise<void>
+}
+
+export interface OrganizationAdminDelivery {
+  send(input: {
+    to: string
+    organizationName: string
+    temporaryPassword: string
+    loginUrl: string
+    expiresAt: Date
+    language: 'fr' | 'en'
+    idempotencyKey: string
+  }): Promise<void>
+}

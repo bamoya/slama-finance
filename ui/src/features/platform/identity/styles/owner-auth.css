@@ -1,0 +1,309 @@
+/* Continuum: identity owns its form; the app composes the shared public shell. */
+.marketing-site .owner-auth {
+  --text: var(--ink);
+  --error-text: #b7473c;
+  padding-block: 64px;
+  min-height: calc(100dvh - 77px);
+  display: grid;
+  align-items: center;
+}
+.marketing-site.is-dark .owner-auth {
+  --error-text: #f0a69c;
+}
+.marketing-site .owner-auth-panel {
+  width: 100%;
+  max-width: 980px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.marketing-site .owner-auth-form-column {
+  padding: 38px;
+  min-width: 0;
+}
+.marketing-site .owner-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 26px;
+  background: var(--muted);
+  border-radius: 10px;
+}
+.marketing-site .owner-auth-tabs a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--caption);
+}
+.marketing-site .owner-auth-tabs a[aria-current='page'] {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+.marketing-site .owner-auth-heading {
+  margin-bottom: 25px;
+}
+.marketing-site .owner-auth-heading h1 {
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+  margin: 0 0 10px;
+}
+.marketing-site .owner-auth-heading p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--caption);
+}
+.marketing-site .owner-auth form {
+  display: grid;
+  gap: 18px;
+}
+.marketing-site .owner-auth form > * {
+  margin-block: 0;
+}
+.marketing-site .owner-auth form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.6;
+}
+.marketing-site .owner-auth form .space-y-2 > :not(:last-child) {
+  margin-bottom: 7px;
+}
+.marketing-site .owner-auth .auth-field-control {
+  position: relative;
+}
+.marketing-site .owner-auth input {
+  height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--muted);
+  color: var(--ink);
+  font-size: 13px;
+  box-shadow: none;
+}
+.marketing-site .owner-auth input::placeholder {
+  color: var(--caption);
+}
+.marketing-site .owner-auth .auth-field-control:has(.auth-password-toggle) input {
+  padding-right: 44px;
+}
+.marketing-site .owner-auth input[aria-invalid='true'] {
+  border-color: var(--error-text);
+}
+.marketing-site .owner-auth .auth-password-toggle {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  height: 34px;
+  width: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--caption);
+}
+.marketing-site .owner-auth .auth-password-toggle:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+.marketing-site .owner-auth button[type='submit'],
+.marketing-site .owner-auth-form-column > button {
+  height: 44px;
+  min-height: 44px;
+  width: 100%;
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 550;
+}
+.marketing-site.is-dark .owner-auth button[type='submit'],
+.marketing-site.is-dark .owner-auth-form-column > button {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.marketing-site .owner-auth button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.marketing-site .owner-auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+  margin-top: 22px;
+  font-size: 11px;
+  color: var(--caption);
+  line-height: 1.7;
+}
+.marketing-site .owner-auth-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.marketing-site .owner-auth-links a:hover {
+  color: var(--accent);
+}
+.marketing-site .owner-auth-note {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  color: var(--caption);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.marketing-site .owner-auth-note > span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+}
+.marketing-site .owner-auth-note svg {
+  color: var(--accent);
+  flex: none;
+}
+.marketing-site .owner-auth-note small {
+  font-size: 10px;
+}
+.marketing-site .owner-auth-context {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 42px 32px;
+  background: var(--muted);
+  border-left: 1px solid var(--border);
+  min-width: 0;
+}
+.marketing-site .owner-auth-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--caption);
+}
+.marketing-site .owner-auth-context h2 {
+  font-size: 28px;
+  line-height: 1.3;
+  letter-spacing: -0.8px;
+  margin: 16px 0 24px;
+  font-weight: 600;
+}
+.marketing-site .owner-auth-context > p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--caption);
+  margin: 0 0 24px;
+}
+.marketing-site .owner-auth-organization {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  margin-bottom: 25px;
+}
+.marketing-site .owner-auth-organization > span {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  border-radius: 10px;
+  color: var(--accent);
+}
+.marketing-site .owner-auth-organization > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.marketing-site .owner-auth-organization strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.marketing-site .owner-auth-organization small {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--caption);
+}
+.marketing-site .owner-auth-capabilities {
+  display: grid;
+  gap: 18px;
+}
+.marketing-site .owner-auth-capabilities > span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--caption);
+}
+.marketing-site .owner-auth-capabilities svg {
+  color: var(--accent);
+  flex: none;
+}
+.marketing-site .owner-auth-context-note {
+  display: flex;
+  gap: 9px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--caption);
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.marketing-site .owner-auth-context-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+.marketing-site .owner-auth a:focus-visible,
+.marketing-site .owner-auth button:focus-visible,
+.marketing-site .owner-auth input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .marketing-site .owner-auth {
+    padding-block: 28px;
+    min-height: calc(100dvh - 68px);
+  }
+  .marketing-site .owner-auth-panel {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+  .marketing-site .owner-auth-form-column {
+    padding: 24px;
+  }
+  .marketing-site .owner-auth-context {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 24px;
+  }
+  .marketing-site .owner-auth-context h2 {
+    font-size: 23px;
+    margin: 12px 0 20px;
+  }
+  .marketing-site .owner-auth-heading h1 {
+    font-size: 24px;
+  }
+  .marketing-site .owner-auth-capabilities {
+    gap: 12px;
+  }
+}

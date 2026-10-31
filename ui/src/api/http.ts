@@ -3,6 +3,7 @@ import axios, { type AxiosRequestConfig } from 'axios'
 import { ApiError, decodeApiError } from '../lib/api-error'
 import { configuredApiBaseUrl, resolveApiBaseUrl } from './base-url'
 import { validateResponse } from './generated/schemas/responses'
+import { documentWorkspace } from './workspace-scope'
 
 const apiBaseUrl = resolveApiBaseUrl(
   configuredApiBaseUrl(import.meta.env.VITE_API_BASE_URL),
@@ -31,6 +32,15 @@ export async function apiRequest<T>(
   try {
     const response = await httpClient.request({
       ...request,
+      headers: {
+        ...request.headers,
+        ...(documentWorkspace && !path.startsWith('/v1/owner')
+          ? {
+              'X-Organization-Id': documentWorkspace.organizationId,
+              'X-Workspace-Identity': documentWorkspace.identityType,
+            }
+          : {}),
+      },
       baseURL: apiBaseUrl,
       withCredentials: true,
       validateStatus: () => true,
@@ -69,8 +79,24 @@ export async function apiRequest<T>(
         data = undefined
       }
     }
-    if (response.status === 401 && !path.startsWith('/v1/auth/') && typeof window !== 'undefined')
+    if (
+      response.status === 401 &&
+      !path.startsWith('/v1/auth/') &&
+      !path.startsWith('/v1/owner-auth/') &&
+      !path.startsWith('/v1/owner/') &&
+      !/^\/v1\/organizations\/[^/]+\/auth\//.test(path) &&
+      typeof window !== 'undefined'
+    )
       window.dispatchEvent(new Event('slama:session-expired'))
+    if (
+      (response.status === 403 || response.status === 402) &&
+      data &&
+      typeof data === 'object' &&
+      'code' in data &&
+      (data.code === 'ORGANIZATION_SUSPENDED' || data.code === 'SUBSCRIPTION_EXPIRED') &&
+      typeof window !== 'undefined'
+    )
+      window.dispatchEvent(new Event('slama:organization-unavailable'))
     if (response.status < 200 || response.status >= 300)
       throw decodeApiError(response.status, data, response.headers['x-request-id'])
     if (request.responseType === 'blob') return data as T

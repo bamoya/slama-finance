@@ -5,7 +5,7 @@ import { Linter } from 'eslint'
 import architecture from './architecture.js'
 
 const linter = new Linter()
-const verify = (code, file = 'src/features/settings/company.js') =>
+const verify = (code, file = 'src/features/organization/settings/company.js') =>
   linter.verify(
     code,
     [{ plugins: { architecture }, rules: { 'architecture/boundaries': 'error' } }],
@@ -26,45 +26,47 @@ test('dynamic imports and re-exports cannot bypass boundaries', () => {
   assert.equal(verify("export * from '../identity/auth/hooks/use-session'")[0]?.messageId, 'public')
 })
 test('features may only consume their own generated API module', () => {
-  assert.equal(verify("import { call } from '../../api/generated/settings/settings'").length, 0)
+  assert.equal(verify("import { call } from '../../../api/generated/settings/settings'").length, 0)
   assert.equal(
-    verify("import { call } from '../../api/generated/identity/identity'")[0]?.messageId,
+    verify("import { call } from '../../../api/generated/identity/identity'")[0]?.messageId,
     'generated',
   )
 })
 test('reports owns reporting operations and dashboard consumes its public API', () => {
   assert.equal(
     verify(
-      "import { call } from '../../api/generated/reporting/reporting'",
-      'src/features/reports/page.js',
+      "import { call } from '../../../api/generated/reporting/reporting'",
+      'src/features/organization/reports/page.js',
     ).length,
     0,
   )
   assert.equal(
     verify(
-      "import { call } from '../../api/generated/reporting/reporting'",
-      'src/features/dashboard/page.js',
+      "import { call } from '../../../api/generated/reporting/reporting'",
+      'src/features/organization/dashboard/page.js',
     )[0]?.messageId,
     'generated',
   )
   assert.equal(
-    verify("import { useDashboard } from '../reports/index'", 'src/features/dashboard/page.js')
-      .length,
+    verify(
+      "import { useDashboard } from '../reports/index'",
+      'src/features/organization/dashboard/page.js',
+    ).length,
     0,
   )
 })
 test('generated schema imports follow the same reporting ownership', () => {
   assert.equal(
     verify(
-      "import { Schema } from '../../api/generated/schemas/reporting/reporting.schemas'",
-      'src/features/reports/page.js',
+      "import { Schema } from '../../../api/generated/schemas/reporting/reporting.schemas'",
+      'src/features/organization/reports/page.js',
     ).length,
     0,
   )
   assert.equal(
     verify(
-      "import { Schema } from '../../api/generated/schemas/reporting/reporting.schemas'",
-      'src/features/dashboard/page.js',
+      "import { Schema } from '../../../api/generated/schemas/reporting/reporting.schemas'",
+      'src/features/organization/dashboard/page.js',
     )[0]?.messageId,
     'generated',
   )
@@ -72,15 +74,15 @@ test('generated schema imports follow the same reporting ownership', () => {
 test('notifications consumes settings policies through its public API', () => {
   assert.equal(
     verify(
-      "import { call } from '../../api/generated/settings/settings'",
-      'src/features/notifications/page.js',
+      "import { call } from '../../../api/generated/settings/settings'",
+      'src/features/organization/notifications/page.js',
     )[0]?.messageId,
     'generated',
   )
   assert.equal(
     verify(
       "import { useNotificationRules } from '../settings/index'",
-      'src/features/notifications/page.js',
+      'src/features/organization/notifications/page.js',
     ).length,
     0,
   )

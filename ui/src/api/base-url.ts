@@ -4,7 +4,7 @@ export function resolveApiBaseUrl(configured: string | undefined, production: bo
 }
 declare global {
   interface Window {
-    __SLAMA_CONFIG__?: { apiBaseUrl?: string }
+    __SLAMA_CONFIG__?: { apiBaseUrl?: string; contactEmail?: string; whatsappNumber?: string }
   }
 }
 

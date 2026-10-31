@@ -10,9 +10,14 @@ import { type Environment, loadEnvironment } from './config/env.js'
 import type {
   EmailProvider,
   ObjectStorage,
+  OrganizationAdminDelivery,
+  OwnerAccountDelivery,
   PasswordResetDelivery,
 } from './integrations/contracts.js'
+import { createOrganizationAdminDelivery } from './integrations/email/organization-admin.js'
+import { createOwnerAccountDelivery } from './integrations/email/owner-account.js'
 import { createResendResetDelivery } from './integrations/email/resend.js'
+import { createProviderResetDelivery } from './integrations/email/reset-delivery.js'
 import { createSmtpEmailProvider } from './integrations/email/smtp.js'
 import {
   createRecordingEmailProvider,
@@ -23,15 +28,24 @@ import { createS3Storage } from './integrations/storage/s3.js'
 import { createDatabase, type Database } from './lib/db.js'
 import { AppError, registerErrorHandlers } from './lib/errors.js'
 import { loggerOptions } from './lib/logging.js'
+import { organizationSessionToken } from './lib/organization-session.js'
+import { tenantDatabase } from './lib/tenant-database.js'
+import { createTenantWorkerRunner } from './lib/tenant-workers.js'
 import type { WorkerObserver } from './lib/worker-observer.js'
 import { createRequirePermission } from './middlewares/require-permission.js'
-import { createCatalogModule } from './modules/catalog/index.js'
-import { createClientModule, createClientNotificationModule } from './modules/clients/index.js'
-import { createIdentityModule } from './modules/identity/index.js'
-import { createMediaModule } from './modules/media/index.js'
-import { createReportingModule } from './modules/reporting/index.js'
-import { createSalesModule, createSalesNotificationsModule } from './modules/sales/index.js'
-import { createNotificationSettingsModule, createSettingsModule } from './modules/settings/index.js'
+import { registerTenantScope } from './middlewares/tenant-scope.js'
+import { createCatalogModule } from './modules/organization/index.js'
+import { createClientModule, createClientNotificationModule } from './modules/organization/index.js'
+import { createIdentityModule } from './modules/organization/index.js'
+import { createMediaModule } from './modules/organization/index.js'
+import { createReportingModule } from './modules/organization/index.js'
+import { createSalesModule, createSalesNotificationsModule } from './modules/organization/index.js'
+import {
+  createNotificationSettingsModule,
+  createSettingsModule,
+} from './modules/organization/index.js'
+import { createPlatformModule } from './modules/platform/index.js'
+import { createSubscriptionsModule } from './modules/platform/subscriptions/index.js'
 import { createArtifactCleanup } from './support/artifacts/index.js'
 import { createJobSupport } from './support/jobs/index.js'
 import { createNotificationSupport } from './support/notifications/index.js'
@@ -47,6 +61,8 @@ export interface AppOptions {
   environment?: Environment
   logger?: FastifyServerOptions['logger']
   readinessProbe?: () => Promise<void>
+  organizationAdminDelivery?: OrganizationAdminDelivery
+  ownerAccountDelivery?: OwnerAccountDelivery
   passwordReset?: { adapter: PasswordResetDelivery; resetUrl: string }
   mediaStorage?: ObjectStorage
   notificationProvider?: EmailProvider
@@ -132,9 +148,52 @@ export async function buildApp(options: AppOptions = {}) {
       clearTimeout(timer)
     }
   })
+  registerTenantScope(app)
   app.decorateRequest('actor', null)
+  const subscriptions = createSubscriptionsModule(() => tenantDatabase(app.database()))
+  const platform = createPlatformModule({
+    provisioning: () => identity.provisioning,
+    subscriptions: subscriptions.publicApi,
+    settings: () => settings.publicApi,
+    ownerBranding: () => media.ownerBranding,
+    database: () => tenantDatabase(app.database()),
+    ttlDays: env.SESSION_TTL_DAYS,
+    secure: env.NODE_ENV === 'production',
+    ownerAuth: {
+      enabled: env.OWNER_AUTH_ENABLED,
+      portalOrigin: env.OWNER_PORTAL_ORIGIN,
+      delivery:
+        options.ownerAccountDelivery ??
+        (env.NODE_ENV !== 'production' && env.NOTIFICATION_TRANSPORT === 'smtp'
+          ? createOwnerAccountDelivery(
+              createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
+              env.EMAIL_FROM ?? 'security@slama.local',
+            )
+          : env.RESEND_API_KEY && env.EMAIL_FROM
+            ? createOwnerAccountDelivery(
+                createResendEmailProvider({ apiKey: env.RESEND_API_KEY }),
+                env.EMAIL_FROM,
+              )
+            : undefined),
+    },
+  })
   const identity = createIdentityModule({
-    database: () => app.database(),
+    portalOrigin: env.OWNER_PORTAL_ORIGIN ?? env.CORS_ORIGIN[0],
+    adminDelivery:
+      options.organizationAdminDelivery ??
+      (env.NOTIFICATION_TRANSPORT === 'smtp'
+        ? createOrganizationAdminDelivery(
+            createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
+            env.EMAIL_FROM ?? 'security@slama.local',
+          )
+        : env.NOTIFICATION_TRANSPORT === 'resend' && env.RESEND_API_KEY && env.EMAIL_FROM
+          ? createOrganizationAdminDelivery(
+              createResendEmailProvider({ apiKey: env.RESEND_API_KEY }),
+              env.EMAIL_FROM,
+            )
+          : undefined),
+    subscriptions: subscriptions.publicApi,
+    database: () => tenantDatabase(app.database()),
     ttlDays: env.SESSION_TTL_DAYS,
     secure: env.NODE_ENV === 'production',
     onAuthorizationChange: async (tx, userIds) => {
@@ -143,22 +202,58 @@ export async function buildApp(options: AppOptions = {}) {
     },
     passwordReset:
       options.passwordReset ??
-      (env.RESEND_API_KEY && env.EMAIL_FROM && env.PASSWORD_RESET_URL
+      (env.NODE_ENV !== 'production' &&
+      env.NOTIFICATION_TRANSPORT === 'smtp' &&
+      env.PASSWORD_RESET_URL
         ? {
-            adapter: createResendResetDelivery({
-              apiKey: env.RESEND_API_KEY,
-              from: env.EMAIL_FROM,
-              onFailure: () =>
-                app.log.error(
-                  { code: 'RESET_EMAIL_DELIVERY_FAILED' },
-                  'Password reset email delivery failed',
-                ),
-            }),
+            adapter: createProviderResetDelivery(
+              createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
+              env.EMAIL_FROM ?? 'security@slama.local',
+            ),
             resetUrl: env.PASSWORD_RESET_URL,
           }
-        : undefined),
+        : env.RESEND_API_KEY && env.EMAIL_FROM && env.PASSWORD_RESET_URL
+          ? {
+              adapter: createResendResetDelivery({
+                apiKey: env.RESEND_API_KEY,
+                from: env.EMAIL_FROM,
+                onFailure: () =>
+                  app.log.error(
+                    { code: 'RESET_EMAIL_DELIVERY_FAILED' },
+                    'Password reset email delivery failed',
+                  ),
+              }),
+              resetUrl: env.PASSWORD_RESET_URL,
+            }
+          : undefined),
   })
-  await identity.registerRoutes(app, createRequirePermission(identity.publicApi))
+  const permission = createRequirePermission(identity.publicApi, async (request, key) => {
+    await tenantDatabase(app.database()).transaction(async (tx) => {
+      await subscriptions.publicApi.assertAccess(tx)
+      const feature =
+        key.startsWith('templates.') && !key.endsWith('.read')
+          ? 'custom_templates'
+          : key.startsWith('roles.')
+            ? 'staff_roles'
+            : key === 'notification_rules.update' || key.startsWith('notification_dispatches.')
+              ? 'business_emails'
+              : request.url.startsWith('/v1/report-schedules')
+                ? 'scheduled_reports'
+                : request.url.includes('/export')
+                  ? 'report_exports'
+                  : request.url.includes('/notifications') && request.method === 'POST'
+                    ? 'business_emails'
+                    : null
+      if (feature) await subscriptions.publicApi.feature(tx, feature)
+    })
+  })
+  await platform.registerRoutes(app)
+  await identity.registerRoutes(app, permission)
+  await subscriptions.registerRoutes(
+    app,
+    platform.publicApi.resolveOwnerSession,
+    env.OWNER_PORTAL_ORIGIN,
+  )
   const unavailableStorage: ObjectStorage = {
     async putImmutable() {
       throw new AppError(503, 'STORAGE_UNAVAILABLE', 'Configure private company asset storage.')
@@ -176,7 +271,7 @@ export async function buildApp(options: AppOptions = {}) {
       throw new AppError(503, 'STORAGE_UNAVAILABLE', 'Configure private document storage.')
     },
   }
-  const storage =
+  const rawStorage =
     options.mediaStorage ??
     (env.S3_ENDPOINT && env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
       ? createS3Storage({
@@ -189,9 +284,10 @@ export async function buildApp(options: AppOptions = {}) {
       : env.NODE_ENV === 'production'
         ? unavailableStorage
         : createLocalStorage(env.MEDIA_ASSET_DIR))
-  const media = createMediaModule(() => app.database(), storage)
+  const storage = subscriptions.storage(rawStorage)
+  const media = createMediaModule(() => tenantDatabase(app.database()), storage)
   const sales = createSalesModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     storage,
     media.publicApi,
     () => reporting.owners,
@@ -205,7 +301,7 @@ export async function buildApp(options: AppOptions = {}) {
     else app.log.info(event, 'Background worker outcome')
   }
   const notifications = createNotificationSupport(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     storage,
     options.notificationProvider ??
       (notificationTransport === 'resend'
@@ -213,10 +309,10 @@ export async function buildApp(options: AppOptions = {}) {
         : notificationTransport === 'smtp'
           ? createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT })
           : createRecordingEmailProvider()),
-    { allowedFrom: [senderEmail], observe },
+    { allowedFrom: [senderEmail], observe, reserveEmail: subscriptions.publicApi.reserveEmail },
   )
   const reporting = createReportingModule({
-    database: () => app.database(),
+    database: () => tenantDatabase(app.database()),
     sales: sales.publicApi.reporting,
     identity: identity.publicApi,
     storage,
@@ -226,7 +322,7 @@ export async function buildApp(options: AppOptions = {}) {
     observe,
   })
   const notificationSettings = createNotificationSettingsModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     notifications,
     {
       allowedFrom: [senderEmail],
@@ -235,12 +331,12 @@ export async function buildApp(options: AppOptions = {}) {
     },
   )
   const clientNotifications = createClientNotificationModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     notificationSettings.publicApi,
     (tx, clientId) => salesNotifications.invalidate(tx, { clientId }).then(() => undefined),
   )
   const salesNotifications = createSalesNotificationsModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     notifications,
     notificationSettings.publicApi,
     clientNotifications.publicApi,
@@ -254,11 +350,14 @@ export async function buildApp(options: AppOptions = {}) {
     paymentConfirmed: (tx, paymentId) => salesNotifications.paymentConfirmed(tx, paymentId),
     documentFinalized: (tx, type, id) => salesNotifications.documentFinalized(tx, type, id),
   })
-  const cleanupArtifacts = createArtifactCleanup(() => app.database(), storage)
-  const jobMetrics = createJobSupport(() => app.database())
+  const cleanupArtifacts = createArtifactCleanup(() => tenantDatabase(app.database()), storage)
+  const jobMetrics = createJobSupport(() => tenantDatabase(app.database()))
   await media.registerRoutes(app, async (r) => {
-    const user = await identity.publicApi.resolveSession(r.cookies.slama_session)
+    const user = await identity.publicApi.resolveSession(organizationSessionToken(r))
     if (!user) throw new AppError(403, 'FORBIDDEN', 'Sign in with a full session.')
+    await tenantDatabase(app.database()).transaction((tx) =>
+      subscriptions.publicApi.assertAccess(tx),
+    )
     r.actor = { userId: user.id }
   })
   let cleanup: ReturnType<typeof setInterval> | undefined
@@ -271,20 +370,20 @@ export async function buildApp(options: AppOptions = {}) {
   let runningReport: Promise<unknown> | undefined
   let metricsTimer: ReturnType<typeof setInterval> | undefined
   let runningMetrics: Promise<unknown> | undefined
+  const forEachTenant = createTenantWorkerRunner(() => app.database())
   app.addHook('onReady', async () => {
     if (env.NODE_ENV === 'test') return
     metricsTimer = setInterval(() => {
-      runningMetrics ??= Promise.all([
-        jobMetrics.metrics(),
-        notifications.metrics(),
-        reporting.metrics(),
-      ])
-        .then(([preparation, delivery, reports]) => {
-          app.log.info(
-            { event: 'worker_queue_metrics', preparation, delivery, reports },
-            'Background queue metrics',
-          )
-        })
+      runningMetrics ??= forEachTenant(async (organizationId) =>
+        Promise.all([jobMetrics.metrics(), notifications.metrics(), reporting.metrics()]).then(
+          ([preparation, delivery, reports]) => {
+            app.log.info(
+              { event: 'worker_queue_metrics', organizationId, preparation, delivery, reports },
+              'Background queue metrics',
+            )
+          },
+        ),
+      )
         .catch(() =>
           app.log.warn({ code: 'WORKER_METRICS_UNAVAILABLE' }, 'Background metrics unavailable'),
         )
@@ -294,8 +393,7 @@ export async function buildApp(options: AppOptions = {}) {
     }, 60_000)
     metricsTimer.unref()
     workerTimer = setInterval(() => {
-      runningWorker ??= sales.worker
-        .runOne()
+      runningWorker ??= forEachTenant(() => sales.worker.runOne())
         .catch(() => app.log.error('Document preparation worker failed'))
         .finally(() => {
           runningWorker = undefined
@@ -306,9 +404,14 @@ export async function buildApp(options: AppOptions = {}) {
       if (notificationTransport === 'recording' && !options.notificationProvider)
         app.log.warn('Business email uses recording transport; no external messages are sent.')
       notificationTimer = setInterval(() => {
-        runningNotification ??= salesNotifications.worker
-          .runOne()
-          .then(() => notifications.worker.runOne())
+        runningNotification ??= forEachTenant(() => identity.provisioning.runOne())
+          .then(() =>
+            forEachTenant(
+              () => salesNotifications.worker.runOne().then(() => notifications.worker.runOne()),
+              false,
+              'business_emails',
+            ),
+          )
           .catch(() => app.log.error({ code: 'NOTIFICATION_WORKER_FAILED' }, 'Email worker failed'))
           .finally(() => {
             runningNotification = undefined
@@ -317,10 +420,15 @@ export async function buildApp(options: AppOptions = {}) {
       notificationTimer.unref()
     }
     reportTimer = setInterval(() => {
-      runningReport ??= reporting.worker
-        .sweep()
-        .then(() => reporting.worker.runOne())
-        .then(() => salesNotifications.sweep())
+      runningReport ??= forEachTenant(
+        () =>
+          reporting.worker
+            .sweep()
+            .then(() => reporting.worker.runOne())
+            .then(() => salesNotifications.sweep()),
+        false,
+        'scheduled_reports',
+      )
         .catch(() => app.log.error({ code: 'REPORT_WORKER_FAILED' }, 'Report worker failed'))
         .finally(() => {
           runningReport = undefined
@@ -329,23 +437,27 @@ export async function buildApp(options: AppOptions = {}) {
     reportTimer.unref()
     cleanup = setInterval(
       () => {
-        running ??= Promise.all([
-          media.cleanup(),
-          cleanupArtifacts(),
-          notifications.retainPayloads(env.NOTIFICATION_PAYLOAD_RETENTION_DAYS),
-        ])
-          .then((result) => {
-            if (result[0].failed)
-              app.log.warn(
-                { failed: result[0].failed },
-                'Media cleanup will retry failed deletions',
-              )
-            if (result[1].failed)
-              app.log.warn(
-                { failed: result[1].failed },
-                'Artifact cleanup will retry failed deletions',
-              )
-          })
+        running ??= forEachTenant(
+          async () =>
+            Promise.all([
+              media.cleanup(),
+              cleanupArtifacts(),
+              subscriptions.publicApi.cleanupReservations(rawStorage.list?.bind(rawStorage)),
+              notifications.retainPayloads(env.NOTIFICATION_PAYLOAD_RETENTION_DAYS),
+            ]).then((result) => {
+              if (result[0].failed)
+                app.log.warn(
+                  { failed: result[0].failed },
+                  'Media cleanup will retry failed deletions',
+                )
+              if (result[1].failed)
+                app.log.warn(
+                  { failed: result[1].failed },
+                  'Artifact cleanup will retry failed deletions',
+                )
+            }),
+          true,
+        )
           .catch(() => app.log.error('Media cleanup failed'))
           .finally(() => {
             running = undefined
@@ -355,30 +467,34 @@ export async function buildApp(options: AppOptions = {}) {
     )
     cleanup.unref()
   })
-  await createSettingsModule(
-    () => app.database(),
+  const settings = createSettingsModule(
+    () => tenantDatabase(app.database()),
     media.publicApi,
     sales.publicApi.settingsDeletion,
-  ).registerRoutes(app, createRequirePermission(identity.publicApi))
+  )
+  await settings.registerRoutes(app, permission)
   await createCatalogModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     media.publicApi,
     sales.publicApi.catalogDeletion,
-  ).registerRoutes(app, createRequirePermission(identity.publicApi))
+  ).registerRoutes(app, permission)
   await createClientModule(
-    () => app.database(),
+    () => tenantDatabase(app.database()),
     (tx, clientId) => salesNotifications.invalidate(tx, { clientId }).then(() => undefined),
     sales.publicApi.clientDeletion,
-  ).registerRoutes(app, createRequirePermission(identity.publicApi))
-  await sales.registerRoutes(app, createRequirePermission(identity.publicApi), async (request) => {
-    const user = await identity.publicApi.resolveSession(request.cookies.slama_session)
+  ).registerRoutes(app, permission)
+  await sales.registerRoutes(app, permission, async (request) => {
+    const user = await identity.publicApi.resolveSession(organizationSessionToken(request))
     if (!user) throw new AppError(403, 'FORBIDDEN', 'Sign in with a full session.')
+    await tenantDatabase(app.database()).transaction((tx) =>
+      subscriptions.publicApi.assertAccess(tx),
+    )
     request.actor = { userId: user.id }
   })
-  await reporting.registerRoutes(app, createRequirePermission(identity.publicApi))
-  await notificationSettings.registerRoutes(app, createRequirePermission(identity.publicApi))
-  await clientNotifications.registerRoutes(app, createRequirePermission(identity.publicApi))
-  await salesNotifications.registerRoutes(app, createRequirePermission(identity.publicApi))
+  await reporting.registerRoutes(app, permission)
+  await notificationSettings.registerRoutes(app, permission)
+  await clientNotifications.registerRoutes(app, permission)
+  await salesNotifications.registerRoutes(app, permission)
 
   return app
 }

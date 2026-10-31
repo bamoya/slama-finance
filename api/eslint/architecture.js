@@ -1,17 +1,9 @@
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
-const modules = new Set([
-  'identity',
-  'settings',
-  'media',
-  'clients',
-  'catalog',
-  'sales',
-  'reporting',
-])
+const modules = new Set(['platform', 'organization'])
 // Exact existing files only. Remove these exceptions when migrating the foundation.
-const legacy = new Set(['src/modules/audit/writer.ts'])
+const legacy = new Set(['src/modules/organization/audit/writer.ts'])
 const layers = {
   routes: ['controllers', 'schemas', 'types', 'middlewares'],
   controllers: ['services', 'mappers', 'schemas', 'types'],
@@ -23,14 +15,22 @@ const layers = {
 }
 const relative = (filename) =>
   path.relative(root, filename).split(path.sep).join('/').replace(/\.js$/, '.ts')
-const owner = (filename) =>
-  filename
+const owner = (filename) => {
+  const nested = filename.match(/^src\/modules\/(platform|organization)\/([^/]+)\//)
+  if (nested) return `modules/${nested[1]}/${nested[2]}`
+  return filename
     .match(/^src\/(modules|support)\/([^/]+)\//)
     ?.slice(1)
     .join('/')
+}
 const layer = (filename) => filename.split('/').find((part) => Object.hasOwn(layers, part))
 const publicEntry = (filename) =>
-  /^src\/(modules|support)\/([^/]+)\/(index|\2\.public)\.ts$/.test(filename)
+  /^src\/support\/([^/]+)\/(index|\1\.public)\.ts$/.test(filename) ||
+  /^src\/modules\/(platform|organization)\/(?:([^/]+)\/)?(?:index|[^/]+\.public)\.ts$/.test(
+    filename,
+  )
+const platformInternal = (from, to) =>
+  from.startsWith('src/modules/platform/') && to.startsWith('src/modules/platform/')
 
 export default {
   rules: {
@@ -73,7 +73,7 @@ export default {
           const to = relative(path.resolve(path.dirname(context.filename), specifier))
           const toOwner = owner(to)
           const toLayer = layer(to)
-          if (toOwner && toOwner !== fromOwner && !publicEntry(to)) {
+          if (toOwner && toOwner !== fromOwner && !publicEntry(to) && !platformInternal(from, to)) {
             report(
               node,
               'Import another module only through its root index.ts or <module>.public.ts.',
@@ -92,6 +92,7 @@ export default {
             toOwner &&
             toOwner !== fromOwner &&
             fromLayer !== 'services' &&
+            !platformInternal(from, to) &&
             !/\.public\.ts$/.test(to)
           )
             report(
@@ -117,10 +118,7 @@ export default {
           Program(node) {
             const name = from.match(/^src\/modules\/([^/]+)\//)?.[1]
             if (name && !modules.has(name) && !legacy.has(from))
-              report(
-                node,
-                'Use an approved module: identity, settings, clients, catalog, sales or reporting.',
-              )
+              report(node, 'Use the platform or organization application area.')
           },
           ImportDeclaration: (node) => check(node.source),
           ExportNamedDeclaration: (node) => check(node.source),

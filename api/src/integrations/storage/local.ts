@@ -9,11 +9,15 @@ import type { ObjectStorage } from '../contracts.js'
 export function createLocalStorage(directory: string): ObjectStorage {
   const root = path.resolve(directory)
   const isArtifactKey = (key: string) =>
-    /^artifacts\/(?:invoice|estimate|delivery_note|payment_receipt|report_run)\/[a-f0-9-]{36}\.pdf$/.test(
+    /^organizations\/[a-f0-9-]{36}\/artifacts\/(?:invoice|estimate|delivery_note|payment_receipt|report_run)\/[a-f0-9-]{36}\.pdf$/.test(
       key,
-    ) || /^artifacts\/report_run\/[a-f0-9-]{36}\.(csv|xlsx)$/.test(key)
+    ) ||
+    /^organizations\/[a-f0-9-]{36}\/artifacts\/report_run\/[a-f0-9-]{36}\.(csv|xlsx)$/.test(key)
   function target(key: string) {
-    if (!/^media\/[a-f0-9-]{36}\.png$/.test(key) && !isArtifactKey(key))
+    if (
+      !/^organizations\/[a-f0-9-]{36}\/(?:media|branding)\/[a-f0-9-]{36}\.png$/.test(key) &&
+      !isArtifactKey(key)
+    )
       throw new AppError(400, 'INVALID_ASSET_KEY', 'Invalid storage key.')
     return path.join(root, key)
   }
@@ -49,17 +53,14 @@ export function createLocalStorage(directory: string): ObjectStorage {
       throw new AppError(503, 'SIGNED_URL_UNAVAILABLE', 'Use the authenticated download endpoint.')
     },
     async list(prefix) {
-      if (prefix !== 'artifacts/')
+      if (!/^organizations\/[a-f0-9-]{36}\/(?:artifacts|media|branding)\/$/.test(prefix))
         throw new AppError(400, 'INVALID_ASSET_KEY', 'Invalid listing prefix.')
       const entries = []
-      for (const kind of [
-        'invoice',
-        'estimate',
-        'delivery_note',
-        'payment_receipt',
-        'report_run',
-      ]) {
-        const directory = path.join(root, 'artifacts', kind)
+      const kinds = prefix.endsWith('/artifacts/')
+        ? ['invoice', 'estimate', 'delivery_note', 'payment_receipt', 'report_run']
+        : ['']
+      for (const kind of kinds) {
+        const directory = path.join(root, prefix, kind)
         let names: string[]
         try {
           names = await readdir(directory)
@@ -68,8 +69,12 @@ export function createLocalStorage(directory: string): ObjectStorage {
           throw error
         }
         for (const name of names) {
-          const key = `artifacts/${kind}/${name}`
-          if (!isArtifactKey(key)) continue
+          const key = `${prefix}${kind ? kind + '/' : ''}${name}`
+          if (
+            !isArtifactKey(key) &&
+            !/^organizations\/[a-f0-9-]{36}\/(?:media|branding)\/[a-f0-9-]{36}\.png$/.test(key)
+          )
+            continue
           const info = await stat(target(key))
           entries.push({ key, lastModified: info.mtime })
         }

@@ -1,0 +1,41 @@
+paths:
+  /v1/workspace/session:
+    get:
+      operationId: getWorkspaceSession
+      tags: [ identity ]
+      security:
+        [
+          { organizationStaffCookie: [], organizationScope: [] }
+        ]
+      responses:
+        '200':
+          description: Verified organization workspace identity. Only independent organization sessions are accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkspaceSession' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+components:
+  schemas:
+    WorkspaceSession:
+      type: object
+      additionalProperties: false
+      required: [ organization, identityType, session, subscription, defaultVatRate ]
+      properties:
+        organization: { $ref: ./owner-organizations.yaml#/components/schemas/OwnerOrganization }
+        identityType: { type: string, enum: [ staff ] }
+        session: { $ref: ./auth.yaml#/components/schemas/Session }
+        subscription:
+          type: object
+          additionalProperties: false
+          required: [entitlements]
+          properties:
+            entitlements:
+              $ref: ../subscriptions/subscriptions.yaml#/components/schemas/SubscriptionEntitlements
+        defaultVatRate:
+          type:
+            - string
+            - "null"

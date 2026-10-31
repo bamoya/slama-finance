@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { Redirect, useLocation } from 'wouter'
 
 import { AppShell } from '../../components/layout/app-shell'
-import { SessionStatus } from '../../features/identity'
-import { useSession } from '../../features/identity'
-import { Can, routePermissions } from '../../features/identity'
+import { SessionStatus } from '../../features/organization/identity'
+import { useSession } from '../../features/organization/identity'
+import { Can, routePermissions } from '../../features/organization/identity'
 import { translate, useUiLanguage } from '../../lib/i18n'
 import { ComingSoonPage } from '../pages/coming-soon-page'
 

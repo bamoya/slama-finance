@@ -401,14 +401,14 @@ paths:
           required: false
           schema:
             type: string
-            enum: [invoice, estimate, delivery, payment_receipt]
+            enum: [ invoice, estimate, delivery, payment_receipt ]
             default: invoice
         - name: sampleSize
           in: query
           required: false
           schema:
             type: string
-            enum: [short, many]
+            enum: [ short, many ]
             default: short
       x-permissions:
         - templates.read
@@ -435,10 +435,10 @@ components:
   schemas:
     DocumentLayout:
       type: string
-      enum: [classic, modern, minimal, signature, atelier, ledger, essential]
+      enum: [ classic, modern, minimal, signature, atelier, ledger, essential ]
     TemplateDensity:
       type: string
-      enum: [standard, compact]
+      enum: [ standard, compact ]
       default: standard
     CompanySettings:
       type: object
@@ -556,7 +556,7 @@ components:
           minimum: 0
           maximum: 3650
         defaultBankAccountId:
-          type: [string, 'null']
+          type: [ string, 'null' ]
           format: uuid
         defaultTemplateId:
           type:
@@ -573,16 +573,21 @@ components:
         updatedAt:
           type: string
           format: date-time
-        createdByUserId:
+        createdByActorId:
           type:
             - string
             - "null"
           format: uuid
-        updatedByUserId:
+        updatedByActorId:
           type:
             - string
             - "null"
           format: uuid
+        defaultVatRate:
+          type:
+            - string
+            - "null"
+          pattern: ^(100|[0-9]{1,2})(\.[0-9]{1,2})?$
       required:
         - id
         - legalName
@@ -611,8 +616,9 @@ components:
         - version
         - createdAt
         - updatedAt
-        - createdByUserId
-        - updatedByUserId
+        - createdByActorId
+        - updatedByActorId
+        - defaultVatRate
     UpdateCompanySettings:
       type: object
       additionalProperties: false
@@ -725,7 +731,7 @@ components:
           minimum: 0
           maximum: 3650
         defaultBankAccountId:
-          type: [string, 'null']
+          type: [ string, 'null' ]
           format: uuid
         defaultTemplateId:
           type:
@@ -736,6 +742,11 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+        defaultVatRate:
+          type:
+            - string
+            - "null"
+          pattern: ^(100|[0-9]{1,2})(\.[0-9]{1,2})?$
       required:
         - legalName
         - tradeName
@@ -811,12 +822,12 @@ components:
         updatedAt:
           type: string
           format: date-time
-        createdByUserId:
+        createdByActorId:
           type:
             - string
             - "null"
           format: uuid
-        updatedByUserId:
+        updatedByActorId:
           type:
             - string
             - "null"
@@ -833,8 +844,8 @@ components:
         - version
         - createdAt
         - updatedAt
-        - createdByUserId
-        - updatedByUserId
+        - createdByActorId
+        - updatedByActorId
     CreateBankAccount:
       type: object
       additionalProperties: false
@@ -977,12 +988,12 @@ components:
         updatedAt:
           type: string
           format: date-time
-        createdByUserId:
+        createdByActorId:
           type:
             - string
             - "null"
           format: uuid
-        updatedByUserId:
+        updatedByActorId:
           type:
             - string
             - "null"
@@ -1004,8 +1015,8 @@ components:
         - version
         - createdAt
         - updatedAt
-        - createdByUserId
-        - updatedByUserId
+        - createdByActorId
+        - updatedByActorId
     CreateDocumentTemplate:
       type: object
       additionalProperties: false

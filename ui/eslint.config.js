@@ -9,7 +9,7 @@ import architecture from './eslint/architecture.js'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'src/api/generated/**'],
+    ignores: ['dist/**', 'node_modules/**', '.local/**', 'src/api/generated/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

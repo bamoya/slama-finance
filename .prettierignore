@@ -14,3 +14,6 @@ api/db/schema/**/*.js
 ui/public
 # Literal email defaults mirrored by applied migration 0026; preserve their bytes.
 docs/notification-email-examples/*_*.html
+
+# Isolated design references and local build artifacts.
+**/.local

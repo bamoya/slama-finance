@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Transaction } from '../src/lib/db.js'
-import { toSession } from '../src/modules/identity/auth/mappers/auth.mapper.js'
-import { createAuthService } from '../src/modules/identity/auth/services/auth.service.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createSessionService } from '../src/modules/identity/auth/services/session.service.js'
+import { toSession } from '../src/modules/organization/identity/auth/mappers/auth.mapper.js'
+import { createAuthService } from '../src/modules/organization/identity/auth/services/auth.service.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createSessionService } from '../src/modules/organization/identity/auth/services/session.service.js'
 
 const user = {
   id: 'user-id',

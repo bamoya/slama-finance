@@ -7,16 +7,22 @@ import { loadEnvironment } from '../src/config/env.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
 import { createRecordingEmailProvider } from '../src/integrations/email/transport.js'
 import { companyDate } from '../src/lib/validation.js'
-import { createClientNotificationModule } from '../src/modules/clients/index.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createMediaModule } from '../src/modules/media/index.js'
-import { createSalesModule, createSalesNotificationsModule } from '../src/modules/sales/index.js'
-import { createNotificationSettingsModule } from '../src/modules/settings/index.js'
+import { createClientNotificationModule } from '../src/modules/organization/clients/index.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createMediaModule } from '../src/modules/organization/media/index.js'
+import {
+  createSalesModule,
+  createSalesNotificationsModule,
+} from '../src/modules/organization/sales/index.js'
+import { createNotificationSettingsModule } from '../src/modules/organization/settings/index.js'
 import { createNotificationSupport } from '../src/support/notifications/index.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 const clientId = '33333333-3333-4333-8333-333333333333'
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 
 describe('consent-aware sales notifications', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
@@ -66,7 +72,7 @@ describe('consent-aware sales notifications', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const login = await post('/v1/auth/login', {
       email: 'operator@example.test',
       password: 'notifications-password-123',

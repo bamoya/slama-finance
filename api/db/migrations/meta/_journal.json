@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1791842979279,
-      "tag": "0000_fresh_baseline",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1791842981108,
-      "tag": "0001_required_defaults",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1792451300577,
-      "tag": "0002_flexible_document_lifecycle",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1792455617607,
-      "tag": "0003_delivery_document_templates",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1792765073941,
-      "tag": "0004_flexible_client_details",
+      "when": 1793402254515,
+      "tag": "0000_initial_schema",
       "breakpoints": true
     }
   ]

@@ -10,15 +10,18 @@ import type { Estimate } from '../src/contracts/generated/sales/estimates.schema
 import type { Invoice } from '../src/contracts/generated/sales/invoices.schemas.js'
 import type { Payment } from '../src/contracts/generated/sales/payments.schemas.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createInvoiceRepository } from '../src/modules/sales/invoices/repositories/invoice.repository.js'
-import { createInvoiceOwnerAccess } from '../src/modules/sales/invoices/services/invoice.service.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createInvoiceRepository } from '../src/modules/organization/sales/invoices/repositories/invoice.repository.js'
+import { createInvoiceOwnerAccess } from '../src/modules/organization/sales/invoices/services/invoice.service.js'
 import { createArtifactCleanup, createArtifactSupport } from '../src/support/artifacts/index.js'
 import { createJobSupport } from '../src/support/jobs/index.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 const clientId = '33333333-3333-4333-8333-333333333333'
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 describe('Impact-confirmed sales deletion', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
@@ -93,7 +96,7 @@ describe('Impact-confirmed sales deletion', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -168,7 +171,7 @@ describe('Impact-confirmed sales deletion', () => {
     return result.json<DeliveryNote>()
   }
   async function file(type: string, id: string, version = 1) {
-    const key = `artifacts/${type}/${randomUUID()}.pdf`
+    const key = `organizations/10000000-0000-4000-8000-000000000001/artifacts/${type}/${randomUUID()}.pdf`
     objects.add(key)
     await fixture.client`insert into document_artifacts(document_type,document_id,source_version,format,object_key,mime_type,byte_size,sha256) values(${type},${id},${version},'pdf',${key},'application/pdf',9,${'a'.repeat(64)})`
     return key
@@ -502,16 +505,14 @@ describe('Impact-confirmed sales deletion', () => {
   it('removes staff access while retaining immutable historical attribution', async () => {
     const id = randomUUID()
     await fixture.client`insert into users(id,email,first_name,password_hash,must_change_password) values(${id},'staff@example.test','Staff','hash',false)`
-    await fixture.client`insert into audit_events(actor_user_id,actor_kind,action,entity_table,entity_key) values(${id},'user','create','clients',${JSON.stringify({ id: clientId })}::jsonb)`
+    await fixture.client`insert into audit_events(actor_id,actor_kind,action,entity_table,entity_key) values(${id},'user','create','clients',${JSON.stringify({ id: clientId })}::jsonb)`
     await deleteEntity('/v1/staff/deletion', { ids: [id] })
     const [user] =
       await fixture.client`select email,first_name,disabled_at,deleted_at from users where id=${id}`
     expect(user!.first_name).toBe('Deleted user')
     expect(user!.email).not.toBe('staff@example.test')
     expect(user!.deleted_at).not.toBeNull()
-    expect(
-      await fixture.client`select id from audit_events where actor_user_id=${id}`,
-    ).toHaveLength(1)
+    expect(await fixture.client`select id from audit_events where actor_id=${id}`).toHaveLength(1)
     expect((await app.inject({ url: `/v1/staff/${id}`, cookies })).statusCode).toBe(404)
     const self = await post('/v1/staff/deletion/preview', { ids: [testUserId] })
     expect(self.statusCode).toBe(409)

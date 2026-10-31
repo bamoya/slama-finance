@@ -7,9 +7,9 @@ import {
   ReportAnalysisSchema,
   ReportScheduleInputSchema,
 } from '../src/contracts/generated/reporting/reporting.schemas.js'
-import { reportFormats } from '../src/modules/reporting/shared/services/report-output.js'
-import { renderReport } from '../src/modules/reporting/shared/services/report-renderer.service.js'
-import { reportTable } from '../src/modules/reporting/shared/services/report-table.js'
+import { reportFormats } from '../src/modules/organization/reporting/shared/services/report-output.js'
+import { renderReport } from '../src/modules/organization/reporting/shared/services/report-renderer.service.js'
+import { reportTable } from '../src/modules/organization/reporting/shared/services/report-table.js'
 
 const snapshot = () =>
   ReportAnalysisSchema.parse({

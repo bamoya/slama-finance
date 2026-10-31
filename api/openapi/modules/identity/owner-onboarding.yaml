@@ -1,0 +1,705 @@
+{
+  "paths": {
+    "/v1/owner/organizations": {
+      "post": {
+        "operationId": "createOwnerOrganization",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Owner-scoped setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOnboarding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or concurrency error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOwnerOrganization"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owner/organizations/{organizationId}/onboarding": {
+      "parameters": [
+        {
+          "name": "organizationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getOwnerOnboarding",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-scoped setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOnboarding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or concurrency error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveOwnerOnboarding",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-scoped setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOnboarding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or concurrency error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveOwnerOnboarding"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owner/organizations/{organizationId}/onboarding/complete": {
+      "parameters": [
+        {
+          "name": "organizationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "completeOwnerOnboarding",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-scoped setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOnboarding"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or concurrency error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteOwnerOnboarding"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owner/organizations/{organizationId}/branding": {
+      "parameters": [
+        {
+          "name": "organizationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "uploadOwnerBrandAsset",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Owner-scoped setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerBrandAsset"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization, validation or concurrency error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerBrandUpload"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/owner/organizations/{organizationId}/branding/{assetId}": {
+      "parameters": [
+        {
+          "name": "organizationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "assetId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getOwnerBrandImage",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized normalized image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerBrandImage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "OwnerOnboardingConfiguration": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "activity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "company": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "legalName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200,
+                "format": "email"
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "ice": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "registrationNumber": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "taxIdentifier": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              }
+            }
+          },
+          "branding": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "logoAssetId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "signatureAssetId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "accentColor": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            },
+            "required": [
+              "accentColor"
+            ]
+          },
+          "defaults": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "layout": {
+                "type": "string",
+                "enum": [
+                  "essential",
+                  "signature",
+                  "atelier"
+                ]
+              },
+              "language": {
+                "type": "string",
+                "enum": [
+                  "fr",
+                  "en"
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "MAD"
+                ]
+              },
+              "paymentDueDays": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3650
+              },
+              "estimateValidDays": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3650
+              },
+              "compact": {
+                "type": "boolean"
+              },
+              "vatEnabled": {
+                "type": "boolean"
+              },
+              "vatRate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "bankName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "accountHolder": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "rib": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 50
+              },
+              "iban": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 100
+              },
+              "footerText": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "layout",
+              "language",
+              "currency",
+              "paymentDueDays",
+              "estimateValidDays",
+              "compact",
+              "vatEnabled",
+              "vatRate"
+            ]
+          },
+          "invitations": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "maxLength": 320
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "administrator",
+                    "staff"
+                  ]
+                }
+              },
+              "required": [
+                "email",
+                "role"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "company",
+          "branding",
+          "defaults",
+          "invitations"
+        ]
+      },
+      "CreateOwnerOrganization": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "activity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "name",
+          "requestId"
+        ]
+      },
+      "OwnerOnboarding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organization": {
+            "$ref": "./owner-organizations.yaml#/components/schemas/OwnerOrganization"
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/OwnerOnboardingConfiguration"
+          },
+          "currentStep": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "organization",
+          "configuration",
+          "currentStep",
+          "version",
+          "completedAt"
+        ]
+      },
+      "SaveOwnerOnboarding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/OwnerOnboardingConfiguration"
+          },
+          "currentStep": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "configuration",
+          "currentStep",
+          "expectedVersion"
+        ]
+      },
+      "CompleteOwnerOnboarding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ]
+      },
+      "OwnerBrandUpload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "company_logo",
+              "company_signature"
+            ]
+          },
+          "originalFilename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp"
+            ]
+          },
+          "data": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2796204
+          }
+        },
+        "required": [
+          "purpose",
+          "originalFilename",
+          "contentType",
+          "data"
+        ]
+      },
+      "OwnerBrandAsset": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "company_logo",
+              "company_signature"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "purpose"
+        ]
+      },
+      "OwnerBrandImage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "purpose",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "company_logo",
+              "company_signature"
+            ]
+          },
+          "data": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,45 +1,35 @@
 # Database migrations
 
-The deployed `0000`/`0001` baseline is immutable. Existing installations that
-already applied those files receive changes through `0002` and later migrations.
-Never clear the migration journal, reset a volume or edit an applied migration.
-The initial baseline replaced 34 pre-deployment development migrations; databases
-using that older history require a separately reviewed upgrade, not a forced reset.
+This SaaS uses a clean installation baseline: `0000_initial_schema.sql`.
+It creates the current 48 tables, final columns, constraints, indexes, foreign keys,
+row policies and integrity triggers directly. There are no historical column alterations,
+legacy-company bindings, upgrade backfills or repair migrations.
 
-- `0000_fresh_baseline.sql`: original 35 tables, constraints, indexes, foreign keys
-  and product/variant integrity triggers. Preserved byte-for-byte as deployed.
-- `0001_required_defaults.sql`: the 53 current CRUD permissions, system admin
-  role and grants, empty company singleton, and six bilingual HTML email rules.
-  Notifications are disabled by default. No demo records or user passwords are seeded.
-- `0002_flexible_document_lifecycle.sql`: additive lifecycle upgrade. Adds hidden
-  staff deletion attribution, nullable document client links, source-estimate and
-  payment-bank snapshots, cancelled-draft BL support, and one-invoice-per-BL
-  integrity triggers. Backfills existing snapshot references without rewriting
-  issued printable content or deleting business records. Unambiguous legacy BL
-  ownership is inferred from existing links; conflicting owners block and roll
-  back the migration with the affected BL IDs for explicit reconciliation.
+The migration installs only the global permission catalog. An organization-creation trigger
+provisions organization-local roles, company defaults and six disabled bilingual HTML email rules.
+There is no global company record, owner/staff credential or sample business data.
+Owners register through owner authentication. Owner workspace activation applies organization defaults atomically; staff invitations remain a separate rollout.
 
-- `0003_delivery_document_templates.sql` adds a template reference and saved appearance
-  to BLs. Existing records receive their historical Classic design, not the current
-  company template. New/finalizing drafts select the company default. Existing issued
-  PDFs are unchanged; explicit latest-design regeneration can use the selected
-  template's current settings (or company default for legacy unbound BLs).
+All 35 finance/support tables have required tenant scope and FORCE RLS. Company settings are keyed
+by `(organization_id,id)`. 46 SQL-managed composite foreign keys reject cross-tenant relationships
+while preserving existing lifecycle deletion behavior. See
+[finance isolation](../../../docs/saas/finance-isolation.md) for execution, workers, storage and tests.
 
-- `0004_flexible_client_details.sql` makes client billing addresses nullable,
-allow independent RC values and partial delivery addresses, and require only one
-personal name for individual clients. Existing rows are retained without a reset.
-  It also removes the mandatory BL delivery-address check so sparse client records
-  can still be used to create delivery documents.
+Run the normal release initializer (`node api/scripts/initialize-database.mjs` from the
+repository root, with `DATABASE_URL` and `MIGRATION_DATABASE_URL` configured). It serializes
+initialization, runs Drizzle migrations, and provisions the restricted runtime role.
+Successful migrations are recorded once; restarting initialization is safe.
 
-The startup initializer still creates the restricted runtime database role and
-bootstraps the first administrator from deployment environment variables. Drizzle
-records successful migrations; subsequent startups do not reapply them.
+`meta/0000_snapshot.json` is generated from the current Drizzle schema. PostgreSQL integrity
+functions, constraint triggers and FORCE RLS clauses are maintained explicitly in SQL.
+Foreign-key declarations use ALTER TABLE after table/index creation to resolve references;
+they do not modify an earlier schema version.
 
-Back up the deployed database before deployment. Publish/deploy the updated release
-image and run its normal migration/initialization step before starting the new API.
-Existing data and migration history are retained. This repository change does not
-itself execute anything against the hosted database.
+This baseline replaces the development migration history. Existing development databases
+must be recreated before using it; it is not an upgrade path for previously deployed Slama
+installations. Do not run it against an old hosted database. Once this SaaS is deployed,
+keep applied files immutable and use new forward migrations for subsequent changes.
 
-Keep future schema changes as new migrations generated from `db/schema`. Custom
-PostgreSQL triggers are maintained in SQL; they are not represented in Drizzle
-snapshots. Keep both SQL migration files and `meta/` snapshots/journal committed.
+Tenant finance scoping, owner workspace entry and per-workspace frontend caches are implemented. Actor guards validate audit attribution. Organization/staff admission and trial expiry are enforced; pooled storage/email metering is implemented. Payment administration remains pending.
+
+`organization_admin_deliveries` stores retry/lease state for independent initial administrator credentials. It stores no cleartext password. The administrator is a normal tenant user and counts toward the member allowance.

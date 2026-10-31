@@ -89,7 +89,7 @@ export function createS3Storage(config: S3StorageConfig): ObjectStorage {
       await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }))
     },
     async list(prefix) {
-      if (prefix !== 'artifacts/')
+      if (!/^organizations\/[a-f0-9-]{36}\/(?:artifacts|media|branding)\/$/.test(prefix))
         throw new AppError(400, 'INVALID_ASSET_KEY', 'Invalid listing prefix.')
       const entries = []
       let continuationToken: string | undefined

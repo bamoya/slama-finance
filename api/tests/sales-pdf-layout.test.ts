@@ -4,8 +4,8 @@ import { PDFDict, PDFDocument, PDFName } from 'pdf-lib'
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
 
-import { renderDeliveryPdf } from '../src/modules/sales/shared/services/delivery-pdf.service.js'
-import { renderSalesPdf } from '../src/modules/sales/shared/services/sales-pdf.service.js'
+import { renderDeliveryPdf } from '../src/modules/organization/sales/shared/services/delivery-pdf.service.js'
+import { renderSalesPdf } from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
 
 const issuerSnapshot = {
   legalName: 'Slama Agricole',

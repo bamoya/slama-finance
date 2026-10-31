@@ -1,0 +1,62 @@
+paths:
+  /v1/owner/analytics/financial-summary:
+    get:
+      operationId: getOwnerFinancialSummary
+      tags: [identity]
+      security: [{ownerSessionCookie: []}]
+      parameters:
+        - {name: start, in: query, required: true, schema: {type: string, format: date}}
+        - {name: end, in: query, required: true, schema: {type: string, format: date}}
+        - {name: organizationId, in: query, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Read-only MAD aggregates for owned organizations. Outstanding is a current snapshot.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OwnerFinancialSummary'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+components:
+  schemas:
+    OwnerFinancialTotals:
+      type: object
+      additionalProperties: false
+      required: [revenue, collected, outstanding, overdue]
+      properties:
+        revenue: {type: string}
+        collected: {type: string}
+        outstanding: {type: string}
+        overdue: {type: string}
+    OwnerFinancialSummary:
+      type: object
+      additionalProperties: false
+      required: [currency, start, end, capturedAt, totals, organizations, series]
+      properties:
+        currency: {type: string, enum: [MAD]}
+        start: {type: string, format: date}
+        end: {type: string, format: date}
+        capturedAt: {type: string, format: date-time}
+        totals: {$ref: '#/components/schemas/OwnerFinancialTotals'}
+        organizations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, totals]
+            properties:
+              id: {type: string, format: uuid}
+              name: {type: string}
+              totals: {$ref: '#/components/schemas/OwnerFinancialTotals'}
+        series:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, revenue, collected]
+            properties:
+              date: {type: string, format: date}
+              revenue: {type: string}
+              collected: {type: string}

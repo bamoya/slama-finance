@@ -24,7 +24,7 @@ Complete `roles`, `permissions`, `user_roles`, `role_permissions` plus user/audi
 integration. Seed an idempotent protected administrator role and fixed application
 permission registry. Administrators compose roles from registered capabilities;
 they do not invent arbitrary executable permission keys. Fresh installations insert
-the current registry directly through `0001_required_defaults.sql`.
+the current registry directly through `0000_initial_schema.sql`.
 Each later sequence adds its keys without resetting customized role assignments.
 
 ## API and permissions

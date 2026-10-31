@@ -12,7 +12,8 @@ import {
 import { createNotificationRepository } from '../src/support/notifications/repositories/notification.repository.js'
 import { isolatedDatabase } from './helpers/postgres.js'
 
-const key = 'artifacts/invoice/11111111-1111-4111-8111-111111111111.pdf'
+const key =
+  'organizations/10000000-0000-4000-8000-000000000001/artifacts/invoice/11111111-1111-4111-8111-111111111111.pdf'
 const storage: ObjectStorage = {
   putImmutable: async () => {
     throw new Error('not used')

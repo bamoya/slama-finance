@@ -5,10 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 const bank = {
   name: 'Main account',
   bankName: 'Sample bank',
@@ -35,8 +38,8 @@ function editable(row: Record<string, unknown>) {
     version,
     createdAt: _ca,
     updatedAt: _ua,
-    createdByUserId: _cb,
-    updatedByUserId: _ub,
+    createdByActorId: _cb,
+    updatedByActorId: _ub,
     archivedAt: _archive,
     ...fields
   } = row
@@ -80,7 +83,7 @@ describe('Company settings module', () => {
         },
       },
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -125,7 +128,7 @@ describe('Company settings module', () => {
       version: 2,
       phone: '06 12 34 56 78 05 22 33 44 55 ext 12',
       ice: '001234567890123',
-      updatedByUserId: testUserId,
+      updatedByActorId: testUserId,
     })
     const events =
       await fixture.client`select * from audit_events where entity_table='company_settings'`
@@ -400,7 +403,9 @@ describe('Company settings module', () => {
     const key = image.json().id
     expect((await patch({ ...editable(await company()), logoAssetId: key })).statusCode).toBe(200)
     expect((await patch({ ...editable(await company()), logoAssetId: null })).statusCode).toBe(200)
-    expect(objects.has(`media/${key}.png`)).toBe(true)
+    expect(objects.has(`organizations/10000000-0000-4000-8000-000000000001/media/${key}.png`)).toBe(
+      true,
+    )
     const get = await app.inject({ url: `/v1/media/${key}/download`, cookies })
     expect(get.statusCode).toBe(200)
     expect(get.headers['content-type']).toContain('image/png')

@@ -1,6 +1,13 @@
 import { Link, useLocation } from 'wouter'
 
-import { Can, routePermissions, useAuthorization, useSession } from '../../features/identity'
+import {
+  Can,
+  routePermissions,
+  useAuthorization,
+  useSession,
+  useWorkspace,
+  WorkspaceSwitcher,
+} from '../../features/organization/identity'
 import { translate, useUiLanguage } from '../../lib/i18n'
 import {
   Sidebar,
@@ -25,6 +32,7 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
   const [pathname] = useLocation()
   const { setOpenMobile } = useSidebar()
   const { canRoute } = useAuthorization()
+  const workspace = useWorkspace()
   const user = useSession().data?.user
   const activePath = navigationGroups
     .flatMap((group) => group.items)
@@ -39,20 +47,21 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
           <Link
             href="/dashboard"
             onClick={closeMobile}
-            aria-label={translate('Slama Finance')}
+            aria-label={workspace ? 'BaMoYa Finance' : translate('Slama Finance')}
             className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <img
-              src="/slama-logo.png"
-              alt={translate('Slama')}
+              src={workspace ? '/branding/bamoya-finance.png' : '/slama-logo.png'}
+              alt={workspace ? 'BaMoYa Finance' : translate('Slama')}
               className="h-8 w-8 shrink-0 object-contain"
             />
             <span className="whitespace-nowrap font-semibold group-data-[collapsible=icon]:hidden">
-              {translate('Slama Finance')}
+              {workspace ? 'BaMoYa Finance' : translate('Slama Finance')}
             </span>
           </Link>
           <SidebarTrigger className="ml-auto shrink-0 md:hidden" />
         </div>
+        <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <nav aria-label={translate('Main navigation')}>
@@ -107,7 +116,9 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
               className="ui-action rounded-xl border border-transparent"
             >
               <Link
-                href="/profile"
+                href={
+                  workspace ? `~/organizations/${workspace.organization.id}/account` : '/profile'
+                }
                 aria-label={translate('View my profile')}
                 aria-current={pathname.startsWith('/profile') ? 'page' : undefined}
                 onClick={closeMobile}

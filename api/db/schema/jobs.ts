@@ -1,16 +1,19 @@
 import { sql } from 'drizzle-orm'
+import { uniqueIndex } from 'drizzle-orm/pg-core'
 import { check, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const backgroundJobs = pgTable(
   'background_jobs',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     jobType: text('job_type').notNull(),
     payloadVersion: integer('payload_version').notNull().default(1),
     payload: jsonb('payload').notNull(),
-    idempotencyKey: text('idempotency_key').notNull().unique(),
+    idempotencyKey: text('idempotency_key').notNull(),
     status: text('status').notNull().default('queued'),
     attempts: integer('attempts').notNull().default(0),
     maxAttempts: integer('max_attempts').notNull().default(5),
@@ -20,13 +23,18 @@ export const backgroundJobs = pgTable(
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     lastErrorCode: text('last_error_code'),
-    initiatedByUserId: uuid('initiated_by_user_id').references(() => users.id, {
+    initiatedByActorId: uuid('initiated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index('background_jobs_claim_idx').on(t.status, t.availableAt, t.lockedUntil),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('background_jobs_idempotencyKey_tenant_unique').on(
+      t.organizationId,
+      t.idempotencyKey,
+    ),
+    index('background_jobs_claim_idx').on(t.organizationId, t.status, t.availableAt, t.lockedUntil),
     check('background_jobs_type', sql`${t.jobType} in ('prepare_pdf','prepare_notification')`),
     check(
       'background_jobs_status',
@@ -38,4 +46,4 @@ export const backgroundJobs = pgTable(
     ),
     check('background_jobs_payload_version', sql`${t.payloadVersion} > 0`),
   ],
-)
+).enableRLS()

@@ -54,7 +54,7 @@ export function createArtifactService(
         if (await repo.findOwnerVersion('report_run', id, 1, file.format, tx)) continue
         if (!file.bytes.length || file.bytes.length > MAX_PDF_BYTES)
           throw new AppError(400, 'INVALID_REPORT_FILE', 'The report file is invalid or too large.')
-        const key = `artifacts/report_run/${randomUUID()}.${file.format}`
+        const key = await repo.storageKey(`artifacts/report_run/${randomUUID()}.${file.format}`)
         const mimeType = reportMime(file.format)
         await storage.putImmutable({ key, bytes: file.bytes, contentType: mimeType })
         // A rollback leaves only an orphan, handled by the existing maintenance worker.
@@ -68,7 +68,7 @@ export function createArtifactService(
             mimeType,
             byteSize: file.bytes.length,
             sha256: createHash('sha256').update(file.bytes).digest('hex'),
-            createdByUserId: actor,
+            createdByActorId: actor,
           },
           tx,
         )
@@ -115,7 +115,7 @@ export function createArtifactService(
         return repo.findOwnerVersion(input.type, input.documentId, input.sourceVersion, format, tx)
       })
       if (existing) return existing
-      const key = `artifacts/report_run/${randomUUID()}.${format}`
+      const key = await repo.storageKey(`artifacts/report_run/${randomUUID()}.${format}`)
       await storage.putImmutable({
         key,
         bytes: input.bytes,
@@ -134,7 +134,7 @@ export function createArtifactService(
             mimeType: reportMime(format),
             byteSize: input.bytes.length,
             sha256: createHash('sha256').update(input.bytes).digest('hex'),
-            createdByUserId: input.actor,
+            createdByActorId: input.actor,
           },
           tx,
         )
@@ -178,10 +178,11 @@ export function createArtifactService(
         Buffer.from(bytes.subarray(0, 5)).toString('ascii') !== '%PDF-'
       )
         throw new AppError(400, 'INVALID_PDF', 'The generated PDF is invalid or too large.')
-      const key = `artifacts/${input.type}/${randomUUID()}.pdf`
+      const key = await repo.storageKey(`artifacts/${input.type}/${randomUUID()}.pdf`)
       try {
         await storage.putImmutable({ key, bytes, contentType: 'application/pdf' })
-      } catch {
+      } catch (error) {
+        if (error instanceof AppError) throw error
         throw new AppError(
           503,
           'PDF_REGENERATION_FAILED',
@@ -201,7 +202,7 @@ export function createArtifactService(
           mimeType: 'application/pdf',
           byteSize: bytes.length,
           sha256: createHash('sha256').update(bytes).digest('hex'),
-          createdByUserId: input.actor,
+          createdByActorId: input.actor,
         }
         const next = previous
           ? await repo.replace(previous, data, tx)
@@ -245,7 +246,7 @@ export function createArtifactService(
       if (existing) return existing
 
       const id = randomUUID()
-      const key = `artifacts/${type}/${id}.pdf`
+      const key = await repo.storageKey(`artifacts/${type}/${id}.pdf`)
       const sha256 = createHash('sha256').update(bytes).digest('hex')
       await storage.putImmutable({ key, bytes, contentType: 'application/pdf' })
 
@@ -267,7 +268,7 @@ export function createArtifactService(
               mimeType: 'application/pdf',
               byteSize: bytes.length,
               sha256,
-              createdByUserId: actor,
+              createdByActorId: actor,
             },
             tx,
           )

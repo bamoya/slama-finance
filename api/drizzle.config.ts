@@ -10,6 +10,8 @@ export default defineConfig({
   // Explicit source tables; run the CLI through tsx to resolve ESM .js imports.
   schema: [
     './db/schema/auth.ts',
+    './db/schema/actors.ts',
+    './db/schema/subscriptions.ts',
     './db/schema/artifacts.ts',
     './db/schema/catalog.ts',
     './db/schema/clients.ts',
@@ -19,6 +21,8 @@ export default defineConfig({
     './db/schema/jobs.ts',
     './db/schema/media.ts',
     './db/schema/notifications.ts',
+    './db/schema/organizations.ts',
+    './db/schema/organization-profiles.ts',
     './db/schema/payments.ts',
     './db/schema/reporting.ts',
     './db/schema/settings.ts',

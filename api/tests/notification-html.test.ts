@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { sanitizeEmailHtml } from '../src/modules/settings/notifications/services/email-html.js'
-import { composeNotification } from '../src/modules/settings/notifications/services/notification-rule.service.js'
+import { sanitizeEmailHtml } from '../src/modules/organization/settings/notifications/services/email-html.js'
+import { composeNotification } from '../src/modules/organization/settings/notifications/services/notification-rule.service.js'
 
 const rule = {
   eventKey: 'invoice_sent' as const,

@@ -1,11 +1,13 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const clients = pgTable(
   'clients',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     type: text('type').notNull(),
     firstName: text('first_name'),
@@ -36,16 +38,17 @@ export const clients = pgTable(
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    index('clients_type_status_idx').on(t.type, t.archivedAt),
-    index('clients_email_idx').on(t.email),
+    tenantPolicy(t.organizationId),
+    index('clients_type_status_idx').on(t.organizationId, t.type, t.archivedAt),
+    index('clients_email_idx').on(t.organizationId, t.email),
     check('client_type_valid', sql`${t.type} in ('individual', 'company')`),
     check(
       'client_identity_valid',
@@ -68,4 +71,4 @@ export const clients = pgTable(
     check('client_locale_valid', sql`${t.locale} in ('fr-MA', 'en-GB')`),
     check('client_version_positive', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()

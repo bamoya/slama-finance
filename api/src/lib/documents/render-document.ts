@@ -1,3 +1,4 @@
+import { displayNumber } from '../number-format.js'
 import { createDocumentCanvas, H, W } from './canvas.js'
 import { displayDate } from './display-date.js'
 import { documentLabel } from './document-labels.js'
@@ -24,6 +25,7 @@ export async function renderDocument(
   images: DocumentImages = {},
 ) {
   const label = (value: string) => documentLabel(value, model.locale)
+  const number = (value: string) => displayNumber(value, model.locale)
   // Translate generated labels only, never product names, customer data or custom terms.
   model = {
     ...model,
@@ -31,13 +33,21 @@ export async function renderDocument(
     reference: model.reference?.[1]
       ? [label(model.reference[0]), displayDate(model.reference[1])]
       : undefined,
-    totals: model.totals?.map(([key, value]) => [label(key), value]),
+    lines: model.lines?.map((line) => ({
+      ...line,
+      quantity: number(line.quantity),
+      price: line.price === undefined ? undefined : number(line.price),
+      total: line.total === undefined ? undefined : number(line.total),
+      vat: line.vat === undefined ? undefined : number(line.vat),
+    })),
+    totals: model.totals?.map(([key, value]) => [label(key), number(value)]),
     sections: model.sections
       ?.filter((section) => section.text.trim())
       .map((section) => ({ ...section, title: label(section.title) })),
     receipt: model.receipt
       ? {
           ...model.receipt,
+          amount: number(model.receipt.amount),
           status: label(model.receipt.status),
           fields: model.receipt.fields.map(([key, value]) => [
             label(key),
@@ -47,7 +57,7 @@ export async function renderDocument(
                 ? displayDate(value)
                 : value,
           ]),
-          balances: model.receipt.balances.map(([key, value]) => [label(key), value]),
+          balances: model.receipt.balances.map(([key, value]) => [label(key), number(value)]),
           note: displayDate(model.receipt.note),
         }
       : undefined,
@@ -360,7 +370,14 @@ export async function renderDocument(
           ? [item.price ?? '', ...(vat ? [item.vat ?? '-'] : []), item.total ?? '']
           : []),
       ]
-      const cells = values.map((value, i) => c.wrap(value, widths[i]! - 8, size))
+      const cellSizes = values.map((value, i) =>
+        i === 0
+          ? size
+          : Math.min(size, (size * (widths[i]! - 8)) / Math.max(1, c.measure(value, size))),
+      )
+      const cells = values.map((value, i) =>
+        i === 0 ? c.wrap(value, widths[i]! - 8, size) : [value],
+      )
       const rowLines = Math.max(...cells.map((cell) => cell.length))
       let offset = 0
       // Keep ordinary rows intact; split exceptionally long rows safely across pages.
@@ -383,7 +400,7 @@ export async function renderDocument(
         cells.forEach((cell, i) => {
           cell.slice(offset, offset + count).forEach((value, j) => {
             if (i === 0) c.text(value, x + 4, y + padding + j * leading, size)
-            else aligned(value, x + widths[i]! - 4, y + padding + j * leading)
+            else aligned(value, x + widths[i]! - 4, y + padding + j * leading, cellSizes[i])
           })
           x += widths[i]!
         })

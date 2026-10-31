@@ -8,12 +8,12 @@ import type * as GeneratedApi from '../api/generated/clients/clients'
 import type * as SalesApi from '../api/generated/sales/sales'
 import type { Client } from '../api/generated/schemas/clients/clients.schemas'
 import { apiRequest } from '../api/http'
-import { ClientDetailPage, ClientFormPage, ClientsPage } from '../features/clients'
-import * as auth from '../features/identity/auth/api/auth-client'
+import { ClientDetailPage, ClientFormPage, ClientsPage } from '../features/organization/clients'
+import * as auth from '../features/organization/identity/auth/api/auth-client'
 import { routeApiRequest } from '../test/api-transport'
 
 vi.mock('../api/http', () => ({ apiRequest: vi.fn() }))
-vi.mock('../features/identity/auth/api/auth-client', () => ({ getSession: vi.fn() }))
+vi.mock('../features/organization/identity/auth/api/auth-client', () => ({ getSession: vi.fn() }))
 const id = '11111111-1111-4111-8111-111111111111'
 const stamp = '2026-09-27T00:00:00.000Z'
 const client: Client = {
@@ -48,8 +48,8 @@ const client: Client = {
   version: 1,
   createdAt: stamp,
   updatedAt: stamp,
-  createdByUserId: null,
-  updatedByUserId: null,
+  createdByActorId: null,
+  updatedByActorId: null,
 }
 const api = {
   listClients: vi.fn<typeof GeneratedApi.listClients>(),

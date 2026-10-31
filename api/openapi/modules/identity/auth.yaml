@@ -2,7 +2,8 @@ paths:
   /v1/auth/profile:
     patch:
       operationId: updateProfile
-      description: Update the signed-in user's personal details. Full session and current password required. No roles or account-status changes allowed.
+      description: Update the signed-in user's personal details. Full session and current password
+        required. No roles or account-status changes allowed.
       requestBody:
         required: true
         content:
@@ -30,7 +31,8 @@ paths:
       description: Limited to five attempts per minute per client IP per API instance. Excess attempts
         return 429 with Retry-After. Temporary staff passwords expire after 24 hours and can log in
         once, creating a restricted 15-minute password_change session.
-      security: []
+      security:
+        - organizationScope: []
       requestBody:
         required: true
         content:
@@ -84,7 +86,8 @@ paths:
   /v1/auth/password-reset/request:
     post:
       operationId: requestPasswordReset
-      security: []
+      security:
+        - organizationScope: []
       description: Generic response for eligible, unknown and inactive accounts; requires configured email
         adapter. Five requests per minute per IP, one email per account per minute.
       requestBody:
@@ -110,7 +113,8 @@ paths:
   /v1/auth/password-reset/confirm:
     post:
       operationId: confirmPasswordReset
-      security: []
+      security:
+        - organizationScope: []
       description: Single-use link, expires after 15 minutes. Revokes all sessions on success.
       requestBody:
         required: true
@@ -146,7 +150,7 @@ components:
     UpdateProfile:
       type: object
       additionalProperties: false
-      required: [firstName, lastName, email, currentPassword]
+      required: [ firstName, lastName, email, currentPassword ]
       properties:
         firstName:
           type: string

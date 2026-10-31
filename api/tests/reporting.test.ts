@@ -8,21 +8,21 @@ import {
 import {
   assertReportPermissions,
   normalizeCriteria,
-} from '../src/modules/reporting/analysis/services/analysis.service.js'
+} from '../src/modules/organization/reporting/analysis/services/analysis.service.js'
 import {
   exportMetrics,
   percentageChange,
-} from '../src/modules/reporting/shared/services/report-presentation.js'
+} from '../src/modules/organization/reporting/shared/services/report-presentation.js'
 import {
   csvCell,
   renderReportCsv,
   renderReportPdf,
-} from '../src/modules/reporting/shared/services/report-renderer.service.js'
+} from '../src/modules/organization/reporting/shared/services/report-renderer.service.js'
 import {
   localInstant,
   nextOccurrence,
   occurrencePeriod,
-} from '../src/modules/reporting/shared/services/report-time.service.js'
+} from '../src/modules/organization/reporting/shared/services/report-time.service.js'
 
 describe('Reporting calendar and authorization', () => {
   it('uses inclusive dates and real local UTC boundaries without shifting business dates', () => {

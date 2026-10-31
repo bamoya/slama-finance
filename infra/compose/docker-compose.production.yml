@@ -43,6 +43,8 @@ services:
       TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set the Resend API key}
       EMAIL_FROM: ${EMAIL_FROM:?Set the verified sender email address}
+      OWNER_AUTH_ENABLED: ${OWNER_AUTH_ENABLED:-false}
+      OWNER_PORTAL_ORIGIN: ${OWNER_PORTAL_ORIGIN:-}
       PASSWORD_RESET_URL: ${PUBLIC_ORIGIN:?Set the public HTTPS origin}/reset-password
       NOTIFICATION_TRANSPORT: resend
       # PostgreSQL-backed workers run inside this single API process; no Redis needed.

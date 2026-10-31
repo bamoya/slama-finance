@@ -14,7 +14,11 @@ describe('login rate limit', () => {
         method: 'POST',
         url: '/v1/auth/login',
         remoteAddress: peer,
-        headers: { origin: 'http://localhost:5173', 'x-forwarded-for': client },
+        headers: {
+          origin: 'http://localhost:5173',
+          'x-organization-id': '10000000-0000-4000-8000-000000000001',
+          'x-forwarded-for': client,
+        },
         payload: { email: 'invalid', password: 'short' },
       })
     try {
@@ -35,7 +39,10 @@ describe('login rate limit', () => {
       environment: loadEnvironment({ NODE_ENV: 'test' }),
     })
     try {
-      const headers = { origin: 'http://localhost:5173' }
+      const headers = {
+        origin: 'http://localhost:5173',
+        'x-organization-id': '10000000-0000-4000-8000-000000000001',
+      }
       // Invalid input avoids needing a database; every login attempt still counts.
       for (let attempt = 0; attempt < 5; attempt++) {
         const response = await app.inject({
@@ -69,7 +76,8 @@ describe('login rate limit', () => {
         ).statusCode,
       ).toBe(400)
       expect(
-        (await app.inject({ url: '/v1/auth/session', remoteAddress: '192.0.2.1' })).statusCode,
+        (await app.inject({ url: '/v1/auth/session', headers, remoteAddress: '192.0.2.1' }))
+          .statusCode,
       ).toBe(401)
       expect(
         (

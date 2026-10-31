@@ -7,15 +7,18 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createMediaModule } from '../src/modules/media/index.js'
-import { createEstimateRepository } from '../src/modules/sales/estimates/repositories/estimate.repository.js'
-import { createSalesModule } from '../src/modules/sales/index.js'
-import { createFreshDocumentParties } from '../src/modules/sales/shared/repositories/fresh-document-parties.js'
-import { renderSalesPdf } from '../src/modules/sales/shared/services/sales-pdf.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createMediaModule } from '../src/modules/organization/media/index.js'
+import { createEstimateRepository } from '../src/modules/organization/sales/estimates/repositories/estimate.repository.js'
+import { createSalesModule } from '../src/modules/organization/sales/index.js'
+import { createFreshDocumentParties } from '../src/modules/organization/sales/shared/repositories/fresh-document-parties.js'
+import { renderSalesPdf } from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 const clientId = '33333333-3333-4333-8333-333333333333'
 const businessFields = (row: Record<string, unknown>) =>
   Object.fromEntries(
@@ -25,11 +28,11 @@ const businessFields = (row: Record<string, unknown>) =>
           'templateId',
           'appearanceSnapshot',
           'updatedAt',
-          'updatedByUserId',
+          'updatedByActorId',
           'template_id',
           'appearance_snapshot',
           'updated_at',
-          'updated_by_user_id',
+          'updated_by_actor_id',
         ].includes(key),
     ),
   )
@@ -104,7 +107,7 @@ describe('Estimates lifecycle', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const login = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -465,7 +468,7 @@ describe('Estimates lifecycle', () => {
     const assets = []
     for (const purpose of ['company_logo', 'company_signature']) {
       const id = randomUUID(),
-        key = `media/${id}.png`
+        key = `organizations/10000000-0000-4000-8000-000000000001/media/${id}.png`
       objects.set(key, new Uint8Array(png))
       await fixture.client`insert into media_assets(id,object_key,original_filename,content_type,byte_size,sha256,purpose,status) values(${id},${key},'brand.png','image/png',${png.length},${createHash('sha256').update(png).digest('hex')},${purpose},'ready')`
       assets.push(id)
@@ -707,8 +710,8 @@ describe('Estimates lifecycle', () => {
                 'version',
                 'createdAt',
                 'updatedAt',
-                'createdByUserId',
-                'updatedByUserId',
+                'createdByActorId',
+                'updatedByActorId',
               ].includes(key),
           ),
         ),

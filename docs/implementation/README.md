@@ -1,5 +1,9 @@
 # Implementation sequence
 
+Future SaaS work is governed by the [SaaS architecture and commercial agreement](../saas/README.md).
+That agreement records approved target decisions and outstanding design details;
+it does not mark multi-tenancy as implemented or replace the current delivery baseline.
+
 Latest approved cross-module change: [flexible deletion and cancellation](destructive-actions.md).
 That spec records the agreed cascade/detachment rules, shared impact dialogs and staged implementation.
 
@@ -137,7 +141,7 @@ in localStorage. Shell/sidebar stay global with consistent page width and dark m
 
 ## Migration strategy
 
-The repository uses `0000_fresh_baseline.sql` plus `0001_required_defaults.sql` for
+The repository uses a single `0000_initial_schema.sql` for
 empty databases. The old development history has been consolidated; existing databases
 that used it cannot be upgraded by this baseline. Use a new database/volume for fresh deployment.
 Sequence files describe logical model batches, not mandatory separate SQL files.

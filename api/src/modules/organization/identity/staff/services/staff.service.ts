@@ -1,0 +1,263 @@
+import { randomBytes } from 'node:crypto'
+
+import type {
+  ConfirmStaffDeletion,
+  StaffDeletionSelection,
+} from '../../../../../contracts/generated/identity/deletion.schemas.js'
+import {
+  type CreateStaff,
+  CreateStaffSchema,
+  type ListStaffQuery as StaffQuery,
+  type UpdateStaff as StaffUpdate,
+  UpdateStaffSchema,
+} from '../../../../../contracts/generated/identity/staff.schemas.js'
+import { requireActorPermission } from '../../../../../lib/actor-permissions.js'
+import type { Database, Transaction } from '../../../../../lib/db.js'
+import { AppError } from '../../../../../lib/errors.js'
+import { createImpactConfirmation } from '../../../../../lib/impact-confirmation.js'
+import type { SubscriptionsPublicApi } from '../../../../platform/subscriptions/index.js'
+import type { createPasswordService } from '../../auth/services/password.service.js'
+import type { createStaffRepository } from '../repositories/staff.repository.js'
+
+export function createStaffService(
+  database: () => Database,
+  repository: ReturnType<typeof createStaffRepository>,
+  passwords: ReturnType<typeof createPasswordService>,
+  onAuthorizationChange?: (tx: Transaction, userIds: string[]) => Promise<void>,
+  subscriptions?: SubscriptionsPublicApi,
+) {
+  const deletionConfirmation = createImpactConfirmation()
+  async function find(id: string, tx?: Transaction) {
+    const user = await repository.find(id, tx)
+    if (!user) throw new AppError(404, 'STAFF_NOT_FOUND', 'Staff account not found')
+    return user
+  }
+  async function actor(actorId: string, tx: Transaction, permission: string) {
+    await requireActorPermission(tx, actorId, permission)
+    const grants = await repository.grants(actorId, tx)
+    return {
+      grants,
+      admin: (await repository.rolesFor(actorId, tx)).some((role) => role.key === 'admin'),
+    }
+  }
+
+  async function validateRoles(ids: string[], actorId: string, tx: Transaction) {
+    const authority = await actor(actorId, tx, 'roles.update')
+    const selected = await repository.selectedRoles(ids, tx)
+    if (selected.length !== ids.length)
+      throw new AppError(400, 'VALIDATION_ERROR', 'Unknown roles', {
+        roleIds: ['One or more roles do not exist'],
+      })
+    if (!authority.admin) {
+      const grants = await repository.selectedGrants(ids, tx)
+      if (
+        selected.some((role) => role.key === 'admin') ||
+        grants.some((grant) => !authority.grants.includes(grant.key))
+      )
+        throw new AppError(403, 'FORBIDDEN', 'Cannot assign permissions you do not hold')
+    }
+    return selected
+  }
+  async function mutable(
+    id: string,
+    actorId: string,
+    tx: Transaction,
+    permission: string,
+    allowArchived = false,
+  ) {
+    const authority = await actor(actorId, tx, permission)
+    const user = await find(id, tx)
+    if (user.archivedAt && !allowArchived)
+      throw new AppError(409, 'STAFF_ARCHIVED', 'Archived accounts cannot be changed')
+    const isAdmin = (await repository.rolesFor(id, tx)).some((role) => role.key === 'admin')
+    if (
+      !authority.admin &&
+      (await repository.grants(id, tx)).some((key) => !authority.grants.includes(key))
+    )
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        'Cannot modify an account with privileges you do not hold',
+      )
+    if (isAdmin && !authority.admin)
+      throw new AppError(403, 'FORBIDDEN', 'Only administrators can change administrator accounts')
+    return { user, isAdmin }
+  }
+  async function preserveAdmin(id: string, tx: Transaction, _actorId: string) {
+    const admins = await repository.activeAdmins(tx)
+    if (admins.length === 1 && admins[0]!.id === id)
+      throw new AppError(409, 'LAST_ADMIN', 'At least one active administrator must remain')
+  }
+  async function deletionGraph(input: StaffDeletionSelection, actorId: string, tx: Transaction) {
+    await repository.lock(tx)
+    await actor(actorId, tx, 'staff.read')
+    await actor(actorId, tx, 'staff.delete')
+    const ids = input.ids.map((id) => id.toLowerCase()).sort()
+    if (new Set(ids).size !== ids.length)
+      throw new AppError(400, 'DUPLICATE_SELECTION', 'Select each record only once.')
+    for (const id of ids) {
+      if (id === actorId)
+        throw new AppError(409, 'SELF_DELETE', 'You cannot delete your own account.')
+      await mutable(id, actorId, tx, 'staff.delete', true)
+      await preserveAdmin(id, tx, actorId)
+    }
+    return {
+      actor: actorId,
+      action: 'delete_staff',
+      state: await repository.deletionState(ids, tx),
+    }
+  }
+  return {
+    previewDeletion(input: StaffDeletionSelection, actorId: string) {
+      return database().transaction(async (tx) => {
+        const impact = await deletionGraph(input, actorId, tx)
+        return {
+          ...deletionConfirmation.issue(impact),
+          groups: [
+            {
+              resource: 'staff',
+              operation: 'delete' as const,
+              records: impact.state.users.map((user) => ({
+                id: user.id,
+                name: `${[user.firstName, user.lastName].filter(Boolean).join(' ')} · ${user.email}`,
+              })),
+            },
+          ],
+          requiredPermissions: ['staff.read', 'staff.delete'],
+          blockers: [],
+          media: 0,
+        }
+      })
+    },
+    confirmDeletion(input: ConfirmStaffDeletion, actorId: string) {
+      return database().transaction(async (tx) => {
+        const impact = await deletionGraph(input, actorId, tx)
+        deletionConfirmation.assert(input.token, impact)
+        const ids = impact.state.users.map((user) => user.id)
+        for (const id of ids) await repository.anonymize(id, actorId, tx)
+        await onAuthorizationChange?.(tx, ids)
+      })
+    },
+    async delete(id: string, actorId: string) {
+      try {
+        await database().transaction(async (tx) => {
+          await repository.lock(tx)
+          await mutable(id, actorId, tx, 'staff.delete', true)
+          if (id === actorId)
+            throw new AppError(409, 'SELF_DELETE', 'You cannot delete your own account.')
+          await preserveAdmin(id, tx, actorId)
+          await repository.revokeSessions(id, tx)
+          await onAuthorizationChange?.(tx, [id])
+          await repository.delete(id, tx)
+        })
+      } catch (error) {
+        if ((error as { code?: string }).code === '23503')
+          throw new AppError(
+            409,
+            'STAFF_IN_USE',
+            'This account is required by audit or report history. Archive it instead.',
+          )
+        throw error
+      }
+    },
+    list: (query: StaffQuery) => repository.list(query),
+    async detail(id: string) {
+      return {
+        user: await find(id),
+        roles: await repository.rolesFor(id),
+        permissionKeys: await repository.grants(id),
+      }
+    },
+    async create(input: CreateStaff, actorId: string) {
+      input = CreateStaffSchema.parse({
+        ...input,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+      })
+      const temporaryPassword = randomBytes(24).toString('base64url')
+      const passwordHash = await passwords.hash(temporaryPassword)
+      const temporaryPasswordExpiresAt = new Date(Date.now() + 24 * 60 * 60_000)
+      return database().transaction(async (tx) => {
+        await repository.lock(tx)
+        await actor(actorId, tx, 'staff.create')
+        await subscriptions?.admitStaff(tx)
+        const ids = [...new Set(input.roleIds)]
+        if (ids.length) await validateRoles(ids, actorId, tx)
+        const user = await repository.create(
+          {
+            email: input.email.toLowerCase(),
+            firstName: input.firstName,
+            lastName: input.lastName,
+            passwordHash,
+            temporaryPasswordExpiresAt,
+          },
+          tx,
+        )
+        await repository.replaceRoles(user.id, ids, actorId, tx)
+        return { user, temporaryPassword, temporaryPasswordExpiresAt }
+      })
+    },
+    async reissueTemporary(id: string, actorId: string) {
+      const temporaryPassword = randomBytes(24).toString('base64url')
+      const passwordHash = await passwords.hash(temporaryPassword)
+      const temporaryPasswordExpiresAt = new Date(Date.now() + 24 * 60 * 60_000)
+      return database().transaction(async (tx) => {
+        await repository.lock(tx)
+        await mutable(id, actorId, tx, 'staff.update')
+        await preserveAdmin(id, tx, actorId)
+        await repository.setTemporary(id, passwordHash, temporaryPasswordExpiresAt, tx)
+        await repository.revokeSessions(id, tx)
+        await onAuthorizationChange?.(tx, [id])
+        return { temporaryPassword, temporaryPasswordExpiresAt }
+      })
+    },
+    update: (id: string, input: StaffUpdate, actorId: string) =>
+      database().transaction(async (tx) => {
+        await repository.lock(tx)
+        await mutable(id, actorId, tx, 'staff.update')
+        const result = await repository.update(
+          id,
+          UpdateStaffSchema.parse({
+            ...input,
+            ...(input.email ? { email: input.email.toLowerCase() } : {}),
+            ...(input.firstName !== undefined ? { firstName: input.firstName.trim() } : {}),
+            ...(input.lastName !== undefined ? { lastName: input.lastName.trim() } : {}),
+          }),
+          tx,
+        )
+        if (input.email) await onAuthorizationChange?.(tx, [id])
+        return result
+      }),
+    replaceRoles: (id: string, roleIds: string[], actorId: string) =>
+      database().transaction(async (tx) => {
+        await repository.lock(tx)
+        await mutable(id, actorId, tx, 'staff.update')
+        const ids = [...new Set(roleIds)]
+        const selected = await validateRoles(ids, actorId, tx)
+        if (!selected.some((role) => role.key === 'admin')) await preserveAdmin(id, tx, actorId)
+        await repository.replaceRoles(id, ids, actorId, tx)
+        await onAuthorizationChange?.(tx, [id])
+      }),
+    setStatus: (id: string, action: 'disable' | 'enable' | 'archive', actorId: string) =>
+      database().transaction(async (tx) => {
+        await repository.lock(tx)
+        const { user } = await mutable(id, actorId, tx, 'staff.update')
+        if (action === 'enable' && user.archivedAt) await subscriptions?.admitStaff(tx)
+        if (action !== 'enable') await preserveAdmin(id, tx, actorId)
+        const now = new Date()
+        const result = await repository.update(
+          id,
+          action === 'archive'
+            ? { archivedAt: now, disabledAt: user.disabledAt ?? now }
+            : {
+                disabledAt: action === 'disable' ? now : null,
+                ...(action === 'enable' ? { archivedAt: null } : {}),
+              },
+          tx,
+        )
+        if (action !== 'enable') await repository.revokeSessions(id, tx)
+        await onAuthorizationChange?.(tx, [id])
+        return result
+      }),
+  }
+}

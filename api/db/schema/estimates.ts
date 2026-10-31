@@ -14,16 +14,18 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { products, productVariants } from './catalog.js'
 import { clients } from './clients.js'
 import { bankAccounts, documentTemplates } from './settings.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 export const estimates = pgTable(
   'estimates',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
-    number: text('number').unique(),
+    number: text('number'),
     status: text('status').notNull().default('draft'),
     revisionOfId: uuid('revision_of_id').references((): AnyPgColumn => estimates.id, {
       onDelete: 'restrict',
@@ -63,21 +65,23 @@ export const estimates = pgTable(
     contentVersion: integer('content_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    uniqueIndex('estimates_revision_of_uq').on(t.revisionOfId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('estimates_number_tenant_unique').on(t.organizationId, t.number),
+    uniqueIndex('estimates_revision_of_uq').on(t.organizationId, t.revisionOfId),
     check(
       'estimates_revision_not_self',
       sql`${t.revisionOfId} is null or ${t.revisionOfId} <> ${t.id}`,
     ),
-    index('estimates_client_status_idx').on(t.clientId, t.status),
-    index('estimates_issue_date_idx').on(t.issueDate),
+    index('estimates_client_status_idx').on(t.organizationId, t.clientId, t.status),
+    index('estimates_issue_date_idx').on(t.organizationId, t.issueDate),
     check(
       'estimates_status',
       sql`${t.status} in ('draft','issued','sent','accepted','rejected','expired','cancelled','superseded')`,
@@ -102,11 +106,12 @@ export const estimates = pgTable(
       sql`(${t.status} = 'draft' and ${t.number} is null and ${t.issuedAt} is null) or (${t.status} <> 'draft' and ${t.number} is not null and ${t.issuedAt} is not null and ${t.validUntil} is not null)`,
     ),
   ],
-)
+).enableRLS()
 
 export const estimateLines = pgTable(
   'estimate_lines',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     estimateId: uuid('estimate_id')
       .notNull()
@@ -127,16 +132,17 @@ export const estimateLines = pgTable(
     totalAmount: numeric('total_amount', { precision: 18, scale: 2 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    createdByUserId: uuid('created_by_user_id').references(() => users.id, {
+    createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
-    updatedByUserId: uuid('updated_by_user_id').references(() => users.id, {
+    updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
       onDelete: 'set null',
     }),
   },
   (t) => [
-    uniqueIndex('estimate_lines_position_uq').on(t.estimateId, t.position),
-    index('estimate_lines_product_idx').on(t.productId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('estimate_lines_position_uq').on(t.organizationId, t.estimateId, t.position),
+    index('estimate_lines_product_idx').on(t.organizationId, t.productId),
     check('estimate_lines_position', sql`${t.position} >= 0`),
     check('estimate_lines_product_name', sql`length(trim(${t.productName})) > 0`),
     check('estimate_lines_quantity', sql`${t.quantity} > 0`),
@@ -155,4 +161,4 @@ export const estimateLines = pgTable(
       sql`${t.productVariantId} is null or ${t.productId} is not null`,
     ),
   ],
-)
+).enableRLS()

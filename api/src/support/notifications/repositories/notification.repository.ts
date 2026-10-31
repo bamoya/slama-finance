@@ -15,7 +15,10 @@ export async function lockStorageReference(tx: Transaction, key: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${key}, 91036))`)
 }
 
-export function createNotificationRepository(database: () => Database) {
+export function createNotificationRepository(
+  database: () => Database,
+  reserveEmail?: (tx: Transaction, key: string, recipients: number) => Promise<void>,
+) {
   return {
     async metrics(now: Date) {
       const [row] = await database().execute<{
@@ -46,7 +49,7 @@ export function createNotificationRepository(database: () => Database) {
           text: payload.text,
           idempotencyKey: payload.idempotencyKey,
           payloadHash,
-          createdByUserId: payload.actor,
+          createdByActorId: payload.actor,
         })
         .onConflictDoNothing()
         .returning()
@@ -56,6 +59,12 @@ export function createNotificationRepository(database: () => Database) {
           409,
           'MESSAGE_CONFLICT',
           'This message identity already has different content.',
+        )
+      if (inserted)
+        await reserveEmail?.(
+          tx,
+          `${inserted.organizationId}:${inserted.id}`,
+          new Set([payload.to, ...payload.cc].map((email) => email.trim().toLowerCase())).size,
         )
       if (inserted && payload.attachments.length) {
         for (const item of [...payload.attachments].sort((a, b) =>

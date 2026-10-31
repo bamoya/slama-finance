@@ -63,7 +63,7 @@ email preferences and underlying document permissions still apply. See [reportin
 
 ## Migration and deployment
 
-Fresh installations use `0000_fresh_baseline.sql` and `0001_required_defaults.sql`.
+Fresh installations use `0000_initial_schema.sql` and `0000_initial_schema.sql`.
 Only the current CRUD permission registry is inserted; no legacy permission conversions
 are needed. The system admin receives all registered permissions. New delegated roles
 receive only explicitly assigned capabilities. Reports retain the single `reports.read`

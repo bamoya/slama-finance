@@ -58,7 +58,7 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
         payloadVersion: 1,
         payload,
         idempotencyKey,
-        initiatedByUserId: actor,
+        initiatedByActorId: actor,
       },
       tx,
     )
@@ -143,7 +143,7 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
           payloadVersion: 1,
           payload,
           idempotencyKey,
-          initiatedByUserId: actor,
+          initiatedByActorId: actor,
         },
         tx,
       )

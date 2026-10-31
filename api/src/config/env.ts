@@ -51,6 +51,14 @@ const environmentSchema = z
     DATABASE_POOL_SIZE: positive(10, 50),
     RATE_LIMIT_MAX: positive(100, 10000),
     SESSION_TTL_DAYS: positive(30, 90),
+    OWNER_AUTH_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    OWNER_PORTAL_ORIGIN: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      origin.optional(),
+    ),
     MEDIA_ASSET_DIR: z.string().default('.local/media'),
     S3_ENDPOINT: z.string().url().optional().or(z.literal('')),
     S3_REGION: z.string().default('us-ashburn-1'),
@@ -84,6 +92,29 @@ const environmentSchema = z
       .default('info'),
   })
   .superRefine((env, context) => {
+    if (env.OWNER_AUTH_ENABLED && !env.OWNER_PORTAL_ORIGIN)
+      context.addIssue({
+        code: 'custom',
+        path: ['OWNER_PORTAL_ORIGIN'],
+        message: 'Required for owner authentication',
+      })
+    if (env.OWNER_PORTAL_ORIGIN) {
+      const url = new URL(env.OWNER_PORTAL_ORIGIN)
+      if (
+        !env.CORS_ORIGIN.includes(env.OWNER_PORTAL_ORIGIN) ||
+        (url.protocol !== 'https:' &&
+          !(
+            env.NODE_ENV !== 'production' &&
+            url.protocol === 'http:' &&
+            ['localhost', '127.0.0.1'].includes(url.hostname)
+          ))
+      )
+        context.addIssue({
+          code: 'custom',
+          path: ['OWNER_PORTAL_ORIGIN'],
+          message: 'Use a trusted HTTPS portal origin (HTTP localhost allowed in development)',
+        })
+    }
     if (env.NODE_ENV === 'production' && env.NOTIFICATION_TRANSPORT === 'smtp')
       context.addIssue({
         code: 'custom',

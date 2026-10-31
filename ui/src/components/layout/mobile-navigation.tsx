@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'wouter'
 
-import { useAuthorization } from '../../features/identity'
+import { useAuthorization } from '../../features/organization/identity'
 import { registerTranslations, useUiLanguage } from '../../lib/i18n'
 import { useIsMobile } from '../../lib/use-mobile'
 import { cn } from '../../lib/utils'

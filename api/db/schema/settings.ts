@@ -6,26 +6,33 @@ import {
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   smallint,
   text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { mediaAssets } from './media.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 const audit = () => ({
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-  updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
+    onDelete: 'set null',
+  }),
+  updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
+    onDelete: 'set null',
+  }),
 })
 
 export const documentTemplates = pgTable(
   'document_templates',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     layout: text('layout', {
@@ -50,6 +57,7 @@ export const documentTemplates = pgTable(
     ...audit(),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     check(
       'template_layout',
       sql`${t.layout} in ('classic','modern','minimal','signature','atelier','ledger','essential')`,
@@ -58,12 +66,13 @@ export const documentTemplates = pgTable(
     check('template_color', sql`${t.accentColor} ~ '^#[0-9a-fA-F]{6}$'`),
     check('template_version', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()
 
 export const companySettings = pgTable(
   'company_settings',
   {
-    id: smallint('id').primaryKey().default(1),
+    organizationId: organizationColumn(),
+    id: smallint('id').notNull().default(1),
     legalName: text('legal_name'),
     tradeName: text('trade_name'),
     legalForm: text('legal_form'),
@@ -86,6 +95,7 @@ export const companySettings = pgTable(
     timezone: text('timezone').notNull().default('Africa/Casablanca'),
     paymentDueDays: integer('payment_due_days').notNull().default(15),
     estimateValidDays: integer('estimate_valid_days').notNull().default(15),
+    defaultVatRate: numeric('default_vat_rate', { precision: 5, scale: 2 }),
     defaultBankAccountId: uuid('default_bank_account_id').references(() => bankAccounts.id, {
       onDelete: 'restrict',
     }),
@@ -95,6 +105,12 @@ export const companySettings = pgTable(
     ...audit(),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
+    primaryKey({ columns: [t.organizationId, t.id] }),
+    check(
+      'company_default_vat',
+      sql`${t.defaultVatRate} is null or ${t.defaultVatRate} between 0 and 100`,
+    ),
     check('company_singleton', sql`${t.id} = 1`),
     check('company_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
     check('company_capital', sql`${t.shareCapital} is null or ${t.shareCapital} >= 0`),
@@ -109,11 +125,12 @@ export const companySettings = pgTable(
     ),
     check('company_version', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()
 
 export const bankAccounts = pgTable(
   'bank_accounts',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     bankName: text('bank_name').notNull(),
@@ -125,23 +142,29 @@ export const bankAccounts = pgTable(
     ...audit(),
   },
   (t) => [
+    tenantPolicy(t.organizationId),
     check('bank_rib', sql`${t.rib} is null or ${t.rib} ~ '^[0-9]{24}$'`),
     check('bank_identifier', sql`${t.rib} is not null or ${t.iban} is not null`),
     check('bank_version', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()
 
-export const auditEvents = pgTable('audit_events', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
-  actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'restrict' }),
-  actorKind: text('actor_kind').notNull(),
-  action: text('action').notNull(),
-  entityTable: text('entity_table').notNull(),
-  entityKey: jsonb('entity_key').notNull(),
-  beforeValues: jsonb('before_values'),
-  afterValues: jsonb('after_values'),
-  reason: text('reason'),
-  requestId: uuid('request_id'),
-  ipAddress: text('ip_address'),
-})
+export const auditEvents = pgTable(
+  'audit_events',
+  {
+    organizationId: organizationColumn(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    actorId: uuid('actor_id').references(() => actors.id, { onDelete: 'restrict' }),
+    actorKind: text('actor_kind').notNull(),
+    action: text('action').notNull(),
+    entityTable: text('entity_table').notNull(),
+    entityKey: jsonb('entity_key').notNull(),
+    beforeValues: jsonb('before_values'),
+    afterValues: jsonb('after_values'),
+    reason: text('reason'),
+    requestId: uuid('request_id'),
+    ipAddress: text('ip_address'),
+  },
+  (t) => [tenantPolicy(t.organizationId)],
+).enableRLS()

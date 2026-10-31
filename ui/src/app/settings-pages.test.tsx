@@ -14,8 +14,8 @@ import type {
 } from '../api/generated/schemas/settings/settings.schemas'
 import type * as GeneratedApi from '../api/generated/settings/settings'
 import { apiRequest } from '../api/http'
-import * as auth from '../features/identity/auth/api/auth-client'
-import { CompanySettingsPage } from '../features/settings/company/pages/company-settings-page'
+import * as auth from '../features/organization/identity/auth/api/auth-client'
+import { CompanySettingsPage } from '../features/organization/settings/company/pages/company-settings-page'
 import { ApiError } from '../lib/api-error'
 import { routeApiRequest } from '../test/api-transport'
 import { ProtectedRoute } from './router/protected-route'
@@ -42,7 +42,7 @@ const api = {
   previewDocumentTemplate: vi.fn<typeof GeneratedApi.previewDocumentTemplate>(),
   uploadMedia: vi.fn<typeof MediaApi.uploadMedia>(),
 }
-vi.mock('../features/identity/auth/api/auth-client', () => ({
+vi.mock('../features/organization/identity/auth/api/auth-client', () => ({
   getSession: vi.fn(),
   logout: vi.fn(),
 }))
@@ -53,10 +53,11 @@ const meta = {
   version: 1,
   createdAt: stamp,
   updatedAt: stamp,
-  createdByUserId: null,
-  updatedByUserId: null,
+  createdByActorId: null,
+  updatedByActorId: null,
 }
 const company: CompanySettings = {
+  defaultVatRate: null,
   id: 1,
   legalName: null,
   tradeName: null,

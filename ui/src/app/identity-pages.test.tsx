@@ -11,12 +11,12 @@ import { memoryLocation } from 'wouter/memory-location'
 import type { Session } from '../api/generated/schemas/identity/auth.schemas'
 import type { Permission, Role } from '../api/generated/schemas/identity/rbac.schemas'
 import type { StaffCreated, StaffDetail } from '../api/generated/schemas/identity/staff.schemas'
-import * as auth from '../features/identity/auth/api/auth-client'
-import { RoleCreatePage } from '../features/identity/roles/pages/role-create-page'
-import { RolesPage } from '../features/identity/roles/pages/roles-page'
-import { StaffDetailPage } from '../features/identity/staff/pages/staff-detail-page'
-import { StaffFormPage } from '../features/identity/staff/pages/staff-form-page'
-import { StaffPage } from '../features/identity/staff/pages/staff-page'
+import * as auth from '../features/organization/identity/auth/api/auth-client'
+import { RoleCreatePage } from '../features/organization/identity/roles/pages/role-create-page'
+import { RolesPage } from '../features/organization/identity/roles/pages/roles-page'
+import { StaffDetailPage } from '../features/organization/identity/staff/pages/staff-detail-page'
+import { StaffFormPage } from '../features/organization/identity/staff/pages/staff-form-page'
+import { StaffPage } from '../features/organization/identity/staff/pages/staff-page'
 import { ApiError } from '../lib/api-error'
 import { routeApiRequest } from '../test/api-transport'
 const api = {
@@ -35,7 +35,7 @@ const api = {
   archiveStaff: vi.fn<typeof GeneratedApi.archiveStaff>(),
   reissueTemporaryPassword: vi.fn<typeof GeneratedApi.reissueTemporaryPassword>(),
 }
-vi.mock('../features/identity/auth/api/auth-client', () => ({ getSession: vi.fn() }))
+vi.mock('../features/organization/identity/auth/api/auth-client', () => ({ getSession: vi.fn() }))
 const id = '11111111-1111-4111-8111-111111111111'
 const roleId = '22222222-2222-4222-8222-222222222222'
 const stamp = '2026-09-26T12:00:00.000Z'

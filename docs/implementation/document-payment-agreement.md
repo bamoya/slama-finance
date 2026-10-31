@@ -43,7 +43,7 @@ Both PDF output and template previews use the canonical renderer.
 ## Migration
 
 The fields, restricted FKs and method checks are defined directly in
-`0000_fresh_baseline.sql`, with matching Drizzle snapshots. No separate corrective
+`0000_initial_schema.sql`, with matching Drizzle snapshots. No separate corrective
 migration or data update is needed before production. Use an empty database/new
 volume: editing this pre-production baseline does not upgrade existing databases.
 No existing database is reset automatically.

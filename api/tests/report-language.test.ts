@@ -11,13 +11,13 @@ import {
   drawReportDonut,
   isRingBreakdown,
   reportDonutHeight,
-} from '../src/modules/reporting/shared/services/report-breakdown-pdf.js'
+} from '../src/modules/organization/reporting/shared/services/report-breakdown-pdf.js'
 import {
   collectionMonths,
   drawCollectionMonth,
-} from '../src/modules/reporting/shared/services/report-calendar-pdf.js'
-import { composeReportEmail } from '../src/modules/reporting/shared/services/report-email.service.js'
-import { renderReportPdf } from '../src/modules/reporting/shared/services/report-renderer.service.js'
+} from '../src/modules/organization/reporting/shared/services/report-calendar-pdf.js'
+import { composeReportEmail } from '../src/modules/organization/reporting/shared/services/report-email.service.js'
+import { renderReportPdf } from '../src/modules/organization/reporting/shared/services/report-renderer.service.js'
 
 const schedule = {
   name: 'Weekly',
@@ -163,7 +163,7 @@ describe('scheduled report languages and visual parity', () => {
       language: 'en',
     })
     expect(text.mock.calls.map(([value]) => value)).toEqual(
-      expect.arrayContaining(['29', '30', '1,200', '0']),
+      expect.arrayContaining(['29', '30', '1\u00a0200', '0']),
     )
   })
 })

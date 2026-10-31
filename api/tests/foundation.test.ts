@@ -19,7 +19,7 @@ import {
   unitPriceSchema,
   weightSchema,
 } from '../src/lib/validation.js'
-import { prepareAuditEvent } from '../src/modules/audit/writer.js'
+import { prepareAuditEvent } from '../src/modules/organization/audit/writer.js'
 
 const apps: Awaited<ReturnType<typeof buildApp>>[] = []
 afterEach(async () => {
@@ -34,7 +34,10 @@ async function appFor(overrides: NodeJS.ProcessEnv = {}, probe?: () => Promise<v
   apps.push(app)
   return app
 }
-const trusted = { origin: 'http://localhost:5173' }
+const trusted = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 
 describe('environment configuration', () => {
   it('validates business worker controls and never permits recording delivery in production', () => {
@@ -126,7 +129,10 @@ describe('HTTP boundaries', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/v1/auth/logout',
-        headers: origin ? { origin } : {},
+        headers: {
+          ...(origin ? { origin } : {}),
+          'x-organization-id': '10000000-0000-4000-8000-000000000001',
+        },
       })
       expect(response.statusCode).toBe(403)
       expect(response.json().code).toBe('UNTRUSTED_ORIGIN')
@@ -265,7 +271,7 @@ describe('shared data conventions', () => {
     const id = '11111111-1111-4111-8111-111111111111'
     const event = prepareAuditEvent({
       actorKind: 'user',
-      actorUserId: id,
+      actorId: id,
       entityTable: 'users',
       entityKey: { id },
       action: 'update',
@@ -281,7 +287,7 @@ describe('shared data conventions', () => {
     expect(() =>
       prepareAuditEvent({
         actorKind: 'system',
-        actorUserId: null,
+        actorId: null,
         entityTable: 'user_roles',
         entityKey: { userId: id },
         action: 'grant',

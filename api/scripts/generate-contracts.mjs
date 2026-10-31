@@ -158,7 +158,7 @@ export function compileSchema(schema, { query = false } = {}) {
 const pascal = (value) => value[0].toUpperCase() + value.slice(1)
 function group(ref) {
   const match = ref.match(
-    /^\.\/(?:modules\/)?((?:identity|settings|media|catalog|clients|sales|reporting|shared)\/[a-z-]+)\.yaml#/,
+    /^\.\/(?:modules\/)?((?:identity|settings|media|catalog|clients|sales|reporting|subscriptions|shared)\/[a-z-]+)\.yaml#/,
   )
   if (!match) throw new Error(`Contract must reference an approved module/shared file: ${ref}`)
   return match[1]

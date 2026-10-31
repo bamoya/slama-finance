@@ -28,7 +28,7 @@ export function createPdfJobWorker(
             })
         }, 10_000)
         heartbeat.unref()
-        await prepare(job.payload as PreparePdfPayload, job.initiatedByUserId)
+        await prepare(job.payload as PreparePdfPayload, job.initiatedByActorId)
         if (heartbeatInFlight) await heartbeatInFlight
         if (heartbeatFailure) throw heartbeatFailure
         await jobs.complete(job)

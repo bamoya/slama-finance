@@ -11,20 +11,26 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { users } from './auth.js'
+import { actors } from './actors.js'
 import { mediaAssets } from './media.js'
+import { organizationColumn, tenantPolicy } from './tenant.js'
 
 const audit = () => ({
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-  updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdByActorId: uuid('created_by_actor_id').references(() => actors.id, {
+    onDelete: 'set null',
+  }),
+  updatedByActorId: uuid('updated_by_actor_id').references(() => actors.id, {
+    onDelete: 'set null',
+  }),
 })
 
 export const productCategories = pgTable(
   'product_categories',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     description: text('description'),
@@ -32,15 +38,20 @@ export const productCategories = pgTable(
     ...audit(),
   },
   (t) => [
-    uniqueIndex('product_categories_normalized_name_unique').on(sql`lower(trim(${t.name}))`),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('product_categories_normalized_name_unique').on(
+      t.organizationId,
+      sql`lower(trim(${t.name}))`,
+    ),
     check('category_name_nonblank', sql`length(trim(${t.name})) > 0`),
     check('category_version_positive', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()
 
 export const products = pgTable(
   'products',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     reference: text('reference').notNull(),
     name: text('name').notNull(),
@@ -54,8 +65,9 @@ export const products = pgTable(
     ...audit(),
   },
   (t) => [
-    uniqueIndex('products_reference_unique').on(sql`lower(trim(${t.reference}))`),
-    index('products_category_idx').on(t.categoryId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('products_reference_unique').on(t.organizationId, sql`lower(trim(${t.reference}))`),
+    index('products_category_idx').on(t.organizationId, t.categoryId),
     check('product_name_nonblank', sql`length(trim(${t.name})) > 0`),
     check('product_reference_nonblank', sql`length(trim(${t.reference})) > 0`),
     check(
@@ -64,11 +76,12 @@ export const products = pgTable(
     ),
     check('product_version_positive', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()
 
 export const productVariants = pgTable(
   'product_variants',
   {
+    organizationId: organizationColumn(),
     id: uuid('id').primaryKey().defaultRandom(),
     productId: uuid('product_id')
       .notNull()
@@ -80,11 +93,16 @@ export const productVariants = pgTable(
     ...audit(),
   },
   (t) => [
-    uniqueIndex('product_variants_product_weight_unique').on(t.productId, t.weightG),
-    index('product_variants_product_idx').on(t.productId),
+    tenantPolicy(t.organizationId),
+    uniqueIndex('product_variants_product_weight_unique').on(
+      t.organizationId,
+      t.productId,
+      t.weightG,
+    ),
+    index('product_variants_product_idx').on(t.organizationId, t.productId),
     check('variant_weight_positive', sql`${t.weightG} > 0`),
     check('variant_price_nonnegative', sql`${t.pricePerItem} >= 0`),
     check('variant_cost_nonnegative', sql`${t.costPerItem} is null or ${t.costPerItem} >= 0`),
     check('variant_version_positive', sql`${t.version} > 0`),
   ],
-)
+).enableRLS()

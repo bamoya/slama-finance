@@ -4,15 +4,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 describe('action permissions', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
   let cookies: { slama_session: string }
   let roleId: string
-  const headers = { origin: 'http://localhost:5173' }
+  const headers = {
+    origin: 'http://localhost:5173',
+    'x-organization-id': '10000000-0000-4000-8000-000000000001',
+  }
   const missingId = randomUUID()
   beforeAll(async () => {
     fixture = await isolatedDatabase()
@@ -23,7 +26,7 @@ describe('action permissions', () => {
     roleId = role!.id
     await fixture.client`insert into user_roles (user_id,role_id) values (${testUserId},${roleId})`
     app = await buildApp({ environment: loadEnvironment({ NODE_ENV: 'test' }), logger: false })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',

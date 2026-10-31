@@ -1,5 +1,33 @@
 # Architecture
 
+## Current application boundaries
+
+The application has two business areas in both API and UI:
+
+```text
+api/src/modules/                  ui/src/features/
+├── platform/                     ├── platform/
+│   ├── identity/                 │   ├── marketing/
+│   ├── organizations/            │   ├── identity/
+│   ├── subscriptions/            │   ├── organizations/
+│   └── analytics/                │   ├── subscriptions/
+└── organization/                 │   └── shared/
+    ├── identity/                 └── organization/
+    ├── settings/                     ├── identity/
+    ├── clients/                      ├── settings/
+    ├── catalog/                      ├── clients/
+    ├── sales/                        ├── catalog/
+    ├── reporting/                    ├── sales/
+    └── media/                        ├── reports/
+                                      └── other organization features/
+```
+
+Platform sessions manage ownership and subscriptions; they never become organization staff sessions. Organization creation provisions a normal administrator with independent credentials, a counted member seat and the usual administrator safeguards. A retryable organization-owned job sends its temporary password after activation. There is no Owner staff role or permission bypass.
+
+Platform analytics uses dedicated read-only repositories scoped through organization ownership. Direct financial aggregate reads of the shared schema are the approved exception; organization repositories are not reused. Submodule layers and public-interface boundaries are enforced through ESLint. HTTP operation IDs and modular OpenAPI namespaces remain stable during this code reorganization.
+
+See [the approved boundary agreement](saas/platform-organization-boundaries.md). This fresh SaaS baseline supersedes the older single-company and owner-handoff descriptions below. No production migration or deployment is part of this change.
+
 ## Principles
 
 The API is a seven-module modular monolith with layered internal
@@ -306,3 +334,11 @@ RBAC follows in 02. The current Compose/dependency scaffold still includes unuse
 Redis/BullMQ entries; remove those during sequence 06 after checking consumers.
 They are not the approved queue design. Audit writer plumbing exists in 00;
 production audit DDL and least-privilege grants are installed with the 01 baseline.
+
+### SaaS finance isolation — 30-10-2026
+
+All 34 finance/staff/support tables now require organization scope and FORCE RLS, with tenant-local
+settings/uniqueness, cross-tenant FK guards and organization-prefixed private storage. The shared
+request/database layer preserves module boundaries and repository transaction/isolation semantics;
+workers execute one organization at a time. See [finance isolation](saas/finance-isolation.md).
+Owner workspace entry, onboarding activation and plan enforcement remain separate release gates.

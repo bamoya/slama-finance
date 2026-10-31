@@ -17,18 +17,24 @@ import {
 } from '../src/integrations/email/transport.js'
 import { companyDate } from '../src/lib/validation.js'
 import type { WorkerEvent, WorkerObserver } from '../src/lib/worker-observer.js'
-import { createClientNotificationModule } from '../src/modules/clients/index.js'
-import { createPasswordService } from '../src/modules/identity/auth/services/password.service.js'
-import { createIdentityModule } from '../src/modules/identity/index.js'
-import { createMediaModule } from '../src/modules/media/index.js'
-import { createReportingModule } from '../src/modules/reporting/index.js'
-import { createSalesModule, createSalesNotificationsModule } from '../src/modules/sales/index.js'
-import { createNotificationSettingsModule } from '../src/modules/settings/index.js'
+import { createClientNotificationModule } from '../src/modules/organization/clients/index.js'
+import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
+import { createIdentityModule } from '../src/modules/organization/identity/index.js'
+import { createMediaModule } from '../src/modules/organization/media/index.js'
+import { createReportingModule } from '../src/modules/organization/reporting/index.js'
+import {
+  createSalesModule,
+  createSalesNotificationsModule,
+} from '../src/modules/organization/sales/index.js'
+import { createNotificationSettingsModule } from '../src/modules/organization/settings/index.js'
 import { createJobSupport } from '../src/support/jobs/index.js'
 import { createNotificationSupport } from '../src/support/notifications/index.js'
-import { isolatedDatabase, testUserId } from './helpers/postgres.js'
+import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
-const headers = { origin: 'http://localhost:5173' }
+const headers = {
+  origin: 'http://localhost:5173',
+  'x-organization-id': '10000000-0000-4000-8000-000000000001',
+}
 const password = 'independent-qa-password-123'
 const reportGrants = ['reports.read']
 
@@ -109,7 +115,7 @@ describe('Independent remaining-feature regression QA', () => {
       logger: false,
       mediaStorage: storage,
     })
-    app.database = () => fixture.db
+    attachTestDatabase(app, fixture)
     cookies = await login('operator@example.test')
   })
   afterEach(async () => {

@@ -1,0 +1,25 @@
+.platform-brand {
+  position: relative;
+  display: block;
+  width: 164px;
+  aspect-ratio: 5.17;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.platform-brand > img {
+  max-width: none;
+  width: 124.55%;
+  height: auto;
+  position: absolute;
+  left: -12.4%;
+  top: -52%;
+}
+.platform-brand-light-lettering {
+  display: none;
+}
+.theme-dark .platform-brand-light-lettering,
+.platform-brand-on-dark .platform-brand-light-lettering {
+  display: block;
+  filter: brightness(0) invert(0.94);
+  clip-path: inset(0 0 0 30%);
+}

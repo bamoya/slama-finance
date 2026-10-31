@@ -8,7 +8,7 @@ function componentFiles(directory: string): string[] {
     const path = resolve(directory, entry.name)
     return entry.isDirectory()
       ? componentFiles(path)
-      : path.endsWith('.tsx') && !path.endsWith('.test.tsx')
+      : path.endsWith('.tsx') && !path.endsWith('.test')
         ? [path]
         : []
   })

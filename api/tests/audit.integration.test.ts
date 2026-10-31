@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { users } from '../db/schema/auth.js'
 import { inTransaction } from '../src/lib/db.js'
-import { writeAudit } from '../src/modules/audit/writer.js'
+import { writeAudit } from '../src/modules/organization/audit/writer.js'
 import { isolatedDatabase, testUserId } from './helpers/postgres.js'
 
 describe('PostgreSQL transaction and audit foundation', () => {
@@ -21,7 +21,7 @@ describe('PostgreSQL transaction and audit foundation', () => {
         await tx.update(users).set({ firstName: 'Must roll back' }).where(eq(users.id, testUserId))
         await writeAudit(tx, {
           actorKind: 'user',
-          actorUserId: testUserId,
+          actorId: testUserId,
           action: 'update',
           entityTable: 'users',
           entityKey: { id: testUserId },
@@ -41,7 +41,7 @@ describe('PostgreSQL transaction and audit foundation', () => {
       await tx.update(users).set({ firstName: 'Updated operator' }).where(eq(users.id, testUserId))
       await writeAudit(tx, {
         actorKind: 'user',
-        actorUserId: testUserId,
+        actorId: testUserId,
         action: 'update',
         entityTable: 'users',
         entityKey: { id: testUserId },

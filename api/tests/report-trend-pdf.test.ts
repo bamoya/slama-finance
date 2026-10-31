@@ -4,7 +4,7 @@ import { createDocumentCanvas } from '../src/lib/documents/canvas.js'
 import {
   drawReportTrend,
   trendAxis,
-} from '../src/modules/reporting/shared/services/report-trend-pdf.js'
+} from '../src/modules/organization/reporting/shared/services/report-trend-pdf.js'
 
 describe('report chart axes and projections', () => {
   it('uses readable tick intervals above the largest plotted amount, including zero and small amounts', () => {
@@ -36,10 +36,11 @@ describe('report chart axes and projections', () => {
         ],
       })
       const values = text.mock.calls.map(([value]) => value)
-      for (const label of [...labels, 'MAD', 'Date', '3 000', '2 800'])
+      for (const label of [...labels, 'MAD', 'Date', '3\u00a0000', '2\u00a0800'])
         expect(values).toContain(label)
       expect(values.join('')).not.toContain(String.fromCharCode(0))
-      expect(values.join('')).not.toMatch(/[\u202f\u00a0]/)
+      expect(values.join('')).not.toContain('\u202f')
+      expect((await canvas.pdf.save()).length).toBeGreaterThan(1000)
       expect(height).toBeLessThan(200)
       expect(lines.mock.calls.some(([options]) => options.dashArray)).toBe(true)
       expect(

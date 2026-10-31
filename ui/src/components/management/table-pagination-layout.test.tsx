@@ -48,7 +48,7 @@ it('keeps every feature pagination inside its section or collapsible table conta
 
 it('does not render a duplicate product or category footer counter', () => {
   for (const page of ['products', 'categories']) {
-    const source = readFileSync(`src/features/products/pages/${page}-page.tsx`, 'utf8')
+    const source = readFileSync(`src/features/organization/catalog/pages/${page}-page.tsx`, 'utf8')
     expect(source).not.toMatch(/t\('count(?:Products|Categories)'/)
   }
 })

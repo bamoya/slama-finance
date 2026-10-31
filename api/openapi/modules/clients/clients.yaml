@@ -243,8 +243,8 @@ components:
           version,
           createdAt,
           updatedAt,
-          createdByUserId,
-          updatedByUserId,
+          createdByActorId,
+          updatedByActorId,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -278,8 +278,8 @@ components:
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        createdByUserId: { type: [string, 'null'], format: uuid }
-        updatedByUserId: { type: [string, 'null'], format: uuid }
+        createdByActorId: { type: [string, 'null'], format: uuid }
+        updatedByActorId: { type: [string, 'null'], format: uuid }
         financialSummary:
           {
             type: [object, 'null'],

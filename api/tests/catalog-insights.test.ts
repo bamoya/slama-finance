@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveCatalogPeriod } from '../src/modules/catalog/services/catalog-insights.service.js'
+import { resolveCatalogPeriod } from '../src/modules/organization/catalog/services/catalog-insights.service.js'
 
 describe('catalog insight periods', () => {
   const now = new Date('2026-10-01T00:30:00.000Z')

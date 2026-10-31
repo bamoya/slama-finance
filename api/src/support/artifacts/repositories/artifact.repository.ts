@@ -5,12 +5,14 @@ import { outboundMessageAttachments } from '../../../../db/schema/notifications.
 import { auditEvents } from '../../../../db/schema/settings.js'
 import type { Database, Transaction } from '../../../lib/db.js'
 import { AppError } from '../../../lib/errors.js'
+import { tenantObjectKey } from '../../../lib/tenant-storage.js'
 
 export type Artifact = typeof documentArtifacts.$inferSelect
 export type ArtifactInsert = typeof documentArtifacts.$inferInsert
 
 export function createArtifactRepository(database: () => Database) {
   return {
+    storageKey: (path: string) => tenantObjectKey(database(), path),
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async findOwnerVersion(
       type: string,
@@ -91,7 +93,7 @@ export function createArtifactRepository(database: () => Database) {
           byteSize: data.byteSize,
           sha256: data.sha256,
           generatedAt: new Date(),
-          createdByUserId: data.createdByUserId,
+          createdByActorId: data.createdByActorId,
         })
         .where(
           and(
@@ -111,7 +113,7 @@ export function createArtifactRepository(database: () => Database) {
       tx: Transaction,
     ) {
       await tx.insert(auditEvents).values({
-        actorUserId: next.createdByUserId,
+        actorId: next.createdByActorId,
         actorKind: 'user',
         action: 'regenerate_pdf',
         entityTable: 'document_artifacts',
