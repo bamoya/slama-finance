@@ -6,6 +6,7 @@ import type { ObjectStorage } from '../src/integrations/contracts.js'
 import { createRecordingEmailProvider } from '../src/integrations/email/transport.js'
 import { inTenantScope } from '../src/lib/tenant-database.js'
 import { createSubscriptionsModule } from '../src/modules/platform/subscriptions/index.js'
+import { createBillingRepository } from '../src/modules/platform/subscriptions/repositories/billing.repository.js'
 import { createSubscriptionRepository } from '../src/modules/platform/subscriptions/repositories/subscription.repository.js'
 import { createSubscriptionService } from '../src/modules/platform/subscriptions/services/subscription.service.js'
 import { createNotificationSupport } from '../src/support/notifications/index.js'
@@ -236,6 +237,7 @@ describe('Pooled subscription usage', () => {
     let now = new Date('2026-06-15T12:00:00Z')
     const service = createSubscriptionService(
         createSubscriptionRepository(() => fixture.db),
+        createBillingRepository(() => fixture.db),
         () => now,
       ),
       m = memory()

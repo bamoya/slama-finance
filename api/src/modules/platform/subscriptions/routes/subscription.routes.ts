@@ -7,9 +7,15 @@ export function registerSubscriptionRoutes(
   controller: ReturnType<typeof createSubscriptionController>,
   origin?: string,
 ) {
-  app.get(
-    '/v1/owner/subscription',
-    { preHandler: createRequirePortalOrigin(origin) },
-    controller.get,
+  const preHandler = createRequirePortalOrigin(origin)
+  app.get('/v1/owner/subscription', { preHandler }, controller.get)
+  app.get('/v1/owner/subscription/billing', { preHandler }, controller.billing)
+  app.post('/v1/owner/subscription/quote', { preHandler }, controller.quote)
+  app.get('/v1/owner/subscription/payments', { preHandler }, controller.payments)
+  app.post(
+    '/v1/owner/subscription/payments',
+    { preHandler, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    controller.submit,
   )
+  app.put('/v1/owner/subscription/cancellation', { preHandler }, controller.cancellation)
 }

@@ -123,11 +123,17 @@ export async function initializeDatabase(env = process.env) {
           `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.${identifier(table)} TO ${role}`,
         )
       for (const [privileges, tables] of [
-        ['SELECT', ['permissions', 'subscription_plans']],
+        ['SELECT', ['permissions', 'subscription_plans', 'billing_settings']],
         ['SELECT, INSERT', ['organizations']],
         [
           'SELECT, INSERT',
-          ['audit_events', 'actors', 'owner_subscriptions', 'subscription_emails'],
+          [
+            'audit_events',
+            'actors',
+            'owner_subscriptions',
+            'subscription_emails',
+            'subscription_payments',
+          ],
         ],
         ['SELECT, INSERT, UPDATE, DELETE', ['subscription_storage']],
         [
@@ -149,6 +155,10 @@ export async function initializeDatabase(env = process.env) {
           await tx.unsafe(`GRANT ${privileges} ON TABLE public.${identifier(table)} TO ${role}`)
       await tx.unsafe(
         `GRANT UPDATE (name, locale, updated_at, activated_at) ON public.organizations TO ${role}`,
+      )
+      // Payment confirmation runs only through the privileged administrator path.
+      await tx.unsafe(
+        `GRANT UPDATE (cancel_at_period_end) ON public.owner_subscriptions TO ${role}`,
       )
     })
     await runtime`SELECT 1 FROM public.users LIMIT 1`

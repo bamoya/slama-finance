@@ -19,7 +19,8 @@
     "contract:check": "pnpm contracts:generate && vitest run tests/contract.test.ts tests/generated-contracts.test.ts",
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate",
-    "db:grant-sales-runtime": "tsx scripts/grant-sales-runtime.ts"
+    "db:grant-sales-runtime": "tsx scripts/grant-sales-runtime.ts",
+    "subscription:payment": "tsx scripts/subscription-payment.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",

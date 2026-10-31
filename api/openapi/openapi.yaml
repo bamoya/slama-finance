@@ -323,6 +323,14 @@ paths:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1change-password
   /v1/owner/subscription:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1v1~1owner~1subscription
+  /v1/owner/subscription/billing:
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1v1~1owner~1subscription~1billing
+  /v1/owner/subscription/quote:
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1v1~1owner~1subscription~1quote
+  /v1/owner/subscription/payments:
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1v1~1owner~1subscription~1payments
+  /v1/owner/subscription/cancellation:
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1v1~1owner~1subscription~1cancellation
   /v1/workspace/session:
     $ref: ./modules/identity/workspace.yaml#/paths/~1v1~1workspace~1session
 components:
@@ -766,5 +774,23 @@ components:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/OwnerSubscription
     SubscriptionEntitlements:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionEntitlements
+    PaidPlanCode:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/PaidPlanCode
+    BillingCycle:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingCycle
+    MoneyBreakdown:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/MoneyBreakdown
+    BillingCatalog:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingCatalog
+    SubscriptionQuoteRequest:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionQuoteRequest
+    SubscriptionQuote:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionQuote
+    SubscriptionPaymentSubmission:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionPaymentSubmission
+    SubscriptionPayment:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionPayment
+    SubscriptionCancellation:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionCancellation
     WorkspaceSession:
       $ref: ./modules/identity/workspace.yaml#/components/schemas/WorkspaceSession

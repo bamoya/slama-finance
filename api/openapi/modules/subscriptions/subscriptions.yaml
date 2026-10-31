@@ -15,6 +15,107 @@ paths:
           content:
             application/json:
               schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+  /v1/owner/subscription/billing:
+    get:
+      operationId: getOwnerBilling
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      responses:
+        '200':
+          description: Plan prices, tax configuration, accepted payment methods and instructions.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BillingCatalog'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+  /v1/owner/subscription/quote:
+    post:
+      operationId: quoteOwnerSubscription
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SubscriptionQuoteRequest'}
+      responses:
+        '200':
+          description: Exact HT, tax and TTC amounts and the expected kind of change. Nothing is recorded.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SubscriptionQuote'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+  /v1/owner/subscription/payments:
+    get:
+      operationId: listOwnerSubscriptionPayments
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      responses:
+        '200':
+          description: Submitted, confirmed and rejected manual payments, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/SubscriptionPayment'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+    post:
+      operationId: submitOwnerSubscriptionPayment
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SubscriptionPaymentSubmission'}
+      responses:
+        '201':
+          description: Payment reference recorded for administrator verification. Coverage starts only after confirmation.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SubscriptionPayment'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
+  /v1/owner/subscription/cancellation:
+    put:
+      operationId: setOwnerSubscriptionCancellation
+      tags: [subscriptions]
+      security: [{ownerSessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SubscriptionCancellation'}
+      responses:
+        '200':
+          description: Updated subscription. Already-paid coverage is preserved.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OwnerSubscription'}
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: {$ref: ../../openapi.yaml#/components/schemas/Error}
 components:
   schemas:
     SubscriptionEntitlements:
@@ -32,13 +133,20 @@ components:
     OwnerSubscription:
       type: object
       additionalProperties: false
-      required: [planCode, planName, status, trialEndsAt, paidThroughAt, entitlements, organizationCount, usage]
+      required: [planCode, planName, status, trialEndsAt, paidThroughAt, cycle, cancelAtPeriodEnd, graceEndsAt, blockedAt, retentionEndsAt, nextPlanCode, pendingPayment, entitlements, organizationCount, usage]
       properties:
         planCode: {type: string, enum: [trial, essential, business, pro]}
         planName: {type: string}
         status: {type: string, enum: [not_started, trial, active, past_due, expired]}
         trialEndsAt: {type: [string, 'null'], format: date-time}
         paidThroughAt: {type: [string, 'null'], format: date-time}
+        cycle: {anyOf: [{$ref: '#/components/schemas/BillingCycle'}, {type: 'null'}]}
+        cancelAtPeriodEnd: {type: boolean}
+        graceEndsAt: {type: [string, 'null'], format: date-time, description: 'Set only for previously paid coverage; trials have no grace.'}
+        blockedAt: {type: [string, 'null'], format: date-time}
+        retentionEndsAt: {type: [string, 'null'], format: date-time, description: '90 days after access was blocked. Deletion is not automatic.'}
+        nextPlanCode: {anyOf: [{$ref: '#/components/schemas/PaidPlanCode'}, {type: 'null'}], description: 'Plan of already-confirmed future coverage, such as a downgrade at renewal.'}
+        pendingPayment: {anyOf: [{$ref: '#/components/schemas/SubscriptionPayment'}, {type: 'null'}]}
         entitlements: {$ref: '#/components/schemas/SubscriptionEntitlements'}
         organizationCount: {type: integer, minimum: 0}
         usage:
@@ -50,3 +158,88 @@ components:
             businessEmails: {type: integer, minimum: 0}
             emailPeriodStart: {type: [string, 'null'], format: date-time}
             emailPeriodEnd: {type: [string, 'null'], format: date-time}
+    PaidPlanCode: {type: string, enum: [essential, business, pro]}
+    BillingCycle: {type: string, enum: [monthly, annual]}
+    MoneyBreakdown:
+      type: object
+      additionalProperties: false
+      required: [currency, amountHt, taxRateBasisPoints, taxAmount, amountTtc]
+      properties:
+        currency: {type: string, minLength: 3, maxLength: 3}
+        amountHt: {type: integer, minimum: 0, description: 'Centimes, excluding tax.'}
+        taxRateBasisPoints: {type: [integer, 'null'], minimum: 0, maximum: 10000}
+        taxAmount: {type: integer, minimum: 0}
+        amountTtc: {type: integer, minimum: 0}
+    BillingCatalog:
+      type: object
+      additionalProperties: false
+      required: [currency, taxRateBasisPoints, paymentMethods, paymentInstructions, plans]
+      properties:
+        currency: {type: string}
+        taxRateBasisPoints: {type: [integer, 'null'], minimum: 0, maximum: 10000}
+        paymentMethods:
+          type: array
+          items: {type: string}
+        paymentInstructions: {type: string}
+        plans:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, name, monthlyHt, annualHt, entitlements]
+            properties:
+              code: {$ref: '#/components/schemas/PaidPlanCode'}
+              name: {type: string}
+              monthlyHt: {type: integer, minimum: 0}
+              annualHt: {type: integer, minimum: 0}
+              entitlements: {$ref: '#/components/schemas/SubscriptionEntitlements'}
+    SubscriptionQuoteRequest:
+      type: object
+      additionalProperties: false
+      required: [planCode, cycle]
+      properties:
+        planCode: {$ref: '#/components/schemas/PaidPlanCode'}
+        cycle: {$ref: '#/components/schemas/BillingCycle'}
+    SubscriptionQuote:
+      type: object
+      additionalProperties: false
+      required: [planCode, cycle, kind, amount, coverageStart, coverageEnd]
+      properties:
+        planCode: {$ref: '#/components/schemas/PaidPlanCode'}
+        cycle: {$ref: '#/components/schemas/BillingCycle'}
+        kind: {type: string, enum: [activation, renewal, upgrade]}
+        amount: {$ref: '#/components/schemas/MoneyBreakdown'}
+        coverageStart: {type: string, format: date-time, description: 'Estimate; final coverage is set at confirmation.'}
+        coverageEnd: {type: string, format: date-time}
+    SubscriptionPaymentSubmission:
+      type: object
+      additionalProperties: false
+      required: [planCode, cycle, method, reference]
+      properties:
+        planCode: {$ref: '#/components/schemas/PaidPlanCode'}
+        cycle: {$ref: '#/components/schemas/BillingCycle'}
+        method: {type: string, minLength: 1, maxLength: 40}
+        reference: {type: string, minLength: 1, maxLength: 120}
+    SubscriptionPayment:
+      type: object
+      additionalProperties: false
+      required: [id, planCode, cycle, kind, status, method, reference, amount, coverageStart, coverageEnd, submittedAt, decidedAt]
+      properties:
+        id: {type: string, format: uuid}
+        planCode: {$ref: '#/components/schemas/PaidPlanCode'}
+        cycle: {$ref: '#/components/schemas/BillingCycle'}
+        kind: {type: string, enum: [activation, renewal, upgrade]}
+        status: {type: string, enum: [submitted, confirmed, rejected]}
+        method: {type: string}
+        reference: {type: string}
+        amount: {$ref: '#/components/schemas/MoneyBreakdown'}
+        coverageStart: {type: [string, 'null'], format: date-time}
+        coverageEnd: {type: [string, 'null'], format: date-time}
+        submittedAt: {type: string, format: date-time}
+        decidedAt: {type: [string, 'null'], format: date-time}
+    SubscriptionCancellation:
+      type: object
+      additionalProperties: false
+      required: [cancelAtPeriodEnd]
+      properties:
+        cancelAtPeriodEnd: {type: boolean}

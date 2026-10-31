@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
+import { CancellationCard } from '../components/cancellation-card'
+import { PaymentHistory } from '../components/payment-history'
+import { PlanCheckout } from '../components/plan-checkout'
+import { SubscriptionStatusCard } from '../components/subscription-status-card'
 import { UsageMeter } from '../components/usage-meter'
 export function OwnerSubscriptionPage() {
   useUiLanguage()
@@ -26,51 +30,7 @@ export function OwnerSubscriptionPage() {
         <RequestState query={query} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>{s.planCode === 'trial' ? translate('Free trial') : s.planName}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <span className="inline-flex rounded-full border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
-                {translate(
-                  s.status === 'trial'
-                    ? 'Free trial'
-                    : s.status === 'not_started'
-                      ? 'Trial not started'
-                      : s.status === 'expired'
-                        ? 'Expired'
-                        : s.status === 'past_due'
-                          ? 'Payment overdue'
-                          : 'Active',
-                )}
-              </span>
-              <p>
-                {translate(
-                  'The free trial lasts seven calendar days from your first organization.',
-                )}
-              </p>
-              {s.trialEndsAt && (
-                <p>
-                  <strong>{translate('Trial ends')}: </strong>
-                  {displayDateTime(s.trialEndsAt, 'Africa/Casablanca')}
-                </p>
-              )}
-              {s.paidThroughAt && (
-                <p>
-                  {translate('Paid through')}:{' '}
-                  {displayDateTime(s.paidThroughAt, 'Africa/Casablanca')}
-                </p>
-              )}
-              <p className="text-sm text-[var(--muted)]">
-                {translate(
-                  'Paid activation requires payment confirmation. No automatic payment is taken.',
-                )}
-              </p>
-              <a href="/contact" className={buttonVariants()}>
-                {translate('Contact us')}
-              </a>
-            </CardContent>
-          </Card>
+          <SubscriptionStatusCard s={s} />
           <Card>
             <CardHeader>
               <CardTitle>{translate('Plan allowances')}</CardTitle>
@@ -135,6 +95,13 @@ export function OwnerSubscriptionPage() {
               </p>
             </CardContent>
           </Card>
+          <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
+            <PlanCheckout s={s} />
+            <CancellationCard s={s} />
+          </div>
+          <div className="lg:col-span-2">
+            <PaymentHistory />
+          </div>
         </div>
       )}
     </OwnerPortalLayout>

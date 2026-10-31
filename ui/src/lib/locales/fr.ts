@@ -2188,4 +2188,51 @@ export const french: Record<string, string> = {
   revoked: 'Révoquée',
   all: 'Tous',
   sending: 'Envoi en cours',
+  'Upgrade (prorated)': 'Changement d’offre (au prorata)',
+  Renewal: 'Renouvellement',
+  Activation: 'Activation',
+  Annual: 'Annuel',
+  'Awaiting verification': 'En attente de vérification',
+  'Cancels at period end': 'Résiliation en fin de période',
+  'Covered until': 'Couvert jusqu’au',
+  'Grace period ends': 'Fin de la période de grâce',
+  'Access blocked since': 'Accès bloqué depuis le',
+  'Data retained until': 'Données conservées jusqu’au',
+  'Next plan': 'Prochaine offre',
+  'Access is blocked. Your data is kept until the retention date; deletion is never automatic.':
+    'L’accès est bloqué. Vos données sont conservées jusqu’à la date de conservation ; aucune suppression n’est automatique.',
+  'Payment awaiting verification': 'Paiement en attente de vérification',
+  'An administrator must verify it before your plan is activated.':
+    'Un administrateur doit le vérifier avant l’activation de votre offre.',
+  Submitted: 'Soumis le',
+  Plan: 'Offre',
+  'Total incl. tax': 'Total TTC',
+  Coverage: 'Couverture',
+  'No payments yet.': 'Aucun paiement pour le moment.',
+  Cancellation: 'Résiliation',
+  'Resume subscription': 'Reprendre l’abonnement',
+  'Cancel at period end': 'Résilier en fin de période',
+  'Your subscription will stop at the end of the covered period.':
+    'Votre abonnement s’arrêtera à la fin de la période couverte.',
+  'Cancelling keeps your access until the end of the covered period.':
+    'La résiliation conserve votre accès jusqu’à la fin de la période couverte.',
+  'Your plan will remain active and can be renewed after payment.':
+    'Votre offre restera active et pourra être renouvelée après paiement.',
+  'No refund is made. Access continues until the end of the covered period, then stops.':
+    'Aucun remboursement n’est effectué. L’accès continue jusqu’à la fin de la période couverte, puis s’arrête.',
+  'Confirm resume': 'Confirmer la reprise',
+  'Choose a plan and pay': 'Choisir une offre et payer',
+  'Billing cycle': 'Cycle de facturation',
+  'Amount excl. tax': 'Montant HT',
+  'Estimated coverage': 'Couverture estimée',
+  'The upgrade price is prorated for the remaining covered period.':
+    'Le prix du changement d’offre est calculé au prorata de la période couverte restante.',
+  'How to pay': 'Comment payer',
+  'Payment reference': 'Référence du paiement',
+  'Your plan is activated only after an administrator verifies your payment. No automatic payment is taken.':
+    'Votre offre n’est activée qu’après vérification de votre paiement par un administrateur. Aucun paiement automatique n’est prélevé.',
+  'A payment is already awaiting verification.': 'Un paiement est déjà en attente de vérification.',
+  'Payment submitted. It will be activated once verified.':
+    'Paiement soumis. L’offre sera activée après vérification.',
+  'Submit payment': 'Soumettre le paiement',
 }

@@ -32,6 +32,12 @@ export function errorMessage(error: unknown): string {
         'Cette invitation a déjà été acceptée. Connectez-vous à votre organisation.',
       INVITATION_CONFLICT: 'Cette invitation ne peut plus être modifiée.',
       STAFF_LIMIT: 'La limite de membres est atteinte. Contactez votre administrateur.',
+      PAYMENT_PENDING: 'Un paiement est déjà en attente de vérification pour votre abonnement.',
+      INVALID_PAYMENT_METHOD:
+        'Ce moyen de paiement n’est pas accepté. Choisissez-en un dans la liste.',
+      RENEWAL_EXISTS: 'Un renouvellement est déjà confirmé pour la période suivante.',
+      NOT_CANCELLABLE: 'Cet abonnement ne peut pas être résilié dans son état actuel.',
+      UPGRADE_STALE: 'Le prix du changement d’offre a évolué. Actualisez le devis puis réessayez.',
       EMAIL_UNAVAILABLE: 'L’envoi des invitations est temporairement indisponible.',
     }
     if (invitationErrors[error.code]) return invitationErrors[error.code]!

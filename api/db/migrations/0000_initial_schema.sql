@@ -1132,61 +1132,6 @@ CREATE TABLE IF NOT EXISTS "document_templates" (
 ALTER TABLE "document_templates" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
-CREATE TABLE IF NOT EXISTS "owner_subscriptions" (
-	"owner_id" uuid PRIMARY KEY NOT NULL,
-	"plan_code" text NOT NULL,
-	"trial_started_at" timestamp with time zone NOT NULL,
-	"trial_ends_at" timestamp with time zone NOT NULL,
-	"paid_through_at" timestamp with time zone,
-	CONSTRAINT "trial_window" CHECK ("owner_subscriptions"."trial_ends_at"="owner_subscriptions"."trial_started_at"+interval '7 days')
-);
-
---> statement-breakpoint
-
-ALTER TABLE "owner_subscriptions" ENABLE ROW LEVEL SECURITY;
---> statement-breakpoint
-
-CREATE TABLE IF NOT EXISTS "subscription_emails" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"owner_id" uuid NOT NULL,
-	"message_key" text NOT NULL,
-	"recipients" integer NOT NULL,
-	"allowance_key" text NOT NULL,
-	"queued_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "subscription_emails_message_key_unique" UNIQUE("message_key"),
-	CONSTRAINT "subscription_email_recipients" CHECK ("subscription_emails"."recipients">0)
-);
-
---> statement-breakpoint
-
-ALTER TABLE "subscription_emails" ENABLE ROW LEVEL SECURITY;
---> statement-breakpoint
-
-CREATE TABLE IF NOT EXISTS "subscription_plans" (
-	"code" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"entitlements" jsonb NOT NULL
-);
-
---> statement-breakpoint
-
-CREATE TABLE IF NOT EXISTS "subscription_storage" (
-	"object_key" text PRIMARY KEY NOT NULL,
-	"owner_id" uuid NOT NULL,
-	"byte_size" bigint NOT NULL,
-	"sha256" text NOT NULL,
-	"stored" boolean DEFAULT false NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	"touched_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "subscription_storage_size" CHECK ("subscription_storage"."byte_size">0)
-);
-
---> statement-breakpoint
-
-ALTER TABLE "subscription_storage" ENABLE ROW LEVEL SECURITY;
---> statement-breakpoint
-
 CREATE TABLE IF NOT EXISTS "staff_invitation_roles" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
@@ -1228,6 +1173,107 @@ CREATE TABLE IF NOT EXISTS "staff_invitations" (
 --> statement-breakpoint
 
 ALTER TABLE "staff_invitations" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_settings" (
+	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
+	"currency" text DEFAULT 'MAD' NOT NULL,
+	"tax_rate_basis_points" integer,
+	"payment_methods" text[] DEFAULT '{bank_transfer,cash}'::text[] NOT NULL,
+	"payment_instructions" text DEFAULT '' NOT NULL,
+	CONSTRAINT "billing_settings_singleton" CHECK ("billing_settings"."id"=1),
+	CONSTRAINT "billing_settings_tax" CHECK ("billing_settings"."tax_rate_basis_points" is null or "billing_settings"."tax_rate_basis_points" between 0 and 10000)
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "owner_subscriptions" (
+	"owner_id" uuid PRIMARY KEY NOT NULL,
+	"plan_code" text NOT NULL,
+	"trial_started_at" timestamp with time zone NOT NULL,
+	"trial_ends_at" timestamp with time zone NOT NULL,
+	"paid_through_at" timestamp with time zone,
+	"cancel_at_period_end" boolean DEFAULT false NOT NULL,
+	CONSTRAINT "trial_window" CHECK ("owner_subscriptions"."trial_ends_at"="owner_subscriptions"."trial_started_at"+interval '7 days')
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "owner_subscriptions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_emails" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"message_key" text NOT NULL,
+	"recipients" integer NOT NULL,
+	"allowance_key" text NOT NULL,
+	"queued_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_emails_message_key_unique" UNIQUE("message_key"),
+	CONSTRAINT "subscription_email_recipients" CHECK ("subscription_emails"."recipients">0)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_emails" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"plan_code" text NOT NULL,
+	"cycle" text NOT NULL,
+	"kind" text NOT NULL,
+	"status" text DEFAULT 'submitted' NOT NULL,
+	"method" text NOT NULL,
+	"reference" text NOT NULL,
+	"currency" text NOT NULL,
+	"amount_ht" integer NOT NULL,
+	"tax_rate_basis_points" integer,
+	"tax_amount" integer NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	"coverage_start" timestamp with time zone,
+	"coverage_end" timestamp with time zone,
+	"submitted_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"decided_at" timestamp with time zone,
+	"decided_by" text,
+	"received_reference" text,
+	CONSTRAINT "subscription_payment_amounts" CHECK ("subscription_payments"."amount_ht">=0 and "subscription_payments"."tax_amount">=0 and "subscription_payments"."amount_ttc"="subscription_payments"."amount_ht"+"subscription_payments"."tax_amount"),
+	CONSTRAINT "subscription_payment_coverage" CHECK (("subscription_payments"."status"='confirmed')=("subscription_payments"."coverage_start" is not null and "subscription_payments"."coverage_end">"subscription_payments"."coverage_start")),
+	CONSTRAINT "subscription_payment_reference" CHECK (btrim("subscription_payments"."reference")<>'')
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_payments" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_plans" (
+	"code" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"entitlements" jsonb NOT NULL,
+	"rank" integer DEFAULT 0 NOT NULL,
+	"monthly_ht" integer DEFAULT 0 NOT NULL,
+	"annual_ht" integer DEFAULT 0 NOT NULL
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_storage" (
+	"object_key" text PRIMARY KEY NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"byte_size" bigint NOT NULL,
+	"sha256" text NOT NULL,
+	"stored" boolean DEFAULT false NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"touched_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_storage_size" CHECK ("subscription_storage"."byte_size">0)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_storage" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "document_artifacts_objectKey_tenant_unique" ON "document_artifacts" USING btree ("organization_id","object_key");
@@ -1449,12 +1495,6 @@ CREATE INDEX IF NOT EXISTS "report_schedule_recipients_user_idx" ON "report_sche
 CREATE INDEX IF NOT EXISTS "report_schedules_due_idx" ON "report_schedules" USING btree ("next_run_at") WHERE "report_schedules"."enabled" and "report_schedules"."archived_at" is null;
 --> statement-breakpoint
 
-CREATE INDEX IF NOT EXISTS "subscription_emails_owner_period" ON "subscription_emails" USING btree ("owner_id","queued_at");
---> statement-breakpoint
-
-CREATE INDEX IF NOT EXISTS "subscription_storage_owner" ON "subscription_storage" USING btree ("owner_id");
---> statement-breakpoint
-
 CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_role_unique" ON "staff_invitation_roles" USING btree ("invitation_id","role_id");
 --> statement-breakpoint
 
@@ -1462,6 +1502,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_pending_email" ON "staff_inv
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_token_hash" ON "staff_invitations" USING btree ("organization_id","token_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "subscription_emails_owner_period" ON "subscription_emails" USING btree ("owner_id","queued_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_payments_one_open" ON "subscription_payments" USING btree ("owner_id") WHERE "subscription_payments"."status"='submitted';
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "subscription_payments_owner" ON "subscription_payments" USING btree ("owner_id","submitted_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "subscription_storage_owner" ON "subscription_storage" USING btree ("owner_id");
 --> statement-breakpoint
 
 DO $$ BEGIN
@@ -2553,38 +2605,6 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
- ALTER TABLE "owner_subscriptions" ADD CONSTRAINT "owner_subscriptions_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
-
---> statement-breakpoint
-
-DO $$ BEGIN
- ALTER TABLE "owner_subscriptions" ADD CONSTRAINT "owner_subscriptions_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
-
---> statement-breakpoint
-
-DO $$ BEGIN
- ALTER TABLE "subscription_emails" ADD CONSTRAINT "subscription_emails_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
-
---> statement-breakpoint
-
-DO $$ BEGIN
- ALTER TABLE "subscription_storage" ADD CONSTRAINT "subscription_storage_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
-
---> statement-breakpoint
-
-DO $$ BEGIN
  ALTER TABLE "staff_invitation_roles" ADD CONSTRAINT "staff_invitation_roles_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -2626,6 +2646,54 @@ END $$;
 
 DO $$ BEGIN
  ALTER TABLE "staff_invitations" ADD CONSTRAINT "staff_invitations_accepted_user_id_users_id_fk" FOREIGN KEY ("accepted_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "owner_subscriptions" ADD CONSTRAINT "owner_subscriptions_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "owner_subscriptions" ADD CONSTRAINT "owner_subscriptions_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_emails" ADD CONSTRAINT "subscription_emails_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_payments" ADD CONSTRAINT "subscription_payments_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_payments" ADD CONSTRAINT "subscription_payments_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_storage" ADD CONSTRAINT "subscription_storage_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -2764,7 +2832,16 @@ CREATE POLICY "tenant_isolation" ON "company_settings" AS PERMISSIVE FOR ALL TO 
 CREATE POLICY "tenant_isolation" ON "document_templates" AS PERMISSIVE FOR ALL TO public USING ("document_templates"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("document_templates"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "tenant_isolation" ON "staff_invitation_roles" AS PERMISSIVE FOR ALL TO public USING ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
+
+CREATE POLICY "tenant_isolation" ON "staff_invitations" AS PERMISSIVE FOR ALL TO public USING ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
+
 CREATE POLICY "subscription_worker_read" ON "owner_subscriptions" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_admin" ON "owner_subscriptions" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
 CREATE POLICY "subscription_scope" ON "owner_subscriptions" AS PERMISSIVE FOR ALL TO public USING (("owner_subscriptions"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="owner_subscriptions"."owner_id")) WITH CHECK (("owner_subscriptions"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="owner_subscriptions"."owner_id"));
@@ -2773,13 +2850,13 @@ CREATE POLICY "subscription_scope" ON "owner_subscriptions" AS PERMISSIVE FOR AL
 CREATE POLICY "usage_owner" ON "subscription_emails" AS PERMISSIVE FOR ALL TO public USING ("subscription_emails"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_emails"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
 --> statement-breakpoint
 
+CREATE POLICY "subscription_payment_owner" ON "subscription_payments" AS PERMISSIVE FOR ALL TO public USING (("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_payments"."owner_id")) WITH CHECK ("subscription_payments"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_payment_admin" ON "subscription_payments" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "usage_owner" ON "subscription_storage" AS PERMISSIVE FOR ALL TO public USING ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_storage"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
---> statement-breakpoint
-
-CREATE POLICY "tenant_isolation" ON "staff_invitation_roles" AS PERMISSIVE FOR ALL TO public USING ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitation_roles"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
---> statement-breakpoint
-
-CREATE POLICY "tenant_isolation" ON "staff_invitations" AS PERMISSIVE FOR ALL TO public USING ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 ALTER TABLE "actors" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -2861,15 +2938,17 @@ ALTER TABLE "company_settings" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "document_templates" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
+ALTER TABLE "staff_invitation_roles" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "staff_invitations" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
 ALTER TABLE "owner_subscriptions" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "subscription_emails" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
+ALTER TABLE "subscription_payments" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
 ALTER TABLE "subscription_storage" FORCE ROW LEVEL SECURITY;
---> statement-breakpoint
-ALTER TABLE "staff_invitation_roles" FORCE ROW LEVEL SECURITY;
---> statement-breakpoint
-ALTER TABLE "staff_invitations" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_d7b5c742ff8d4ced" ON "users" ("organization_id","id");
 --> statement-breakpoint
@@ -3114,11 +3193,13 @@ INSERT INTO permissions (key, description) VALUES
 ON CONFLICT DO NOTHING;
 
 --> statement-breakpoint
-INSERT INTO subscription_plans(code,name,entitlements) VALUES
-('trial','Essai gratuit 7 jours','{"organizations":1,"staffPerOrganization":2,"storageBytes":1000000000,"businessEmails":50,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}'),
-('essential','Essential','{"organizations":1,"staffPerOrganization":1,"storageBytes":1000000000,"businessEmails":0,"features":[]}'),
-('business','Business','{"organizations":3,"staffPerOrganization":5,"storageBytes":10000000000,"businessEmails":2000,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}'),
-('pro','Pro','{"organizations":null,"staffPerOrganization":null,"storageBytes":50000000000,"businessEmails":10000,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}');
+INSERT INTO subscription_plans(code,name,rank,monthly_ht,annual_ht,entitlements) VALUES
+('trial','Essai gratuit 7 jours',0,0,0,'{"organizations":1,"staffPerOrganization":2,"storageBytes":1000000000,"businessEmails":50,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}'),
+('essential','Essential',1,9900,99000,'{"organizations":1,"staffPerOrganization":1,"storageBytes":1000000000,"businessEmails":0,"features":[]}'),
+('business','Business',2,29900,299000,'{"organizations":3,"staffPerOrganization":5,"storageBytes":10000000000,"businessEmails":2000,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}'),
+('pro','Pro',3,79900,799000,'{"organizations":null,"staffPerOrganization":null,"storageBytes":50000000000,"businessEmails":10000,"features":["custom_templates","business_emails","scheduled_reports","report_exports","staff_roles","advanced_analytics","custom_domains"]}');
+--> statement-breakpoint
+INSERT INTO billing_settings(id) VALUES (1);
 
 --> statement-breakpoint
 CREATE FUNCTION lock_variant_product() RETURNS trigger LANGUAGE plpgsql AS $$

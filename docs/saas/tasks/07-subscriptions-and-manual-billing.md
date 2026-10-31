@@ -1,6 +1,6 @@
 # 07 — Implement trial, manual payments and subscription lifecycle
 
-Status: not started. Documentation only; no implementation is performed by this task file.
+Status: In progress. Documentation only; no implementation is performed by this task file.
 
 Depends on: 05, 06; tax and billing decisions from 00.
 

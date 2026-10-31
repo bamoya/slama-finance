@@ -2,37 +2,34 @@ import type { OwnerSubscription } from '../../../../contracts/generated/subscrip
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { currentOrganizationId } from '../../../../lib/tenant-database.js'
+import type { createBillingRepository } from '../repositories/billing.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
+import { createBillingService, toPayment } from './billing.service.js'
 export function createSubscriptionService(
   repo: ReturnType<typeof createSubscriptionRepository>,
+  billingRepo: ReturnType<typeof createBillingRepository>,
   clock = () => new Date(),
 ) {
+  const billing = {
+    ...createBillingService(billingRepo, repo, clock),
+    plan: billingRepo.plan,
+    payments: billingRepo.payments,
+  }
   async function summary(ownerId: string, tx: Transaction): Promise<OwnerSubscription> {
-    const row = await repo.subscription(ownerId, tx),
-      plan = row?.subscription_plans ?? (await repo.trial(tx)),
-      subscription = row?.owner_subscriptions
-    const now = clock().getTime(),
-      paid = subscription?.paidThroughAt?.getTime()
-    const status = !subscription
-      ? 'not_started'
-      : subscription.planCode === 'trial'
-        ? now < subscription.trialEndsAt.getTime()
-          ? 'trial'
-          : 'expired'
-        : paid && now < paid
-          ? 'active'
-          : paid && now < paid + 7 * 86400000
-            ? 'past_due'
-            : 'expired'
+    const s = await billing.state(ownerId, tx),
+      subscription = s.row
+    const plan = (await billing.plan(s.planCode, tx)) ?? (await repo.trial(tx)),
+      pending = (await billing.payments(ownerId, tx)).find((p) => p.status === 'submitted')
     const period =
-      subscription?.planCode === 'trial'
-        ? {
-            start: subscription.trialStartedAt.toISOString(),
-            end: subscription.trialEndsAt.toISOString(),
-          }
-        : subscription
-          ? await repo.month(clock(), tx)
+      s.planCode === 'trial'
+        ? subscription
+          ? {
+              start: subscription.trialStartedAt.toISOString(),
+              end: subscription.trialEndsAt.toISOString(),
+            }
           : { start: null, end: null }
+        : await repo.month(clock(), tx)
+    const iso = (d: Date | null) => d?.toISOString() ?? null
     return {
       usage: await repo.usage(
         ownerId,
@@ -43,9 +40,16 @@ export function createSubscriptionService(
       ),
       planCode: plan.code as OwnerSubscription['planCode'],
       planName: plan.name,
-      status,
-      trialEndsAt: subscription?.trialEndsAt.toISOString() ?? null,
-      paidThroughAt: subscription?.paidThroughAt?.toISOString() ?? null,
+      status: s.status,
+      trialEndsAt: iso(subscription?.trialEndsAt ?? null),
+      paidThroughAt: iso(s.paidThroughAt),
+      cycle: s.cycle,
+      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+      graceEndsAt: iso(s.graceEndsAt),
+      blockedAt: iso(s.blockedAt),
+      retentionEndsAt: iso(s.retentionEndsAt),
+      nextPlanCode: s.nextPlanCode as OwnerSubscription['nextPlanCode'],
+      pendingPayment: pending ? toPayment(pending) : null,
       entitlements: plan.entitlements,
       organizationCount: await repo.organizationCount(ownerId, tx),
     }

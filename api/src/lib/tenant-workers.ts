@@ -29,7 +29,7 @@ export function createTenantWorkerRunner(database: () => Database) {
               ...(!includeInactive
                 ? [
                     isNotNull(organizations.activatedAt),
-                    sql`((${ownerSubscriptions.planCode}='trial' and ${ownerSubscriptions.trialEndsAt}>now()) or (${ownerSubscriptions.planCode}<>'trial' and ${ownerSubscriptions.paidThroughAt}+interval '7 days'>now()))`,
+                    sql`((${ownerSubscriptions.planCode}='trial' and ${ownerSubscriptions.trialEndsAt}>now()) or (${ownerSubscriptions.planCode}<>'trial' and ${ownerSubscriptions.paidThroughAt}+case when ${ownerSubscriptions.cancelAtPeriodEnd} then interval '0' else interval '7 days' end>now()))`,
                     isNull(organizations.pausedAt),
                     isNull(organizations.suspendedAt),
                     isNull(organizations.deletionRequestedAt),
