@@ -31,8 +31,8 @@ export function createOwnerAccountDelivery(
         },
         invitation: {
           subject: fr
-            ? 'Activez votre compte Slama Finance'
-            : 'Activate your Slama Finance account',
+            ? 'Activez votre compte BaMoYa Finance'
+            : 'Activate your BaMoYa Finance account',
           detail: fr
             ? 'Un compte propriétaire a été créé pour vous. Choisissez votre mot de passe pour y accéder.'
             : 'An owner account was created for you. Choose your password to access it.',
@@ -44,12 +44,12 @@ export function createOwnerAccountDelivery(
       const { subject, detail, expiry } = text
       await provider.send({
         idempotencyKey: `owner-${input.purpose}-${createHash('sha256').update(input.url).digest('hex')}`,
-        from: { email: from, name: 'Slama Finance' },
+        from: { email: from, name: 'BaMoYa Finance' },
         to: input.to,
         cc: [],
         subject,
         text: `${subject}\n\n${detail}\n${input.url}\n\n${expiry}`,
-        html: `<!doctype html><html lang="${fr ? 'fr' : 'en'}"><body style="margin:0;background:#f7f7f5;font-family:Arial,sans-serif;color:#222"><main style="max-width:520px;margin:32px auto;padding:32px;background:white;border-radius:16px"><p style="color:#ad7d1d;font-weight:bold">Slama Finance</p><h1 style="font-size:24px">${subject}</h1><p>${detail}</p><p style="margin:28px 0"><a href="${escape(input.url)}" style="display:inline-block;background:#ad7d1d;color:white;padding:12px 20px;border-radius:8px;text-decoration:none">${subject}</a></p><p style="color:#666">${expiry}</p></main></body></html>`,
+        html: `<!doctype html><html lang="${fr ? 'fr' : 'en'}"><body style="margin:0;background:#f7f7f5;font-family:Arial,sans-serif;color:#222"><main style="max-width:520px;margin:32px auto;padding:32px;background:white;border-radius:16px"><p style="color:#ad7d1d;font-weight:bold">BaMoYa Finance</p><h1 style="font-size:24px">${subject}</h1><p>${detail}</p><p style="margin:28px 0"><a href="${escape(input.url)}" style="display:inline-block;background:#ad7d1d;color:white;padding:12px 20px;border-radius:8px;text-decoration:none">${subject}</a></p><p style="color:#666">${expiry}</p></main></body></html>`,
         attachments: [],
       })
     },

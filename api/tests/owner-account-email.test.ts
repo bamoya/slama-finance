@@ -29,6 +29,20 @@ describe('Owner security emails and configuration', () => {
       }
     },
   )
+  it('brands owner invitation emails as BaMoYa Finance', async () => {
+    const provider = createRecordingEmailProvider()
+    await createOwnerAccountDelivery(provider, 'security@example.test').send({
+      to: 'owner@example.test',
+      url: 'https://portal.example/auth/accept-invitation#token=secret',
+      expiresAt: new Date(),
+      language: 'fr',
+      purpose: 'invitation',
+    })
+    const [message] = provider.messages
+    expect(message?.subject).toBe('Activez votre compte BaMoYa Finance')
+    expect(message?.from.name).toBe('BaMoYa Finance')
+    expect(`${message?.text}${message?.html}`).not.toContain('Slama')
+  })
   it('requires an explicit trusted owner portal and defaults registration to disabled', () => {
     expect(loadEnvironment({ NODE_ENV: 'test' }).OWNER_AUTH_ENABLED).toBe(false)
     expect(() => loadEnvironment({ NODE_ENV: 'test', OWNER_AUTH_ENABLED: 'true' })).toThrow(
