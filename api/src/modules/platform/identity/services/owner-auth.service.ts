@@ -10,6 +10,8 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 // Valid scrypt shape to keep unknown-user password verification expensive too.
 const dummyHash = `${'0'.repeat(32)}:${'0'.repeat(128)}`
 const normalize = (email: string) => email.trim().toLowerCase()
+const invalidInvitation = () =>
+  new AppError(400, 'INVALID_INVITATION_TOKEN', 'This invitation link is invalid or has expired.')
 export function createOwnerAuthService(
   repository: ReturnType<typeof createOwnerAuthRepository>,
   passwords: ReturnType<typeof createPasswordService>,
@@ -88,11 +90,31 @@ export function createOwnerAuthService(
       )
         throw new AppError(400, 'INVALID_RESET_TOKEN', 'This reset link is invalid or has expired.')
     },
+    async inspectInvitation(token: string) {
+      enabled()
+      const owner = await repository.invitation(hash(token))
+      if (!owner) throw invalidInvitation()
+      return {
+        email: owner.email,
+        firstName: owner.firstName,
+        lastName: owner.lastName,
+        locale: owner.locale,
+      }
+    },
+    async acceptInvitation(token: string, password: string) {
+      enabled()
+      if (!(await repository.invitation(hash(token)))) throw invalidInvitation()
+      if (
+        !(await repository.consumeToken(hash(token), 'invitation', await passwords.hash(password)))
+      )
+        throw invalidInvitation()
+    },
     async login(email: string, password: string) {
       enabled()
       const owner = await repository.byEmail(normalize(email))
       const valid = await passwords.verify(password, owner?.passwordHash ?? dummyHash)
-      if (!owner || !valid || owner.disabledAt)
+      // Blocked or deleting customers get the same response as wrong credentials.
+      if (!owner || !valid || owner.disabledAt || owner.blockedAt || owner.deletionRequestedAt)
         throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid email or password.')
       if (!owner.emailVerifiedAt)
         throw new AppError(

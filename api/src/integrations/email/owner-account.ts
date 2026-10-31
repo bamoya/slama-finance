@@ -14,28 +14,34 @@ export function createOwnerAccountDelivery(
   return {
     async send(input) {
       const fr = input.language === 'fr'
-      const verification = input.purpose === 'verify_email'
-      const subject = verification
-        ? fr
-          ? 'Vérifiez votre adresse e-mail'
-          : 'Verify your email address'
-        : fr
-          ? 'Réinitialisez votre mot de passe'
-          : 'Reset your password'
-      const detail = verification
-        ? fr
-          ? 'Confirmez votre adresse pour accéder à votre espace propriétaire.'
-          : 'Confirm your email to access your owner portal.'
-        : fr
-          ? 'Choisissez un nouveau mot de passe pour votre compte propriétaire.'
-          : 'Choose a new password for your owner account.'
-      const expiry = verification
-        ? fr
-          ? 'Ce lien expire dans 24 heures.'
-          : 'This link expires in 24 hours.'
-        : fr
-          ? 'Ce lien expire dans 15 minutes.'
-          : 'This link expires in 15 minutes.'
+      const text = {
+        verify_email: {
+          subject: fr ? 'Vérifiez votre adresse e-mail' : 'Verify your email address',
+          detail: fr
+            ? 'Confirmez votre adresse pour accéder à votre espace propriétaire.'
+            : 'Confirm your email to access your owner portal.',
+          expiry: fr ? 'Ce lien expire dans 24 heures.' : 'This link expires in 24 hours.',
+        },
+        reset_password: {
+          subject: fr ? 'Réinitialisez votre mot de passe' : 'Reset your password',
+          detail: fr
+            ? 'Choisissez un nouveau mot de passe pour votre compte propriétaire.'
+            : 'Choose a new password for your owner account.',
+          expiry: fr ? 'Ce lien expire dans 15 minutes.' : 'This link expires in 15 minutes.',
+        },
+        invitation: {
+          subject: fr
+            ? 'Activez votre compte Slama Finance'
+            : 'Activate your Slama Finance account',
+          detail: fr
+            ? 'Un compte propriétaire a été créé pour vous. Choisissez votre mot de passe pour y accéder.'
+            : 'An owner account was created for you. Choose your password to access it.',
+          expiry: fr
+            ? 'Ce lien est valable une seule fois et expire dans 72 heures.'
+            : 'This link can be used once and expires in 72 hours.',
+        },
+      }[input.purpose]
+      const { subject, detail, expiry } = text
       await provider.send({
         idempotencyKey: `owner-${input.purpose}-${createHash('sha256').update(input.url).digest('hex')}`,
         from: { email: from, name: 'Slama Finance' },

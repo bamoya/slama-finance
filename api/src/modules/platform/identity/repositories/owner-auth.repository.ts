@@ -7,7 +7,7 @@ import {
 } from '../../../../../db/schema/organizations.js'
 import type { Database } from '../../../../lib/db.js'
 
-type Purpose = 'verify_email' | 'reset_password'
+type Purpose = 'verify_email' | 'reset_password' | 'invitation'
 export function createOwnerAuthRepository(database: () => Database) {
   return {
     async register(input: typeof platformUsers.$inferInsert) {
@@ -38,6 +38,8 @@ export function createOwnerAuthRepository(database: () => Database) {
         if (
           !owner ||
           owner.disabledAt ||
+          owner.blockedAt ||
+          owner.deletionRequestedAt ||
           !owner.emailVerifiedAt ||
           owner.passwordHash !== expectedPasswordHash
         )
@@ -57,6 +59,8 @@ export function createOwnerAuthRepository(database: () => Database) {
             isNull(ownerSessions.revokedAt),
             gt(ownerSessions.expiresAt, new Date()),
             isNull(platformUsers.disabledAt),
+            isNull(platformUsers.blockedAt),
+            isNull(platformUsers.deletionRequestedAt),
           ),
         )
       return row?.owner.emailVerifiedAt ? row.owner : undefined
@@ -99,6 +103,24 @@ export function createOwnerAuthRepository(database: () => Database) {
         return owner
       })
     },
+    /** Valid, unused invitation of a pending account, without consuming it. */
+    async invitation(tokenHash: string) {
+      const [row] = await database()
+        .select({ owner: platformUsers })
+        .from(ownerAccountTokens)
+        .innerJoin(platformUsers, eq(platformUsers.id, ownerAccountTokens.ownerId))
+        .where(
+          and(
+            eq(ownerAccountTokens.tokenHash, tokenHash),
+            eq(ownerAccountTokens.purpose, 'invitation'),
+            isNull(ownerAccountTokens.consumedAt),
+            gt(ownerAccountTokens.expiresAt, new Date()),
+            isNull(platformUsers.disabledAt),
+            isNull(platformUsers.emailVerifiedAt),
+          ),
+        )
+      return row?.owner
+    },
     async invalidateToken(tokenHash: string) {
       await database()
         .update(ownerAccountTokens)
@@ -133,7 +155,14 @@ export function createOwnerAuthRepository(database: () => Database) {
           .for('update')
         if (!token) return false
         const now = new Date()
-        if (purpose === 'verify_email') {
+        if (purpose === 'invitation') {
+          // Accepting sets the first password and proves control of the email address.
+          if (!passwordHash || owner.emailVerifiedAt) return false
+          await tx
+            .update(platformUsers)
+            .set({ passwordHash, emailVerifiedAt: now, updatedAt: now })
+            .where(eq(platformUsers.id, owner.id))
+        } else if (purpose === 'verify_email') {
           await tx
             .update(platformUsers)
             .set({ emailVerifiedAt: now, updatedAt: now })

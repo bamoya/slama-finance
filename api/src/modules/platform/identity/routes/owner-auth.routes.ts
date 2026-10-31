@@ -18,4 +18,6 @@ export function registerOwnerAuthRoutes(
   app.post('/verification/confirm', limited, controller.confirmVerification)
   app.post('/password-reset/request', limited, controller.requestReset)
   app.post('/password-reset/confirm', limited, controller.confirmReset)
+  app.post('/invitation/inspect', limited, controller.inspectInvitation)
+  app.post('/invitation/accept', limited, controller.acceptInvitation)
 }

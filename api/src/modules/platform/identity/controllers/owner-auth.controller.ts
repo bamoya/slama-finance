@@ -58,6 +58,15 @@ export function createOwnerAuthController(service: Service, secure: boolean) {
       await service.requestReset(OwnerEmailRequestSchema.parse(request.body).email)
       return reply.code(202).send(accepted)
     },
+    async inspectInvitation(request: FastifyRequest) {
+      return service.inspectInvitation(OwnerTokenSchema.parse(request.body).token)
+    },
+    async acceptInvitation(request: FastifyRequest, reply: FastifyReply) {
+      const body = OwnerResetPasswordSchema.parse(request.body)
+      await service.acceptInvitation(body.token, body.password)
+      reply.clearCookie('slama_owner_session', { path: '/' })
+      return reply.code(204).send()
+    },
     async confirmReset(request: FastifyRequest, reply: FastifyReply) {
       const body = OwnerResetPasswordSchema.parse(request.body)
       await service.reset(body.token, body.password)

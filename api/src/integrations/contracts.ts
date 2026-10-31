@@ -49,7 +49,7 @@ export interface OwnerAccountDelivery {
   send(input: {
     to: string
     url: string
-    purpose: 'verify_email' | 'reset_password'
+    purpose: 'verify_email' | 'reset_password' | 'invitation'
     expiresAt: Date
     language: 'fr' | 'en'
   }): Promise<void>
