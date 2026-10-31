@@ -1,4 +1,4 @@
-# BaMoYa Finance public website
+# B-Finance public website
 
 The approved public design is integrated into the existing UI under `ui/src/features/marketing/`.
 The isolated design references remain in `ui/.local/` and are not runtime dependencies.

@@ -2,7 +2,7 @@
 
 Status: **C — Continuum selected and integrated** for owner login, registration, recovery and verification. Authentication contracts and backend behavior are unchanged.
 
-These studies keep the approved BaMoYa Finance public header, footer, typography, themes and shared UI controls. They connect the marketing website visually to the Classic owner portal. French is the default; English and dark mode use the existing application preferences.
+These studies keep the approved B-Finance public header, footer, typography, themes and shared UI controls. They connect the marketing website visually to the Classic owner portal. French is the default; English and dark mode use the existing application preferences.
 
 ## Compare the proposals
 

@@ -155,7 +155,7 @@ styles["List Bullet"].paragraph_format.space_after = Pt(4)
 # Header and footer
 header = section.header
 header_p = header.paragraphs[0]
-header_p.text = "SLAMA FINANCE    PROJECT PROPOSAL"
+header_p.text = "B-FINANCE    PROJECT PROPOSAL"
 header_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 for run in header_p.runs:
     run.font.name = "Aptos"
@@ -183,7 +183,7 @@ if logo.exists():
     p.paragraph_format.space_before = Pt(30)
     p.add_run().add_picture(str(logo), width=Inches(0.95))
 
-title = doc.add_paragraph("Slama Finance Project Proposal", style="Title")
+title = doc.add_paragraph("B-Finance Project Proposal", style="Title")
 title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 subtitle = doc.add_paragraph("Finance document management system")
 subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -216,7 +216,7 @@ for row, values in enumerate((
 doc.add_paragraph()
 intro = doc.add_paragraph(
     "This proposal presents the scope, design direction, delivery schedule, pricing options, "
-    "commercial terms, and post-launch support for the Slama Finance web application. The "
+    "commercial terms, and post-launch support for the B-Finance web application. The "
     "client may select one of the three deployment options on page 5."
 )
 intro.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -460,9 +460,9 @@ for row, values in enumerate(entries):
             if cell.paragraphs[0].runs:
                 cell.paragraphs[0].runs[0].bold = True
 
-doc.core_properties.title = "Slama Finance Project Proposal"
-doc.core_properties.subject = "Client proposal for the Slama Finance web application"
+doc.core_properties.title = "B-Finance Project Proposal"
+doc.core_properties.subject = "Client proposal for the B-Finance web application"
 doc.core_properties.author = "PROVIDER NAME"
-doc.core_properties.keywords = "Slama Finance, proposal, estimate, invoice management"
+doc.core_properties.keywords = "B-Finance, proposal, estimate, invoice management"
 doc.save(OUTPUT)
 print(OUTPUT)

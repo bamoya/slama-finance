@@ -45,16 +45,16 @@ for name in ("Title", "Subtitle", "Heading 1", "Heading 2"):
 lang = OxmlElement("w:lang")
 lang.set(qn("w:val"), "en-GB")
 doc.styles["Normal"].element.get_or_add_rPr().append(lang)
-doc.core_properties.title = "Slama Finance Business data and rules for client approval"
+doc.core_properties.title = "B-Finance Business data and rules for client approval"
 doc.core_properties.subject = "Business data and rules for client confirmation"
-doc.core_properties.author = "Slama Finance"
+doc.core_properties.author = "B-Finance"
 doc.core_properties.keywords = "products, clients, estimates, invoices, delivery, payments"
 doc.core_properties.comments = ""
 
 # Page numbers make references in a returned approval form unambiguous.
 footer = section.footer.paragraphs[0]
 footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-run = footer.add_run("Slama Finance  |  Business rules approval  |  ")
+run = footer.add_run("B-Finance  |  Business rules approval  |  ")
 run.font.size = Pt(9)
 run.font.color.rgb = RGBColor.from_string("666666")
 field = OxmlElement("w:fldSimple")
@@ -135,10 +135,10 @@ def confirm():
     p("Section:  ☐ Approved   ☐ Changes requested   ☐ Discuss", bold=True)
 
 
-doc.add_paragraph("Slama Finance", style="Subtitle")
+doc.add_paragraph("B-Finance", style="Subtitle")
 doc.add_paragraph("Business data and rules\nfor client approval", style="Title")
 p("Version 1.0  •  26 September 2026")
-p("Please confirm that the data and rules in this document match the way your company works. Your responses will establish the functional baseline for the first version of Slama Finance.")
+p("Please confirm that the data and rules in this document match the way your company works. Your responses will establish the functional baseline for the first version of B-Finance.")
 p("Review each section, mark it as approved or requiring changes, and answer the confirmation questions. An unanswered question or unchecked box does not count as approval.")
 h("What this document covers")
 p("Products and categories, customer records, estimates, invoices, delivery notes and payment tracking. Staff management, notifications, reports and technical architecture are outside this review.")

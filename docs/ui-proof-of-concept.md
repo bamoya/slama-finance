@@ -28,7 +28,7 @@ The required functional areas are:
 ## Navigation
 
 ```text
-Slama Finance
+B-Finance
 |
 |- Dashboard
 |

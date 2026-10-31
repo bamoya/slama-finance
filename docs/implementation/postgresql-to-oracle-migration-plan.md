@@ -6,7 +6,7 @@ Date: 2026-10-04
 
 ## Objective and scope
 
-Evaluate and, only after a successful feasibility checkpoint, migrate Slama Finance from PostgreSQL to Oracle Database on OCI. This is a database-engine migration, not merely a deployment change.
+Evaluate and, only after a successful feasibility checkpoint, migrate B-Finance from PostgreSQL to Oracle Database on OCI. This is a database-engine migration, not merely a deployment change.
 
 Preserve the existing API contracts, UI, modular monolith boundaries, permissions, and business behavior. Keep the controller/service/repository structure, with mappers where needed. Do not introduce permanent dual-database support or a generic repository framework solely for this migration.
 

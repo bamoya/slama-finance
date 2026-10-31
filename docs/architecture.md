@@ -51,7 +51,7 @@ work. Inventory, payment gateways, credit notes and government submission are
 outside this MVP. Foundation runtime/test details are in
 [the foundation runbook](implementation/foundation-runbook.md).
 
-Slama Finance is a TypeScript `pnpm` workspace with two first-class projects at
+B-Finance is a TypeScript `pnpm` workspace with two first-class projects at
 the repository root: `api` and `ui`. There are deliberately no `apps/`,
 `packages/`, or shared-code workspace directories.
 

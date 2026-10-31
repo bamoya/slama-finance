@@ -38,8 +38,8 @@ def insert_after(paragraph, text, bold_lead=None, color=None):
 doc = Document(DOCX)
 
 replacements = {
-    "This proposal presents the scope, design direction, delivery schedule, pricing options, commercial terms, and post-launch support for the Slama Finance web application. The client may select one of the three deployment options on page 5.":
-        "This proposal presents the scope, design direction, delivery schedule, project price, commercial terms, and post-launch support for the Slama Finance web application.",
+    "This proposal presents the scope, design direction, delivery schedule, pricing options, commercial terms, and post-launch support for the B-Finance web application. The client may select one of the three deployment options on page 5.":
+        "This proposal presents the scope, design direction, delivery schedule, project price, commercial terms, and post-launch support for the B-Finance web application.",
     "Confirm the functional scope, deployment option, project price, and payment schedule.":
         "Confirm the functional scope, project price, delivery schedule, and payment terms.",
     "11  Project price and deployment options":
@@ -96,7 +96,7 @@ confirmation = next(
     table for table in doc.tables if table.cell(0, 0).text.strip() == "Selected option"
 )
 confirmation.cell(0, 0).text = "Approved project"
-confirmation.cell(0, 1).text = "Slama Finance with OCI deployment — 5,000 DH"
+confirmation.cell(0, 1).text = "B-Finance with OCI deployment — 5,000 DH"
 confirmation.cell(0, 0).paragraphs[0].runs[0].bold = True
 
 doc.save(DOCX)

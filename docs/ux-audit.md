@@ -1,4 +1,4 @@
-# Slama Finance — UX audit and improvement plan
+# B-Finance — UX audit and improvement plan
 
 Reviewed: 26 October 2026  
 Source baseline: `565b333` on `master`  

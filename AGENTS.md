@@ -1,6 +1,6 @@
 # Repository guide for contributors and coding tools
 
-Slama Finance is a multi-tenant SaaS for invoicing and finance. pnpm monorepo: `api/` (Fastify, Drizzle,
+B-Finance is a multi-tenant SaaS for invoicing and finance. pnpm monorepo: `api/` (Fastify, Drizzle,
 PostgreSQL) and `ui/` (React, Vite). French is the default language; English is also supported.
 
 ## Where things live

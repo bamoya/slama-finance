@@ -1,6 +1,6 @@
 # Database schema design
 
-PostgreSQL design for Slama Finance. Identity, company settings and Media are
+PostgreSQL design for B-Finance. Identity, company settings and Media are
 implemented; other domains below remain the target design. Source schemas and
 migrations in `api/db/` are authoritative for implemented functionality.
 
