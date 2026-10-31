@@ -1,6 +1,6 @@
 # 07 — Implement trial, manual payments and subscription lifecycle
 
-Status: In progress. Billing core, owner screens and operator confirmation are implemented; trial start,
+Status: In progress. Billing core, owner screens and operator confirmation are implemented;
 client confirmations and reminders remain open.
 
 Depends on: 05, 06; tax and billing decisions from 00.
@@ -9,7 +9,7 @@ Depends on: 05, 06; tax and billing decisions from 00.
 
 ## Work
 
-- [ ] Start the one-time seven-calendar-day trial at first organization creation, atomically with onboarding. Apply Business features, one org, two additional staff, 50 total business emails and 1 GB.
+- [x] Start the one-time seven-calendar-day trial at first organization creation, atomically with onboarding. Apply Business features, one org, two additional staff, 50 total business emails and 1 GB.
 - [x] Build owner subscription/usage/payment-instruction screens and reference submission. Administrator confirmation is required for paid activation and renewal.
 - [x] Implement monthly/annual coverage, cancellation at period end, seven-day grace for previously paid subscriptions only, upgrades and next-renewal downgrades.
 - [x] Persist HT, currency, applicable tax rate/amount and TTC snapshots for billing: 99/299/799 DH monthly HT and 990/2990/7990 DH annually HT; 20% TVA only when applicable.
@@ -32,7 +32,7 @@ Depends on: 05, 06; tax and billing decisions from 00.
 
 ## Completion evidence
 
-Status: partially complete (billing core, owner screens and operator confirmation). Not complete: trial start,
+Status: partially complete (billing core, owner screens and operator confirmation). Not complete:
 client confirmations, downgrade retention selection and reminder emails.
 
 **Implemented** (commits `d1259a1`, with lifecycle integration in `077233b` and `a055019`):
@@ -56,7 +56,7 @@ client confirmations, downgrade retention selection and reminder emails.
 **Open items:**
 
 - Client confirmation of accepted payment methods, TVA rate (default not applicable) and proration rule.
-- Trial start at first organization creation is not evidenced in the commits.
+- Trial start: `provision_organization_defaults` trigger (`api/db/integrity/organization-defaults.sql`) and `admitOrganization` in `subscription.service.ts`, covered by owner onboarding and subscription usage integration tests.
 - Owner selection of organizations and staff to retain on downgrade is not implemented.
 - Worker plan gating reads `owner_subscriptions.plan_code`, which does not yet reflect scheduled changes.
 - Owner reminder emails are not implemented.
