@@ -106,7 +106,7 @@ export function PortalShell({
       >
         <Sidebar collapsible="icon" className="portal-sidebar">
           <SidebarHeader className="portal-sidebar-header">
-            <Link href={homeHref} aria-label="BaMoYa Finance" className="portal-sidebar-brand">
+            <Link href={homeHref} aria-label="B-Finance" className="portal-sidebar-brand">
               <PlatformBrand className="platform-brand-on-dark" />
             </Link>
           </SidebarHeader>

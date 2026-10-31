@@ -19,7 +19,7 @@ function OrganizationDetail({ organizationId }: { organizationId: string }) {
   return (
     <>
       <PageHeader
-        brandName="BaMoYa Finance"
+        brandName="B-Finance"
         eyebrow={translate('Organizations')}
         title={organization.name}
         description={translate('Organization identity and owner access.')}

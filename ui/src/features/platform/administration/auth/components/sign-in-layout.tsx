@@ -21,7 +21,7 @@ export function SignInLayout({
   useUiLanguage()
   const { isDark, toggleTheme } = useTheme()
   useEffect(() => {
-    document.title = 'BaMoYa Finance'
+    document.title = 'B-Finance'
   }, [title])
   useEffect(() => {
     const robots = document.createElement('meta')

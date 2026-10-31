@@ -17,7 +17,7 @@ export function Legal({ type }: { type: 'privacy' | 'terms' | 'notice' }) {
           title: t('Who is responsible?'),
           paragraphs: [
             t(
-              'BaMoYa Finance is a service published by an individual. Responsible party: [legal name to complete]. Privacy contact: [email to complete]. Address: [address to complete].',
+              'B-Finance is a service published by an individual. Responsible party: [legal name to complete]. Privacy contact: [email to complete]. Address: [address to complete].',
             ),
           ],
         },
@@ -81,14 +81,14 @@ export function Legal({ type }: { type: 'privacy' | 'terms' | 'notice' }) {
     terms: {
       title: t('Terms of service'),
       intro: t(
-        'A readable framework for using BaMoYa Finance, subscriptions and our relationship with you.',
+        'A readable framework for using B-Finance, subscriptions and our relationship with you.',
       ),
       sections: [
         {
           title: t('The service and its publisher'),
           paragraphs: [
             t(
-              'BaMoYa Finance is a business management tool: clients, products, estimates, invoices, deliveries, payments and financial insights. Publisher: [legal name to complete], [status to confirm], [address to complete].',
+              'B-Finance is a business management tool: clients, products, estimates, invoices, deliveries, payments and financial insights. Publisher: [legal name to complete], [status to confirm], [address to complete].',
             ),
             t(
               'The service records payments declared by users. It does not execute bank transfers or replace accounting, tax or legal advice.',
@@ -154,13 +154,13 @@ export function Legal({ type }: { type: 'privacy' | 'terms' | 'notice' }) {
     },
     notice: {
       title: t('Legal notice'),
-      intro: t('Publisher identification and contact information for the BaMoYa Finance website.'),
+      intro: t('Publisher identification and contact information for the B-Finance website.'),
       sections: [
         {
           title: t('Service publisher'),
           paragraphs: [
             t(
-              'Product name: BaMoYa Finance. Parent brand: BaMoYa. Publisher: individual — [legal first and last name to complete]. Professional status: [to confirm].',
+              'Product name: B-Finance. Parent brand: BaMoYa. Publisher: individual — [legal first and last name to complete]. Professional status: [to confirm].',
             ),
             t(
               'Business address: [to complete]. Identifiers and registrations applicable to the chosen status: [to confirm]. Personal details must be confirmed by the publisher before publication.',
@@ -187,7 +187,7 @@ export function Legal({ type }: { type: 'privacy' | 'terms' | 'notice' }) {
           title: t('Visual identity and content'),
           paragraphs: [
             t(
-              'The BaMoYa Finance logo supplied by the publisher is used in this design proposal. Screenshots and illustrations use fictional data and are not customer testimonials or results.',
+              'The B-Finance logo supplied by the publisher is used in this design proposal. Screenshots and illustrations use fictional data and are not customer testimonials or results.',
             ),
             t(
               'Conditions for reusing text, graphics and trademarks will be specified in the published version.',

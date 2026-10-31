@@ -20,7 +20,7 @@ export function AdministrationPageHeader({
 }) {
   return (
     <PageHeader
-      brandName="BaMoYa Finance"
+      brandName="B-Finance"
       eyebrow={translate('Administration')}
       title={translate(title)}
       description={translate(description)}

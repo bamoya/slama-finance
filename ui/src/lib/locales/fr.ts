@@ -644,7 +644,7 @@ export const french: Record<string, string> = {
   '15 digits.': '15 chiffres.',
   '24 digits. Provide RIB or IBAN.': '24 chiffres. Renseignez un RIB ou un IBAN.',
   Slama: 'Slama',
-  'Slama Finance': 'Slama Finance',
+  'B-Finance': 'B-Finance',
   ICE: 'ICE',
   IF: 'IF',
   RC: 'RC',

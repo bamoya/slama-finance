@@ -44,7 +44,7 @@ function OrganizationList() {
   return (
     <>
       <PageHeader
-        brandName="BaMoYa Finance"
+        brandName="B-Finance"
         eyebrow={translate('Owner portal')}
         title={translate('Your organizations')}
         description={translate('Choose an organization to view its details and access status.')}

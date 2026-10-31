@@ -21,7 +21,7 @@ export function AuthLayout({
 
   const { isDark, toggleTheme } = useTheme()
   useEffect(() => {
-    if (brand === 'platform') document.title = `${title} — BaMoYa Finance`
+    if (brand === 'platform') document.title = `${title} — B-Finance`
   }, [brand, title])
   return (
     <main
@@ -43,7 +43,7 @@ export function AuthLayout({
             ) : (
               <>
                 <img src="/slama-logo.png" alt="" className="h-12 w-12 rounded-full" />
-                {translate('Slama Finance')}
+                {translate('B-Finance')}
               </>
             )}
           </div>
@@ -70,7 +70,7 @@ export function AuthLayout({
             ) : (
               <img
                 src="/slama-logo.png"
-                alt={translate('Slama Finance')}
+                alt={translate('B-Finance')}
                 className="mb-8 h-12 w-12 lg:hidden"
               />
             )}

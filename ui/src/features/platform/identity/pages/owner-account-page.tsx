@@ -14,7 +14,7 @@ function OwnerProfile() {
   return (
     <>
       <PageHeader
-        brandName="BaMoYa Finance"
+        brandName="B-Finance"
         eyebrow={translate('Owner portal')}
         title={translate('Owner account')}
         description={translate('Manage your organizations with your independent owner account.')}

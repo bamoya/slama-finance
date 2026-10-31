@@ -175,7 +175,7 @@ export function Contact() {
                 <div className="request-summary">
                   <strong>{values.name}</strong>
                   <span>{values.email}</span>
-                  <span>{tab === 'demo' ? t('Demo request') : t('BaMoYa Finance question')}</span>
+                  <span>{tab === 'demo' ? t('Demo request') : t('B-Finance question')}</span>
                 </div>
                 <Button onClick={() => setSent(false)}>
                   {t('Back to the form')}

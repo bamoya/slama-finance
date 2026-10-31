@@ -17,7 +17,7 @@ import { useMarketing } from '../hooks/marketing-context'
 import { Button, Eyebrow, IconButton, RouteButton, TrialButton } from './ui'
 export function Brand() {
   return (
-    <Link href="/" className="brand-link" aria-label="BaMoYa Finance">
+    <Link href="/" className="brand-link" aria-label="B-Finance">
       <PlatformBrand />
       <span className="brand-by">by BaMoYa</span>
     </Link>
@@ -163,7 +163,7 @@ export function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 BaMoYa Finance. {t('A BaMoYa product.')}</span>
+          <span>© 2026 B-Finance. {t('A BaMoYa product.')}</span>
           <span className="prototype-mark">
             <i />
             {t('Built for businesses in Morocco.')}

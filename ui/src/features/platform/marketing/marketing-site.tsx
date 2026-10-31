@@ -26,7 +26,7 @@ function MarketingLayout() {
       '/conditions': t('Terms of service'),
       '/mentions-legales': t('Legal notice'),
     }
-    document.title = `${titles[path] || 'BaMoYa Finance'} — BaMoYa Finance`
+    document.title = `${titles[path] || 'B-Finance'} — B-Finance`
   }, [path, locale, t])
   useEffect(() => {
     if (window.location.hash) {

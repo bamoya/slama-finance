@@ -20,7 +20,7 @@ export function OwnerAuthLayout({
 }) {
   useUiLanguage()
   useEffect(() => {
-    document.title = `${title} — BaMoYa Finance`
+    document.title = `${title} — B-Finance`
   }, [title])
   const accountEntry = mode === 'login' || mode === 'register'
   return (

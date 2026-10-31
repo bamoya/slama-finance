@@ -72,7 +72,7 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
       ) : (
         <>
           <PageHeader
-            brandName="BaMoYa Finance"
+            brandName="B-Finance"
             eyebrow={translate('Customer')}
             title={ownerFullName(detail.owner) ?? detail.owner.email}
             description={

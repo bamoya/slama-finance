@@ -67,6 +67,6 @@ export function navigationTitle(path: string) {
     navigationGroups
       .flatMap((group) => group.items)
       .sort((a, b) => b.to.length - a.to.length)
-      .find((item) => path === item.to || path.startsWith(item.to + '/'))?.label ?? 'Slama Finance'
+      .find((item) => path === item.to || path.startsWith(item.to + '/'))?.label ?? 'B-Finance'
   )
 }

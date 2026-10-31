@@ -89,7 +89,7 @@ export function Pricing() {
             aria-label={t('Plan comparison, horizontally scrollable')}
           >
             <table>
-              <caption className="sr-only">{t('BaMoYa Finance plan features and quotas')}</caption>
+              <caption className="sr-only">{t('B-Finance plan features and quotas')}</caption>
               <thead>
                 <tr>
                   <th scope="col">{t('Feature')}</th>

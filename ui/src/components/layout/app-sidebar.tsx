@@ -47,16 +47,16 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
           <Link
             href="/dashboard"
             onClick={closeMobile}
-            aria-label={workspace ? 'BaMoYa Finance' : translate('Slama Finance')}
+            aria-label={workspace ? 'B-Finance' : translate('B-Finance')}
             className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <img
               src={workspace ? '/branding/bamoya-finance.png' : '/slama-logo.png'}
-              alt={workspace ? 'BaMoYa Finance' : translate('Slama')}
+              alt={workspace ? 'B-Finance' : translate('Slama')}
               className="h-8 w-8 shrink-0 object-contain"
             />
             <span className="whitespace-nowrap font-semibold group-data-[collapsible=icon]:hidden">
-              {workspace ? 'BaMoYa Finance' : translate('Slama Finance')}
+              {workspace ? 'B-Finance' : translate('B-Finance')}
             </span>
           </Link>
           <SidebarTrigger className="ml-auto shrink-0 md:hidden" />

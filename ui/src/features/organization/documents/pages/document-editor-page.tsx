@@ -145,16 +145,14 @@ export function DocumentEditorPage({
               <span>
                 <ImagePlus className="mx-auto mb-2" />
                 <strong className="text-sm">{translate('Company logo')}</strong>
-                <small className="mt-1 block text-[var(--muted)]">
-                  {translate('Slama Finance')}
-                </small>
+                <small className="mt-1 block text-[var(--muted)]">{translate('B-Finance')}</small>
               </span>
             </button>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Address
               title={translate('Bill from')}
-              name="Slama Finance SARL"
+              name="B-Finance SARL"
               detail={'15 Avenue Hassan II\nCasablanca, Morocco\nICE 001234567890123'}
             />
             <div className="rounded-[20px] bg-[var(--surface-muted)] p-5">

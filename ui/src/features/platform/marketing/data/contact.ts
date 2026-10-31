@@ -30,7 +30,7 @@ export function contactDraftUrl(
   locale: string,
 ) {
   const french = locale === 'fr'
-  const subject = `BaMoYa Finance — ${kind === 'demo' ? (french ? 'Demande de démonstration' : 'Demo request') : french ? 'Question' : 'Question'}`
+  const subject = `B-Finance — ${kind === 'demo' ? (french ? 'Demande de démonstration' : 'Demo request') : french ? 'Question' : 'Question'}`
   const fields: [string, string][] = [
     [french ? 'Nom' : 'Name', values.name],
     ['Email', values.email],

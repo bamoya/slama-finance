@@ -49,7 +49,7 @@ export function OwnerPortalLayout({
       navigationLabel={translate('Owner navigation')}
       mobileNavigationLabel={translate('Owner mobile navigation')}
       currentLabel={current.label}
-      titleSuffix="BaMoYa Finance"
+      titleSuffix="B-Finance"
       sidebarFooter={
         <>
           <div className="portal-sidebar-context">

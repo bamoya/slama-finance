@@ -37,8 +37,8 @@ export const marketingFrench: Record<string, string> = {
   'A human contact': 'Un contact humain',
   'A product question': 'Une question sur le produit',
   'A question?': 'Une question ?',
-  'A readable framework for using BaMoYa Finance, subscriptions and our relationship with you.':
-    'Un cadre lisible pour l’utilisation de BaMoYa Finance, les abonnements et notre relation avec vous.',
+  'A readable framework for using B-Finance, subscriptions and our relationship with you.':
+    'Un cadre lisible pour l’utilisation de B-Finance, les abonnements et notre relation avec vous.',
   'A real conversation.': 'Une vraie conversation.',
   'A reassuring first payment': 'Premier paiement rassurant',
   'AND ALWAYS, YOUR CLIENTS': 'ET TOUJOURS, VOS CLIENTS',
@@ -67,13 +67,12 @@ export const marketingFrench: Record<string, string> = {
     'Au lancement, le paiement et son contrôle sont manuels. Les instructions et le montant total vous sont communiqués avant règlement. Votre abonnement est activé après confirmation, avec ses dates de début et de fin visibles.',
   'Atlas selection': 'Sélection Atlas',
   'BILL TO': 'FACTURÉ À',
-  'BaMoYa Finance is a business management tool: clients, products, estimates, invoices, deliveries, payments and financial insights. Publisher: [legal name to complete], [status to confirm], [address to complete].':
-    'BaMoYa Finance est un outil de gestion destiné aux entreprises : clients, produits, devis, factures, livraisons, paiements et suivi financier. Éditeur : [nom légal à compléter], [statut à confirmer], [adresse à compléter].',
-  'BaMoYa Finance is a service published by an individual. Responsible party: [legal name to complete]. Privacy contact: [email to complete]. Address: [address to complete].':
-    'BaMoYa Finance est un service édité à titre personnel. Identité du responsable : [nom légal à compléter]. Contact confidentialité : [email à compléter]. Adresse : [adresse à compléter].',
-  'BaMoYa Finance plan features and quotas':
-    'Fonctionnalités et quotas des formules BaMoYa Finance',
-  'BaMoYa Finance question': 'Question sur BaMoYa Finance',
+  'B-Finance is a business management tool: clients, products, estimates, invoices, deliveries, payments and financial insights. Publisher: [legal name to complete], [status to confirm], [address to complete].':
+    'B-Finance est un outil de gestion destiné aux entreprises : clients, produits, devis, factures, livraisons, paiements et suivi financier. Éditeur : [nom légal à compléter], [statut à confirmer], [adresse à compléter].',
+  'B-Finance is a service published by an individual. Responsible party: [legal name to complete]. Privacy contact: [email to complete]. Address: [address to complete].':
+    'B-Finance est un service édité à titre personnel. Identité du responsable : [nom légal à compléter]. Contact confidentialité : [email à compléter]. Adresse : [adresse à compléter].',
+  'B-Finance plan features and quotas': 'Fonctionnalités et quotas des formules B-Finance',
+  'B-Finance question': 'Question sur B-Finance',
   'Back to home': 'Retour à l’accueil',
   'Back to the form': 'Revenir au formulaire',
   Balance: 'Reste',
@@ -337,14 +336,14 @@ export const marketingFrench: Record<string, string> = {
   'Privacy policy': 'Politique de confidentialité',
   Product: 'Le produit',
   'Product illustration · fictional data': 'Illustration produit · données fictives',
-  'Product name: BaMoYa Finance. Parent brand: BaMoYa. Publisher: individual — [legal first and last name to complete]. Professional status: [to confirm].':
-    'Nom du produit : BaMoYa Finance. Marque ombrelle : BaMoYa. Éditeur : personne physique — [nom et prénom légaux à compléter]. Statut professionnel : [à confirmer].',
+  'Product name: B-Finance. Parent brand: BaMoYa. Publisher: individual — [legal first and last name to complete]. Professional status: [to confirm].':
+    'Nom du produit : B-Finance. Marque ombrelle : BaMoYa. Éditeur : personne physique — [nom et prénom légaux à compléter]. Statut professionnel : [à confirmer].',
   'Provisional document — validate before publication':
     'Document provisoire — à valider avant publication',
   'Publication contact: [name to complete]. Email: [to complete]. Business phone / WhatsApp: [to complete]. Details will be entered and verified before commercial publication.':
     'Responsable de publication : [nom à compléter]. Email : [à compléter]. Téléphone / WhatsApp professionnel : [à compléter]. Les coordonnées seront renseignées et vérifiées avant la mise en ligne commerciale.',
-  'Publisher identification and contact information for the BaMoYa Finance website.':
-    'Les informations d’identification de l’éditeur et les contacts relatifs au site BaMoYa Finance.',
+  'Publisher identification and contact information for the B-Finance website.':
+    'Les informations d’identification de l’éditeur et les contacts relatifs au site B-Finance.',
   Qty: 'Qté',
   'RECOMMENDED FOR TEAMS': 'RECOMMANDÉ POUR LES ÉQUIPES',
   'Readable figures, by client and business. Decide with clarity.':
@@ -394,8 +393,8 @@ export const marketingFrench: Record<string, string> = {
   'Template customization: Business and Pro.': 'Personnalisation des modèles : Business et Pro.',
   'Terms of service': 'Conditions d’utilisation',
   'Thank you for your business.': 'Merci pour votre confiance.',
-  'The BaMoYa Finance logo supplied by the publisher is used in this design proposal. Screenshots and illustrations use fictional data and are not customer testimonials or results.':
-    'Le logo BaMoYa Finance fourni par l’éditeur est utilisé pour cette proposition de design. Les captures et illustrations présentent des données fictives et ne sont pas des témoignages ou résultats de clients.',
+  'The B-Finance logo supplied by the publisher is used in this design proposal. Screenshots and illustrations use fictional data and are not customer testimonials or results.':
+    'Le logo B-Finance fourni par l’éditeur est utilisé pour cette proposition de design. Les captures et illustrations présentent des données fictives et ne sont pas des témoignages ou résultats de clients.',
   'The contact form prepares an email using your name, email, message and any optional details. You review and send it in your own email app; the website does not submit the form to a server.':
     'Le formulaire de contact prépare un email contenant votre nom, votre email, votre message et les informations facultatives. Vous le vérifiez et l’envoyez dans votre propre messagerie ; le site ne transmet pas le formulaire à un serveur.',
   'The data involved': 'Les données concernées',

@@ -79,7 +79,7 @@ export function EmailStartingDesign({
                 onApply(
                   choice === 'simple'
                     ? content
-                    : `<div dir="ltr" style="font-family:Arial,sans-serif;max-width:600px;padding:24px"><h2><span style="color:#a77718">Slama Finance</span></h2>${content}<table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table><hr><p><span style="font-size:12px;color:#666666">Slama Finance</span></p></div>`,
+                    : `<div dir="ltr" style="font-family:Arial,sans-serif;max-width:600px;padding:24px"><h2><span style="color:#a77718">B-Finance</span></h2>${content}<table style="width:100%;border-collapse:collapse"><tbody>${rows}</tbody></table><hr><p><span style="font-size:12px;color:#666666">B-Finance</span></p></div>`,
                 )
                 setChoice(null)
               }}
