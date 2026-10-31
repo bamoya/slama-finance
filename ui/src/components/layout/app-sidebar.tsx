@@ -51,8 +51,8 @@ export function AppSidebar({ isDark }: { isDark: boolean }) {
             className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <img
-              src={workspace ? '/branding/bamoya-finance.png' : '/slama-logo.png'}
-              alt={workspace ? 'B-Finance' : translate('Slama')}
+              src={workspace ? '/branding/bamoya-finance.png' : '/branding/b-finance-mark.png'}
+              alt="B-Finance"
               className="h-8 w-8 shrink-0 object-contain"
             />
             <span className="whitespace-nowrap font-semibold group-data-[collapsible=icon]:hidden">

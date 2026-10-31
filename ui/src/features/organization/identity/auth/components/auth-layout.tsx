@@ -42,7 +42,7 @@ export function AuthLayout({
               </Link>
             ) : (
               <>
-                <img src="/slama-logo.png" alt="" className="h-12 w-12 rounded-full" />
+                <img src="/branding/b-finance-mark.png" alt="" className="h-12 w-12" />
                 {translate('B-Finance')}
               </>
             )}
@@ -69,7 +69,7 @@ export function AuthLayout({
               </Link>
             ) : (
               <img
-                src="/slama-logo.png"
+                src="/branding/b-finance-mark.png"
                 alt={translate('B-Finance')}
                 className="mb-8 h-12 w-12 lg:hidden"
               />

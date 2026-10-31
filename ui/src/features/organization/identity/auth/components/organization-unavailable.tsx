@@ -9,7 +9,7 @@ export function OrganizationUnavailable() {
       className={`flex min-h-screen items-center justify-center bg-[var(--surface)] p-6 text-[var(--text)] ${isDark ? 'is-dark' : ''}`}
     >
       <div className="max-w-md text-center">
-        <img src="/slama-logo.png" alt="" className="mx-auto mb-6 h-14 w-14" />
+        <img src="/branding/b-finance-mark.png" alt="" className="mx-auto mb-6 h-14 w-14" />
         <h1 className="text-2xl font-semibold">
           {translate('Organization temporarily unavailable')}
         </h1>
