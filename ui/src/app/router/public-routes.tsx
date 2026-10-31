@@ -29,7 +29,7 @@ import {
 } from '../../features/platform/administration'
 import { MarketingSite } from '../../features/platform/marketing'
 import { ownerAuthPaths } from '../../lib/public-paths'
-import { OwnerAccess } from './owner-access'
+import { OwnerAccess, OwnerInvitationAccess } from './owner-access'
 
 export const publicRoutes = (
   <>
@@ -65,6 +65,7 @@ export const publicRoutes = (
     <Route path={ownerAuthPaths.resend}>
       <OwnerAccess key="auth-resend" mode="resend" />
     </Route>
+    <Route path={ownerAuthPaths.acceptInvitation} component={OwnerInvitationAccess} />
     <Route path="/organization-unavailable" component={OrganizationUnavailable} />
     <Route path="/organizations/:organizationId/accept-invitation">
       {({ organizationId }) => (

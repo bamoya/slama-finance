@@ -6,4 +6,5 @@ export const ownerAuthPaths = {
   reset: '/auth/reset-password',
   verify: '/auth/verify-email',
   resend: '/auth/resend-verification',
+  acceptInvitation: '/auth/accept-invitation',
 } as const

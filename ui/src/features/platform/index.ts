@@ -1,3 +1,4 @@
+export { AcceptOwnerInvitationPage } from './identity/pages/accept-owner-invitation-page'
 export { OwnerAccountPage } from './identity/pages/owner-account-page'
 export { OwnerAuthPage } from './identity/pages/owner-auth-page'
 export { OwnerDashboardPage } from './organizations/pages/owner-dashboard-page'

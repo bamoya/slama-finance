@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'wouter'
+import { Link, useLocation, useSearch } from 'wouter'
 
 import {
   getGetOwnerSessionQueryKey,
@@ -37,6 +37,7 @@ const titles: Record<Mode, string> = {
 export function OwnerAuthPage({ mode }: { mode: Mode }) {
   const language = useUiLanguage()
   const [, navigate] = useLocation()
+  const search = useSearch()
   const client = useQueryClient()
   const login = useLoginOwner()
   const register = useRegisterOwner()
@@ -96,6 +97,14 @@ export function OwnerAuthPage({ mode }: { mode: Mode }) {
       title={translate(titles[mode])}
       description={translate('Manage your organizations with your independent owner account.')}
     >
+      {mode === 'login' && new URLSearchParams(search).get('invitation') === 'accepted' && (
+        <p
+          role="status"
+          className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] p-3 text-sm"
+        >
+          {translate('Your account is active. Sign in with your new password.')}
+        </p>
+      )}
       <FormError error={error} />
       {done ? (
         <p role="status" className="mb-6 text-sm">
