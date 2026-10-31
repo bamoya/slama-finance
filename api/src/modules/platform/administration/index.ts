@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 
+import type { OwnerAccountDelivery } from '../../../integrations/contracts.js'
 import type { Database } from '../../../lib/db.js'
 import { createPasswordService } from '../../../lib/password.js'
 import { createRequirePortalOrigin } from '../../../middlewares/require-portal-origin.js'
@@ -23,6 +24,10 @@ import { createAdminCustomersController } from './customers/controllers/admin-cu
 import { createAdminCustomerRepository } from './customers/repositories/admin-customer.repository.js'
 import { registerAdminCustomersRoutes } from './customers/routes/admin-customers.routes.js'
 import { createAdminCustomersService } from './customers/services/admin-customers.service.js'
+import { createCustomerLifecycleController } from './lifecycle/controllers/customer-lifecycle.controller.js'
+import { createCustomerLifecycleRepository } from './lifecycle/repositories/customer-lifecycle.repository.js'
+import { registerCustomerLifecycleRoutes } from './lifecycle/routes/customer-lifecycle.routes.js'
+import { createCustomerLifecycleService } from './lifecycle/services/customer-lifecycle.service.js'
 import { createAdminOverviewController } from './overview/controllers/admin-overview.controller.js'
 import { createAdminOverviewRepository } from './overview/repositories/admin-overview.repository.js'
 import { registerAdminOverviewRoutes } from './overview/routes/admin-overview.routes.js'
@@ -51,27 +56,42 @@ export function createAdministrationModule(options: {
   portalOrigin?: string
   totpKey?: Buffer
   clock?: () => Date
+  /** Owner account emails (customer invitations); links point at portalOrigin. */
+  ownerDelivery?: OwnerAccountDelivery
 }) {
   const { withAdmin, accounts, audit } = createAdministrationServices(options.database)
-  const auth = createAdminAuthController(
-    createAdminAuthService(accounts, audit, withAdmin, createPasswordService(), {
-      totpKey: options.totpKey,
-      clock: options.clock,
-    }),
-    options.secure,
-  )
+  const authService = createAdminAuthService(accounts, audit, withAdmin, createPasswordService(), {
+    totpKey: options.totpKey,
+    clock: options.clock,
+  })
+  const auth = createAdminAuthController(authService, options.secure)
   const payments = createAdminPaymentRepository()
   const paymentsController = createAdminPaymentsController(
     createAdminPaymentsService(payments, audit, withAdmin, options.billing),
     auth.currentAdmin,
   )
-  const customersController = createAdminCustomersController(
-    createAdminCustomersService(
-      createAdminCustomerRepository(),
-      payments,
+  const customers = createAdminCustomersService(
+    createAdminCustomerRepository(),
+    payments,
+    audit,
+    withAdmin,
+    options.billing,
+    options.clock,
+  )
+  const customersController = createAdminCustomersController(customers)
+  const lifecycleController = createCustomerLifecycleController(
+    createCustomerLifecycleService({
+      repo: createCustomerLifecycleRepository(),
+      audit,
       withAdmin,
-      options.billing,
-    ),
+      billing: options.billing.lifecycle,
+      stepUp: authService.stepUp,
+      detail: customers.detail,
+      delivery: options.ownerDelivery,
+      portalOrigin: options.portalOrigin,
+      clock: options.clock,
+    }),
+    auth.currentAdmin,
   )
   const billingController = createBillingSettingsController(
     createBillingSettingsService(createBillingSettingsRepository(), audit, withAdmin),
@@ -92,6 +112,7 @@ export function createAdministrationModule(options: {
       registerAdminOverviewRoutes(scope, overviewController)
       registerAdminPaymentsRoutes(scope, paymentsController)
       registerAdminCustomersRoutes(scope, customersController)
+      registerCustomerLifecycleRoutes(scope, lifecycleController)
       registerBillingSettingsRoutes(scope, billingController)
       registerAdminAuditRoutes(scope, auditController)
     })

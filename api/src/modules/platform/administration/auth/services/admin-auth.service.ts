@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 
+import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import type { createPasswordService } from '../../../../../lib/password.js'
 import {
@@ -207,6 +208,29 @@ export function createAdminAuthService(
       })
       if (!admin) throw unauthenticated()
       return admin
+    },
+
+    /**
+     * Fresh second factor for sensitive actions, inside the action's transaction. Each code is
+     * accepted once (shared replay guard with sign-in); a failed action rolls the step back.
+     */
+    async stepUp(admin: AuthenticatedAdmin, code: string, tx: Transaction) {
+      const secrets = box()
+      const now = clock()
+      const row = await repo.byId(admin.id, tx)
+      let step: number | null = null
+      try {
+        if (row?.totpSecret && !row.disabledAt)
+          step = verifyTotp(base32Decode(secrets.open(row.totpSecret)), code, now)
+      } catch {
+        step = null
+      }
+      if (step === null || !(await repo.acceptStep(admin.id, step, now, tx)))
+        throw new AppError(
+          403,
+          'TWO_FACTOR_INVALID',
+          'Enter a new code from your authenticator app to confirm this action.',
+        )
     },
 
     async logout(token?: string) {

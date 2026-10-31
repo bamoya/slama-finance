@@ -12,6 +12,12 @@ export function createAdminAuditService(
 ) {
   return {
     record: (entry: AuditInput, tx: Transaction) => repo.append(entry, tx),
+    /** Internal reason of the latest matching action; administrators only. */
+    async reason(action: string, targetType: string, targetId: string, tx: Transaction) {
+      const row = await repo.latest(action, targetType, targetId, tx)
+      const after = row?.after as { reason?: unknown } | null | undefined
+      return typeof after?.reason === 'string' ? after.reason : null
+    },
     async list(page: number): Promise<AdminAuditPage> {
       const { rows, total } = await admin((tx) => repo.page(page, AUDIT_PAGE_SIZE, tx))
       return {

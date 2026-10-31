@@ -23,4 +23,32 @@ export type AdminBillingPort = {
     onDecided?: PaymentDecision,
   ) => Promise<unknown>
   summary: (ownerId: string) => Promise<OwnerSubscription>
+  lifecycle: AdminLifecyclePort
+}
+
+export type AdminLifecycleState = {
+  status: string
+  planCode: string
+  paidThroughAt: Date | null
+  row: { trialEndsAt: Date; suspendedAt: Date | null } | null
+}
+
+/** Subscription lifecycle changes run inside the administrator's transaction. */
+export type AdminLifecyclePort = {
+  state: (ownerId: string, tx: Transaction) => Promise<AdminLifecycleState>
+  suspend: (ownerId: string, tx: Transaction) => Promise<void>
+  resume: (ownerId: string, tx: Transaction) => Promise<void>
+  changePlan: (
+    ownerId: string,
+    planCode: string,
+    decidedBy: string,
+    tx: Transaction,
+  ) => Promise<void>
+  extend: (ownerId: string, days: number, decidedBy: string, tx: Transaction) => Promise<void>
+  grant: (
+    ownerId: string,
+    grant: { planCode: string; cycle: 'monthly' | 'annual'; start: Date; end: Date },
+    decidedBy: string,
+    tx: Transaction,
+  ) => Promise<void>
 }

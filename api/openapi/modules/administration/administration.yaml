@@ -734,8 +734,7 @@ components:
           items:
             type: object
             additionalProperties: false
-            required:
-              [id, name, slug, createdAt, activatedAt, state, suspendedAt, suspensionReason]
+            required: [id, name, slug, createdAt, activatedAt, state, suspendedAt, suspensionReason]
             properties:
               id: { type: string, format: uuid }
               name: { type: string }
@@ -796,8 +795,9 @@ components:
     AdminOwnerCreate:
       type: object
       additionalProperties: false
-      required: [firstName, lastName, email, locale, subscription]
+      required: [firstName, lastName, email, locale, subscription, reason]
       properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
         firstName: { type: string, minLength: 1, maxLength: 100 }
         lastName: { type: string, minLength: 1, maxLength: 100 }
         email: { type: string, format: email, maxLength: 254 }
@@ -806,19 +806,17 @@ components:
           type: object
           additionalProperties: false
           required: [kind]
-          description: 'trial: the 7-day trial starts with the first organization. paid: an administrator grant; requires planCode, cycle, coverageStart (not in the future), coverageEnd (in the future) and reason.'
+          description: 'trial: the 7-day trial starts with the first organization. paid: an administrator grant; requires planCode, cycle, coverageStart (not in the future) and coverageEnd (in the future).'
           properties:
             kind: { type: string, enum: [trial, paid] }
             planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
             cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
             coverageStart: { type: string, format: date-time }
             coverageEnd: { type: string, format: date-time }
-            reason: { type: string, minLength: 1, maxLength: 500 }
     AdminOwnerRestriction:
       type: object
       additionalProperties: false
-      required:
-        [blockedAt, blockReason, deletionRequestedAt, deletionDueAt, deletionReason]
+      required: [blockedAt, blockReason, deletionRequestedAt, deletionDueAt, deletionReason]
       properties:
         blockedAt: { type: [string, 'null'], format: date-time }
         blockReason: { type: [string, 'null'], description: Internal administrator note. }

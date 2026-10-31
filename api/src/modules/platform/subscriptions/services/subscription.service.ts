@@ -7,7 +7,7 @@ import type { createSubscriptionRepository } from '../repositories/subscription.
 import { createBillingService, toPayment } from './billing.service.js'
 /** Never discloses which restriction applies; the organization domain shows a static page. */
 const unavailable = () =>
-  new AppError(403, 'ORGANIZATION_UNAVAILABLE', 'This organization is currently unavailable.')
+  new AppError(403, 'ORGANIZATION_SUSPENDED', 'This organization is temporarily unavailable.')
 
 export function createSubscriptionService(
   repo: ReturnType<typeof createSubscriptionRepository>,

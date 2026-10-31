@@ -11,8 +11,7 @@ export function createAdminCustomersController(
 ) {
   return {
     async list(request: FastifyRequest) {
-      const query = listAdminOwnersQuerySchema.parse(request.query)
-      return customers.list(query.search, query.page)
+      return customers.list(listAdminOwnersQuerySchema.parse(request.query))
     },
     async detail(request: FastifyRequest) {
       return customers.detail(getAdminOwnerParamsSchema.parse(request.params).ownerId)

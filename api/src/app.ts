@@ -154,6 +154,19 @@ export async function buildApp(options: AppOptions = {}) {
   })
   registerTenantScope(app)
   app.decorateRequest('actor', null)
+  const ownerAccountDelivery =
+    options.ownerAccountDelivery ??
+    (env.NODE_ENV !== 'production' && env.NOTIFICATION_TRANSPORT === 'smtp'
+      ? createOwnerAccountDelivery(
+          createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
+          env.EMAIL_FROM ?? 'security@slama.local',
+        )
+      : env.RESEND_API_KEY && env.EMAIL_FROM
+        ? createOwnerAccountDelivery(
+            createResendEmailProvider({ apiKey: env.RESEND_API_KEY }),
+            env.EMAIL_FROM,
+          )
+        : undefined)
   const subscriptions = createSubscriptionsModule(() => tenantDatabase(app.database()))
   const platform = createPlatformModule({
     provisioning: () => identity.provisioning,
@@ -166,19 +179,7 @@ export async function buildApp(options: AppOptions = {}) {
     ownerAuth: {
       enabled: env.OWNER_AUTH_ENABLED,
       portalOrigin: env.OWNER_PORTAL_ORIGIN,
-      delivery:
-        options.ownerAccountDelivery ??
-        (env.NODE_ENV !== 'production' && env.NOTIFICATION_TRANSPORT === 'smtp'
-          ? createOwnerAccountDelivery(
-              createSmtpEmailProvider({ host: env.SMTP_HOST, port: env.SMTP_PORT }),
-              env.EMAIL_FROM ?? 'security@slama.local',
-            )
-          : env.RESEND_API_KEY && env.EMAIL_FROM
-            ? createOwnerAccountDelivery(
-                createResendEmailProvider({ apiKey: env.RESEND_API_KEY }),
-                env.EMAIL_FROM,
-              )
-            : undefined),
+      delivery: ownerAccountDelivery,
     },
   })
   const identity = createIdentityModule({
@@ -271,6 +272,7 @@ export async function buildApp(options: AppOptions = {}) {
     secure: env.NODE_ENV === 'production',
     portalOrigin: env.OWNER_PORTAL_ORIGIN,
     totpKey: env.ADMIN_TOTP_KEY ? Buffer.from(env.ADMIN_TOTP_KEY, 'base64') : undefined,
+    ownerDelivery: ownerAccountDelivery,
   }).registerRoutes(app)
   await identity.registerRoutes(app, permission)
   await subscriptions.registerRoutes(

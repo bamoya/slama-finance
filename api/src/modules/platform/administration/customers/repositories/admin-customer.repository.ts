@@ -1,15 +1,23 @@
-import { asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
 
 import { organizations, platformUsers } from '../../../../../../db/schema/organizations.js'
 import type { Transaction } from '../../../../../lib/db.js'
+import { subscriptionLifecycle } from '../../shared/repositories/subscription-lifecycle.repository.js'
 
 const like = (value: string) => `%${value.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
 
 export function createAdminCustomerRepository() {
   return {
-    async owners(search: string | undefined, page: number, pageSize: number, tx: Transaction) {
+    async owners(
+      search: string | undefined,
+      status: string | undefined,
+      page: number,
+      pageSize: number,
+      now: Date,
+      tx: Transaction,
+    ) {
       const term = search?.trim()
-      const where = term
+      const matches = term
         ? or(
             ilike(platformUsers.email, like(term)),
             ilike(
@@ -18,6 +26,12 @@ export function createAdminCustomerRepository() {
             ),
           )
         : undefined
+      const where = and(
+        matches,
+        status
+          ? sql`${platformUsers.id} in (select owner_id from (${subscriptionLifecycle(sql`${now.toISOString()}::timestamptz`)}) l where l.status=${status})`
+          : undefined,
+      )
       const organizationCount = sql<number>`(select count(*)::int from organizations o where o.owner_id=platform_users.id)`
       const [rows, [total]] = await Promise.all([
         tx
@@ -43,6 +57,9 @@ export function createAdminCustomerRepository() {
           slug: organizations.slug,
           createdAt: organizations.createdAt,
           activatedAt: organizations.activatedAt,
+          pausedAt: organizations.pausedAt,
+          suspendedAt: organizations.suspendedAt,
+          deletionRequestedAt: organizations.deletionRequestedAt,
         })
         .from(organizations)
         .where(eq(organizations.ownerId, ownerId))
