@@ -3,7 +3,7 @@ import { Check, LoaderCircle } from 'lucide-react'
 import { Input } from '../../../../../components/ui/input'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { formatSlug } from '../../../../../lib/organization-slug'
-import { organizationAddress } from '../../../../../lib/platform-sites'
+import { organizationOrigin } from '../../../../../lib/platform-sites'
 import type { SlugAvailability } from '../../hooks/use-slug-availability'
 
 const messages: Record<Exclude<SlugAvailability, 'empty' | 'checking' | 'available'>, string> = {
@@ -51,8 +51,7 @@ export function OrganizationAddressField({
         onBlur={() => onChange(formatSlug(value, true))}
       />
       <small>
-        {translate('Your team signs in at')}{' '}
-        <strong>https://{organizationAddress(value || '…')}</strong>
+        {translate('Your team signs in at')} <strong>{organizationOrigin(value || '…')}</strong>
       </small>
       <small id="organization-address-status" role={problem ? 'alert' : 'status'}>
         {problem ? (

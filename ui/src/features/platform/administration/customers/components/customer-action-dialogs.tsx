@@ -20,7 +20,7 @@ import { Label } from '../../../../../components/ui/label'
 import { Select, SelectGroup, SelectOption } from '../../../../../components/ui/select'
 import { translate } from '../../../../../lib/i18n'
 import { formatSlug } from '../../../../../lib/organization-slug'
-import { organizationAddress } from '../../../../../lib/platform-sites'
+import { organizationAddress, organizationOrigin } from '../../../../../lib/platform-sites'
 import { planLabel } from '../../../subscriptions/components/billing-format'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
 import type { CustomerAction } from './customer-action'
@@ -89,7 +89,7 @@ export function AddressChangeFields({
         <span className="text-[var(--muted)]">{translate('Current address')}: </span>
         {organizationAddress(current)}
       </p>
-      <p className="text-sm font-semibold break-all">https://{organizationAddress(value || '…')}</p>
+      <p className="text-sm font-semibold break-all">{organizationOrigin(value || '…')}</p>
     </div>
   )
 }
