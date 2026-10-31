@@ -1,7 +1,12 @@
-import { AppError } from '../../../../lib/errors.js'
-import type { createPasswordService } from '../../../../lib/password.js'
-import type { AdminRow, createAdminRepository } from '../repositories/admin.repository.js'
-import { normalizeEmail } from './admin-auth.service.js'
+import { AppError } from '../../../../../lib/errors.js'
+import type { createPasswordService } from '../../../../../lib/password.js'
+import type { AdminAuditService } from '../../audit/services/admin-audit.service.js'
+import type {
+  AdminRow,
+  createAdminAccountRepository,
+} from '../../auth/repositories/admin-account.repository.js'
+import { normalizeEmail } from '../../auth/services/admin-auth.service.js'
+import type { AdminTransaction } from '../../shared/repositories/admin-transaction.repository.js'
 
 const CLI = 'cli'
 const snapshot = (a: AdminRow) => ({
@@ -13,17 +18,19 @@ const snapshot = (a: AdminRow) => ({
 
 /** Operator bootstrap tooling only (no HTTP surface in v1). Every change is audited. */
 export function createAdminAccountsService(
-  repo: ReturnType<typeof createAdminRepository>,
+  repo: ReturnType<typeof createAdminAccountRepository>,
+  audit: AdminAuditService,
+  withAdmin: AdminTransaction,
   passwords: ReturnType<typeof createPasswordService>,
 ) {
   async function find(
     email: string,
     work: (
       admin: AdminRow,
-      tx: Parameters<Parameters<typeof repo.admin>[0]>[0],
+      tx: Parameters<Parameters<AdminTransaction>[0]>[0],
     ) => Promise<AdminRow>,
   ) {
-    return repo.admin(async (tx) => {
+    return withAdmin(async (tx) => {
       const admin = await repo.byEmail(normalizeEmail(email), tx)
       if (!admin) throw new AppError(404, 'NOT_FOUND', 'Administrator not found.')
       return snapshot(await work(admin, tx))
@@ -34,13 +41,13 @@ export function createAdminAccountsService(
       if (input.password.length < 12)
         throw new AppError(400, 'WEAK_PASSWORD', 'Use at least 12 characters.')
       const passwordHash = await passwords.hash(input.password)
-      return repo.admin(async (tx) => {
+      return withAdmin(async (tx) => {
         const admin = await repo.create(
           { email: normalizeEmail(input.email), name: input.name.trim(), passwordHash },
           tx,
         )
         if (!admin) throw new AppError(409, 'ADMIN_EXISTS', 'This administrator already exists.')
-        await repo.audit(
+        await audit.record(
           {
             adminId: admin.id,
             actor: CLI,
@@ -64,7 +71,7 @@ export function createAdminAccountsService(
           tx,
         ))!
         await repo.revokeAll(admin.id, now, tx)
-        await repo.audit(
+        await audit.record(
           {
             adminId: admin.id,
             actor: CLI,
@@ -88,7 +95,7 @@ export function createAdminAccountsService(
           tx,
         ))!
         await repo.revokeAll(admin.id, now, tx)
-        await repo.audit(
+        await audit.record(
           {
             adminId: admin.id,
             actor: CLI,

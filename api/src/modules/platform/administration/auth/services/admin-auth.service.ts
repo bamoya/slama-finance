@@ -1,15 +1,21 @@
 import { createHash, randomBytes } from 'node:crypto'
 
-import { AppError } from '../../../../lib/errors.js'
-import type { createPasswordService } from '../../../../lib/password.js'
+import { AppError } from '../../../../../lib/errors.js'
+import type { createPasswordService } from '../../../../../lib/password.js'
 import {
   base32Decode,
   createSecretBox,
   generateTotpSecret,
   otpauthUri,
   verifyTotp,
-} from '../../../../lib/totp.js'
-import type { AdminRow, createAdminRepository } from '../repositories/admin.repository.js'
+} from '../../../../../lib/totp.js'
+import type { AdminAuditService } from '../../audit/services/admin-audit.service.js'
+import type { AdminTransaction } from '../../shared/repositories/admin-transaction.repository.js'
+import type { AuthenticatedAdmin } from '../../shared/types/authenticated-admin.js'
+import type {
+  AdminRow,
+  createAdminAccountRepository,
+} from '../repositories/admin-account.repository.js'
 
 export const ADMIN_SESSION_HOURS = 8
 export const ADMIN_IDLE_MINUTES = 30
@@ -27,10 +33,12 @@ const invalidCode = () =>
 const unauthenticated = () =>
   new AppError(401, 'UNAUTHENTICATED', 'Sign in to the administration portal.')
 
-export type AuthenticatedAdmin = { id: string; email: string; name: string; expiresAt: Date }
+export type { AuthenticatedAdmin }
 
 export function createAdminAuthService(
-  repo: ReturnType<typeof createAdminRepository>,
+  repo: ReturnType<typeof createAdminAccountRepository>,
+  audit: AdminAuditService,
+  withAdmin: AdminTransaction,
   passwords: ReturnType<typeof createPasswordService>,
   options: { totpKey?: Buffer; clock?: () => Date },
 ) {
@@ -56,13 +64,13 @@ export function createAdminAuthService(
     async login(email: string, password: string) {
       const secrets = box()
       const normalized = normalizeEmail(email)
-      const candidate = await repo.admin((tx) => repo.byEmail(normalized, tx))
+      const candidate = await withAdmin((tx) => repo.byEmail(normalized, tx))
       const valid = await passwords.verify(password, candidate?.passwordHash ?? dummyHash)
-      const outcome = await repo.admin(async (tx) => {
+      const outcome = await withAdmin(async (tx) => {
         const now = clock()
         const admin = candidate && (await repo.byId(candidate.id, tx))
         if (!admin || !valid || admin.disabledAt || admin.passwordHash !== candidate.passwordHash) {
-          await repo.audit(
+          await audit.record(
             {
               adminId: admin?.id ?? null,
               actor: normalized.slice(0, 254),
@@ -111,7 +119,7 @@ export function createAdminAuthService(
     async verify(pendingToken: string | undefined, code: string) {
       const secrets = box()
       if (!pendingToken) throw invalidCode()
-      const outcome = await repo.admin(async (tx) => {
+      const outcome = await withAdmin(async (tx) => {
         const now = clock()
         const found = await repo.session(hash(pendingToken), tx)
         if (!found || found.session.verifiedAt || found.session.expiresAt <= now) return null
@@ -134,7 +142,7 @@ export function createAdminAuthService(
             },
             tx,
           )
-          await repo.audit(
+          await audit.record(
             {
               adminId: admin.id,
               actor: admin.email,
@@ -162,7 +170,7 @@ export function createAdminAuthService(
           },
           tx,
         )
-        await repo.audit(
+        await audit.record(
           {
             adminId: admin.id,
             actor: admin.email,
@@ -183,7 +191,7 @@ export function createAdminAuthService(
     /** Verified, unexpired, recently active session of an enabled administrator. */
     async authenticate(token?: string): Promise<AuthenticatedAdmin> {
       if (!token) throw unauthenticated()
-      const admin = await repo.admin(async (tx) => {
+      const admin = await withAdmin(async (tx) => {
         const now = clock()
         const found = await repo.session(hash(token), tx)
         if (
@@ -203,7 +211,7 @@ export function createAdminAuthService(
 
     async logout(token?: string) {
       if (!token) return
-      await repo.admin(async (tx) => {
+      await withAdmin(async (tx) => {
         const found = await repo.session(hash(token), tx)
         if (found) await repo.updateSession(found.session.id, { revokedAt: clock() }, tx)
       })

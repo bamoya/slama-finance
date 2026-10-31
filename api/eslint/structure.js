@@ -116,7 +116,6 @@ export const API_FORBIDDEN_LAYERS = [
 const LEGACY = 'legacy, pending refactor'
 /** Paths are relative to api/src/modules. New violations must fail; shrink this list, never grow it. */
 export const STRUCTURE_EXCEPTIONS = [
-  { path: 'platform/administration', reason: `${LEGACY} (uncommitted work, restructure planned)` },
   {
     path: 'organization/settings/notifications',
     reason: `${LEGACY} (domain folder beside layer folders)`,
