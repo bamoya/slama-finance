@@ -22,6 +22,7 @@ import {
   AdminBillingSettingsPage,
   AdminCustomerDetailPage,
   AdminCustomersPage,
+  AdminNewCustomerPage,
   AdminOverviewPage,
   AdminPaymentsPage,
   AdminSignInPage,
@@ -34,6 +35,7 @@ export const publicRoutes = (
   <>
     <Route path="/admin/login" component={AdminSignInPage} />
     <Route path="/admin/payments" component={AdminPaymentsPage} />
+    <Route path="/admin/customers/new" component={AdminNewCustomerPage} />
     <Route path="/admin/customers/:customerId">
       {({ customerId }) => <AdminCustomerDetailPage key={customerId} customerId={customerId} />}
     </Route>

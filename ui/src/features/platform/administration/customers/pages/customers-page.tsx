@@ -1,3 +1,4 @@
+import { UserPlus } from 'lucide-react'
 import { useCallback } from 'react'
 import { Link } from 'wouter'
 
@@ -7,6 +8,7 @@ import { DataTable } from '../../../../../components/management/data-table'
 import { DataTablePagination } from '../../../../../components/management/data-table-pagination'
 import { DataTableToolbar } from '../../../../../components/management/data-table-toolbar'
 import { RequestState } from '../../../../../components/management/request-state'
+import { buttonVariants } from '../../../../../components/ui/button'
 import { Card } from '../../../../../components/ui/card'
 import { Select, SelectGroup, SelectOption } from '../../../../../components/ui/select'
 import { displayDateTime } from '../../../../../lib/dates'
@@ -74,6 +76,12 @@ export function AdminCustomersPage() {
       <AdministrationPageHeader
         title="Customers"
         description="Find customers and review their subscription and payments."
+        actions={
+          <Link href={`${adminPaths.customers}/new`} className={buttonVariants()}>
+            <UserPlus data-icon="inline-start" aria-hidden="true" />
+            {translate('New customer')}
+          </Link>
+        }
       />
       <section aria-label={translate('Customers')}>
         <Card className="gap-0 overflow-hidden p-0">

@@ -1,5 +1,18 @@
 /** Reviewed French interface copy. English source phrases are stable gettext-style keys. */
 export const french: Record<string, string> = {
+  'New customer': 'Nouveau client',
+  'Create a customer account and choose how their subscription starts.': 'Créez un compte client et choisissez comment son abonnement démarre.',
+  'The coverage cannot start in the future.': 'La couverture ne peut pas commencer dans le futur.',
+  'The coverage must end in the future.': 'La couverture doit se terminer dans le futur.',
+  'The customer receives an email to set their password, then creates their first organization themselves.': 'Le client reçoit un e-mail pour définir son mot de passe, puis crée lui-même sa première organisation.',
+  'Subscription type': 'Type d’abonnement',
+  'Paid plan': 'Offre payante',
+  'The 7-day trial starts with the first organization.': 'L’essai de 7 jours démarre avec la première organisation.',
+  'Grant a plan for a coverage period, without a payment.': 'Accorde une offre pour une période de couverture, sans paiement.',
+  'Coverage start': 'Début de la couverture',
+  'Coverage end': 'Fin de la couverture',
+  'Computed from the cycle; you can change it.': 'Calculée selon le cycle ; vous pouvez la modifier.',
+  'Create customer': 'Créer le client',
   Impact: 'Impact',
   'What will happen': 'Ce qui va se passer',
   'Reason (internal)': 'Motif (interne)',
