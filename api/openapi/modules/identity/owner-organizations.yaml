@@ -37,12 +37,12 @@ paths:
               - suspended
               - pending_deletion
       responses:
-        "200":
+        '200':
           description: Owned organizations only
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerOrganizationList"
+                $ref: '#/components/schemas/OwnerOrganizationList'
         default:
           description: Standard error
           content:
@@ -62,12 +62,12 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Owned organization metadata
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerOrganization"
+                $ref: '#/components/schemas/OwnerOrganization'
         default:
           description: Standard error
           content:
@@ -126,7 +126,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/OwnerOrganization"
+            $ref: '#/components/schemas/OwnerOrganization'
         total:
           type: integer
           minimum: 0

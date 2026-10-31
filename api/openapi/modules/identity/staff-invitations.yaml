@@ -35,7 +35,8 @@ paths:
             maxLength: 200
         - name: status
           in: query
-          description: Pending by default, mirroring the staff list's current-account default; expired
+          description:
+            Pending by default, mirroring the staff list's current-account default; expired
             invitations stay resendable and are reachable through this filter.
           schema:
             type: string
@@ -54,14 +55,15 @@ paths:
             enum: [asc, desc]
             default: desc
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPage
         default: &standardError
-          description: Standard error envelope, including validation, authorization, conflict, request size,
+          description:
+            Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -71,7 +73,8 @@ paths:
       operationId: createStaffInvitation
       tags: [identity]
       x-permissions: [staff.create]
-      description: Creates an organization staff invitation and queues delivery on the security-email
+      description:
+        Creates an organization staff invitation and queues delivery on the security-email
         transport; security mail never consumes business-email quota. Nonempty roleIds also requires
         roles.update, with the existing anti-escalation checks; an invitation without roles grants no
         implicit permissions. Email addresses are normalized (trimmed, lowercased), duplicate pending
@@ -95,14 +98,14 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/CreateStaffInvitation
       responses:
-        "201":
+        '201':
           description: Invitation created with delivery queued; no token exists until the delivery worker generates one
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/staff/invitations/{invitationId}/resend":
+  '/v1/staff/invitations/{invitationId}/resend':
     post:
       operationId: resendStaffInvitation
       tags: [identity]
@@ -127,14 +130,14 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Invitation with the previous token invalidated and delivery queued; the next token exists only after the delivery worker generates it
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/staff/invitations/{invitationId}/revoke":
+  '/v1/staff/invitations/{invitationId}/revoke':
     post:
       operationId: revokeStaffInvitation
       tags: [identity]
@@ -149,14 +152,14 @@ paths:
       parameters:
         - *invitationId
       responses:
-        "200":
+        '200':
           description: Current invitation state; repeating the request returns the same revoked invitation
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitation
         default: *standardError
-  "/v1/organizations/{organizationId}/auth/invitations/inspect":
+  '/v1/organizations/{organizationId}/auth/invitations/inspect':
     parameters:
       - name: organizationId
         in: path
@@ -168,7 +171,8 @@ paths:
       operationId: organizationStaffInspectInvitation
       tags: [identity]
       security: []
-      description: Public preview before accepting a staff invitation. The single-use token is supplied
+      description:
+        Public preview before accepting a staff invitation. The single-use token is supplied
         in the request body and never in a URL; the emailed acceptance link carries it in the browser
         URL fragment only, never as a query parameter, keeping it out of server and proxy URL logs.
         Limited to five attempts per minute per client IP per API instance; excess attempts return 429
@@ -184,14 +188,14 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/InspectStaffInvitationInput
       responses:
-        "200":
+        '200':
           description: Minimal invitation preview
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/StaffInvitationPreview
         default: *standardError
-  "/v1/organizations/{organizationId}/auth/invitations/accept":
+  '/v1/organizations/{organizationId}/auth/invitations/accept':
     parameters:
       - name: organizationId
         in: path
@@ -203,7 +207,8 @@ paths:
       operationId: organizationStaffAcceptInvitation
       tags: [identity]
       security: []
-      description: Public single-use acceptance. The token is supplied in the request body and never in a
+      description:
+        Public single-use acceptance. The token is supplied in the request body and never in a
         URL; the emailed acceptance link carries it in the browser URL fragment only, never as a query
         parameter, keeping it out of server and proxy URL logs. Collects first and family names and a
         new password following the current password policy, then atomically revalidates the
@@ -226,7 +231,7 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/AcceptStaffInvitationInput
       responses:
-        "200":
+        '200':
           description: Staff account created; no session is issued, sign in on the organization login page
           content:
             application/json:
@@ -259,8 +264,7 @@ components:
     StaffInvitation:
       type: object
       additionalProperties: false
-      required:
-        [id, email, status, delivery, roles, createdAt, expiresAt, acceptedAt, revokedAt]
+      required: [id, email, status, delivery, roles, createdAt, expiresAt, acceptedAt, revokedAt]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
@@ -292,17 +296,19 @@ components:
               id: { type: string, format: uuid }
               key: { type: string }
               name: { type: string }
-          description: Roles granted on acceptance; empty means no implicit permissions, and permissions
+          description:
+            Roles granted on acceptance; empty means no implicit permissions, and permissions
             must be assigned separately after acceptance.
         createdAt: { type: string, format: date-time }
         expiresAt:
-          type: [string, "null"]
+          type: [string, 'null']
           format: date-time
-          description: Null before the delivery worker generates the current token; 48 hours after the
+          description:
+            Null before the delivery worker generates the current token; 48 hours after the
             latest delivery attempt that created it. Retried delivery rotates the token and its
             expiry.
-        acceptedAt: { type: [string, "null"], format: date-time }
-        revokedAt: { type: [string, "null"], format: date-time }
+        acceptedAt: { type: [string, 'null'], format: date-time }
+        revokedAt: { type: [string, 'null'], format: date-time }
     StaffInvitationPage:
       type: object
       additionalProperties: false
@@ -310,7 +316,7 @@ components:
       properties:
         items:
           type: array
-          items: { $ref: "../../openapi.yaml#/components/schemas/StaffInvitation" }
+          items: { $ref: '../../openapi.yaml#/components/schemas/StaffInvitation' }
         total: { type: integer, minimum: 0 }
         page: { type: integer, minimum: 1 }
         pageSize: { type: integer, minimum: 1, maximum: 100 }
@@ -321,8 +327,9 @@ components:
       properties:
         token:
           type: string
-          pattern: "^[A-Za-z0-9_-]{43}$"
-          description: Single-use invitation token from the email link, transported in the request body
+          pattern: '^[A-Za-z0-9_-]{43}$'
+          description:
+            Single-use invitation token from the email link, transported in the request body
             only.
     StaffInvitationPreview:
       type: object
@@ -339,8 +346,9 @@ components:
       properties:
         token:
           type: string
-          pattern: "^[A-Za-z0-9_-]{43}$"
-          description: Single-use invitation token from the email link, transported in the request body
+          pattern: '^[A-Za-z0-9_-]{43}$'
+          description:
+            Single-use invitation token from the email link, transported in the request body
             only.
         firstName: { type: string, minLength: 1, maxLength: 100 }
         lastName: { type: string, minLength: 1, maxLength: 100 }

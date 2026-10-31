@@ -19,6 +19,8 @@ paths:
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~1logout
   '/v1/admin/auth/me':
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1auth~1me
+  '/v1/admin/overview':
+    $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1overview
   '/v1/admin/payments':
     $ref: ./modules/administration/administration.yaml#/paths/~1v1~1admin~1payments
   '/v1/admin/payments/{paymentId}/confirm':
@@ -828,6 +830,8 @@ components:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminAuditEntry
     AdminAuditPage:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminAuditPage
+    AdminOverview:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOverview
     OwnerSubscription:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/OwnerSubscription
     SubscriptionEntitlements:

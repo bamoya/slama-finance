@@ -4,12 +4,12 @@ paths:
       operationId: registerOwner
       security: []
       responses:
-        "202":
+        '202':
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerRequestAccepted"
+                $ref: '#/components/schemas/OwnerRequestAccepted'
         default:
           description: Standard error
           content:
@@ -21,18 +21,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerRegister"
+              $ref: '#/components/schemas/OwnerRegister'
   /v1/owner-auth/login:
     post:
       operationId: loginOwner
       security: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerSession"
+                $ref: '#/components/schemas/OwnerSession'
         default:
           description: Standard error
           content:
@@ -44,19 +44,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerLogin"
+              $ref: '#/components/schemas/OwnerLogin'
   /v1/owner-auth/session:
     get:
       operationId: getOwnerSession
       security:
         - ownerSessionCookie: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerSession"
+                $ref: '#/components/schemas/OwnerSession'
         default:
           description: Standard error
           content:
@@ -69,7 +69,7 @@ paths:
       security:
         - ownerSessionCookie: []
       responses:
-        "204":
+        '204':
           description: Success
         default:
           description: Standard error
@@ -82,12 +82,12 @@ paths:
       operationId: requestOwnerVerification
       security: []
       responses:
-        "202":
+        '202':
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerRequestAccepted"
+                $ref: '#/components/schemas/OwnerRequestAccepted'
         default:
           description: Standard error
           content:
@@ -99,13 +99,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerEmailRequest"
+              $ref: '#/components/schemas/OwnerEmailRequest'
   /v1/owner-auth/verification/confirm:
     post:
       operationId: confirmOwnerVerification
       security: []
       responses:
-        "204":
+        '204':
           description: Success
         default:
           description: Standard error
@@ -118,18 +118,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerToken"
+              $ref: '#/components/schemas/OwnerToken'
   /v1/owner-auth/password-reset/request:
     post:
       operationId: requestOwnerPasswordReset
       security: []
       responses:
-        "202":
+        '202':
           description: Success
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OwnerRequestAccepted"
+                $ref: '#/components/schemas/OwnerRequestAccepted'
         default:
           description: Standard error
           content:
@@ -141,13 +141,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerEmailRequest"
+              $ref: '#/components/schemas/OwnerEmailRequest'
   /v1/owner-auth/password-reset/confirm:
     post:
       operationId: confirmOwnerPasswordReset
       security: []
       responses:
-        "204":
+        '204':
           description: Success
         default:
           description: Standard error
@@ -160,7 +160,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerResetPassword"
+              $ref: '#/components/schemas/OwnerResetPassword'
 components:
   schemas:
     OwnerRegister:
@@ -269,11 +269,11 @@ components:
             firstName:
               type:
                 - string
-                - "null"
+                - 'null'
             lastName:
               type:
                 - string
-                - "null"
+                - 'null'
             locale:
               type: string
               enum:

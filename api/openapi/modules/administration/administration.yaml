@@ -240,6 +240,23 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /v1/admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Subscription counts for the administration dashboard, evaluated at request time with the same coverage rules as the owner subscription lifecycle.'
+      responses:
+        '200':
+          description: Current counts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOverview' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
 components:
   schemas:
     AdminLogin:
@@ -490,3 +507,28 @@ components:
         page: { type: integer, minimum: 1 }
         pageSize: { type: integer, minimum: 1 }
         total: { type: integer, minimum: 0 }
+    AdminOverview:
+      type: object
+      additionalProperties: false
+      required: [pendingPayments, activeSubscriptions, trialsEndingSoon, inGracePeriod, expired]
+      properties:
+        pendingPayments:
+          description: 'Subscription payments with status submitted, awaiting confirmation or rejection.'
+          type: integer
+          minimum: 0
+        activeSubscriptions:
+          description: 'Owners with a confirmed coverage period containing the current instant (status active).'
+          type: integer
+          minimum: 0
+        trialsEndingSoon:
+          description: 'Owners still in trial (no confirmed coverage, trial not yet ended) whose trial ends within the next 7 days.'
+          type: integer
+          minimum: 0
+        inGracePeriod:
+          description: 'Owners with confirmed coverage but none current, still before the end of the 7-day grace (status past_due). Cancelled-at-period-end subscriptions have no grace and are never counted here.'
+          type: integer
+          minimum: 0
+        expired:
+          description: 'Owners whose access is blocked: trial ended without any coverage, or the grace period ended after the last coverage (status expired).'
+          type: integer
+          minimum: 0

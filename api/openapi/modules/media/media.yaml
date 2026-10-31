@@ -88,13 +88,28 @@ components:
     MediaAsset:
       type: object
       additionalProperties: false
-      required: [id, originalFilename, contentType, byteSize, purpose, status, uploadedBy, expiresAt, version, createdAt, updatedAt, deletedAt]
+      required:
+        [
+          id,
+          originalFilename,
+          contentType,
+          byteSize,
+          purpose,
+          status,
+          uploadedBy,
+          expiresAt,
+          version,
+          createdAt,
+          updatedAt,
+          deletedAt,
+        ]
       properties:
         id: { type: string, format: uuid }
         originalFilename: { type: string, minLength: 1, maxLength: 255 }
         contentType: { type: string, enum: [image/png] }
         byteSize: { type: integer, minimum: 1, maximum: 8388608 }
-        purpose: { type: string, enum: [company_logo, company_signature, product_image, template_asset] }
+        purpose:
+          { type: string, enum: [company_logo, company_signature, product_image, template_asset] }
         status: { type: string, enum: [pending, ready, deleting, deleted] }
         uploadedBy: { type: [string, 'null'], format: uuid }
         expiresAt: { type: [string, 'null'], format: date-time }

@@ -4,13 +4,14 @@ paths:
   /v1/report-runs/{id}/cleanup:
     post:
       operationId: cleanupReportRun
-      tags: [ reporting ]
+      tags: [reporting]
       security:
         - sessionCookie: []
           organizationScope: []
         - organizationStaffCookie: []
           organizationScope: []
-      description: Requires reports.read. Files mode preserves the frozen snapshot; run mode permanently
+      description:
+        Requires reports.read. Files mode preserves the frozen snapshot; run mode permanently
         removes it. Queued/running production or queued/sending email blocks cleanup. Terminal email
         attachment references are released and those messages cannot be retried. Delivered emails
         cannot be recalled. Unreferenced objects are removed immediately where possible, otherwise
@@ -36,13 +37,14 @@ paths:
   /v1/report-runs/{id}/regenerate-files:
     post:
       operationId: regenerateReportRunFiles
-      tags: [ reporting ]
+      tags: [reporting]
       security:
         - sessionCookie: []
           organizationScope: []
         - organizationStaffCookie: []
           organizationScope: []
-      description: Requires reports.read. Restores missing PDF/CSV from a succeeded run's frozen snapshot
+      description:
+        Requires reports.read. Restores missing PDF/CSV from a succeeded run's frozen snapshot
         and language. Does not recapture business data or send email. Existing files are unchanged.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -68,13 +70,13 @@ components:
     ReportRunCleanupInput:
       type: object
       additionalProperties: false
-      required: [ mode ]
+      required: [mode]
       properties:
-        mode: { type: string, enum: [ files, run ] }
+        mode: { type: string, enum: [files, run] }
     ReportRunCleanupResult:
       type: object
       additionalProperties: false
-      required: [ removedFiles, freedBytes, retainedFiles, pendingFiles ]
+      required: [removedFiles, freedBytes, retainedFiles, pendingFiles]
       properties:
         removedFiles: { type: integer, minimum: 0 }
         freedBytes: { type: integer, minimum: 0 }

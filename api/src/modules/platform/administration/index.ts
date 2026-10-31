@@ -23,6 +23,10 @@ import { createAdminCustomersController } from './customers/controllers/admin-cu
 import { createAdminCustomerRepository } from './customers/repositories/admin-customer.repository.js'
 import { registerAdminCustomersRoutes } from './customers/routes/admin-customers.routes.js'
 import { createAdminCustomersService } from './customers/services/admin-customers.service.js'
+import { createAdminOverviewController } from './overview/controllers/admin-overview.controller.js'
+import { createAdminOverviewRepository } from './overview/repositories/admin-overview.repository.js'
+import { registerAdminOverviewRoutes } from './overview/routes/admin-overview.routes.js'
+import { createAdminOverviewService } from './overview/services/admin-overview.service.js'
 import { createAdminPaymentsController } from './payments/controllers/admin-payments.controller.js'
 import { createAdminPaymentRepository } from './payments/repositories/admin-payment.repository.js'
 import { registerAdminPaymentsRoutes } from './payments/routes/admin-payments.routes.js'
@@ -74,6 +78,9 @@ export function createAdministrationModule(options: {
     auth.currentAdmin,
   )
   const auditController = createAdminAuditController(audit)
+  const overviewController = createAdminOverviewController(
+    createAdminOverviewService(createAdminOverviewRepository(), withAdmin, options.clock),
+  )
 
   /** Mounted at /v1/admin. The portal is served by the owner portal origin under /admin. */
   async function registerAdminRoutes(app: FastifyInstance) {
@@ -82,6 +89,7 @@ export function createAdministrationModule(options: {
     await app.register(async (scope) => {
       scope.addHook('preHandler', auth.requireAdmin)
       registerAdminSessionRoutes(scope, auth)
+      registerAdminOverviewRoutes(scope, overviewController)
       registerAdminPaymentsRoutes(scope, paymentsController)
       registerAdminCustomersRoutes(scope, customersController)
       registerBillingSettingsRoutes(scope, billingController)

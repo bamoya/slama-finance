@@ -208,7 +208,18 @@ components:
     PaymentReceiptSnapshot:
       type: object
       additionalProperties: false
-      required: [invoiceNumber, invoiceTotal, issuer, client, appearance, templateId, capturedAt, paidAtRecording, remainingAtRecording]
+      required:
+        [
+          invoiceNumber,
+          invoiceTotal,
+          issuer,
+          client,
+          appearance,
+          templateId,
+          capturedAt,
+          paidAtRecording,
+          remainingAtRecording,
+        ]
       properties:
         invoiceNumber: { type: string }
         invoiceTotal: { type: string }
@@ -252,7 +263,12 @@ components:
         paymentDate: { type: string, format: date }
         collectedOn: { type: [string, 'null'], format: date }
         bankAccountId: { type: [string, 'null'], format: uuid }
-        reference: { type: [string, 'null'], maxLength: 200, description: Optional bank-transfer reference. Omitted or blank values are stored as null. }
+        reference:
+          {
+            type: [string, 'null'],
+            maxLength: 200,
+            description: Optional bank-transfer reference. Omitted or blank values are stored as null.,
+          }
         chequeBank: { type: [string, 'null'], maxLength: 200 }
         chequeNumber: { type: [string, 'null'], maxLength: 100 }
     PaymentConfirmation:

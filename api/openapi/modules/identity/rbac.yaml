@@ -12,7 +12,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "204":
+        '204':
           description: Role and assignments deleted
         default:
           description: Standard error envelope; 403 forbidden, 404 missing role, 409 protected system role
@@ -26,7 +26,7 @@ paths:
       description: Canonical resource permissions use read (View), create, update (Edit, including state changes) and delete (permanent deletion only). Unsupported operations are omitted. Reports keeps its single reports.read access grant. Legacy granular slugs are no longer accepted for role assignments.
       x-permissions: [roles.read]
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -35,7 +35,8 @@ paths:
                 items:
                   $ref: ../../openapi.yaml#/components/schemas/Permission
         default:
-          description: Standard error envelope, including validation, authorization, conflict, request size,
+          description:
+            Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -46,7 +47,7 @@ paths:
       operationId: listRoles
       x-permissions: [roles.read]
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -55,7 +56,8 @@ paths:
                 items:
                   $ref: ../../openapi.yaml#/components/schemas/Role
         default:
-          description: Standard error envelope, including validation, authorization, conflict, request size,
+          description:
+            Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -71,14 +73,15 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/CreateRole
       responses:
-        "201":
+        '201':
           description: Success
           content:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Role
         default:
-          description: Standard error envelope, including validation, authorization, conflict, request size,
+          description:
+            Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -102,10 +105,11 @@ paths:
             schema:
               $ref: ../../openapi.yaml#/components/schemas/PermissionAssignment
       responses:
-        "204":
+        '204':
           description: Completed without response body
         default:
-          description: Standard error envelope, including validation, authorization, conflict, request size,
+          description:
+            Standard error envelope, including validation, authorization, conflict, request size,
             rate limit and unavailable service
           content:
             application/json:
@@ -130,7 +134,7 @@ components:
         description:
           type:
             - string
-            - "null"
+            - 'null'
         isSystem:
           type: boolean
         createdAt:
@@ -160,7 +164,7 @@ components:
         description:
           type:
             - string
-            - "null"
+            - 'null'
         createdAt:
           type: string
           format: date-time
@@ -197,7 +201,8 @@ components:
       properties:
         permissionKeys:
           type: array
-          description: Unique permission keys (slugs), such as roles.read. Duplicates are deduplicated; an
+          description:
+            Unique permission keys (slugs), such as roles.read. Duplicates are deduplicated; an
             empty list clears assignments. Unknown keys reject the entire update.
           items:
             type: string

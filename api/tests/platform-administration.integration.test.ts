@@ -95,6 +95,48 @@ describe('SaaS administration portal', () => {
     return row!.id as string
   }
 
+  it('counts subscriptions by lifecycle with the coverage rules', async () => {
+    const day = 86_400_000
+    const at = (days: number) => new Date(Date.now() + days * day).toISOString()
+    // Fixture owner: trial that ends within 7 days, with one pending payment.
+    const pendingFixture = await submittedPayment('overview-fixture')
+    expect(pendingFixture).toBeTruthy()
+    async function owner(
+      name: string,
+      trialStartDays: number,
+      coverage: [number, number] | null,
+      cancel = false,
+    ) {
+      const id = randomBytesUuid()
+      await fixture.client`insert into platform_users (id,email,password_hash,created_at) values (${id},${`${name.toLowerCase()}@example.test`},'x',${at(trialStartDays)})`
+      await fixture.client`insert into owner_subscriptions(owner_id,plan_code,trial_started_at,trial_ends_at,cancel_at_period_end) values (${id},'trial',${at(trialStartDays)},${at(trialStartDays + 7)},${cancel})`
+      if (coverage)
+        await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${id},'pro','monthly','activation','cash',${name},'MAD',100,0,100,'confirmed',${at(coverage[0])},${at(coverage[1])},now())`
+      return id
+    }
+    const trial = await owner('trial', -4, null)
+    await owner('active', -30, [-10, 20])
+    await owner('grace', -60, [-40, -3])
+    await owner('graceEdge', -60, [-40, -8])
+    await owner('cancelled', -60, [-40, -1], true)
+    await owner('lapsed', -60, [-50, -20])
+    await owner('noPayment', -30, null)
+    await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${trial},'pro','monthly','activation','cash','overview-trial','MAD',100,0,100)`
+
+    const anonymous = await app.inject({ method: 'GET', url: '/v1/admin/overview' })
+    expect(anonymous.statusCode).toBe(401)
+    const { cookie } = await signIn()
+    const response = await as(cookie).get('/v1/admin/overview')
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      pendingPayments: 2,
+      activeSubscriptions: 1,
+      trialsEndingSoon: 2,
+      inGracePeriod: 1,
+      expired: 4,
+    })
+  })
+
   it('rejects owner and staff sessions on every admin route', async () => {
     const token = randomBytes(32).toString('base64url')
     await fixture.client`insert into owner_sessions(owner_id,token_hash,expires_at) values (${testOwnerId},${sha(token)},now()+interval '1 day')`

@@ -248,7 +248,12 @@ components:
         dueDate: { type: string, format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
-        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        bankAccountId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Omit to select the company default; null hides bank details.,
+          }
         agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {
@@ -290,7 +295,12 @@ components:
         dueDate: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
-        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        bankAccountId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Omit to select the company default; null hides bank details.,
+          }
         agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {
@@ -312,7 +322,12 @@ components:
         dueDate: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
-        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        bankAccountId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Omit to select the company default; null hides bank details.,
+          }
         agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           {

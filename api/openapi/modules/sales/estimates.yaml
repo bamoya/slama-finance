@@ -10,7 +10,8 @@ paths:
             schema:
               {
                 type: string,
-                enum: [all, draft, issued, sent, accepted, rejected, expired, cancelled, superseded],
+                enum:
+                  [all, draft, issued, sent, accepted, rejected, expired, cancelled, superseded],
                 default: all,
               },
           }
@@ -259,7 +260,12 @@ components:
         validUntil: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
-        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        bankAccountId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Omit to select the company default; null hides bank details.,
+          }
         agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           { type: array, maxItems: 100, items: { $ref: '#/components/schemas/EstimateLineInput' } }
@@ -277,7 +283,12 @@ components:
         validUntil: { type: [string, 'null'], format: date }
         notes: { type: [string, 'null'], maxLength: 4000 }
         paymentTerms: { type: [string, 'null'], maxLength: 4000 }
-        bankAccountId: { type: [string, 'null'], format: uuid, description: Omit to select the company default; null hides bank details. }
+        bankAccountId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Omit to select the company default; null hides bank details.,
+          }
         agreedPaymentMethod: { type: [string, 'null'], enum: [cash, bank_transfer, cheque, null] }
         lines:
           { type: array, maxItems: 100, items: { $ref: '#/components/schemas/EstimateLineInput' } }
@@ -344,9 +355,18 @@ components:
         id: { type: string, format: uuid }
         number: { type: [string, 'null'] }
         status:
-          { type: string, enum: [draft, issued, sent, accepted, rejected, expired, cancelled, superseded] }
-        revisionOfId: { type: [string, 'null'], format: uuid, description: Previous estimate in the revision chain }
-        revisionId: { type: [string, 'null'], format: uuid, description: Draft or issued direct successor }
+          {
+            type: string,
+            enum: [draft, issued, sent, accepted, rejected, expired, cancelled, superseded],
+          }
+        revisionOfId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: Previous estimate in the revision chain,
+          }
+        revisionId:
+          { type: [string, 'null'], format: uuid, description: Draft or issued direct successor }
         clientId: { type: [string, 'null'], format: uuid }
         clientDisplayName: { type: string }
         templateId: { type: [string, 'null'], format: uuid }

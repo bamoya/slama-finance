@@ -11,7 +11,7 @@ paths:
       operationId: organizationStaffLogin
       security: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -42,7 +42,7 @@ paths:
       security:
         - organizationStaffCookie: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -67,7 +67,7 @@ paths:
       security:
         - organizationStaffCookie: []
       responses:
-        "204":
+        '204':
           description: Success
         default:
           description: Standard error
@@ -88,7 +88,7 @@ paths:
       security:
         - organizationStaffCookie: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -119,7 +119,7 @@ paths:
       security:
         - organizationStaffCookie: []
       responses:
-        "200":
+        '200':
           description: Success
           content:
             application/json:
@@ -149,7 +149,7 @@ paths:
       operationId: organizationStaffRequestReset
       security: []
       responses:
-        "202":
+        '202':
           description: Success
           content:
             application/json:
@@ -179,7 +179,7 @@ paths:
       operationId: organizationStaffConfirmReset
       security: []
       responses:
-        "204":
+        '204':
           description: Success
         default:
           description: Standard error
