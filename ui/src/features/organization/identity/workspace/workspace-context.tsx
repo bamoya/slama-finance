@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { Redirect } from 'wouter'
 
 import { useGetWorkspaceSession } from '../../../../api/generated/identity/identity'
 import { RequestState } from '../../../../components/management/request-state'
@@ -16,17 +17,19 @@ function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
     query: { retry: false, refetchInterval: 60000, refetchOnWindowFocus: 'always' },
   })
   useEffect(() => {
-    const unavailable = () => {
+    const leave = (path: string) => () => {
       void client.cancelQueries().finally(() => {
         client.clear()
-        window.location.assign('/organization-unavailable')
+        window.location.assign(path)
       })
     }
+    const unavailable = leave('/organization-unavailable')
+    const expired = leave('/login')
     window.addEventListener('slama:organization-unavailable', unavailable)
-    window.addEventListener('slama:session-expired', unavailable)
+    window.addEventListener('slama:session-expired', expired)
     return () => {
       window.removeEventListener('slama:organization-unavailable', unavailable)
-      window.removeEventListener('slama:session-expired', unavailable)
+      window.removeEventListener('slama:session-expired', expired)
     }
   }, [client])
   if (query.isPending)
@@ -35,6 +38,7 @@ function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
         <RequestState query={query} />
       </main>
     )
+  if (query.error?.status === 401) return <Redirect to="~/login" />
   if (query.error || !query.data)
     return (
       <main className="mx-auto max-w-3xl p-6">
