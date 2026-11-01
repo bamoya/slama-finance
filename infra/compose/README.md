@@ -21,8 +21,10 @@ docker compose --env-file .env.production -f infra/compose/docker-compose.produc
 ```
 
 For Coolify, set the Compose file location to
-`infra/compose/docker-compose.production.yml` and retain the existing resource/
-project identity when changing its path. Supply production secrets in Coolify.
+`infra/compose/docker-compose.production.yml` (UI on port 8080) and retain the existing resource/
+project identity when changing its path. Route every platform host to `ui` (nginx proxies `/api` to the API); set `PLATFORM_DOMAIN`
+and `PLATFORM_SCHEME`. See [domains and TLS](../../docs/deployment/domains-and-tls.md).
+Supply production secrets in Coolify.
 For direct CLI operations, pass the root environment file explicitly; it is not
 moved here or committed. Follow the [release procedure](../../docs/deployment/release-procedure.md)
 before starting production. Never merge the local and production definitions.

@@ -55,7 +55,8 @@ not install Coolify, format the data disk, or release the application automatica
   If using a separate block disk, mount it persistently before provisioning the
   data path and verify the Docker volume actually stores data on that disk.
   A named volume alone does not place data on a separate OCI block volume.
-- Assign the finance HTTPS domain to the **UI service port 80 only**. Keep API and
+- Assign every platform host (apex, `www.`, `app.`, `admin.`, `api.`, `*.`; see
+  [domains and TLS](domains-and-tls.md)) to the **UI service port 8080 only**. Keep API and
   PostgreSQL off the Coolify ingress network. Use the configured Coolify network
   and ensure private CIDRs do not overlap other Docker or OCI networks.
 - Complete the release gates before routing users to the application.

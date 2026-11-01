@@ -4,21 +4,15 @@ Use `infra/compose/docker-compose.dokploy.yml` as a single raw Compose file.
 The migration history is now a fresh-install baseline. Use an empty database/new
 `POSTGRES_VOLUME_NAME`; do not reuse a volume initialized with the old 34 migrations.
 See [migration baseline](../../api/db/migrations/README.md). No existing data is reset automatically.
-Configure HTTPS in Dokploy Domains for `slama-finance.bamoya.com` → `ui:8080`
-and `api-slama-finance.bamoya.com` → `api:3000`. Point both DNS A records to
-the Hostinger server. Dokploy supplies Traefik routing; no host port mappings
-are required. Nginx serves React assets and SPA routes only.
-Set `API_BASE_URL` in Dokploy, defaulting to
-`https://api-slama-finance.bamoya.com`. Container startup generates a public,
-non-cached `/config.js` before Nginx starts. Changing the URL requires recreating
-the UI container, not rebuilding its image. Publish the runtime-config-capable UI
-image once and set `UI_IMAGE` to its digest. The GitHub Actions variable
-`VITE_API_BASE_URL` is no longer used for image builds; it remains available in
-local Vite development. Never put secrets in runtime browser configuration.
-Keep `PUBLIC_ORIGIN` set to the UI origin;
-it controls API CORS and reset links. Axios already enables credentials and the
-API uses secure, host-only session cookies. Verify the Traefik address before
-setting `TRUST_PROXY_IPS` for accurate client rate limits.
+Routing is host-based: every public host (apex, `www.`, `app.`, `admin.`, `api.`, `<slug>.`)
+goes to `ui:8080`; the UI nginx sends `/api/*` to the API, `api.` to the API only and `www.` to the
+apex. Follow [domains and TLS](domains-and-tls.md) for DNS, wildcard certificates and the Traefik
+labels. Set `PLATFORM_DOMAIN` (required) and `PLATFORM_SCHEME` (default `https`) in Dokploy; the UI
+reads `PLATFORM_DOMAIN` into `/config.js` at container start, so changing it recreates the
+container without rebuilding. `API_BASE_URL`, `CORS_ORIGIN`, `OWNER_PORTAL_ORIGIN` and
+`PUBLIC_ORIGIN` were removed. Never put secrets in runtime browser configuration. Axios uses
+the relative `/api` base and the API uses secure, host-only session cookies. Verify the UI
+container and Traefik addresses before setting `TRUST_PROXY_IPS` (see the guide).
 Supply real R2
 and Resend credentials and override both development password defaults.
 
