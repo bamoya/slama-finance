@@ -1,6 +1,11 @@
 import { documentTitle } from '../../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../../lib/documents/render-document.js'
-import { type DocumentImages, party, record } from '../../../../../lib/documents/types.js'
+import {
+  type DocumentImages,
+  issuerParty,
+  party,
+  record,
+} from '../../../../../lib/documents/types.js'
 import { displayNumber } from '../../../../../lib/number-format.js'
 import type {
   DeliveryLineRow,
@@ -17,7 +22,7 @@ export async function renderDeliveryPdf(
       locale: String(record(row.issuerSnapshot).locale ?? 'fr-MA'),
       title: documentTitle('delivery', record(row.issuerSnapshot).locale),
       number: row.number ?? '',
-      issuer: party(row.issuerSnapshot),
+      issuer: issuerParty(row.issuerSnapshot),
       client: [party(row.clientSnapshot)[0] ?? '', row.deliveryAddress].filter(Boolean),
       date: row.deliveryDate,
       lines: lines.map((line) => ({

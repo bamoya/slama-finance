@@ -1,7 +1,12 @@
 import { PaymentReceiptSnapshotSchema } from '../../../../../contracts/generated/sales/payments.schemas.js'
 import { documentTitle } from '../../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../../lib/documents/render-document.js'
-import { type DocumentImages, party, record } from '../../../../../lib/documents/types.js'
+import {
+  type DocumentImages,
+  issuerParty,
+  party,
+  record,
+} from '../../../../../lib/documents/types.js'
 import type { PaymentRow } from '../repositories/payment.repository.js'
 
 export async function renderPaymentReceiptPdf(
@@ -16,7 +21,7 @@ export async function renderPaymentReceiptPdf(
       locale: String(record(saved.issuer).locale ?? 'fr-MA'),
       title: documentTitle('payment_receipt', record(saved.issuer).locale),
       number: row.number.replace(/^PAY-/, 'REC-'),
-      issuer: party(saved.issuer),
+      issuer: issuerParty(saved.issuer),
       client: party(saved.client),
       date: row.paymentDate,
       reference: ['Invoice', saved.invoiceNumber],

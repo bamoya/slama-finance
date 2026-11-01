@@ -38,6 +38,24 @@ export const record = (value: unknown): Record<string, unknown> =>
     ? (value as Record<string, unknown>)
     : {}
 export const text = (value: unknown) => (typeof value === 'string' ? value : '')
+/** Issuer identity: the party lines plus RC (with registration city) and IF when the profile has them. */
+export function issuerParty(value: unknown) {
+  const data = record(value)
+  const lines = party(value)
+  const fiscal = [
+    data.registrationNumber
+      ? `RC: ${text(data.registrationNumber)}${data.registrationCity ? ` (${text(data.registrationCity)})` : ''}`
+      : '',
+    data.taxIdentifier ? `IF: ${text(data.taxIdentifier)}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  if (fiscal) {
+    const ice = lines.findIndex((line) => line.startsWith('ICE:'))
+    lines.splice(ice >= 0 ? ice + 1 : lines.length, 0, fiscal)
+  }
+  return lines
+}
 export function party(value: unknown) {
   const data = record(value)
   return [

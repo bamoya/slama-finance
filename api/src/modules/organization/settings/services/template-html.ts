@@ -4,7 +4,11 @@ import type {
 } from '../../../../contracts/generated/settings/settings.schemas.js'
 import { documentTitle } from '../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../lib/documents/render-document.js'
-import { type DocumentImages, type DocumentModel, party } from '../../../../lib/documents/types.js'
+import {
+  type DocumentImages,
+  type DocumentModel,
+  issuerParty,
+} from '../../../../lib/documents/types.js'
 
 /** Organization data the preview shows instead of invented values. */
 export type TemplatePreviewProfile = {
@@ -39,22 +43,7 @@ const sampleProducts = {
 function issuerLines(profile: TemplatePreviewProfile, locale: string) {
   const company = profile.company
   if (!company) return [locale === 'en-GB' ? 'Your company' : 'Votre entreprise']
-  const lines = party({ ...company, legalName: company.legalName || company.tradeName })
-  const fiscal = [
-    company.registrationNumber
-      ? `RC: ${company.registrationNumber}${company.registrationCity ? ` (${company.registrationCity})` : ''}`
-      : '',
-    company.taxIdentifier ? `IF: ${company.taxIdentifier}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ')
-  if (fiscal)
-    lines.splice(
-      Math.min(lines.length, lines.findIndex((l) => l.startsWith('ICE:')) + 1 || lines.length),
-      0,
-      fiscal,
-    )
-  return lines
+  return issuerParty({ ...company, legalName: company.legalName || company.tradeName })
 }
 
 export async function renderTemplatePreview(

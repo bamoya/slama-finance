@@ -1,6 +1,12 @@
 import { documentTitle } from '../../../../../lib/documents/document-title.js'
 import { renderDocument } from '../../../../../lib/documents/render-document.js'
-import { type DocumentImages, party, record, text } from '../../../../../lib/documents/types.js'
+import {
+  type DocumentImages,
+  issuerParty,
+  party,
+  record,
+  text,
+} from '../../../../../lib/documents/types.js'
 import { displayNumber } from '../../../../../lib/number-format.js'
 import type {
   EstimateLineRow,
@@ -22,7 +28,7 @@ export async function renderSalesPdf(
       locale: row.locale,
       title: documentTitle(title === 'INVOICE' ? 'invoice' : 'estimate', row.locale),
       number: row.number ?? '',
-      issuer: party(row.issuerSnapshot),
+      issuer: issuerParty(row.issuerSnapshot),
       client: party(row.clientSnapshot),
       date: row.issueDate,
       reference: [
