@@ -18,7 +18,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [database]
+    networks:
+      database:
+        aliases: [bfinance-postgres]
     shm_size: 256m
     mem_limit: 2g
     cpus: 0.65
@@ -44,7 +46,7 @@ services:
       HOST: 0.0.0.0
       PORT: '3000'
       # A separately provisioned non-owner role, never slama_owner.
-      DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@postgres:5432/slama_finance
+      DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@bfinance-postgres:5432/slama_finance
       DATABASE_POOL_SIZE: '5'
       # Every site derives from one platform domain; browsers call /api on their own origin.
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
@@ -69,7 +71,11 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set the dedicated media secret access key}
       LOG_LEVEL: info
       NODE_OPTIONS: --max-old-space-size=1536
-    networks: [application, database]
+    networks:
+      application:
+        aliases: [bfinance-api]
+      database:
+        aliases: [bfinance-api]
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,14 +101,17 @@ services:
   ui:
     image: ${UI_IMAGE:-ghcr.io/bamoya/slama-finance-ui@sha256:a903ccf9d7f9c2bda20b81e71804420980e58f3e03feddfa50eb17a91d30cd84}
     environment:
+      API_UPSTREAM_HOST: bfinance-api
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
       PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:-}
       PUBLIC_WHATSAPP_NUMBER: ${PUBLIC_WHATSAPP_NUMBER:-}
     restart: unless-stopped
     expose: ['8080']
     networks:
-      default: {}
+      default:
+        aliases: [bfinance-ui]
       application:
+        aliases: [bfinance-ui]
         # Stable proxy address for TRUST_PROXY_IPS; the API sees requests from here.
         ipv4_address: ${UI_PROXY_IP:-172.30.85.2}
     depends_on:
@@ -124,9 +133,11 @@ services:
     command: ['node', 'scripts/initialize-database.mjs']
     restart: 'no'
     environment:
-      MIGRATION_DATABASE_URL: postgres://slama_owner:${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}@postgres:5432/slama_finance
-      DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@postgres:5432/slama_finance
-    networks: [database]
+      MIGRATION_DATABASE_URL: postgres://slama_owner:${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}@bfinance-postgres:5432/slama_finance
+      DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@bfinance-postgres:5432/slama_finance
+    networks:
+      database:
+        aliases: [bfinance-migrate]
     depends_on:
       postgres:
         condition: service_healthy

@@ -34,14 +34,24 @@ Every host is sent to the **UI service** (port 8080). The UI container runs ngin
 (`ui/nginx.conf`, `ui/docker/api-proxy.conf`) and applies the rules itself, so the ingress
 needs no per-site configuration:
 
-| Host             | Rule                                                 |
-| ---------------- | ---------------------------------------------------- |
-| `www.<domain>`   | 301 to `<scheme>://<domain>/<same path>`             |
-| `api.<domain>`   | `/api/*` to the API service, every other path 404    |
-| every other host | `PathPrefix(/api)` to `http://api:3000`, else the UI |
+| Host             | Rule                                                                |
+| ---------------- | ------------------------------------------------------------------- |
+| `www.<domain>`   | 301 to `<scheme>://<domain>/<same path>`                            |
+| `api.<domain>`   | `/api/*` to the API service, every other path 404                   |
+| every other host | `PathPrefix(/api)` to `http://$API_UPSTREAM_HOST:3000`, else the UI |
 
 nginx forwards the original `Host`, plus `X-Forwarded-For/Host/Proto`. The API port is never
 published and the API is attached only to the private `application` and `database` networks.
+
+### Unique service aliases
+
+Dokploy and Coolify attach every stack's UI to one shared proxy network, and other stacks on the
+same host also call their API service `api`. Docker DNS then resolves `api` to whichever stack
+answers first, so requests can reach another deployment's API and fail with `UNTRUSTED_ORIGIN`.
+The compose files therefore give each service a unique alias (`bfinance-postgres`, `bfinance-api`,
+`bfinance-ui`, `bfinance-migrate`) and set `API_UPSTREAM_HOST=bfinance-api` on the UI, which the
+UI entrypoint writes into the nginx upstream. This needs a UI image built from this change; older
+images ignore the variable and keep using `api`.
 
 ### Dokploy / Traefik
 
