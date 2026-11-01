@@ -4,6 +4,7 @@ import { fade } from '@remotion/transitions/fade'
 import { Chapter, type ChapterProps } from './components/Chapter'
 import { Intro, Outro } from './components/Intro'
 import { chapters, sourceFor, type Timeline } from './config'
+import { ANIMATIONS } from './film/animations'
 import { Film, filmMeta, type FilmProps } from './film/Film'
 import { CUTDOWNS, FILM_FPS } from './film/storyboard'
 import { CROSSFADE_FRAMES, FPS, INTRO_FRAMES, OUTRO_FRAMES } from './theme'
@@ -107,6 +108,17 @@ export const Root = () => (
           durationInFrames={450}
           defaultProps={{ scenes: [], timelines: {} } as FilmProps}
           calculateMetadata={filmMeta(key)}
+        />
+      )),
+      ...Object.entries(ANIMATIONS).map(([key, Anim]) => (
+        <Composition
+          key={`anim-${key}${suffix}`}
+          id={`Anim-${key}${suffix}`}
+          component={Anim}
+          width={width}
+          height={height}
+          fps={FILM_FPS}
+          durationInFrames={9 * FILM_FPS}
         />
       )),
       ...chapters.map((c, i) => (

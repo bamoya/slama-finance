@@ -2,6 +2,7 @@ import { AbsoluteFill, interpolate, Sequence } from 'remotion'
 import type { CalculateMetadataFunction } from 'remotion'
 import { staticFile } from 'remotion'
 import type { Timeline } from '../config'
+import { ANIMATIONS } from './animations'
 import { IntroCard, OutroCard, QuestionCard } from './Cards'
 import { ClipScene } from './ClipScene'
 import { buildPlan, planDuration } from './plan'
@@ -104,18 +105,13 @@ const Body = ({
       return <OutroCard title={scene.title} cta={scene.cta} mini={mini} />
     case 'question':
       return <QuestionCard text={scene.text} />
+    case 'anim': {
+      const Anim = ANIMATIONS[scene.anim]
+      return <Anim />
+    }
     case 'clip':
       return (
         <ClipScene clip={scene.clip} timeline={timelines[scene.clip.id]} caption={scene.caption} />
-      )
-    case 'problem':
-      return (
-        <ClipScene
-          clip={scene.clip}
-          timeline={timelines[scene.clip.id]}
-          title={scene.title}
-          mood="dark"
-        />
       )
     case 'ask-clip': {
       const q = Math.round(scene.questionSeconds * FILM_FPS)
