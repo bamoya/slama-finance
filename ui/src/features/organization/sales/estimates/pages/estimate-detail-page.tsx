@@ -359,7 +359,7 @@ export function EstimateDetailPage() {
               <p className="text-xs text-[var(--muted)]">
                 {artifacts.data?.length
                   ? translate('Finalized PDF ready')
-                  : 'PDF preparation in progress'}
+                  : translate('PDF preparation in progress')}
               </p>
             )}
           </section>

@@ -1646,6 +1646,7 @@ export const french: Record<string, string> = {
     'Les filtres actualisent immédiatement la liste. Fermez ce panneau pour voir les résultats.',
   'Finalize invoice': 'Finaliser la facture',
   'Finalized PDF ready': 'PDF définitif prêt',
+  'PDF preparation in progress': 'Préparation du PDF en cours',
   Finance: 'Finance',
   'Financial reports': 'Rapports financiers',
   'First name': 'Prénom',
