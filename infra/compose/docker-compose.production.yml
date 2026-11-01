@@ -13,7 +13,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?Set a strong database owner password}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [database]
+    networks:
+      database:
+        aliases: [bfinance-postgres]
     shm_size: 256m
     mem_limit: 2g
     cpus: 0.65
@@ -61,7 +63,11 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set the dedicated media secret access key}
       LOG_LEVEL: info
       NODE_OPTIONS: --max-old-space-size=1536
-    networks: [application, database]
+    networks:
+      application:
+        aliases: [bfinance-api]
+      database:
+        aliases: [bfinance-api]
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,13 +92,16 @@ services:
     image: ${UI_IMAGE:?Set the prebuilt UI image for this release}
     restart: unless-stopped
     environment:
+      API_UPSTREAM_HOST: bfinance-api
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
       PUBLIC_CONTACT_EMAIL: ${PUBLIC_CONTACT_EMAIL:-}
       PUBLIC_WHATSAPP_NUMBER: ${PUBLIC_WHATSAPP_NUMBER:-}
     expose: ['8080']
     networks:
-      default: {}
+      default:
+        aliases: [bfinance-ui]
       application:
+        aliases: [bfinance-ui]
         # Stable immediate proxy address; trust it only together with verified ingress hops.
         ipv4_address: ${UI_PROXY_IP:-172.30.84.2}
     depends_on:
@@ -115,7 +124,9 @@ services:
     restart: 'no'
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set the migration-owner database URL}
-    networks: [database]
+    networks:
+      database:
+        aliases: [bfinance-migrate]
     depends_on:
       postgres:
         condition: service_healthy
