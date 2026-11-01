@@ -72,7 +72,7 @@ export function EstimateConvertPage() {
             {row.number ?? translate('Draft')} · {displayNumber(row.total)} {row.currency}
           </p>
           <p className="text-sm text-[var(--muted)]">
-            {translate('Status:')} {row.status}
+            {translate('Status:')} {t(row.status)}
           </p>
           <h3 className="mt-2 font-semibold">{translate('Previous invoices')}</h3>
           {linked.isPending ? (
@@ -82,7 +82,7 @@ export function EstimateConvertPage() {
               {linked.data.map((invoice) => (
                 <li key={invoice.id}>
                   <Link href={`/invoices/${invoice.id}`} className="text-[var(--accent)]">
-                    {invoice.number ?? translate('Draft invoice')} · {invoice.status}
+                    {invoice.number ?? translate('Draft invoice')} · {t(invoice.status)}
                   </Link>
                 </li>
               ))}

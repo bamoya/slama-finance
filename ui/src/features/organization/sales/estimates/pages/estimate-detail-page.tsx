@@ -314,7 +314,7 @@ export function EstimateDetailPage() {
                     href={`/invoices/${invoice.id}`}
                     className="text-sm text-[var(--accent)]"
                   >
-                    {invoice.number ?? translate('Draft invoice')} · {invoice.status}
+                    {invoice.number ?? translate('Draft invoice')} · {t(invoice.status)}
                   </Link>
                 ))}
               </section>

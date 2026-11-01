@@ -199,7 +199,7 @@ export function InvoiceDetailPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">{translate('Products')}</h2>
               <StatusBadge
-                label={row.status}
+                label={t(row.status)}
                 tone={
                   row.status === 'draft'
                     ? 'draft'
