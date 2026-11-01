@@ -1,6 +1,6 @@
 # 09 — Implement default and verified custom website domains
 
-Status: not started. Documentation only; no implementation is performed by this task file.
+Status: In progress. Phase 1 (default platform subdomains) is implemented; phase 2 (custom domains) is not started.
 
 Depends on: 03, 05, 06, 08; owner-login design from 00.
 
@@ -29,4 +29,19 @@ Depends on: 03, 05, 06, 08; owner-login design from 00.
 
 ## Completion evidence
 
-Record implemented files, migration/contract changes, test commands/results and remaining blockers here when work is completed. Do not mark complete based only on scaffolding.
+Phase 1 (default host-based sites), commits `f8a376f..HEAD` (see `git log`):
+
+- `697d551` API resolves platform sites (apex, `app.`, `admin.`, `api.`, `<slug>.`) from the trusted request host.
+- `734cd49` UI reads `platformDomain` at runtime and calls the API on the current origin.
+- `a2540e0` UI selects the site from the host with one route tree per site.
+- `945f189` UI redirects legacy path-based addresses and former organization hosts.
+- `33c2258`, `51583d0`, `f4eab45`, `a8fd55c` owner-chosen organization addresses with live availability check, admin renames with slug history, legacy address lookup.
+- Deployment: UI nginx routes `/api` to the API, `api.` to the API only and `www.` to the apex; compose files use `PLATFORM_DOMAIN`/`PLATFORM_SCHEME`; guide in `docs/deployment/domains-and-tls.md`; local setup in `docs/implementation/local-development.md`.
+
+Open items:
+
+- [ ] Custom domains (phase 2): DNS verification, certificate issuance, settings screens, session revocation on change.
+- [ ] Owner single sign-on into workspaces. Until then owners sign in as staff on `<slug>.<domain>`.
+- [ ] Real-service end-to-end run over `*.localhost` and a staging deployment with the verification checklist.
+
+Do not mark complete based only on scaffolding.

@@ -1,6 +1,10 @@
 # Platform domains — phase 1 plan (task 09)
 
-Status: proposed, awaiting review. Phase 2 (custom domains for Business/Pro) follows separately.
+Status: phase 1 implemented (steps 1-7); the real-service end-to-end run (step 8) is pending.
+Phase 2 (custom domains for Business/Pro) follows separately.
+
+Guides: [domains, DNS and TLS](../../deployment/domains-and-tls.md) ·
+[local development](../local-development.md) · [Dokploy startup](../../deployment/dokploy-startup.md)
 
 ## Goal
 
@@ -105,8 +109,9 @@ A single resolver classifies the trusted request host (Fastify `trustProxy` only
 - DNS: `bfinance.ma`, `www`, and wildcard `*.bfinance.ma` → server.
 - TLS: wildcard certificate via Let's Encrypt DNS-01 on the proxy (Traefik/Dokploy).
 - Proxy rule for every host: `PathPrefix(/api)` → API service, everything else → UI service;
-  `api.bfinance.ma` → API only. Update `ui/nginx.conf`, compose files and
-  `docs/deployment/*`.
+  `api.bfinance.ma` → API only; `www.` → 301 to the apex. Implemented in the UI container's
+  nginx (`ui/nginx.conf`), so the ingress only forwards every host to the UI; compose files
+  and `docs/deployment/domains-and-tls.md` are updated.
 - The proxy overwrites `X-Forwarded-*`; the API trusts them only from `TRUST_PROXY_IPS`, and
   the API port is not published publicly.
 
