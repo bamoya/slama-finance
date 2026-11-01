@@ -21,7 +21,7 @@ export type ChapterProps = {
   timeline: Timeline
 }
 
-const Ring = ({
+export const Ring = ({
   box,
   age,
   type,

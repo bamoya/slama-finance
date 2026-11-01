@@ -4,6 +4,8 @@ import { fade } from '@remotion/transitions/fade'
 import { Chapter, type ChapterProps } from './components/Chapter'
 import { Intro, Outro } from './components/Intro'
 import { chapters, sourceFor, type Timeline } from './config'
+import { Film, filmMeta, type FilmProps } from './film/Film'
+import { CUTDOWNS, FILM_FPS } from './film/storyboard'
 import { CROSSFADE_FRAMES, FPS, INTRO_FRAMES, OUTRO_FRAMES } from './theme'
 
 const loadTimeline = async (path: string): Promise<Timeline> => {
@@ -83,6 +85,30 @@ const sizes = [
 export const Root = () => (
   <>
     {sizes.flatMap(({ suffix, width, height }) => [
+      <Composition
+        key={`film${suffix}`}
+        id={`Film${suffix}`}
+        component={Film}
+        width={width}
+        height={height}
+        fps={FILM_FPS}
+        durationInFrames={2400}
+        defaultProps={{ scenes: [], timelines: {} } as FilmProps}
+        calculateMetadata={filmMeta()}
+      />,
+      ...Object.entries(CUTDOWNS).map(([key, c]) => (
+        <Composition
+          key={`${c.compositionId}${suffix}`}
+          id={`${c.compositionId}${suffix}`}
+          component={Film}
+          width={width}
+          height={height}
+          fps={FILM_FPS}
+          durationInFrames={450}
+          defaultProps={{ scenes: [], timelines: {} } as FilmProps}
+          calculateMetadata={filmMeta(key)}
+        />
+      )),
       ...chapters.map((c, i) => (
         <Composition
           key={c.compositionId + suffix}

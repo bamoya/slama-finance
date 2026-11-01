@@ -3,7 +3,8 @@ import type { Timeline } from './config'
 
 export const VIDEO_W = 1440
 export const VIDEO_H = 900
-const MAX_ZOOM = 1.3
+const MAX_ZOOM = 1.25
+const SNAP = 220 // a window ending within this many px of the frame edge snaps to it (no sliver of cut text)
 const LEAD = 0.4 // seconds the zoom starts before the event
 const TRAVEL = 0.5 // seconds a zoom move lasts (ends 0.1 s after the event)
 const HOLD = 1.3 // seconds to stay after the event
@@ -24,7 +25,10 @@ const target = (box: Timeline['events'][number]['box']) => {
     const lo = start + size + MARGIN - h
     const hi = start - MARGIN + h
     const v = lo <= hi ? Math.min(hi, Math.max(lo, c)) : start - MARGIN + h
-    return Math.min(total - h, Math.max(h, v))
+    const c2 = Math.min(total - h, Math.max(h, v))
+    if (c2 - h < SNAP) return h
+    if (total - (c2 + h) < SNAP) return total - h
+    return c2
   }
   return { cx: axis(box.x, box.width, half.w, VIDEO_W), cy: axis(box.y, box.height, half.h, VIDEO_H), s }
 }
@@ -33,7 +37,7 @@ export const buildKeys = (timeline: Timeline): Key[] => {
   const home = { cx: VIDEO_W / 2, cy: VIDEO_H / 2, s: 1 }
   const keys: Key[] = [{ time: 0, ...home }]
   for (const e of timeline.events) {
-    if (e.type === 'navigate') continue
+    if (e.type === 'navigate' || e.type === 'highlight') continue
     const tg = e.box.width > VIDEO_W * 0.7 || e.box.height > VIDEO_H * 0.7 ? home : target(e.box)
     const last = keys[keys.length - 1]
     const start = Math.max(last.time + 0.05, e.t - LEAD)

@@ -1,6 +1,6 @@
 import manifest from './recordings.generated.json'
 
-export type EventType = 'click' | 'type' | 'pause' | 'navigate'
+export type EventType = 'click' | 'type' | 'pause' | 'navigate' | 'highlight'
 export type TimelineEvent = {
   t: number
   type: EventType
