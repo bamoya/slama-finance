@@ -7,6 +7,7 @@ import { Button } from '../../../../../components/ui/button'
 import { Combobox } from '../../../../../components/ui/combobox'
 import { Field, FieldLabel } from '../../../../../components/ui/field'
 import { Input } from '../../../../../components/ui/input'
+import { NumberInput } from '../../../../../components/ui/number-input'
 import { Select, SelectOption } from '../../../../../components/ui/select'
 import { Switch } from '../../../../../components/ui/switch'
 import { useUiLanguage } from '../../../../../lib/i18n'
@@ -114,13 +115,12 @@ export function EstimateLineRow({
         <FieldLabel className="product-editor-label" htmlFor={id + '-qty'}>
           {t('lineQuantity')}
         </FieldLabel>
-        <Input
+        <NumberInput
           id={id + '-qty'}
-          type="number"
           min="1"
           step="1"
           value={line.quantity}
-          onChange={(e) => onChange({ quantity: Number(e.target.value) })}
+          onValueChange={(value) => onChange({ quantity: Number(value) })}
         />
       </Field>
       {!quantityOnly && (

@@ -13,6 +13,7 @@ import { RequestState } from '../../../../../components/management/request-state
 import { Button, buttonVariants } from '../../../../../components/ui/button'
 import { Combobox } from '../../../../../components/ui/combobox'
 import { Input } from '../../../../../components/ui/input'
+import { NumberInput } from '../../../../../components/ui/number-input'
 import { validationMessage } from '../../../../../lib/error-messages'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { displayNumber } from '../../../../../lib/number-format'
@@ -198,17 +199,14 @@ function Editor({ note }: { note: NonNullable<ReturnType<typeof useDeliveryNote>
                     </span>
                     <label className="grid gap-1 text-xs">
                       {translate('Quantity')}
-                      <Input
-                        type="number"
+                      <NumberInput
                         min="1"
                         max={source?.remainingBillableQuantity}
                         value={line.quantity}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           field.handleChange(
                             field.state.value.map((item, position) =>
-                              position === index
-                                ? { ...item, quantity: Number(event.target.value) }
-                                : item,
+                              position === index ? { ...item, quantity: Number(value) } : item,
                             ),
                           )
                         }

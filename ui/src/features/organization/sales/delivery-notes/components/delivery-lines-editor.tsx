@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { DeliveryNoteInput } from '../../../../../api/generated/schemas/sales/delivery-notes.schemas'
 import { Button } from '../../../../../components/ui/button'
 import { Combobox } from '../../../../../components/ui/combobox'
-import { Input } from '../../../../../components/ui/input'
+import { NumberInput } from '../../../../../components/ui/number-input'
 import { useUiLanguage } from '../../../../../lib/i18n'
 import { displayNumber } from '../../../../../lib/number-format'
 import { EstimateLinesEditor } from '../../estimates/components/estimate-lines-editor'
@@ -93,13 +93,12 @@ export function DeliveryLinesEditor({
                 onRetry={() => void invoice.refetch()}
               />
             </div>
-            <Input
+            <NumberInput
               aria-label={t('lineQuantity')}
-              type="number"
               min="1"
               step="1"
               value={line.quantity}
-              onChange={(e) => change(index, { quantity: Number(e.target.value) })}
+              onValueChange={(value) => change(index, { quantity: Number(value) })}
             />
             <div className="product-editor-remove">
               <Button
