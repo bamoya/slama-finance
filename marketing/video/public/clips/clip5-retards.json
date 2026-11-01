@@ -1,0 +1,54 @@
+{
+  "chapter": "clip5-retards",
+  "width": 1440,
+  "height": 900,
+  "duration": 7.37,
+  "lead": 3.6,
+  "drift": 1.0082,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Liste des factures",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.47,
+      "type": "click",
+      "label": "Filtre : retards",
+      "box": {
+        "x": 1137,
+        "y": 176,
+        "width": 122,
+        "height": 29
+      }
+    },
+    {
+      "t": 2.47,
+      "type": "click",
+      "label": "En retard uniquement",
+      "box": {
+        "x": 1141,
+        "y": 245,
+        "width": 157,
+        "height": 29
+      }
+    },
+    {
+      "t": 3.82,
+      "type": "highlight",
+      "label": "Factures en retard de paiement",
+      "box": {
+        "x": 233,
+        "y": 283,
+        "width": 1166,
+        "height": 70
+      }
+    }
+  ]
+}

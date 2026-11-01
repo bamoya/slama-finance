@@ -1,0 +1,164 @@
+{
+  "chapter": "clip7-rapport",
+  "width": 1440,
+  "height": 900,
+  "duration": 19.37,
+  "lead": 5.8,
+  "drift": 0.9991,
+  "events": [
+    {
+      "t": 0.2,
+      "type": "pause",
+      "label": "Rapports planifiés : rapport mensuel",
+      "box": {
+        "x": 233,
+        "y": 216,
+        "width": 1166,
+        "height": 75
+      }
+    },
+    {
+      "t": 1.13,
+      "type": "click",
+      "label": "Envoi du rapport par e-mail",
+      "box": {
+        "x": 1354,
+        "y": 253,
+        "width": 32,
+        "height": 32
+      }
+    },
+    {
+      "t": 2.4,
+      "type": "click",
+      "label": "Confirmation de l’envoi",
+      "box": {
+        "x": 830,
+        "y": 500,
+        "width": 81,
+        "height": 29
+      }
+    },
+    {
+      "t": 3.4,
+      "type": "navigate",
+      "label": "Le dirigeant reçoit le rapport par e-mail",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 5.21,
+      "type": "pause",
+      "label": "Rapport mensuel reçu par e-mail",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    },
+    {
+      "t": 7.1,
+      "type": "navigate",
+      "label": "Rapports",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 12.36,
+      "type": "click",
+      "label": "Choix de la période",
+      "box": {
+        "x": 916,
+        "y": 250,
+        "width": 147,
+        "height": 17
+      }
+    },
+    {
+      "t": 12.98,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 909,
+        "y": 363,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 13.48,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 909,
+        "y": 363,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 13.98,
+      "type": "click",
+      "label": "Début de période",
+      "box": {
+        "x": 935,
+        "y": 426,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 14.5,
+      "type": "click",
+      "label": "Mois suivant",
+      "box": {
+        "x": 1063,
+        "y": 363,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 15.09,
+      "type": "click",
+      "label": "Fin de période",
+      "box": {
+        "x": 1037,
+        "y": 554,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 15.72,
+      "type": "click",
+      "label": "Appliquer la période",
+      "box": {
+        "x": 1101,
+        "y": 609,
+        "width": 79,
+        "height": 29
+      }
+    },
+    {
+      "t": 16.44,
+      "type": "pause",
+      "label": "Rapports de gestion : évolution des ventes",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

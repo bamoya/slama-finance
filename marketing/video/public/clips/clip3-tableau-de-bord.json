@@ -1,0 +1,131 @@
+{
+  "chapter": "clip3-tableau-de-bord",
+  "width": 1440,
+  "height": 900,
+  "duration": 14.77,
+  "lead": 2.32,
+  "drift": 0.9993,
+  "events": [
+    {
+      "t": 0.02,
+      "type": "pause",
+      "label": "Tableau de bord de l’organisation",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 0.72,
+      "type": "click",
+      "label": "Choix de la période",
+      "box": {
+        "x": 916,
+        "y": 180,
+        "width": 147,
+        "height": 17
+      }
+    },
+    {
+      "t": 1.61,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 909,
+        "y": 294,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 2.19,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 909,
+        "y": 294,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 2.7,
+      "type": "click",
+      "label": "Début de période",
+      "box": {
+        "x": 935,
+        "y": 357,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 3.34,
+      "type": "click",
+      "label": "Mois suivant",
+      "box": {
+        "x": 1063,
+        "y": 294,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 4.01,
+      "type": "click",
+      "label": "Fin de période",
+      "box": {
+        "x": 1037,
+        "y": 485,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 4.74,
+      "type": "click",
+      "label": "Appliquer la période",
+      "box": {
+        "x": 1101,
+        "y": 540,
+        "width": 79,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.61,
+      "type": "pause",
+      "label": "Indicateurs : facturé, encaissé, solde, retards",
+      "box": {
+        "x": 216,
+        "y": 0,
+        "width": 1200,
+        "height": 1056
+      }
+    },
+    {
+      "t": 7.11,
+      "type": "pause",
+      "label": "Graphiques : ventes et encaissements",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 10.56,
+      "type": "pause",
+      "label": "Créances et devis",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

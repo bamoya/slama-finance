@@ -1,0 +1,186 @@
+{
+  "chapter": "clip4-facture",
+  "width": 1440,
+  "height": 900,
+  "duration": 19.67,
+  "lead": 5.68,
+  "drift": 0.9995,
+  "events": [
+    {
+      "t": 0.02,
+      "type": "pause",
+      "label": "Nouvelle facture",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 0.78,
+      "type": "click",
+      "label": "Choix du client",
+      "box": {
+        "x": 246,
+        "y": 265,
+        "width": 743,
+        "height": 29
+      }
+    },
+    {
+      "t": 2.22,
+      "type": "click",
+      "label": "Coopérative Al Baraka",
+      "box": {
+        "x": 250,
+        "y": 333,
+        "width": 734,
+        "height": 32
+      }
+    },
+    {
+      "t": 3.1,
+      "type": "click",
+      "label": "Ajout d’un produit",
+      "box": {
+        "x": 246,
+        "y": 462,
+        "width": 148,
+        "height": 29
+      }
+    },
+    {
+      "t": 3.95,
+      "type": "click",
+      "label": "Recherche d’un produit du catalogue",
+      "box": {
+        "x": 330,
+        "y": 511,
+        "width": 339,
+        "height": 36
+      }
+    },
+    {
+      "t": 5.34,
+      "type": "click",
+      "label": "Produit sélectionné : prix repris du catalogue",
+      "box": {
+        "x": 334,
+        "y": 586,
+        "width": 330,
+        "height": 32
+      }
+    },
+    {
+      "t": 6.24,
+      "type": "type",
+      "label": "Quantité",
+      "box": {
+        "x": 676,
+        "y": 511,
+        "width": 60,
+        "height": 36
+      }
+    },
+    {
+      "t": 7.04,
+      "type": "click",
+      "label": "Taux de TVA",
+      "box": {
+        "x": 848,
+        "y": 511,
+        "width": 96,
+        "height": 36
+      }
+    },
+    {
+      "t": 7.85,
+      "type": "click",
+      "label": "TVA 20 %",
+      "box": {
+        "x": 852,
+        "y": 705,
+        "width": 89,
+        "height": 29
+      }
+    },
+    {
+      "t": 8.18,
+      "type": "pause",
+      "label": "Totaux HT, TVA, TTC",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 9.22,
+      "type": "click",
+      "label": "Enregistrement du brouillon",
+      "box": {
+        "x": 1211,
+        "y": 124,
+        "width": 175,
+        "height": 29
+      }
+    },
+    {
+      "t": 10.96,
+      "type": "click",
+      "label": "Émission de la facture",
+      "box": {
+        "x": 1167,
+        "y": 124,
+        "width": 147,
+        "height": 29
+      }
+    },
+    {
+      "t": 12.69,
+      "type": "click",
+      "label": "Envoi de la facture par e-mail",
+      "box": {
+        "x": 1168,
+        "y": 178,
+        "width": 146,
+        "height": 29
+      }
+    },
+    {
+      "t": 13.97,
+      "type": "click",
+      "label": "Confirmation de l’envoi",
+      "box": {
+        "x": 765,
+        "y": 513,
+        "width": 146,
+        "height": 29
+      }
+    },
+    {
+      "t": 15.29,
+      "type": "navigate",
+      "label": "Le client reçoit la facture",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 16.57,
+      "type": "pause",
+      "label": "E-mail de la facture reçu par le client",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    }
+  ]
+}

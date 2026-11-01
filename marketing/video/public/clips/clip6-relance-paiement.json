@@ -1,0 +1,109 @@
+{
+  "chapter": "clip6-relance-paiement",
+  "width": 1440,
+  "height": 900,
+  "duration": 18.7,
+  "lead": 6.24,
+  "drift": 0.9984,
+  "events": [
+    {
+      "t": 0.02,
+      "type": "navigate",
+      "label": "Le client reçoit le rappel automatique",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.32,
+      "type": "pause",
+      "label": "Rappel automatique : montant restant dû",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    },
+    {
+      "t": 3.12,
+      "type": "navigate",
+      "label": "Facture du client",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 8.08,
+      "type": "click",
+      "label": "Enregistrer un paiement",
+      "box": {
+        "x": 477,
+        "y": 178,
+        "width": 183,
+        "height": 29
+      }
+    },
+    {
+      "t": 9.1,
+      "type": "type",
+      "label": "Solde restant à payer",
+      "box": {
+        "x": 246,
+        "y": 267,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 9.98,
+      "type": "click",
+      "label": "Enregistrement du paiement",
+      "box": {
+        "x": 1227,
+        "y": 94,
+        "width": 159,
+        "height": 29
+      }
+    },
+    {
+      "t": 11.07,
+      "type": "pause",
+      "label": "Facture réglée",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 11.57,
+      "type": "navigate",
+      "label": "Tableau de bord mis à jour",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 16.02,
+      "type": "pause",
+      "label": "Tableau de bord : encaissé et solde mis à jour",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

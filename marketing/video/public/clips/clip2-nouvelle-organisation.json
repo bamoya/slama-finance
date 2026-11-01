@@ -1,0 +1,65 @@
+{
+  "chapter": "clip2-nouvelle-organisation",
+  "width": 1440,
+  "height": 900,
+  "duration": 9.03,
+  "lead": 3,
+  "drift": 1,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Espace propriétaire",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.3,
+      "type": "click",
+      "label": "Clic sur « Nouvelle organisation »",
+      "box": {
+        "x": 1244,
+        "y": 123,
+        "width": 168,
+        "height": 38
+      }
+    },
+    {
+      "t": 2.78,
+      "type": "type",
+      "label": "Saisie du nom de l’organisation",
+      "box": {
+        "x": 466,
+        "y": 363,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 4.22,
+      "type": "pause",
+      "label": "L’adresse se forme automatiquement",
+      "box": {
+        "x": 466,
+        "y": 471,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 5.92,
+      "type": "pause",
+      "label": "Organisation créée, essai gratuit démarré",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

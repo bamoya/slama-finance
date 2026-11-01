@@ -1,0 +1,87 @@
+{
+  "chapter": "clip9-modele",
+  "width": 1440,
+  "height": 900,
+  "duration": 12.93,
+  "lead": 1.76,
+  "drift": 1.0008,
+  "events": [
+    {
+      "t": 0.02,
+      "type": "pause",
+      "label": "Nouveau modèle de document",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 0.98,
+      "type": "type",
+      "label": "Nom du modèle",
+      "box": {
+        "x": 246,
+        "y": 287,
+        "width": 269,
+        "height": 29
+      }
+    },
+    {
+      "t": 2.24,
+      "type": "click",
+      "label": "Mise en page « Moderne »",
+      "box": {
+        "x": 429,
+        "y": 353,
+        "width": 183,
+        "height": 202
+      }
+    },
+    {
+      "t": 3.49,
+      "type": "click",
+      "label": "Couleur de marque",
+      "box": {
+        "x": 246,
+        "y": 570,
+        "width": 51,
+        "height": 29
+      }
+    },
+    {
+      "t": 4.83,
+      "type": "click",
+      "label": "Téléverser le logo",
+      "box": {
+        "x": 246,
+        "y": 702,
+        "width": 131,
+        "height": 32
+      }
+    },
+    {
+      "t": 7.15,
+      "type": "pause",
+      "label": "Aperçu en direct : logo et couleur du modèle",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 9.61,
+      "type": "pause",
+      "label": "Aperçu en direct : logo et couleur du modèle",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

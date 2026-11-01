@@ -1,0 +1,76 @@
+{
+  "chapter": "clip8-invitation",
+  "width": 1440,
+  "height": 900,
+  "duration": 8.97,
+  "lead": 5.4,
+  "drift": 0.9967,
+  "events": [
+    {
+      "t": 0.02,
+      "type": "pause",
+      "label": "Invitation d’un nouveau membre",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.12,
+      "type": "type",
+      "label": "E-mail de la comptable",
+      "box": {
+        "x": 246,
+        "y": 203,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 2.66,
+      "type": "click",
+      "label": "Attribution du rôle « Comptable »",
+      "box": {
+        "x": 469,
+        "y": 280,
+        "width": 66,
+        "height": 17
+      }
+    },
+    {
+      "t": 3.24,
+      "type": "pause",
+      "label": "Rôle attribué : permissions héritées",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 4.99,
+      "type": "click",
+      "label": "Envoi de l’invitation",
+      "box": {
+        "x": 1233,
+        "y": 94,
+        "width": 153,
+        "height": 29
+      }
+    },
+    {
+      "t": 6.57,
+      "type": "pause",
+      "label": "Invitation envoyée",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}
