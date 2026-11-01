@@ -20,7 +20,7 @@ const names = {
 const comps = ids.map((i) => names[i] ?? i).filter((c) => !args.only || c === args.only)
 const suffixes = args.square
   ? ['-Square']
-  : args['no-square'] !== undefined
+  : 'no-square' in args
     ? ['']
     : ['', '-Square']
 mkdirSync('out', { recursive: true })
@@ -41,7 +41,7 @@ for (const c of comps) {
       '--log=error',
     ])
     run(['still', 'src/index.ts', id, `out/${id}.png`, `--frame=${stillFrame(c)}`, '--log=error'])
-    if (args.webm !== undefined)
+    if ('webm' in args)
       run([
         'render',
         'src/index.ts',
