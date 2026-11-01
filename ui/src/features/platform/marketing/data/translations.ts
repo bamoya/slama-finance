@@ -189,6 +189,9 @@ export const marketingFrench: Record<string, string> = {
   'Customize your document templates · fictional data':
     'Personnalisez vos modèles de documents · données fictives',
   Enlarge: 'Agrandir',
+  'Enlarge the demo': 'Agrandir la démonstration',
+  'Pause the video': 'Mettre la vidéo en pause',
+  'Demonstration with fictional data': 'Démonstration avec des données fictives',
   'Enlarge the dashboard preview': 'Agrandir l’aperçu du tableau de bord',
   'Enlarged dashboard': 'Tableau de bord agrandi',
   'Estimates & invoices': 'Devis & factures',
