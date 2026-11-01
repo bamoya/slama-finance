@@ -43,6 +43,8 @@ async function staffLogin(slug, email, password) {
   return api
 }
 let ownerCache
+/** Forget cached API sessions (needed after a DB snapshot restore). */
+export function resetApiCache() { apiCache.clear(); ownerCache = undefined }
 export async function ownerApi() {
   if (ownerCache) return ownerCache
   const api = new Api('app.localhost:5174')

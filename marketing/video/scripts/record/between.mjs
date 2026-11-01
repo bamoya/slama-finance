@@ -38,3 +38,10 @@ export async function createMonthlySchedule() {
   console.log('schedule', s.id)
   return s
 }
+
+/** Switch the due-date reminder off (used by clips that must show only the invoice e-mail). */
+export async function disableDueReminder() {
+  const w = await staffApi(ORG.slug, KARIM.email)
+  const r = (await w.get('/api/v1/notification-rules')).items.find((x) => x.eventKey === 'invoice_due_reminder')
+  await w.patch(`/api/v1/notification-rules/${r.id}`, { expectedVersion: r.version, enabled: false, offsetDays: r.offsetDays, repeatEveryDays: r.repeatEveryDays, senderName: 'Atlas Négoce SARL', senderEmail: 'factures@atlas-negoce.ma', locale: r.locale, subjectTemplate: r.subjectTemplate, bodyTemplate: r.bodyTemplate, bodyFormat: r.bodyFormat, ...(r.englishSubjectTemplate ? { englishSubjectTemplate: r.englishSubjectTemplate, englishBodyTemplate: r.englishBodyTemplate } : {}) })
+}

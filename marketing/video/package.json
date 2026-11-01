@@ -7,7 +7,9 @@
     "manifest": "node render/manifest.mjs",
     "studio": "pnpm manifest && remotion studio src/index.ts",
     "render:all": "pnpm manifest && node render/render-all.mjs",
-    "typecheck": "pnpm manifest && tsc --noEmit"
+    "typecheck": "pnpm manifest && tsc --noEmit",
+    "demo:record": "bash scripts/demo-env.sh wait || bash scripts/demo-env.sh start; node scripts/record/film.mjs",
+    "demo:render": "pnpm manifest && node render/render-film.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.536",
