@@ -26,7 +26,15 @@ async function tempPassword(email, slug) {
   }
   throw new Error('temporary password mail not found for ' + slug)
 }
+const apiCache = new Map()
 export async function staffApi(slug, email, password = STAFF_PASSWORD) {
+  const key = `${slug}|${email}`
+  if (apiCache.has(key)) return apiCache.get(key)
+  const api = await staffLogin(slug, email, password)
+  apiCache.set(key, api)
+  return api
+}
+async function staffLogin(slug, email, password) {
   const api = new Api(`${slug}.localhost:5174`)
   try { await api.post('/api/v1/organization-auth/login', { email, password }); return api } catch {}
   const temp = await tempPassword(email, slug)
@@ -34,9 +42,12 @@ export async function staffApi(slug, email, password = STAFF_PASSWORD) {
   await api.post('/api/v1/organization-auth/change-password', { currentPassword: temp, newPassword: password })
   return api
 }
+let ownerCache
 export async function ownerApi() {
+  if (ownerCache) return ownerCache
   const api = new Api('app.localhost:5174')
   await api.post('/api/v1/owner-auth/login', { email: KARIM.email, password: KARIM.password })
+  ownerCache = api
   return api
 }
 function demoEnv() {

@@ -14,7 +14,7 @@ demo_env() {
   export NOTIFICATION_TRANSPORT=smtp SMTP_HOST=127.0.0.1 SMTP_PORT=1025 OWNER_AUTH_ENABLED=true
   export ADMIN_TOTP_KEY="$(printf '0123456789abcdef0123456789abcdef' | base64)"
   export MEDIA_ASSET_DIR="$RUN/media" S3_ENDPOINT= S3_BUCKET= S3_ACCESS_KEY_ID= S3_SECRET_ACCESS_KEY=
-  export LOG_LEVEL=warn RATE_LIMIT_MAX=10000 SESSION_TTL_DAYS=30
+  export EMAIL_FROM=factures@atlas-negoce.ma LOG_LEVEL=warn REPORT_POLL_MS=3000 RATE_LIMIT_MAX=10000 SESSION_TTL_DAYS=30
 }
 case "${1:-}" in
   init) # create DB if missing and initialise schema
@@ -48,7 +48,7 @@ case "${1:-}" in
     for s in api ui; do
       rm -f "$RUN/$s.pid"
     done
-    lsof -ti tcp:3100 | xargs kill 2>/dev/null || true; lsof -ti tcp:5174 | xargs kill 2>/dev/null || true; sleep 1; true ;;
+    lsof -ti tcp:3100 -sTCP:LISTEN | xargs kill 2>/dev/null || true; lsof -ti tcp:5174 -sTCP:LISTEN | xargs kill 2>/dev/null || true; sleep 1; true ;;
   env) demo_env; env | grep -E '^(DATABASE_URL|MIGRATION_DATABASE_URL|PORT|PLATFORM_|SMTP|MEDIA_ASSET_DIR|ADMIN_TOTP_KEY)=' ;;
   *) echo "usage: $0 init|reset|fresh|snapshot N|restore N|wait|start|stop|env"; exit 1 ;;
 esac

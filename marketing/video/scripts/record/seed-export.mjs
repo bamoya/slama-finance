@@ -1,10 +1,11 @@
 // Second organization "Atlas Négoce Export" with a little activity (for the owner overview, ch09).
 import { randomUUID } from 'node:crypto'
-import { OUT } from './lib.mjs'
+import { OUT, clearMailFor } from './lib.mjs'
 import { ownerApi, staffApi, stateFor } from './seed.mjs'
 import { COMPANY, KARIM } from './data.mjs'
 
 export async function seedExport() {
+  await clearMailFor(KARIM.email) // drop old temporary-password mails so the new org's one is used
   const o = await ownerApi()
   const existing = ((await o.get('/api/v1/owner/organizations')).items ?? []).find((x) => x.slug === 'atlas-export')
   const created = existing ?? await o.post('/api/v1/owner/organizations', { name: 'Atlas Négoce Export', slug: 'atlas-export', activity: 'Export de produits agricoles', requestId: randomUUID() })

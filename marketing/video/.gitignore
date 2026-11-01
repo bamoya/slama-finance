@@ -1,2 +1,5 @@
 out/
 src/recordings.generated.json
+.demo-run/
+public/recordings/*.webm
+public/recordings/raw/

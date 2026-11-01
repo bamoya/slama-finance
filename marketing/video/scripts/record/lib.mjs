@@ -115,7 +115,7 @@ class Recorder {
   }
   async boxOf(target) {
     const l = this.loc(target)
-    await l.waitFor({ state: 'visible', timeout: 20000 })
+    await l.waitFor({ state: 'visible', timeout: 20000 }).catch(async (e) => { await this.page.screenshot({ path: `/private/tmp/claude-503/demo/fail-${this.chapter}.png` }).catch(() => {}); throw e })
     await l.scrollIntoViewIfNeeded().catch(() => {})
     await sleep(120)
     return await l.boundingBox()
@@ -157,7 +157,7 @@ class Recorder {
     return b
   }
   /** Click the field then type naturally. */
-  async type(target, text, label, { delay = this.delay ?? 34, clear = false } = {}) {
+  async type(target, text, label, { delay = this.delay ?? 34, clear = false, fill = false } = {}) {
     const b = await this.boxOf(target)
     await this.moveTo(b.x + Math.min(b.width / 2, 120), b.y + b.height / 2)
     await sleep(100)
@@ -216,6 +216,16 @@ class Recorder {
     )
     await this.goto('http://inbox.localhost/', label)
     return html
+  }
+  /** Show a downloaded PDF (first page rendered with Ghostscript) in a minimal viewer page. */
+  async pdfViewer(pdfFile, { title = path.basename(pdfFile), label = 'Visionneuse PDF' } = {}) {
+    const png = path.join(this.tmp, 'pdf-page.png')
+    execFileSync('gs', ['-q', '-dNOPAUSE', '-dBATCH', '-sDEVICE=png16m', '-r200', '-dFirstPage=1', '-dLastPage=1', `-sOutputFile=${png}`, pdfFile])
+    const pages = execFileSync('gs', ['-q', '-dNODISPLAY', '-dNOSAFER', '-c', `(${pdfFile}) (r) file runpdfbegin pdfpagecount = quit`]).toString().trim()
+    const b64 = fs.readFileSync(png).toString('base64')
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>*{box-sizing:border-box}body{margin:0;background:#525659;font-family:Inter,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}.bar{height:48px;background:#323639;color:#f1f3f4;display:flex;align-items:center;padding:0 20px;gap:18px;font-size:14px}.bar b{font-weight:500}.bar span{opacity:.75}.pg{flex:1;overflow:hidden;display:flex;justify-content:center;padding:22px 0}.pg img{height:auto;max-height:none;width:900px;align-self:flex-start;box-shadow:0 4px 18px rgba(0,0,0,.5);background:#fff}</style></head><body><div class="bar"><b>${esc(title)}</b><span>1 / ${pages}</span><span style="margin-left:auto">100 %</span></div><div class="pg"><img src="data:image/png;base64,${b64}"></div></body></html>`
+    await this.context.route('http://pdf.localhost/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }))
+    await this.goto('http://pdf.localhost/', label)
   }
   /** Stop, trim leading idle time, write webm + mp4 + json into public/recordings. */
   async finish({ trimLead = 0.0 } = {}) {
@@ -366,7 +376,8 @@ export class Api {
     this.base = base
     this.cookies = {}
   }
-  async req(method, p, body, { raw = false, headers = {} } = {}) {
+  async req(method, p, body, opts = {}, attempt = 0) {
+    const { raw = false, headers = {} } = opts
     const u = new URL(this.base + p)
     const payload = body === undefined ? undefined : JSON.stringify(body)
     const res = await new Promise((resolve, reject) => {
@@ -376,6 +387,7 @@ export class Api {
       r.on('error', reject); if (payload) r.write(payload); r.end()
     })
     for (const c of [].concat(res.headers['set-cookie'] ?? [])) { const [kv] = c.split(';'); const i = kv.indexOf('='); this.cookies[kv.slice(0, i)] = kv.slice(i + 1) }
+    if (res.status === 429 && attempt < 5) { await sleep(15000); return this.req(method, p, body, opts, attempt + 1) }
     if (raw) return res
     const text = res.body.toString('utf8')
     let json; try { json = text ? JSON.parse(text) : null } catch { json = text }
