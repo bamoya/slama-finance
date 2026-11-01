@@ -94,6 +94,8 @@ class Recorder {
   constructor(o) {
     Object.assign(this, o)
     this.events = []
+    this.cursor = [] // [t, x, y] samples of the visible cursor (camera keeps it in frame)
+    this.popupBox = null
     this.cuts = []
     this.t0 = null
     this.pos = { x: W / 2, y: H / 2 }
@@ -168,9 +170,51 @@ class Recorder {
     for (let i = 1; i <= steps; i++) {
       const k = ease(i / steps)
       await this.page.mouse.move(sx + dx * k, sy + dy * k)
+      if (this.t0) this.cursor.push([this.now(), sx + dx * k, sy + dy * k])
       await sleep(dur / steps)
     }
     this.pos = { x, y }
+    if (this.t0) this.cursor.push([this.now(), x, y])
+  }
+  /**
+   * Log the bounding box (union) of open popups (dialogs, listboxes, menus, popovers such as date pickers) as a
+   * `popup` event whenever it changes; a zero-size box means closed. The camera keeps popups fully in frame.
+   */
+  async probePopups(wait = 160) {
+    if (!this.t0) return
+    await sleep(wait)
+    const boxes = await this.page
+      .evaluate(() => {
+        const sel =
+          '[role=dialog],[role=alertdialog],[role=listbox],[role=menu],[data-radix-popper-content-wrapper],[data-radix-popover-content],[data-slot=popover-content],[data-slot=select-content],[data-slot=dropdown-menu-content]'
+        return [...document.querySelectorAll(sel)]
+          .map((el) => {
+            const r = el.getBoundingClientRect()
+            const cs = getComputedStyle(el)
+            const shown = cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.3
+            return { x: r.x, y: r.y, w: r.width, h: r.height, shown }
+          })
+          .filter(
+            (b) =>
+              b.shown &&
+              b.w > 40 &&
+              b.h > 30 &&
+              !(b.w >= innerWidth * 0.95 && b.h >= innerHeight * 0.95),
+          )
+      })
+      .catch(() => [])
+    let box = { x: 0, y: 0, width: 0, height: 0 }
+    if (boxes.length) {
+      const x0 = Math.max(0, Math.min(...boxes.map((b) => b.x)))
+      const y0 = Math.max(0, Math.min(...boxes.map((b) => b.y)))
+      const x1 = Math.min(W, Math.max(...boxes.map((b) => b.x + b.w)))
+      const y1 = Math.min(H, Math.max(...boxes.map((b) => b.y + b.h)))
+      box = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
+    }
+    const key = [box.x, box.y, box.width, box.height].map((n) => Math.round(n / 8)).join(',')
+    if (key === this.popupBox) return
+    this.popupBox = key
+    this.push('popup', box.width ? 'Popup ouvert' : 'Popup fermé', box)
   }
   async pointAt(target, { dx = 0, dy = 0 } = {}) {
     const b = await this.boxOf(target)
@@ -186,6 +230,7 @@ class Recorder {
     await sleep(70)
     await this.page.mouse.up()
     await sleep(settle)
+    await this.probePopups()
     return b
   }
   async hover(target, label) {
@@ -211,6 +256,7 @@ class Recorder {
       await sleep(delay + Math.random() * 40 - 15)
     }
     await sleep(150)
+    await this.probePopups(0)
     return b
   }
   async select(target, optionText, label) {
@@ -436,6 +482,17 @@ class Recorder {
         .reduce((n, [ca, cb]) => n + (cb - ca), 0)
       events.push({ ...e, t: +((e.t - removed) * drift).toFixed(2) })
     }
+    const cursor = []
+    for (const [ct, x, y] of this.cursor) {
+      if (this.cuts.some(([ca, cb]) => ct >= ca && ct < cb)) continue
+      const removed = this.cuts
+        .filter(([, cb]) => cb <= ct)
+        .reduce((n, [ca, cb]) => n + (cb - ca), 0)
+      const t = +((ct - removed) * drift).toFixed(2)
+      const last = cursor[cursor.length - 1]
+      if (t < 0 || (last && t - last[0] < 0.04)) continue
+      cursor.push([t, Math.round(x), Math.round(y)])
+    }
     fs.writeFileSync(
       `${base}.json`,
       JSON.stringify(
@@ -447,6 +504,7 @@ class Recorder {
           lead: +lead.toFixed(2),
           drift: +drift.toFixed(4),
           events,
+          cursor,
         },
         null,
         2,

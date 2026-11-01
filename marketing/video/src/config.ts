@@ -1,13 +1,17 @@
 import manifest from './recordings.generated.json'
 
-export type EventType = 'click' | 'type' | 'pause' | 'navigate' | 'highlight'
+export type EventType = 'click' | 'type' | 'pause' | 'navigate' | 'highlight' | 'popup' // popup: box = open dialog / listbox / popover (zero size = closed)
 export type TimelineEvent = {
   t: number
   type: EventType
   label: string
   box: { x: number; y: number; width: number; height: number }
 }
-export type Timeline = { duration: number; events: TimelineEvent[] }
+export type Timeline = {
+  duration: number
+  events: TimelineEvent[]
+  cursor?: [number, number, number][] // [t, x, y] samples of the visible cursor (video pixels)
+}
 
 export type ChapterConfig = {
   id: string // chNN
