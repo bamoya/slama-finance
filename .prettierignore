@@ -17,3 +17,5 @@ docs/notification-email-examples/*_*.html
 
 # Isolated design references and local build artifacts.
 **/.local
+marketing/video/out
+marketing/video/public

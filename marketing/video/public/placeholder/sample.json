@@ -1,0 +1,35 @@
+{
+  "duration": 12,
+  "events": [
+    {
+      "t": 1.5,
+      "type": "click",
+      "label": "Cliquez sur Nouveau client",
+      "box": { "x": 1100, "y": 120, "width": 260, "height": 56 }
+    },
+    {
+      "t": 3.5,
+      "type": "type",
+      "label": "Saisissez la raison sociale",
+      "box": { "x": 420, "y": 300, "width": 520, "height": 60 }
+    },
+    {
+      "t": 6,
+      "type": "pause",
+      "label": "Les informations sont enregistrées",
+      "box": { "x": 300, "y": 450, "width": 800, "height": 260 }
+    },
+    {
+      "t": 8.5,
+      "type": "click",
+      "label": "Enregistrez",
+      "box": { "x": 1000, "y": 760, "width": 200, "height": 56 }
+    },
+    {
+      "t": 10.5,
+      "type": "navigate",
+      "label": "Fiche client",
+      "box": { "x": 0, "y": 0, "width": 1440, "height": 900 }
+    }
+  ]
+}
