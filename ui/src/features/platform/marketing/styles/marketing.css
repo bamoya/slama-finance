@@ -2912,7 +2912,8 @@ body.marketing-document {
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  /* Same property as the shared dialog's Tailwind classes, so the offsets don't add up. */
+  translate: -50% -50%;
   width: calc(100% - 32px);
   max-width: 540px;
   max-height: 90dvh;
@@ -5070,11 +5071,11 @@ html.marketing-document {
 @keyframes marketing-dialog-in {
   from {
     opacity: 0;
-    transform: translate(-50%, calc(-50% + 6px)) scale(0.985);
+    transform: translateY(6px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: none;
   }
 }
 @keyframes marketing-menu-in {
