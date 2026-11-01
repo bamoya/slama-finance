@@ -160,7 +160,7 @@ it('renders real owner aggregates through the platform analytics endpoint withou
   await waitFor(() => expect(screen.queryAllByLabelText('Data unavailable')).toHaveLength(0))
   await waitFor(() =>
     expect(screen.getByRole('region', { name: 'Financial summary' })).toHaveTextContent(
-      '1\u00a0250.50',
+      /1\s250\.50/,
     ),
   )
   expect(
