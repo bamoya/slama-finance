@@ -7,7 +7,7 @@ export async function openWorkspace(chapter, path, { state = 'ws' } = {}) {
   await rec.page.goto(WS + path)
   await rec.page.waitForLoadState('networkidle').catch(() => {})
   await sleep(1200)
-  rec.start()
+  await rec.start()
   return rec
 }
 export const run = async (fn) => { const rec = await fn(); await rec.finish() }

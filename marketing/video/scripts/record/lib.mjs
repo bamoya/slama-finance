@@ -36,6 +36,12 @@ const CURSOR_JS = `(() => {
     c.style.cssText = 'position:fixed;left:0;top:0;width:28px;height:28px;z-index:2147483647;pointer-events:none;transform:translate(-100px,-100px);transition:none'
     c.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))"><path d="M5 3 L5 22 L10 17.5 L13.5 25 L17 23.5 L13.6 16.2 L20 16 Z" fill="#111" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>'
     document.body.appendChild(c)
+    // heartbeat: a repaint every 40 ms keeps the screencast delivering frames (the video starts at page load, not at the first change)
+    const hb = document.createElement('div')
+    hb.style.cssText = 'position:fixed;right:0;bottom:0;width:2px;height:2px;z-index:2147483645;pointer-events:none'
+    document.body.appendChild(hb)
+    let k = 0
+    setInterval(() => { hb.style.background = (k++ % 2) ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)' }, 40)
     const move = (x, y) => { c.style.transform = 'translate(' + (x - 5) + 'px,' + (y - 3) + 'px)'; try { sessionStorage.__cur = x + ',' + y } catch {} }
     try { const p = (sessionStorage.__cur || '').split(',').map(Number); if (p.length === 2 && !isNaN(p[0])) move(p[0], p[1]) } catch {}
     window.addEventListener('mousemove', (e) => move(e.clientX, e.clientY), true)
@@ -53,7 +59,7 @@ const CURSOR_JS = `(() => {
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 /** Open a recorded browser session. `storageState` optional (path or object). */
-export async function openSession(chapter, { storageState, locale = 'fr-FR' } = {}) {
+export async function openSession(chapter, { storageState, locale = 'fr-FR', outDir = OUT, webm = true } = {}) {
   fs.mkdirSync(RAW, { recursive: true })
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `rec-${chapter}-`))
   const browser = await chromium.launch({ executablePath: EXE, args: ['--hide-scrollbars'] })
@@ -74,7 +80,7 @@ export async function openSession(chapter, { storageState, locale = 'fr-FR' } = 
   await context.addInitScript(CURSOR_JS)
   const created = Date.now()
   const page = await context.newPage()
-  const rec = new Recorder({ chapter, browser, context, page, tmp, created })
+  const rec = new Recorder({ chapter, browser, context, page, tmp, created, outDir, webm })
   page.on('framenavigated', async (f) => {
     if (f === page.mainFrame()) rec.restoreMouse().catch(() => {})
   })
@@ -85,18 +91,41 @@ class Recorder {
   constructor(o) {
     Object.assign(this, o)
     this.events = []
+    this.cuts = []
     this.t0 = null
     this.pos = { x: W / 2, y: H / 2 }
   }
   now() {
     return this.t0 ? +((Date.now() - this.t0) / 1000).toFixed(2) : 0
   }
-  /** Mark the start of the timeline (call once the first screen is fully ready). */
-  start() {
+  /**
+   * Mark the start of the timeline (call once the first screen is fully ready). A full-screen magenta flash is shown
+   * and removed; its disappearance in the raw video is detected in finish() so the video trim and the timeline share
+   * exactly the same origin (t = 0 at the removal of the flash).
+   */
+  async start() {
+    if (this.t0) return
+    // the video only starts ~2.2 s after the page is created (recorder warm-up): flash well after that
+    await sleep(Math.max(0, 4000 - (Date.now() - this.created)))
+    await this.page.evaluate(() => {
+      const d = document.createElement('div')
+      d.id = '__sync'
+      d.style.cssText = 'position:fixed;inset:0;background:#ff00ff;z-index:2147483647'
+      document.documentElement.appendChild(d)
+    })
+    await sleep(500)
+    await this.page.evaluate(() => document.getElementById('__sync')?.remove())
     this.t0 = Date.now()
+    this.synced = true
+  }
+  /** Run `fn` but remove that stretch (e.g. the boring middle of a wizard) from the final video and timeline. */
+  async cut(fn) {
+    const a = this.now()
+    await fn()
+    this.cuts.push([a, this.now()])
   }
   push(type, label, box) {
-    if (!this.t0) this.start()
+    if (!this.t0) this.t0 = Date.now()
     const e = { t: this.now(), type, label }
     if (box)
       e.box = {
@@ -124,7 +153,7 @@ class Recorder {
     const dx = x - this.pos.x,
       dy = y - this.pos.y
     const dist = Math.hypot(dx, dy)
-    const dur = ms ?? Math.min(600, 200 + dist * 0.35)
+    const dur = (ms ?? Math.min(600, 200 + dist * 0.35)) * (this.mv ?? 1)
     const steps = Math.max(8, Math.round(dur / 16))
     const sx = this.pos.x,
       sy = this.pos.y
@@ -143,7 +172,7 @@ class Recorder {
   /** Move to element, click with ripple, log a click event (the event is stamped when the click happens). */
   async click(target, label, { settle = 350, noWait = false } = {}) {
     const b = await this.pointAt(target)
-    await sleep(120)
+    await sleep(120 * (this.mv ?? 1))
     this.push('click', label, b)
     await this.page.mouse.down()
     await sleep(70)
@@ -227,85 +256,76 @@ class Recorder {
     await this.context.route('http://pdf.localhost/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }))
     await this.goto('http://pdf.localhost/', label)
   }
-  /** Stop, trim leading idle time, write webm + mp4 + json into public/recordings. */
+  /** Stop, trim to the sync flash, cut skipped stretches, write mp4 (+ webm for chapters) + json into the out dir. */
   async finish({ trimLead = 0.0 } = {}) {
     await sleep(900)
+    let endReal = null
+    if (this.synced) {
+      await this.page.evaluate(() => {
+        const d = document.createElement('div')
+        d.style.cssText = 'position:fixed;inset:0;background:#ff00ff;z-index:2147483647'
+        document.documentElement.appendChild(d)
+      }).catch(() => {})
+      endReal = this.now()
+      await sleep(500)
+    }
     const total = (Date.now() - this.t0) / 1000
     const video = this.page.video()
     await this.page.close()
     await this.context.close()
     const src = await video.path()
     await this.browser.close()
-    const lead = Math.max(0, (this.t0 - this.created) / 1000 + trimLead)
-    const base = path.join(OUT, this.chapter)
-    fs.mkdirSync(OUT, { recursive: true })
-    const run = (args) =>
-      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...args], { stdio: 'inherit' })
-    run([
-      '-ss',
-      lead.toFixed(2),
-      '-i',
-      src,
-      '-an',
-      '-c:v',
-      'libvpx-vp9',
-      '-b:v',
-      '0',
-      '-crf',
-      '32',
-      '-row-mt',
-      '1',
-      `${base}.webm`,
-    ])
-    run([
-      '-ss',
-      lead.toFixed(2),
-      '-i',
-      src,
-      '-an',
-      '-c:v',
-      'libx264',
-      '-crf',
-      '23',
-      '-preset',
-      'medium',
-      '-pix_fmt',
-      'yuv420p',
-      '-movflags',
-      '+faststart',
-      `${base}.mp4`,
-    ])
+    const out = this.outDir
+    const base = path.join(out, this.chapter)
+    fs.mkdirSync(out, { recursive: true })
+    const run = (args) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...args], { stdio: 'inherit' })
+    // Locate the sync flashes in the raw video (50 fps resample, magenta centre pixel).
+    let lead = Math.max(0, (this.t0 - this.created) / 1000 + trimLead)
+    let drift = 1
+    let vend = null
+    if (this.synced) {
+      const buf = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', src, '-vf', 'fps=50,crop=2:2:720:450,scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 28 })
+      const mag = []
+      for (let i = 0; i + 2 < buf.length; i += 3) mag.push(buf[i] > 200 && buf[i + 1] < 70 && buf[i + 2] > 200)
+      const runs = []
+      for (let i = 0; i < mag.length; i++) if (mag[i] && (i === 0 || !mag[i - 1])) { let j = i; while (j < mag.length && mag[j]) j++; runs.push([i / 50, j / 50]) }
+      if (runs.length === 1 && vend === null && runs[0][0] > 1) console.warn(`${this.chapter}: WARNING start flash not found in the video; timeline sync unreliable`)
+      if (runs.length) {
+        lead = runs[0][1]
+        if (runs.length > 1 && endReal) {
+          vend = runs[runs.length - 1][0]
+          drift = (vend - lead) / endReal
+        }
+      }
+      console.log(`${this.chapter}: sync flash ${runs.map((r) => r.map((x) => x.toFixed(2)).join('-')).join(' | ')} -> lead ${lead.toFixed(2)}s, drift ${drift.toFixed(4)}`)
+      if (Math.abs(drift - 1) > 0.15) drift = 1
+    }
+    // Keep [lead, vend) minus the cut ranges (video time = lead + t * drift).
+    const keepEnd = vend ?? 1e6
+    let sel = `gte(t,${lead.toFixed(3)})*lt(t,${keepEnd.toFixed(3)})`
+    for (const [ca, cb] of this.cuts) sel += `*not(between(t,${(lead + ca * drift).toFixed(3)},${(lead + cb * drift).toFixed(3)}))`
+    const vf = `fps=30,select='${sel}',setpts=N/(30*TB)`
+    if (this.webm)
+      run(['-i', src, '-an', '-vf', vf, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1', `${base}.webm`])
+    run(['-i', src, '-an', '-vf', vf, '-r', '30', '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${base}.mp4`])
     const dur = +parseFloat(
-      execFileSync('ffprobe', [
-        '-v',
-        'error',
-        '-show_entries',
-        'format=duration',
-        '-of',
-        'csv=p=0',
-        `${base}.mp4`,
-      ]).toString(),
+      execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', `${base}.mp4`]).toString(),
     ).toFixed(2)
+    // Timeline: real seconds since the flash -> output seconds (drift applied, cut stretches removed).
+    const events = []
+    for (const e of this.events) {
+      if (this.cuts.some(([ca, cb]) => e.t >= ca && e.t < cb)) continue
+      const removed = this.cuts.filter(([, cb]) => cb <= e.t).reduce((n, [ca, cb]) => n + (cb - ca), 0)
+      events.push({ ...e, t: +((e.t - removed) * drift).toFixed(2) })
+    }
     fs.writeFileSync(
       `${base}.json`,
-      JSON.stringify(
-        {
-          chapter: this.chapter,
-          width: W,
-          height: H,
-          duration: dur,
-          lead: +lead.toFixed(2),
-          events: this.events,
-        },
-        null,
-        2,
-      ),
+      JSON.stringify({ chapter: this.chapter, width: W, height: H, duration: dur, lead: +lead.toFixed(2), drift: +drift.toFixed(4), events }, null, 2),
     )
+    fs.mkdirSync(RAW, { recursive: true })
     fs.copyFileSync(src, path.join(RAW, `${this.chapter}.raw.webm`))
     fs.rmSync(this.tmp, { recursive: true, force: true })
-    console.log(
-      `${this.chapter}: ${dur}s, ${this.events.length} events (recorded ${total.toFixed(1)}s, trimmed ${lead.toFixed(2)}s)`,
-    )
+    console.log(`${this.chapter}: ${dur}s, ${events.length} events (recorded ${total.toFixed(1)}s, trimmed ${lead.toFixed(2)}s)`)
     return { duration: dur }
   }
 }

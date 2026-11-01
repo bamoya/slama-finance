@@ -10,7 +10,7 @@ export async function run() {
   await page.goto(`${HOSTS.owner}/register`)
   await page.waitForSelector('input[name=firstName]')
   await sleep(1200)
-  rec.start()
+  await rec.start()
   await rec.pause(800, 'Page de création de compte propriétaire')
   await rec.type('input[name=firstName]', KARIM.firstName, 'Saisie du prénom')
   await rec.type('input[name=lastName]', KARIM.lastName, 'Saisie du nom')

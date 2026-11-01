@@ -11,7 +11,7 @@ export async function run() {
   await page.goto(`${HOSTS.owner}/`)
   await page.waitForLoadState('networkidle').catch(() => {})
   await sleep(1000)
-  rec.start()
+  await rec.start()
   await rec.pause(900, 'Espace propriétaire vide')
   await rec.click(page.getByRole('link', { name: /Nouvelle organisation/ }).or(page.getByRole('button', { name: /Nouvelle organisation/ })).first(), 'Clic sur « Nouvelle organisation »', { settle: 500 })
   await page.waitForSelector('#organization-address')
