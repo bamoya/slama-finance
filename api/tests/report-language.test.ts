@@ -99,7 +99,9 @@ describe('scheduled report languages and visual parity', () => {
       expect(email.html).not.toContain('<Weekly')
       expect(email.html).toContain('role="presentation"')
       expect(email.html).toContain('x=1&amp;y=2')
-      expect(email.text).toContain('04-10-2026 13:00 · Africa/Casablanca')
+      // Morocco moved Casablanca to permanent UTC+0 on 2026-09-20 (tzdata 2026c);
+      // the rendered hour depends on the runtime's tz database, so only pin the format.
+      expect(email.text).toMatch(/04-10-2026 \d{2}:\d{2} · Africa\/Casablanca/)
       expect(email.text).not.toMatch(/oct\.|Oct/)
       expect(email.text).toContain(language === 'fr' ? 'Période sélectionnée' : 'Selected period')
       expect(email.subject).toBe(
