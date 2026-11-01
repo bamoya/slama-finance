@@ -1,0 +1,262 @@
+{
+  "chapter": "ch02-organisation",
+  "width": 1440,
+  "height": 900,
+  "duration": 32.04,
+  "lead": 3.8,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Espace propriétaire vide",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.81,
+      "type": "click",
+      "label": "Clic sur « Nouvelle organisation »",
+      "box": {
+        "x": 1244,
+        "y": 123,
+        "width": 168,
+        "height": 38
+      }
+    },
+    {
+      "t": 3.31,
+      "type": "type",
+      "label": "Saisie du nom de l’organisation",
+      "box": {
+        "x": 466,
+        "y": 363,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 4.12,
+      "type": "pause",
+      "label": "L’adresse se formate automatiquement",
+      "box": {
+        "x": 466,
+        "y": 471,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 5.37,
+      "type": "type",
+      "label": "Adresse personnalisée : atlas-negoce",
+      "box": {
+        "x": 466,
+        "y": 471,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 6.33,
+      "type": "pause",
+      "label": "Adresse disponible ✓",
+      "box": {
+        "x": 466,
+        "y": 540,
+        "width": 618,
+        "height": 29
+      }
+    },
+    {
+      "t": 7.74,
+      "type": "type",
+      "label": "Activité professionnelle",
+      "box": {
+        "x": 466,
+        "y": 637,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 9.34,
+      "type": "click",
+      "label": "Continuer",
+      "box": {
+        "x": 985,
+        "y": 766,
+        "width": 99,
+        "height": 38
+      }
+    },
+    {
+      "t": 10.78,
+      "type": "type",
+      "label": "Raison sociale",
+      "box": {
+        "x": 466,
+        "y": 363,
+        "width": 301,
+        "height": 39
+      }
+    },
+    {
+      "t": 12.19,
+      "type": "type",
+      "label": "E-mail de contact",
+      "box": {
+        "x": 783,
+        "y": 363,
+        "width": 301,
+        "height": 39
+      }
+    },
+    {
+      "t": 13.72,
+      "type": "type",
+      "label": "Adresse",
+      "box": {
+        "x": 466,
+        "y": 532,
+        "width": 618,
+        "height": 39
+      }
+    },
+    {
+      "t": 15.43,
+      "type": "type",
+      "label": "Ville",
+      "box": {
+        "x": 466,
+        "y": 617,
+        "width": 301,
+        "height": 39
+      }
+    },
+    {
+      "t": 16.53,
+      "type": "type",
+      "label": "ICE",
+      "box": {
+        "x": 783,
+        "y": 617,
+        "width": 301,
+        "height": 39
+      }
+    },
+    {
+      "t": 17.66,
+      "type": "click",
+      "label": "Continuer",
+      "box": {
+        "x": 985,
+        "y": 830,
+        "width": 99,
+        "height": 38
+      }
+    },
+    {
+      "t": 19.05,
+      "type": "click",
+      "label": "Import du logo",
+      "box": {
+        "x": 484,
+        "y": 417,
+        "width": 150,
+        "height": 39
+      }
+    },
+    {
+      "t": 20.86,
+      "type": "pause",
+      "label": "Logo ajouté, aperçu du document mis à jour",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 22.57,
+      "type": "click",
+      "label": "Continuer",
+      "box": {
+        "x": 985,
+        "y": 801,
+        "width": 99,
+        "height": 38
+      }
+    },
+    {
+      "t": 23.15,
+      "type": "pause",
+      "label": "Valeurs par défaut des documents",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 24.49,
+      "type": "click",
+      "label": "Continuer",
+      "box": {
+        "x": 985,
+        "y": 808,
+        "width": 99,
+        "height": 38
+      }
+    },
+    {
+      "t": 25.71,
+      "type": "click",
+      "label": "Continuer (équipe)",
+      "box": {
+        "x": 985,
+        "y": 610,
+        "width": 99,
+        "height": 38
+      }
+    },
+    {
+      "t": 26.29,
+      "type": "pause",
+      "label": "Vérification avant création",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 27.79,
+      "type": "click",
+      "label": "Clic sur « Créer mon organisation »",
+      "box": {
+        "x": 905,
+        "y": 808,
+        "width": 179,
+        "height": 38
+      }
+    },
+    {
+      "t": 29.38,
+      "type": "pause",
+      "label": "Organisation créée, essai gratuit démarré",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "chapter": "ch09-rapports",
+  "width": 1440,
+  "height": 900,
+  "duration": 28.76,
+  "lead": 6.62,
+  "events": [
+    {
+      "t": 0.15,
+      "type": "pause",
+      "label": "Rapports planifiés : rapport mensuel de gestion",
+      "box": {
+        "x": 233,
+        "y": 216,
+        "width": 1166,
+        "height": 75
+      }
+    },
+    {
+      "t": 2.37,
+      "type": "click",
+      "label": "Envoi du rapport par e-mail",
+      "box": {
+        "x": 1354,
+        "y": 253,
+        "width": 32,
+        "height": 32
+      }
+    },
+    {
+      "t": 4.14,
+      "type": "click",
+      "label": "Confirmation de l’envoi",
+      "box": {
+        "x": 830,
+        "y": 500,
+        "width": 81,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.42,
+      "type": "pause",
+      "label": "Rapport envoyé au dirigeant",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 8.46,
+      "type": "navigate",
+      "label": "Le dirigeant reçoit le rapport par e-mail",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 10.23,
+      "type": "pause",
+      "label": "Rapport mensuel reçu par e-mail",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    },
+    {
+      "t": 12.43,
+      "type": "navigate",
+      "label": "Espace propriétaire : toutes les organisations",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 16.41,
+      "type": "click",
+      "label": "Choix de la période",
+      "box": {
+        "x": 1176,
+        "y": 226,
+        "width": 144,
+        "height": 17
+      }
+    },
+    {
+      "t": 17.79,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 1128,
+        "y": 343,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 18.68,
+      "type": "click",
+      "label": "Mois précédent",
+      "box": {
+        "x": 1128,
+        "y": 343,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 19.82,
+      "type": "click",
+      "label": "Début : 1er septembre",
+      "box": {
+        "x": 1154,
+        "y": 406,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 20.89,
+      "type": "click",
+      "label": "Mois suivant",
+      "box": {
+        "x": 1282,
+        "y": 343,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 22.08,
+      "type": "click",
+      "label": "Fin : 31 octobre",
+      "box": {
+        "x": 1256,
+        "y": 534,
+        "width": 26,
+        "height": 26
+      }
+    },
+    {
+      "t": 23.18,
+      "type": "click",
+      "label": "Appliquer la période",
+      "box": {
+        "x": 1320,
+        "y": 589,
+        "width": 79,
+        "height": 29
+      }
+    },
+    {
+      "t": 25.07,
+      "type": "pause",
+      "label": "Vue consolidée des deux organisations sur septembre–octobre",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 27.27,
+      "type": "pause",
+      "label": "Détail par organisation",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "chapter": "ch04-modele",
+  "width": 1440,
+  "height": 900,
+  "duration": 21.76,
+  "lead": 6.73,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Modèles de documents",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.97,
+      "type": "click",
+      "label": "Clic sur « Créer un modèle »",
+      "box": {
+        "x": 1248,
+        "y": 94,
+        "width": 138,
+        "height": 29
+      }
+    },
+    {
+      "t": 4.11,
+      "type": "type",
+      "label": "Nom du modèle",
+      "box": {
+        "x": 246,
+        "y": 287,
+        "width": 269,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.65,
+      "type": "click",
+      "label": "Choix de la mise en page « Moderne »",
+      "box": {
+        "x": 429,
+        "y": 353,
+        "width": 183,
+        "height": 202
+      }
+    },
+    {
+      "t": 7.45,
+      "type": "click",
+      "label": "Choix de la couleur de marque",
+      "box": {
+        "x": 246,
+        "y": 570,
+        "width": 51,
+        "height": 29
+      }
+    },
+    {
+      "t": 9.2,
+      "type": "click",
+      "label": "Clic sur « Téléverser logo »",
+      "box": {
+        "x": 246,
+        "y": 702,
+        "width": 131,
+        "height": 32
+      }
+    },
+    {
+      "t": 11.45,
+      "type": "pause",
+      "label": "Logo ajouté : aperçu en direct",
+      "box": {
+        "x": 836,
+        "y": 225,
+        "width": 550,
+        "height": 20
+      }
+    },
+    {
+      "t": 13.05,
+      "type": "type",
+      "label": "Pied de page : coordonnées bancaires",
+      "box": {
+        "x": 246,
+        "y": 794,
+        "width": 550,
+        "height": 77
+      }
+    },
+    {
+      "t": 15.11,
+      "type": "pause",
+      "label": "Aperçu final de la facture",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 17.21,
+      "type": "click",
+      "label": "Aperçu du devis",
+      "box": {
+        "x": 908,
+        "y": 261,
+        "width": 53,
+        "height": 29
+      }
+    },
+    {
+      "t": 19.23,
+      "type": "click",
+      "label": "Enregistrement du modèle",
+      "box": {
+        "x": 1175,
+        "y": 132,
+        "width": 211,
+        "height": 29
+      }
+    },
+    {
+      "t": 20.82,
+      "type": "pause",
+      "label": "Modèle enregistré",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

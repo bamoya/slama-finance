@@ -1,0 +1,152 @@
+{
+  "chapter": "ch06-facture",
+  "width": 1440,
+  "height": 900,
+  "duration": 20.4,
+  "lead": 6.67,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Liste des devis : devis Coopérative Al Baraka",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.55,
+      "type": "click",
+      "label": "Ouverture du devis",
+      "box": {
+        "x": 281,
+        "y": 292,
+        "width": 144,
+        "height": 15
+      }
+    },
+    {
+      "t": 3.39,
+      "type": "click",
+      "label": "Devis marqué comme accepté",
+      "box": {
+        "x": 686,
+        "y": 124,
+        "width": 168,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.34,
+      "type": "click",
+      "label": "Clic sur « Créer une facture »",
+      "box": {
+        "x": 882,
+        "y": 124,
+        "width": 125,
+        "height": 29
+      }
+    },
+    {
+      "t": 6.36,
+      "type": "pause",
+      "label": "Facture créée à partir du devis",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 7.67,
+      "type": "type",
+      "label": "Date d’échéance",
+      "box": {
+        "x": 1029,
+        "y": 265,
+        "width": 357,
+        "height": 29
+      }
+    },
+    {
+      "t": 8.98,
+      "type": "click",
+      "label": "Création du brouillon de facture",
+      "box": {
+        "x": 1176,
+        "y": 124,
+        "width": 211,
+        "height": 29
+      }
+    },
+    {
+      "t": 10.56,
+      "type": "pause",
+      "label": "Brouillon de facture : lignes reprises du devis",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 12.13,
+      "type": "click",
+      "label": "Émission de la facture",
+      "box": {
+        "x": 1167,
+        "y": 124,
+        "width": 147,
+        "height": 29
+      }
+    },
+    {
+      "t": 14.01,
+      "type": "pause",
+      "label": "Facture émise avec son numéro",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 15.64,
+      "type": "click",
+      "label": "Téléchargement du PDF",
+      "box": {
+        "x": 861,
+        "y": 178,
+        "width": 152,
+        "height": 29
+      }
+    },
+    {
+      "t": 16.6,
+      "type": "navigate",
+      "label": "Ouverture du PDF de la facture",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 17.65,
+      "type": "pause",
+      "label": "PDF de la facture : modèle de marque, lignes, TVA, RIB",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

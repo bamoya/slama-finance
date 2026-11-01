@@ -1,0 +1,240 @@
+{
+  "chapter": "ch08-equipe",
+  "width": 1440,
+  "height": 900,
+  "duration": 30.52,
+  "lead": 6.77,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Équipe actuelle : Karim et Nadia",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.73,
+      "type": "click",
+      "label": "Ouverture de « Rôles et permissions »",
+      "box": {
+        "x": 10,
+        "y": 617,
+        "width": 172,
+        "height": 29
+      }
+    },
+    {
+      "t": 3.88,
+      "type": "click",
+      "label": "Clic sur « Créer un rôle »",
+      "box": {
+        "x": 1090,
+        "y": 94,
+        "width": 117,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.67,
+      "type": "type",
+      "label": "Nom du rôle",
+      "box": {
+        "x": 246,
+        "y": 244,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 6.96,
+      "type": "type",
+      "label": "Description du rôle",
+      "box": {
+        "x": 822,
+        "y": 244,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 8.84,
+      "type": "click",
+      "label": "Création du rôle",
+      "box": {
+        "x": 1288,
+        "y": 132,
+        "width": 98,
+        "height": 29
+      }
+    },
+    {
+      "t": 10.43,
+      "type": "pause",
+      "label": "Matrice des permissions par module",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 12.06,
+      "type": "click",
+      "label": "Permission : Clients — Consulter",
+      "box": {
+        "x": 895,
+        "y": 405,
+        "width": 35,
+        "height": 19
+      }
+    },
+    {
+      "t": 13.04,
+      "type": "click",
+      "label": "Permission : Factures — Consulter",
+      "box": {
+        "x": 895,
+        "y": 546,
+        "width": 35,
+        "height": 19
+      }
+    },
+    {
+      "t": 14.03,
+      "type": "click",
+      "label": "Permission : Paiements — Consulter",
+      "box": {
+        "x": 895,
+        "y": 652,
+        "width": 35,
+        "height": 19
+      }
+    },
+    {
+      "t": 14.99,
+      "type": "click",
+      "label": "Permission : Rapports — Consulter",
+      "box": {
+        "x": 895,
+        "y": 722,
+        "width": 35,
+        "height": 19
+      }
+    },
+    {
+      "t": 15.32,
+      "type": "pause",
+      "label": "4 permissions sélectionnées",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 16.95,
+      "type": "click",
+      "label": "Enregistrement des permissions",
+      "box": {
+        "x": 1184,
+        "y": 94,
+        "width": 202,
+        "height": 29
+      }
+    },
+    {
+      "t": 18.48,
+      "type": "click",
+      "label": "Confirmation",
+      "box": {
+        "x": 830,
+        "y": 480,
+        "width": 81,
+        "height": 29
+      }
+    },
+    {
+      "t": 19.85,
+      "type": "pause",
+      "label": "Rôle « Comptable » enregistré",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 20.75,
+      "type": "navigate",
+      "label": "Invitation d’un nouveau membre",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 24.38,
+      "type": "type",
+      "label": "E-mail de Salma Idrissi",
+      "box": {
+        "x": 246,
+        "y": 203,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 25.88,
+      "type": "click",
+      "label": "Attribution du rôle « Comptable »",
+      "box": {
+        "x": 469,
+        "y": 280,
+        "width": 66,
+        "height": 17
+      }
+    },
+    {
+      "t": 26.56,
+      "type": "pause",
+      "label": "Rôle attribué : permissions héritées",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 28.21,
+      "type": "click",
+      "label": "Envoi de l’invitation",
+      "box": {
+        "x": 1233,
+        "y": 94,
+        "width": 153,
+        "height": 29
+      }
+    },
+    {
+      "t": 30.09,
+      "type": "pause",
+      "label": "Invitation envoyée",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

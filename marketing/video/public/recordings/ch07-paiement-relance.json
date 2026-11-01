@@ -1,0 +1,196 @@
+{
+  "chapter": "ch07-paiement-relance",
+  "width": 1440,
+  "height": 900,
+  "duration": 34,
+  "lead": 6.83,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Liste des factures",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.47,
+      "type": "click",
+      "label": "Ouverture de la facture",
+      "box": {
+        "x": 281,
+        "y": 292,
+        "width": 142,
+        "height": 15
+      }
+    },
+    {
+      "t": 2.49,
+      "type": "pause",
+      "label": "Facture émise : solde à recevoir 49 500 MAD",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 3.96,
+      "type": "click",
+      "label": "Clic sur « Enregistrer un paiement »",
+      "box": {
+        "x": 477,
+        "y": 178,
+        "width": 183,
+        "height": 29
+      }
+    },
+    {
+      "t": 5.59,
+      "type": "type",
+      "label": "Montant partiel : 20 000 MAD",
+      "box": {
+        "x": 246,
+        "y": 267,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 6.62,
+      "type": "click",
+      "label": "Mode de paiement",
+      "box": {
+        "x": 246,
+        "y": 353,
+        "width": 564,
+        "height": 29
+      }
+    },
+    {
+      "t": 7.69,
+      "type": "click",
+      "label": "Virement bancaire",
+      "box": {
+        "x": 250,
+        "y": 422,
+        "width": 555,
+        "height": 29
+      }
+    },
+    {
+      "t": 9.27,
+      "type": "click",
+      "label": "Enregistrement du paiement",
+      "box": {
+        "x": 1227,
+        "y": 94,
+        "width": 159,
+        "height": 29
+      }
+    },
+    {
+      "t": 10.85,
+      "type": "pause",
+      "label": "Paiement enregistré, en attente de confirmation",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 12.18,
+      "type": "click",
+      "label": "Clic sur « Confirmer le paiement »",
+      "box": {
+        "x": 1161,
+        "y": 124,
+        "width": 153,
+        "height": 29
+      }
+    },
+    {
+      "t": 13.95,
+      "type": "click",
+      "label": "Confirmation de l’encaissement",
+      "box": {
+        "x": 758,
+        "y": 498,
+        "width": 153,
+        "height": 29
+      }
+    },
+    {
+      "t": 15.53,
+      "type": "pause",
+      "label": "Paiement confirmé : solde restant mis à jour",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 20.25,
+      "type": "navigate",
+      "label": "Le client reçoit le rappel automatique d’échéance",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 21.51,
+      "type": "pause",
+      "label": "Rappel automatique : montant restant dû",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    },
+    {
+      "t": 24.31,
+      "type": "navigate",
+      "label": "Retour au tableau de bord",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 30,
+      "type": "pause",
+      "label": "Tableau de bord mis à jour : facturé, encaissé, solde",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 32.5,
+      "type": "pause",
+      "label": "Graphiques : ventes et encaissements",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}

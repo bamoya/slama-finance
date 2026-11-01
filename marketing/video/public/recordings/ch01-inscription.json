@@ -1,0 +1,218 @@
+{
+  "chapter": "ch01-inscription",
+  "width": 1440,
+  "height": 900,
+  "duration": 28.92,
+  "lead": 3.06,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Page de création de compte propriétaire",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 1.52,
+      "type": "type",
+      "label": "Saisie du prénom",
+      "box": {
+        "x": 269,
+        "y": 362,
+        "width": 210,
+        "height": 44
+      }
+    },
+    {
+      "t": 2.57,
+      "type": "type",
+      "label": "Saisie du nom",
+      "box": {
+        "x": 495,
+        "y": 362,
+        "width": 210,
+        "height": 44
+      }
+    },
+    {
+      "t": 3.68,
+      "type": "type",
+      "label": "Saisie de l’adresse e-mail",
+      "box": {
+        "x": 269,
+        "y": 449,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 5.72,
+      "type": "type",
+      "label": "Saisie du mot de passe",
+      "box": {
+        "x": 269,
+        "y": 535,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 7.15,
+      "type": "type",
+      "label": "Confirmation du mot de passe",
+      "box": {
+        "x": 269,
+        "y": 621,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 8.73,
+      "type": "click",
+      "label": "Clic sur « Créer un compte »",
+      "box": {
+        "x": 269,
+        "y": 683,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 10.02,
+      "type": "pause",
+      "label": "Message : vérifiez votre boîte e-mail",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 11.55,
+      "type": "navigate",
+      "label": "Réception de l’e-mail de vérification",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 12.82,
+      "type": "pause",
+      "label": "E-mail de vérification reçu",
+      "box": {
+        "x": 578,
+        "y": 153,
+        "width": 844,
+        "height": 729
+      }
+    },
+    {
+      "t": 15.13,
+      "type": "click",
+      "label": "Clic sur le lien de vérification",
+      "box": {
+        "x": 740,
+        "y": 357,
+        "width": 243,
+        "height": 42
+      }
+    },
+    {
+      "t": 16.18,
+      "type": "pause",
+      "label": "Page de confirmation de l’adresse e-mail",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 18.05,
+      "type": "click",
+      "label": "Clic sur « Vérifier l’adresse e-mail »",
+      "box": {
+        "x": 269,
+        "y": 405,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 19.63,
+      "type": "pause",
+      "label": "Adresse e-mail vérifiée",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 21.39,
+      "type": "click",
+      "label": "Clic sur « Connexion propriétaire »",
+      "box": {
+        "x": 336,
+        "y": 445,
+        "width": 119,
+        "height": 19
+      }
+    },
+    {
+      "t": 22.93,
+      "type": "type",
+      "label": "Saisie de l’adresse e-mail",
+      "box": {
+        "x": 269,
+        "y": 434,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 24.74,
+      "type": "type",
+      "label": "Saisie du mot de passe",
+      "box": {
+        "x": 269,
+        "y": 520,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 26.25,
+      "type": "click",
+      "label": "Clic sur « Se connecter »",
+      "box": {
+        "x": 269,
+        "y": 582,
+        "width": 436,
+        "height": 44
+      }
+    },
+    {
+      "t": 27.53,
+      "type": "pause",
+      "label": "Espace propriétaire : connexion réussie",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ]
+}
