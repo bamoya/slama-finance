@@ -3536,12 +3536,11 @@ INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM rol
 INSERT INTO company_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_days, sender_name, sender_email, locale, subject_template, body_template, body_format, english_subject_template, english_body_template) VALUES
-  ('delivery_prepared', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Bon de livraison {{documentNumber}}', '<div style="font-family:Arial,sans-serif;padding:24px;border:1px solid #e4e7ec;border-radius:16px"><h2 style="color:#8f6515">B-Finance</h2><p>Bonjour {{clientName}},</p><p>Votre bon de livraison {{documentNumber}}, prévu le {{deliveryDate}}, est disponible en pièce jointe.</p><p>Merci pour votre confiance.<br>L’équipe B-Finance</p></div>', 'html', 'B-Finance — Delivery note {{documentNumber}}', '<div style="font-family:Arial,sans-serif;padding:24px;border:1px solid #e4e7ec;border-radius:16px"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Your delivery note {{documentNumber}}, scheduled for {{deliveryDate}}, is attached.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>'),
-  ('estimate_expiry_reminder', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Validité du devis {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
+  ('delivery_prepared', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Bon de livraison {{documentNumber}}', '<div style="font-family:Arial,sans-serif;padding:24px;border:1px solid #e4e7ec;border-radius:16px"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Bonjour {{clientName}},</p><p>Votre bon de livraison {{documentNumber}}, prévu le {{deliveryDate}}, est disponible en pièce jointe.</p><p>Merci pour votre confiance.<br>L’équipe {{organizationName}}</p></div>', 'html', '{{organizationName}} — Delivery note {{documentNumber}}', '<div style="font-family:Arial,sans-serif;padding:24px;border:1px solid #e4e7ec;border-radius:16px"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Your delivery note {{documentNumber}}, scheduled for {{deliveryDate}}, is attached.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>'),
+  ('estimate_expiry_reminder', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Validité du devis {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
   <div style="height:5px;background-color:#ad7d1d;border-radius:16px"></div>
   <div style="padding:24px">
-    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">BaMoYa</p>
-    <p style="margin:0;font-size:12px;font-weight:700;color:#4f5661">Finance</p>
+    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">{{organizationName}}</p>
     <div style="padding:24px 0 12px">
       <span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700">SUIVI DE DEVIS</span>
     </div>
@@ -3570,18 +3569,17 @@ INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_da
       <p style="margin:0;font-size:13px;color:#4f5661">Si vous souhaitez donner suite au devis, contactez-nous. Si sa date de validité est dépassée, nous pourrons vérifier les conditions et préparer une nouvelle proposition.</p>
     </div>
     <p style="margin:0;padding:24px 0 16px;color:#4f5661">Nous serons ravis de vous accompagner dans la suite de votre projet.</p>
-    <p style="margin:0;font-weight:700">L’équipe B-Finance</p>
+    <p style="margin:0;font-weight:700">L’équipe {{organizationName}}</p>
   </div>
   <div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px">
-    <p style="margin:0;font-size:12px;color:#4f5661">B-Finance · Suivi de votre relation commerciale</p>
+    <p style="margin:0;font-size:12px;color:#4f5661">{{organizationName}} · Suivi de votre relation commerciale</p>
     <p style="margin:4px 0 0;font-size:11px;color:#4f5661">Message automatique. Pour toute demande, contactez votre interlocuteur habituel.</p>
   </div>
-</div>', 'html', 'B-Finance — Estimate expiry {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Estimate {{documentNumber}} is valid until {{validUntil}}. Total: {{total}} {{currency}}.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>'),
-  ('estimate_sent', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Devis {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
+</div>', 'html', '{{organizationName}} — Estimate expiry {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Estimate {{documentNumber}} is valid until {{validUntil}}. Total: {{total}} {{currency}}.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>'),
+  ('estimate_sent', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Devis {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
   <div style="height:5px;background-color:#ad7d1d;border-radius:16px"></div>
   <div style="padding:24px">
-    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">BaMoYa</p>
-    <p style="margin:0;font-size:12px;font-weight:700;color:#4f5661">Finance</p>
+    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">{{organizationName}}</p>
     <div style="padding:24px 0 12px">
       <span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700">VOTRE PROJET</span>
     </div>
@@ -3614,18 +3612,17 @@ INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_da
       <p style="margin:0;font-size:13px;color:#4f5661">Ce devis est une proposition commerciale, et non une facture. Contactez-nous pour confirmer votre accord ou demander un ajustement.</p>
     </div>
     <p style="margin:0;padding:24px 0 16px;color:#4f5661">Nous restons à votre disposition pour vous accompagner dans votre commande.</p>
-    <p style="margin:0;font-weight:700">L’équipe B-Finance</p>
+    <p style="margin:0;font-weight:700">L’équipe {{organizationName}}</p>
   </div>
   <div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px">
-    <p style="margin:0;font-size:12px;color:#4f5661">B-Finance · Suivi de votre relation commerciale</p>
+    <p style="margin:0;font-size:12px;color:#4f5661">{{organizationName}} · Suivi de votre relation commerciale</p>
     <p style="margin:4px 0 0;font-size:11px;color:#4f5661">Message automatique. Pour toute demande, contactez votre interlocuteur habituel.</p>
   </div>
-</div>', 'html', 'B-Finance — Estimate {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Your estimate {{documentNumber}} is available. Total: {{total}} {{currency}}. Valid until {{validUntil}}.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>'),
-  ('invoice_due_reminder', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Échéance de la facture {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
+</div>', 'html', '{{organizationName}} — Estimate {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Your estimate {{documentNumber}} is available. Total: {{total}} {{currency}}. Valid until {{validUntil}}.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>'),
+  ('invoice_due_reminder', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Échéance de la facture {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
   <div style="height:5px;background-color:#ad7d1d;border-radius:16px"></div>
   <div style="padding:24px">
-    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">BaMoYa</p>
-    <p style="margin:0;font-size:12px;font-weight:700;color:#4f5661">Finance</p>
+    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">{{organizationName}}</p>
     <div style="padding:24px 0 12px">
       <span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700">SUIVI DE FACTURE</span>
     </div>
@@ -3654,18 +3651,17 @@ INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_da
       <p style="margin:0;font-size:13px;color:#4f5661">Si votre règlement vient d’être effectué, contactez-nous afin que nous puissions vérifier sa prise en compte.</p>
     </div>
     <p style="margin:0;padding:24px 0 16px;color:#4f5661">En cas de question sur votre échéance ou votre règlement, votre interlocuteur habituel reste à votre écoute.</p>
-    <p style="margin:0;font-weight:700">L’équipe B-Finance</p>
+    <p style="margin:0;font-weight:700">L’équipe {{organizationName}}</p>
   </div>
   <div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px">
-    <p style="margin:0;font-size:12px;color:#4f5661">B-Finance · Suivi de votre relation commerciale</p>
+    <p style="margin:0;font-size:12px;color:#4f5661">{{organizationName}} · Suivi de votre relation commerciale</p>
     <p style="margin:4px 0 0;font-size:11px;color:#4f5661">Message automatique. Pour toute demande, contactez votre interlocuteur habituel.</p>
   </div>
-</div>', 'html', 'B-Finance — Invoice reminder {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Invoice {{documentNumber}} is due on {{dueDate}}. Outstanding: {{outstanding}} {{currency}}.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>'),
-  ('invoice_sent', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Facture {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
+</div>', 'html', '{{organizationName}} — Invoice reminder {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Invoice {{documentNumber}} is due on {{dueDate}}. Outstanding: {{outstanding}} {{currency}}.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>'),
+  ('invoice_sent', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Facture {{documentNumber}}', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
   <div style="height:5px;background-color:#ad7d1d;border-radius:16px"></div>
   <div style="padding:24px">
-    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">BaMoYa</p>
-    <p style="margin:0;font-size:12px;font-weight:700;color:#4f5661">Finance</p>
+    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">{{organizationName}}</p>
     <div style="padding:24px 0 12px">
       <span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700">FACTURATION</span>
     </div>
@@ -3694,18 +3690,17 @@ INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_da
       <p style="margin:0;font-size:13px;color:#4f5661">Le document joint reprend le détail des produits et les conditions de règlement.</p>
     </div>
     <p style="margin:0;padding:24px 0 16px;color:#4f5661">Pour toute question concernant cette facture, contactez votre interlocuteur habituel.</p>
-    <p style="margin:0;font-weight:700">L’équipe B-Finance</p>
+    <p style="margin:0;font-weight:700">L’équipe {{organizationName}}</p>
   </div>
   <div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px">
-    <p style="margin:0;font-size:12px;color:#4f5661">B-Finance · Suivi de votre relation commerciale</p>
+    <p style="margin:0;font-size:12px;color:#4f5661">{{organizationName}} · Suivi de votre relation commerciale</p>
     <p style="margin:4px 0 0;font-size:11px;color:#4f5661">Message automatique. Pour toute demande, contactez votre interlocuteur habituel.</p>
   </div>
-</div>', 'html', 'B-Finance — Invoice {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Your invoice {{documentNumber}} is available. Total: {{total}} {{currency}}.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>'),
-  ('payment_received', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', 'B-Finance — Paiement {{paymentNumber}} reçu', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
+</div>', 'html', '{{organizationName}} — Invoice {{documentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Your invoice {{documentNumber}} is available. Total: {{total}} {{currency}}.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>'),
+  ('payment_received', false, 0, NULL, 'B-Finance', 'notifications@example.invalid', 'company', '{{organizationName}} — Paiement {{paymentNumber}} reçu', '<div lang="fr" dir="ltr" style="max-width:600px;font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#20242b;background-color:#ffffff;border:1px solid #e4e7ec;border-radius:16px">
   <div style="height:5px;background-color:#ad7d1d;border-radius:16px"></div>
   <div style="padding:24px">
-    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">BaMoYa</p>
-    <p style="margin:0;font-size:12px;font-weight:700;color:#4f5661">Finance</p>
+    <p style="margin:0;font-size:26px;font-weight:700;color:#8f6515">{{organizationName}}</p>
     <div style="padding:24px 0 12px">
       <span style="display:inline-block;padding:5px 10px;border-radius:6px;background-color:#faf3df;color:#8f6515;font-size:11px;font-weight:700">CONFIRMATION DE PAIEMENT</span>
     </div>
@@ -3734,13 +3729,13 @@ INSERT INTO notification_rules (event_key, enabled, offset_days, repeat_every_da
       <p style="margin:0;font-size:13px;color:#4f5661">Cette confirmation concerne uniquement le montant indiqué. Elle ne signifie pas nécessairement que la facture est intégralement réglée.</p>
     </div>
     <p style="margin:0;padding:24px 0 16px;color:#4f5661">Merci pour votre confiance et pour votre collaboration.</p>
-    <p style="margin:0;font-weight:700">L’équipe B-Finance</p>
+    <p style="margin:0;font-weight:700">L’équipe {{organizationName}}</p>
   </div>
   <div style="padding:16px 24px;background-color:#f7f8fa;border-radius:12px">
-    <p style="margin:0;font-size:12px;color:#4f5661">B-Finance · Suivi de votre relation commerciale</p>
+    <p style="margin:0;font-size:12px;color:#4f5661">{{organizationName}} · Suivi de votre relation commerciale</p>
     <p style="margin:4px 0 0;font-size:11px;color:#4f5661">Message automatique. Pour toute demande, contactez votre interlocuteur habituel.</p>
   </div>
-</div>', 'html', 'B-Finance — Payment {{paymentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">B-Finance</h2><p>Hello {{clientName}},</p><p>Your payment {{paymentNumber}} of {{amount}} {{currency}} has been recorded for invoice {{documentNumber}}.</p><p>Thank you for your trust.<br>The B-Finance team</p></div>')
+</div>', 'html', '{{organizationName}} — Payment {{paymentNumber}}', '<div lang="en" style="max-width:600px;padding:24px;border:1px solid #e4e7ec;border-radius:16px;font-family:Arial,sans-serif"><h2 style="color:#8f6515">{{organizationName}}</h2><p>Hello {{clientName}},</p><p>Your payment {{paymentNumber}} of {{amount}} {{currency}} has been recorded for invoice {{documentNumber}}.</p><p>Thank you for your trust.<br>The {{organizationName}} team</p></div>')
 ON CONFLICT DO NOTHING;
 
   PERFORM set_config('app.organization_id',coalesce(previous_scope,''),true);

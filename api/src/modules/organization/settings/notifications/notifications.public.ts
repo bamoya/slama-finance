@@ -4,6 +4,7 @@ import type { Transaction } from '../../../../lib/db.js'
 export interface NotificationPolicyPublicApi {
   rule(event: string, tx?: Transaction): Promise<NotificationRule>
   rules(tx?: Transaction): Promise<NotificationRule[]>
+  organizationName(tx?: Transaction): Promise<string>
   compose(
     rule: NotificationRule,
     values: Record<string, string>,

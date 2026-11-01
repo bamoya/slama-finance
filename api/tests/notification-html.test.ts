@@ -24,7 +24,7 @@ describe('notification HTML composition', () => {
     expect(result.html).toContain('background-color:#a77718')
     expect(result.html).not.toContain('<img')
     expect(result.html).toContain('&lt;img')
-    expect(result.text).toContain('1250 MAD')
+    expect(result.text).toContain('1\u202f250 MAD')
     expect(result.text).not.toContain('<table')
   })
   it('removes executable tags, events, dangerous URLs, CSS and attribute variables', () => {
@@ -51,5 +51,36 @@ describe('notification HTML composition', () => {
     expect(sanitizeEmailHtml(safe)).toBe(safe)
     expect(safe).toContain('colspan="2"')
     expect(safe).toContain('cellpadding="12"')
+  })
+})
+
+describe('business email branding and formatting', () => {
+  const legacy = {
+    eventKey: 'invoice_due_reminder' as const,
+    subjectTemplate: 'B-Finance — Échéance {{documentNumber}}',
+    bodyFormat: 'html' as const,
+    bodyTemplate:
+      '<div><p style="margin:0;font-size:26px">BaMoYa</p>\n    <p style="margin:0;font-size:12px">Finance</p><p>{{outstanding}} {{currency}} le {{dueDate}}</p><p>L’équipe B-Finance</p></div>',
+  }
+  const values = {
+    organizationName: 'Atlas Négoce SARL',
+    documentNumber: 'FAC-1',
+    outstanding: '126180.00',
+    currency: 'MAD',
+    dueDate: '2026-12-01',
+  }
+  it('renders the organization name instead of the platform brand, even for stored legacy templates', () => {
+    const result = composeNotification({ ...legacy, locale: 'fr-MA' }, values)
+    expect(result.subject).toBe('Atlas Négoce SARL — Échéance FAC-1')
+    expect(result.html).toContain('Atlas Négoce SARL')
+    expect(result.html).not.toContain('BaMoYa')
+    expect(result.html).not.toContain('B-Finance')
+    expect(result.html).not.toContain('>Finance<')
+  })
+  it('formats money and dates by language', () => {
+    const fr = composeNotification({ ...legacy, locale: 'fr-MA' }, values)
+    expect(fr.text).toContain('126\u202f180,00 MAD le 01-12-2026')
+    const en = composeNotification({ ...legacy, locale: 'en-GB' }, values)
+    expect(en.text).toContain('126,180.00 MAD le 01-12-2026')
   })
 })

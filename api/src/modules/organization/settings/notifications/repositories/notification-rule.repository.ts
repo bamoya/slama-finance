@@ -15,6 +15,13 @@ export function createNotificationRuleRepository(database: () => Database) {
     transaction: base.transaction,
     authorize: base.authorizeWrite,
     company: base.company,
+    /** Business emails are sent in the organization's name: trade name, legal name, then registered name. */
+    async organizationName(tx: Database | Transaction = database()) {
+      const [row] = await tx.execute<{ name: string | null }>(
+        sql`select coalesce(nullif(btrim(c.trade_name),''), nullif(btrim(c.legal_name),''), (select o.name from organizations o where o.id = c.organization_id)) as name from company_settings c where c.id = 1`,
+      )
+      return row?.name ?? ''
+    },
     list(tx: Database | Transaction = database()) {
       return tx.select().from(notificationRules).orderBy(notificationRules.eventKey)
     },

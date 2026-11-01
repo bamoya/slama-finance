@@ -14,10 +14,10 @@ describe('branded notification defaults migration', () => {
       for (const row of rows) {
         expect(row.body_format).toBe('html')
         expect(row.locale).toBe('company')
-        expect(row.english_subject_template).toContain('B-Finance')
+        expect(row.english_subject_template).toContain('{{organizationName}}')
         expect(row.english_body_template).toContain('Hello {{clientName}}')
         expect(row.enabled).toBe(false)
-        expect(row.subject_template).toContain('B-Finance')
+        expect(row.subject_template).toContain('{{organizationName}}')
         const result = composeNotification(
           {
             eventKey: row.event_key,

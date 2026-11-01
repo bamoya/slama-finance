@@ -17,15 +17,52 @@ import type {
   RuleRow,
 } from '../repositories/notification-rule.repository.js'
 import { emailDocument, emailPlainText, escapeEmailText, sanitizeEmailHtml } from './email-html.js'
+import { formatEmailValues, useOrganizationBranding } from './email-format.js'
 import { emailSample } from './email-sample.js'
 
 export const eventVariables: Record<string, string[]> = {
-  invoice_sent: ['clientName', 'documentNumber', 'issueDate', 'total', 'currency'],
-  estimate_sent: ['clientName', 'documentNumber', 'issueDate', 'validUntil', 'total', 'currency'],
-  payment_received: ['clientName', 'documentNumber', 'paymentNumber', 'amount', 'currency'],
-  delivery_prepared: ['clientName', 'documentNumber', 'deliveryDate'],
-  invoice_due_reminder: ['clientName', 'documentNumber', 'dueDate', 'outstanding', 'currency'],
-  estimate_expiry_reminder: ['clientName', 'documentNumber', 'validUntil', 'total', 'currency'],
+  invoice_sent: [
+    'organizationName',
+    'clientName',
+    'documentNumber',
+    'issueDate',
+    'total',
+    'currency',
+  ],
+  estimate_sent: [
+    'organizationName',
+    'clientName',
+    'documentNumber',
+    'issueDate',
+    'validUntil',
+    'total',
+    'currency',
+  ],
+  payment_received: [
+    'organizationName',
+    'clientName',
+    'documentNumber',
+    'paymentNumber',
+    'amount',
+    'currency',
+  ],
+  delivery_prepared: ['organizationName', 'clientName', 'documentNumber', 'deliveryDate'],
+  invoice_due_reminder: [
+    'organizationName',
+    'clientName',
+    'documentNumber',
+    'dueDate',
+    'outstanding',
+    'currency',
+  ],
+  estimate_expiry_reminder: [
+    'organizationName',
+    'clientName',
+    'documentNumber',
+    'validUntil',
+    'total',
+    'currency',
+  ],
 }
 const escape = (s: string) =>
   s.replace(
@@ -56,14 +93,20 @@ export function composeNotification(
   },
   values: Record<string, string>,
 ) {
-  validateRuleTemplates(rule.eventKey, rule.subjectTemplate, rule.bodyTemplate)
+  const branded = values.organizationName !== undefined
+  const subjectTemplate = branded
+    ? useOrganizationBranding(rule.subjectTemplate)
+    : rule.subjectTemplate
+  const bodyTemplate = branded ? useOrganizationBranding(rule.bodyTemplate) : rule.bodyTemplate
+  validateRuleTemplates(rule.eventKey, subjectTemplate, bodyTemplate)
+  values = formatEmailValues(values, rule.locale ?? 'fr-MA')
   const interpolate = (template: string) =>
     template.replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, (_full, key: string) => values[key] ?? '')
-  const subject = interpolate(rule.subjectTemplate)
+  const subject = interpolate(subjectTemplate)
     .replace(/[\r\n]/g, ' ')
     .slice(0, 200)
   if (rule.bodyFormat === 'html') {
-    const safe = sanitizeEmailHtml(rule.bodyTemplate)
+    const safe = sanitizeEmailHtml(bodyTemplate)
     const html = sanitizeEmailHtml(
       safe.replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, (_full, key: string) =>
         escapeEmailText(values[key] ?? ''),
@@ -71,7 +114,7 @@ export function composeNotification(
     )
     return { subject, html: emailDocument(html, rule.locale), text: emailPlainText(html) }
   }
-  const text = interpolate(rule.bodyTemplate)
+  const text = interpolate(bodyTemplate)
   return {
     subject,
     text,
@@ -127,6 +170,7 @@ export function createNotificationRuleService(
       rule: async (event: string, tx?: Transaction) => resolved(await repo.event(event, tx), tx),
       rules: async (tx?: Transaction) => (await repo.list(tx)).map(output),
       compose: composeNotification,
+      organizationName: (tx?: Transaction) => repo.organizationName(tx),
     },
     async list() {
       return { items: (await repo.list()).map(output), permittedSenderEmails: options.allowedFrom }
@@ -136,7 +180,10 @@ export function createNotificationRuleService(
         await repo.authorize(tx, actor, 'notification_rules.update')
         const rule = output(await repo.rule(id, tx))
         const locale = resolveLocale(input.locale ?? rule.locale, (await repo.company(tx)).locale)
-        const content = composeNotification({ ...rule, ...input, locale }, emailSample)
+        const content = composeNotification(
+          { ...rule, ...input, locale },
+          { ...emailSample, organizationName: await repo.organizationName(tx) },
+        )
         const sanitizedBodyTemplate =
           input.bodyFormat === 'html' ? sanitizeEmailHtml(input.bodyTemplate) : input.bodyTemplate
         return {
@@ -206,7 +253,10 @@ export function createNotificationRuleService(
             'Configure a permitted sender before testing.',
           )
         const operator = await repo.operator(actor, tx)
-        const content = composeNotification(row, emailSample)
+        const content = composeNotification(row, {
+          ...emailSample,
+          organizationName: await repo.organizationName(tx),
+        })
         const message = await notifications.enqueue(
           {
             idempotencyKey: `rule-test:${randomUUID()}`,

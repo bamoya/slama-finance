@@ -618,6 +618,39 @@ describe('consent-aware sales notifications', () => {
       await fixture.client`select count(*)::int as total from notification_dispatches where source_type='payment' and source_id=${id}`
     expect(last?.total).toBe(1)
   })
+  it('reminds the remaining balance after a partial payment, in the organization name and company formats', async () => {
+    await rule('invoice_due_reminder', true)
+    const invoice = await document('invoice')
+    const today = companyDate(new Date())
+    const payment = await post('/api/v1/payments', {
+      operationId: randomUUID(),
+      invoiceId: invoice.id,
+      amount: '40.00',
+      currency: 'MAD',
+      method: 'cash',
+      status: 'confirmed',
+      paymentDate: today,
+      collectedOn: today,
+      bankAccountId: null,
+      reference: null,
+      chequeBank: null,
+      chequeNumber: null,
+    })
+    expect(payment.statusCode, payment.body).toBe(201)
+    const w = workers()
+    expect((await w.producer.sweep()).reminders).toBe(1)
+    const [message] =
+      await fixture.client`select subject, text_body from outbound_messages where subject like '%' || ${invoice.number} || '%' order by created_at desc limit 1`
+    expect(message?.text_body).toContain('60,00 MAD')
+    expect(message?.text_body).not.toContain('100,00 MAD')
+    expect(message?.text_body).not.toContain('BaMoYa')
+    expect(message?.subject).not.toContain('B-Finance')
+    const [company] = await fixture.client`select legal_name, trade_name from company_settings`
+    expect(message?.subject).toContain(company?.trade_name ?? company?.legal_name ?? '')
+    const [due] =
+      await fixture.client`select to_char(due_date,'DD-MM-YYYY') as d from invoices where id=${invoice.id}`
+    expect(message?.text_body).toContain(due?.d)
+  })
   it('repeated reminders and same-day policy edits do not duplicate, and settlement cancels ready reminders', async () => {
     await rule('invoice_due_reminder', true, { repeatEveryDays: 1 })
     const invoice = await document('invoice')

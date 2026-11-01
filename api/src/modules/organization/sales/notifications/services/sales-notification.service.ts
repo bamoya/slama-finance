@@ -245,6 +245,7 @@ export function createSalesNotificationService(
           )
         assertVersion(row.version, input.expectedVersion)
         const content = policies.compose(rule, {
+          organizationName: await policies.organizationName(tx),
           clientName: printableClientName(row.clientSnapshot, client.clientName),
           documentNumber: row.number ?? '',
           issueDate: row.issueDate,
@@ -465,6 +466,7 @@ export function createSalesNotificationService(
       if (!client.enabled || !client.recipient) return
       const rule = await policies.rule(eventKey, tx)
       const content = policies.compose(rule, {
+        organizationName: await policies.organizationName(tx),
         clientName: printableClientName(row.clientSnapshot, client.clientName),
         documentNumber: row.number ?? '',
         issueDate: row.issueDate,
@@ -498,6 +500,7 @@ export function createSalesNotificationService(
       const logical = 'first-confirmed'
       if (await repo.occurrenceExists('payment', id, 'payment_received', logical, tx)) return
       const content = policies.compose(rule, {
+        organizationName: await policies.organizationName(tx),
         clientName: printableClientName(row.clientSnapshot, client.clientName),
         documentNumber: row.number ?? '',
         paymentNumber: payment.number,
@@ -560,6 +563,7 @@ export function createSalesNotificationService(
             const logical = `${basis}:${date}:${recipientKey(client.recipient!)}`
             if (await repo.occurrenceExists(type, row.id, event, logical, tx)) continue
             const content = policies.compose(eligible.rule, {
+              organizationName: await policies.organizationName(tx),
               clientName: printableClientName(row.clientSnapshot, client.clientName),
               documentNumber: row.number ?? '',
               dueDate: basis,
