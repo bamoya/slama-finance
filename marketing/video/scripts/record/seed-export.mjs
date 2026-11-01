@@ -7,24 +7,129 @@ import { COMPANY, KARIM } from './data.mjs'
 export async function seedExport() {
   await clearMailFor(KARIM.email) // drop old temporary-password mails so the new org's one is used
   const o = await ownerApi()
-  const existing = ((await o.get('/api/v1/owner/organizations')).items ?? []).find((x) => x.slug === 'atlas-export')
-  const created = existing ?? await o.post('/api/v1/owner/organizations', { name: 'Atlas Négoce Export', slug: 'atlas-export', activity: 'Export de produits agricoles', requestId: randomUUID() })
+  const existing = ((await o.get('/api/v1/owner/organizations')).items ?? []).find(
+    (x) => x.slug === 'atlas-export',
+  )
+  const created =
+    existing ??
+    (await o.post('/api/v1/owner/organizations', {
+      name: 'Atlas Négoce Export',
+      slug: 'atlas-export',
+      activity: 'Export de produits agricoles',
+      requestId: randomUUID(),
+    }))
   const id = created.id ?? created.organization?.id
   let ob = existing ? null : await o.get(`/api/v1/owner/organizations/${id}/onboarding`)
-  const cfg = { name: 'Atlas Négoce Export', activity: 'Export de produits agricoles', company: { legalName: 'Atlas Négoce Export SARL AU', email: 'export@atlas-negoce.ma', phone: '+212 535 52 31 41', address: '24, Avenue des FAR, Zone industrielle', city: 'Meknès', ice: '002154873000058', registrationNumber: '18453', taxIdentifier: '40128757' }, branding: { accentColor: '#1f5c4a' }, defaults: { layout: 'essential', language: 'fr', currency: 'MAD', paymentDueDays: 30, estimateValidDays: 15, compact: false, vatEnabled: true, vatRate: 20 }, invitations: [] }
-  if (!existing) ob = await o.put(`/api/v1/owner/organizations/${id}/onboarding`, { configuration: cfg, currentStep: 6, expectedVersion: ob.version })
-  if (!existing) await o.post(`/api/v1/owner/organizations/${id}/onboarding/complete`, { expectedVersion: ob.version })
+  const cfg = {
+    name: 'Atlas Négoce Export',
+    activity: 'Export de produits agricoles',
+    company: {
+      legalName: 'Atlas Négoce Export SARL AU',
+      email: 'export@atlas-negoce.ma',
+      phone: '+212 535 52 31 41',
+      address: '24, Avenue des FAR, Zone industrielle',
+      city: 'Meknès',
+      ice: '002154873000058',
+      registrationNumber: '18453',
+      taxIdentifier: '40128757',
+    },
+    branding: { accentColor: '#1f5c4a' },
+    defaults: {
+      layout: 'essential',
+      language: 'fr',
+      currency: 'MAD',
+      paymentDueDays: 30,
+      estimateValidDays: 15,
+      compact: false,
+      vatEnabled: true,
+      vatRate: 20,
+    },
+    invitations: [],
+  }
+  if (!existing)
+    ob = await o.put(`/api/v1/owner/organizations/${id}/onboarding`, {
+      configuration: cfg,
+      currentStep: 6,
+      expectedVersion: ob.version,
+    })
+  if (!existing)
+    await o.post(`/api/v1/owner/organizations/${id}/onboarding/complete`, {
+      expectedVersion: ob.version,
+    })
   const w = await staffApi('atlas-export', KARIM.email)
-  const bank = await w.post('/api/v1/bank-accounts', { name: 'Compte devises', bankName: COMPANY.bankName, accountHolder: 'Atlas Négoce Export', rib: COMPANY.rib, iban: COMPANY.iban, currency: 'MAD' })
+  const bank = await w.post('/api/v1/bank-accounts', {
+    name: 'Compte devises',
+    bankName: COMPANY.bankName,
+    accountHolder: 'Atlas Négoce Export',
+    rib: COMPANY.rib,
+    iban: COMPANY.iban,
+    currency: 'MAD',
+  })
   const clients = []
-  for (const [n, c, city] of [['Maghreb Fruits Import', 'Laurent Dupuis', 'Marseille'], ['Iberia Agro Trading', 'Marta Ruiz', 'Almería'], ['Sahel Distribution', 'Ibrahima Diallo', 'Dakar']])
-    clients.push((await w.post('/api/v1/clients', { type: 'company', legalName: n, contactName: c, email: `contact@${n.toLowerCase().replace(/[^a-z]+/g, '-')}.com`, city, countryCode: city === 'Marseille' ? 'FR' : city === 'Almería' ? 'ES' : 'SN', locale: 'fr-MA' })).id)
-  const p = await w.post('/api/v1/products', { reference: 'EXP-001', name: 'Agrumes Nadorcott (palette 600 kg)', description: null, categoryId: null, imageAssetId: null, suggestedVatRate: '0.00', variants: [{ weightG: 600000, pricePerItem: '7800.00', costPerItem: '5400.00', active: true }] })
+  for (const [n, c, city] of [
+    ['Maghreb Fruits Import', 'Laurent Dupuis', 'Marseille'],
+    ['Iberia Agro Trading', 'Marta Ruiz', 'Almería'],
+    ['Sahel Distribution', 'Ibrahima Diallo', 'Dakar'],
+  ])
+    clients.push(
+      (
+        await w.post('/api/v1/clients', {
+          type: 'company',
+          legalName: n,
+          contactName: c,
+          email: `contact@${n.toLowerCase().replace(/[^a-z]+/g, '-')}.com`,
+          city,
+          countryCode: city === 'Marseille' ? 'FR' : city === 'Almería' ? 'ES' : 'SN',
+          locale: 'fr-MA',
+        })
+      ).id,
+    )
+  const p = await w.post('/api/v1/products', {
+    reference: 'EXP-001',
+    name: 'Agrumes Nadorcott (palette 600 kg)',
+    description: null,
+    categoryId: null,
+    imageAssetId: null,
+    suggestedVatRate: '0.00',
+    variants: [{ weightG: 600000, pricePerItem: '7800.00', costPerItem: '5400.00', active: true }],
+  })
   const dates = ['2026-09-12', '2026-09-28', '2026-10-09', '2026-10-21', '2026-10-27']
   for (let i = 0; i < dates.length; i++) {
-    const d = await w.post('/api/v1/invoices', { clientId: clients[i % 3], templateId: null, issueDate: dates[i], dueDate: dates[i].slice(0, 8) + '28', notes: null, paymentTerms: 'Paiement à 30 jours', bankAccountId: bank.id, agreedPaymentMethod: 'bank_transfer', lines: [{ productVariantId: p.variants[0].id, productName: p.name, quantity: 2 + i, unitPrice: '7800.00', vatRate: '0.00' }] })
+    const d = await w.post('/api/v1/invoices', {
+      clientId: clients[i % 3],
+      templateId: null,
+      issueDate: dates[i],
+      dueDate: dates[i].slice(0, 8) + '28',
+      notes: null,
+      paymentTerms: 'Paiement à 30 jours',
+      bankAccountId: bank.id,
+      agreedPaymentMethod: 'bank_transfer',
+      lines: [
+        {
+          productVariantId: p.variants[0].id,
+          productName: p.name,
+          quantity: 2 + i,
+          unitPrice: '7800.00',
+          vatRate: '0.00',
+        },
+      ],
+    })
     const iss = await w.post(`/api/v1/invoices/${d.id}/issue`, { expectedVersion: d.version })
-    if (i < 3) await w.post('/api/v1/payments', { operationId: randomUUID(), invoiceId: d.id, amount: String(iss.totalTtc ?? iss.amountTtc ?? iss.total), currency: 'MAD', method: 'bank_transfer', status: 'confirmed', paymentDate: dates[i].slice(0, 8) + '26', collectedOn: dates[i].slice(0, 8) + '26', bankAccountId: bank.id, reference: `VIR-EXP-${i + 1}`, chequeBank: null, chequeNumber: null })
+    if (i < 3)
+      await w.post('/api/v1/payments', {
+        operationId: randomUUID(),
+        invoiceId: d.id,
+        amount: String(iss.totalTtc ?? iss.amountTtc ?? iss.total),
+        currency: 'MAD',
+        method: 'bank_transfer',
+        status: 'confirmed',
+        paymentDate: dates[i].slice(0, 8) + '26',
+        collectedOn: dates[i].slice(0, 8) + '26',
+        bankAccountId: bank.id,
+        reference: `VIR-EXP-${i + 1}`,
+        chequeBank: null,
+        chequeNumber: null,
+      })
   }
   console.log('export org seeded')
 }

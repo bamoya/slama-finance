@@ -9,7 +9,11 @@ export async function prepare() {
   const perms = await w.get('/api/v1/rbac/permissions')
   const keys = (perms.items ?? perms).map((p) => p.key ?? p)
   const read = keys.filter((k) => /^(clients|estimates|invoices|payments|reports)\.read$/.test(k))
-  const role = await w.post('/api/v1/rbac/roles', { key: 'comptable', name: 'Comptable', description: 'Suivi des factures et encaissements' })
+  const role = await w.post('/api/v1/rbac/roles', {
+    key: 'comptable',
+    name: 'Comptable',
+    description: 'Suivi des factures et encaissements',
+  })
   await w.put(`/api/v1/rbac/roles/${role.id}/permissions`, { permissionKeys: read })
 }
 export async function run() {
@@ -20,10 +24,21 @@ export async function run() {
   await page.waitForSelector('#invite-email')
   await rec.pause(400, 'Invitation d’un nouveau membre')
   await rec.type('#invite-email', 'salma.idrissi@atlas-negoce.ma', 'E-mail de la comptable')
-  await rec.click(page.getByText('Comptable', { exact: true }), 'Attribution du rôle « Comptable »', { settle: 500 })
+  await rec.click(
+    page.getByText('Comptable', { exact: true }),
+    'Attribution du rôle « Comptable »',
+    { settle: 500 },
+  )
   await rec.pause(900, 'Rôle attribué : permissions héritées')
-  await rec.click(page.getByRole('button', { name: /Envoyer l’invitation/ }), 'Envoi de l’invitation', { settle: 1500 })
+  await rec.click(
+    page.getByRole('button', { name: /Envoyer l’invitation/ }),
+    'Envoi de l’invitation',
+    { settle: 1500 },
+  )
   await rec.pause(1500, 'Invitation envoyée')
   return rec
 }
-if (import.meta.url === `file://${process.argv[1]}`) { const rec = await run(); await rec.finish() }
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const rec = await run()
+  await rec.finish()
+}

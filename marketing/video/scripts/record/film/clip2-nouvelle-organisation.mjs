@@ -11,10 +11,25 @@ export async function run() {
   rec.delay = 30
   rec.mv = 0.6
   await rec.pause(500, 'Espace propriétaire')
-  await rec.click(page.getByRole('link', { name: /Nouvelle organisation/ }).or(page.getByRole('button', { name: /Nouvelle organisation/ })).first(), 'Clic sur « Nouvelle organisation »', { settle: 400 })
+  await rec.click(
+    page
+      .getByRole('link', { name: /Nouvelle organisation/ })
+      .or(page.getByRole('button', { name: /Nouvelle organisation/ }))
+      .first(),
+    'Clic sur « Nouvelle organisation »',
+    { settle: 400 },
+  )
   await page.waitForSelector('#organization-address')
-  await rec.type(page.locator('main input').first(), NEW_ORG.name, 'Saisie du nom de l’organisation')
-  await page.getByText(/adresse est disponible/i).first().waitFor({ timeout: 10000 }).catch(() => {})
+  await rec.type(
+    page.locator('main input').first(),
+    NEW_ORG.name,
+    'Saisie du nom de l’organisation',
+  )
+  await page
+    .getByText(/adresse est disponible/i)
+    .first()
+    .waitFor({ timeout: 10000 })
+    .catch(() => {})
   await rec.pause(1700, 'L’adresse se forme automatiquement', '#organization-address')
   // the rest of the wizard is removed from the clip
   await rec.cut(async () => {
@@ -26,7 +41,10 @@ export async function run() {
     await inputs.nth(3).fill(COMPANY.address)
     await inputs.nth(4).fill('Agadir')
     await inputs.nth(5).fill('002154873000066')
-    for (let i = 0; i < 4; i++) { await page.getByRole('button', { name: /Continuer/ }).click(); await sleep(400) }
+    for (let i = 0; i < 4; i++) {
+      await page.getByRole('button', { name: /Continuer/ }).click()
+      await sleep(400)
+    }
     await page.getByRole('button', { name: /Créer mon organisation/ }).click()
     await page.waitForLoadState('networkidle').catch(() => {})
     await sleep(1500)
@@ -34,4 +52,7 @@ export async function run() {
   await rec.pause(2200, 'Organisation créée, essai gratuit démarré')
   return rec
 }
-if (import.meta.url === `file://${process.argv[1]}`) { const rec = await run(); await rec.finish() }
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const rec = await run()
+  await rec.finish()
+}

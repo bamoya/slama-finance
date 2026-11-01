@@ -10,7 +10,13 @@ async function qtyInput(page, combo) {
   const n = await inputs.count()
   for (let i = 0; i < n; i++) {
     const b = await inputs.nth(i).boundingBox()
-    if (b && b.x > cb.x + cb.width && b.x < cb.x + cb.width + 60 && Math.abs(b.y + b.height / 2 - (cb.y + cb.height / 2)) < 15) return inputs.nth(i)
+    if (
+      b &&
+      b.x > cb.x + cb.width &&
+      b.x < cb.x + cb.width + 60 &&
+      Math.abs(b.y + b.height / 2 - (cb.y + cb.height / 2)) < 15
+    )
+      return inputs.nth(i)
   }
   throw new Error('quantity input not found')
 }
@@ -33,26 +39,50 @@ export async function run() {
   await rec.click(page.locator('[role=option]').first(), 'Coopérative Al Baraka', { settle: 300 })
   for (let i = 0; i < LINES.length; i++) {
     const [q, qty] = LINES[i]
-    await rec.click(page.getByRole('button', { name: 'Ajouter un produit' }), 'Ajout d’un produit', { settle: 300 })
+    await rec.click(
+      page.getByRole('button', { name: 'Ajouter un produit' }),
+      'Ajout d’un produit',
+      { settle: 300 },
+    )
     const combo = page.locator('[id$="-product"]').nth(i)
     await rec.click(combo, 'Recherche d’un produit du catalogue', { settle: 250 })
     await page.keyboard.type(q, { delay: 45 })
     await sleep(450)
-    await rec.click(page.locator('[role=option]').first(), 'Produit sélectionné : prix repris du catalogue', { settle: 300 })
+    await rec.click(
+      page.locator('[role=option]').first(),
+      'Produit sélectionné : prix repris du catalogue',
+      { settle: 300 },
+    )
     await rec.type(await qtyInput(page, combo), String(qty), 'Quantité', { clear: true })
     await rec.click(page.locator('[id$="-vat"]').nth(i), 'Taux de TVA', { settle: 250 })
     await rec.click(page.getByRole('option', { name: /20/ }).first(), 'TVA 20 %', { settle: 250 })
   }
   await rec.pause(500, 'Totaux HT, TVA, TTC')
-  await rec.click(page.getByRole('button', { name: /Enregistrer le brouillon|Créer un brouillon/ }), 'Enregistrement du brouillon', { settle: 1200 })
+  await rec.click(
+    page.getByRole('button', { name: /Enregistrer le brouillon|Créer un brouillon/ }),
+    'Enregistrement du brouillon',
+    { settle: 1200 },
+  )
   await page.waitForLoadState('networkidle').catch(() => {})
-  await rec.click(page.getByRole('button', { name: /Émettre la facture/ }), 'Émission de la facture', { settle: 1200 })
+  await rec.click(
+    page.getByRole('button', { name: /Émettre la facture/ }),
+    'Émission de la facture',
+    { settle: 1200 },
+  )
   await page.waitForLoadState('networkidle').catch(() => {})
   await rec.pause(1800, 'Facture émise : envoi automatique au client')
   // issuing already sends the e-mail; wait for it (cut) and show the client's inbox
-  await rec.cut(async () => { await mailFor(CLIENT.email, { subjectIncludes: 'Facture', timeout: 60000 }) })
-  await rec.inbox(CLIENT.email, { subjectIncludes: 'Facture', label: 'Le client reçoit la facture' })
+  await rec.cut(async () => {
+    await mailFor(CLIENT.email, { subjectIncludes: 'Facture', timeout: 60000 })
+  })
+  await rec.inbox(CLIENT.email, {
+    subjectIncludes: 'Facture',
+    label: 'Le client reçoit la facture',
+  })
   await rec.pause(3200, 'E-mail de la facture reçu par le client', '#mail')
   return rec
 }
-if (import.meta.url === `file://${process.argv[1]}`) { const rec = await run(); await rec.finish() }
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const rec = await run()
+  await rec.finish()
+}

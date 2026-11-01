@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { normalizeNumberDraft,NumberInput } from './number-input'
+import { normalizeNumberDraft, NumberInput } from './number-input'
 
 function Harness({ initial = 0 }: { initial?: number }) {
   const [value, setValue] = useState(initial)

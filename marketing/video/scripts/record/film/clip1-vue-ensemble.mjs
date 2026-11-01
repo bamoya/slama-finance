@@ -19,14 +19,25 @@ export async function run() {
   await rec.cut(async () => {
     await page.waitForLoadState('networkidle').catch(() => {})
     await page.getByText('Toutes vos organisations').first().waitFor()
-    await page.getByText(/Chargement/).first().waitFor({ state: 'detached', timeout: 15000 }).catch(() => {})
+    await page
+      .getByText(/Chargement/)
+      .first()
+      .waitFor({ state: 'detached', timeout: 15000 })
+      .catch(() => {})
     await sleep(600)
   })
   await rec.pause(300, 'Espace propriétaire : toutes les organisations')
-  await pickRange(rec, page.getByText(/\d\d-\d\d-\d{4} – \d\d-\d\d-\d{4}/).first(), { back: 2, start: '2026-09-01', end: '2026-10-31' })
+  await pickRange(rec, page.getByText(/\d\d-\d\d-\d{4} – \d\d-\d\d-\d{4}/).first(), {
+    back: 2,
+    start: '2026-09-01',
+    end: '2026-10-31',
+  })
   await rec.pause(1800, 'Vue consolidée des deux organisations', 'main h1')
   await rec.scroll(380, 'Détail par organisation')
   await rec.pause(1200)
   return rec
 }
-if (import.meta.url === `file://${process.argv[1]}`) { const rec = await run(); await rec.finish() }
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const rec = await run()
+  await rec.finish()
+}

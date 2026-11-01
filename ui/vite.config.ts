@@ -9,6 +9,11 @@ export default defineConfig({
   server: {
     // Sites are subdomains of localhost (app., admin., <slug>.); the API sees the original Host.
     allowedHosts: ['.localhost'],
-    proxy: { '/api': { target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000', changeOrigin: false } },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000',
+        changeOrigin: false,
+      },
+    },
   },
 })

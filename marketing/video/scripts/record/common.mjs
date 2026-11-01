@@ -10,4 +10,7 @@ export async function openWorkspace(chapter, path, { state = 'ws' } = {}) {
   await rec.start()
   return rec
 }
-export const run = async (fn) => { const rec = await fn(); await rec.finish() }
+export const run = async (fn) => {
+  const rec = await fn()
+  await rec.finish()
+}

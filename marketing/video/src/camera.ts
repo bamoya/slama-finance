@@ -30,7 +30,11 @@ const target = (box: Timeline['events'][number]['box']) => {
     if (total - (c2 + h) < SNAP) return total - h
     return c2
   }
-  return { cx: axis(box.x, box.width, half.w, VIDEO_W), cy: axis(box.y, box.height, half.h, VIDEO_H), s }
+  return {
+    cx: axis(box.x, box.width, half.w, VIDEO_W),
+    cy: axis(box.y, box.height, half.h, VIDEO_H),
+    s,
+  }
 }
 
 export const buildKeys = (timeline: Timeline): Key[] => {

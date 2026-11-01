@@ -30,9 +30,17 @@ export async function run() {
   await rec.click(link, 'Clic sur le lien de vérification', { settle: 800 })
   await page.waitForLoadState('networkidle').catch(() => {})
   await rec.pause(1200, 'Page de confirmation de l’adresse e-mail')
-  await rec.click(page.getByRole('button', { name: 'Vérifier l’adresse e-mail' }), 'Clic sur « Vérifier l’adresse e-mail »', { settle: 1500 })
+  await rec.click(
+    page.getByRole('button', { name: 'Vérifier l’adresse e-mail' }),
+    'Clic sur « Vérifier l’adresse e-mail »',
+    { settle: 1500 },
+  )
   await rec.pause(1200, 'Adresse e-mail vérifiée')
-  await rec.click(page.getByRole('link', { name: 'Connexion propriétaire' }), 'Clic sur « Connexion propriétaire »', { settle: 900 })
+  await rec.click(
+    page.getByRole('link', { name: 'Connexion propriétaire' }),
+    'Clic sur « Connexion propriétaire »',
+    { settle: 900 },
+  )
   await rec.type('input[name=email]', KARIM.email, 'Saisie de l’adresse e-mail')
   await rec.type('input[name=password]', KARIM.password, 'Saisie du mot de passe', { delay: 28 })
   await rec.click('button[type=submit]', 'Clic sur « Se connecter »', { settle: 1200 })

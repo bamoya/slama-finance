@@ -18,11 +18,7 @@ const names = {
   'Chapter-09': 'Chapter-09-Rapports',
 }
 const comps = ids.map((i) => names[i] ?? i).filter((c) => !args.only || c === args.only)
-const suffixes = args.square
-  ? ['-Square']
-  : 'no-square' in args
-    ? ['']
-    : ['', '-Square']
+const suffixes = args.square ? ['-Square'] : 'no-square' in args ? [''] : ['', '-Square']
 mkdirSync('out', { recursive: true })
 const run = (a) => execFileSync('npx', ['remotion', ...a], { stdio: 'inherit' })
 const stillFrame = (c) => (c.startsWith('Visite') ? 60 : 75)

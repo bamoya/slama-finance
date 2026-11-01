@@ -59,7 +59,10 @@ const CURSOR_JS = `(() => {
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 /** Open a recorded browser session. `storageState` optional (path or object). */
-export async function openSession(chapter, { storageState, locale = 'fr-FR', outDir = OUT, webm = true } = {}) {
+export async function openSession(
+  chapter,
+  { storageState, locale = 'fr-FR', outDir = OUT, webm = true } = {},
+) {
   fs.mkdirSync(RAW, { recursive: true })
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `rec-${chapter}-`))
   const browser = await chromium.launch({ executablePath: EXE, args: ['--hide-scrollbars'] })
@@ -144,7 +147,12 @@ class Recorder {
   }
   async boxOf(target) {
     const l = this.loc(target)
-    await l.waitFor({ state: 'visible', timeout: 20000 }).catch(async (e) => { await this.page.screenshot({ path: `/private/tmp/claude-503/demo/fail-${this.chapter}.png` }).catch(() => {}); throw e })
+    await l.waitFor({ state: 'visible', timeout: 20000 }).catch(async (e) => {
+      await this.page
+        .screenshot({ path: `/private/tmp/claude-503/demo/fail-${this.chapter}.png` })
+        .catch(() => {})
+      throw e
+    })
     await l.scrollIntoViewIfNeeded().catch(() => {})
     await sleep(120)
     return await l.boundingBox()
@@ -256,17 +264,39 @@ class Recorder {
     await this.context.route('http://inbox.localhost/**', (r) =>
       r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }),
     )
-    await this.goto('http://inbox.localhost/', label, { ready: this.page.frameLocator('#mail').locator('body *').first() })
+    await this.goto('http://inbox.localhost/', label, {
+      ready: this.page.frameLocator('#mail').locator('body *').first(),
+    })
     return html
   }
   /** Show a downloaded PDF (first page rendered with Ghostscript) in a minimal viewer page. */
   async pdfViewer(pdfFile, { title = path.basename(pdfFile), label = 'Visionneuse PDF' } = {}) {
     const png = path.join(this.tmp, 'pdf-page.png')
-    execFileSync('gs', ['-q', '-dNOPAUSE', '-dBATCH', '-sDEVICE=png16m', '-r200', '-dFirstPage=1', '-dLastPage=1', `-sOutputFile=${png}`, pdfFile])
-    const pages = execFileSync('gs', ['-q', '-dNODISPLAY', '-dNOSAFER', '-c', `(${pdfFile}) (r) file runpdfbegin pdfpagecount = quit`]).toString().trim()
+    execFileSync('gs', [
+      '-q',
+      '-dNOPAUSE',
+      '-dBATCH',
+      '-sDEVICE=png16m',
+      '-r200',
+      '-dFirstPage=1',
+      '-dLastPage=1',
+      `-sOutputFile=${png}`,
+      pdfFile,
+    ])
+    const pages = execFileSync('gs', [
+      '-q',
+      '-dNODISPLAY',
+      '-dNOSAFER',
+      '-c',
+      `(${pdfFile}) (r) file runpdfbegin pdfpagecount = quit`,
+    ])
+      .toString()
+      .trim()
     const b64 = fs.readFileSync(png).toString('base64')
     const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>*{box-sizing:border-box}body{margin:0;background:#525659;font-family:Inter,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}.bar{height:48px;background:#323639;color:#f1f3f4;display:flex;align-items:center;padding:0 20px;gap:18px;font-size:14px}.bar b{font-weight:500}.bar span{opacity:.75}.pg{flex:1;overflow:hidden;display:flex;justify-content:center;padding:22px 0}.pg img{height:auto;max-height:none;width:900px;align-self:flex-start;box-shadow:0 4px 18px rgba(0,0,0,.5);background:#fff}</style></head><body><div class="bar"><b>${esc(title)}</b><span>1 / ${pages}</span><span style="margin-left:auto">100 %</span></div><div class="pg"><img src="data:image/png;base64,${b64}"></div></body></html>`
-    await this.context.route('http://pdf.localhost/**', (r) => r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }))
+    await this.context.route('http://pdf.localhost/**', (r) =>
+      r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }),
+    )
     await this.goto('http://pdf.localhost/', label)
   }
   /** Stop, trim to the sync flash, cut skipped stretches, write mp4 (+ webm for chapters) + json into the out dir. */
@@ -274,11 +304,13 @@ class Recorder {
     await sleep(900)
     let endReal = null
     if (this.synced) {
-      await this.page.evaluate(() => {
-        const d = document.createElement('div')
-        d.style.cssText = 'position:fixed;inset:0;background:#ff00ff;z-index:2147483647'
-        document.documentElement.appendChild(d)
-      }).catch(() => {})
+      await this.page
+        .evaluate(() => {
+          const d = document.createElement('div')
+          d.style.cssText = 'position:fixed;inset:0;background:#ff00ff;z-index:2147483647'
+          document.documentElement.appendChild(d)
+        })
+        .catch(() => {})
       endReal = this.now()
       await sleep(500)
     }
@@ -291,18 +323,44 @@ class Recorder {
     const out = this.outDir
     const base = path.join(out, this.chapter)
     fs.mkdirSync(out, { recursive: true })
-    const run = (args) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...args], { stdio: 'inherit' })
+    const run = (args) =>
+      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...args], { stdio: 'inherit' })
     // Locate the sync flashes in the raw video (50 fps resample, magenta centre pixel).
     let lead = Math.max(0, (this.t0 - this.created) / 1000 + trimLead)
     let drift = 1
     let vend = null
     if (this.synced) {
-      const buf = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', src, '-vf', 'fps=50,crop=2:2:720:450,scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 28 })
+      const buf = execFileSync(
+        'ffmpeg',
+        [
+          '-loglevel',
+          'error',
+          '-i',
+          src,
+          '-vf',
+          'fps=50,crop=2:2:720:450,scale=1:1',
+          '-f',
+          'rawvideo',
+          '-pix_fmt',
+          'rgb24',
+          '-',
+        ],
+        { maxBuffer: 1 << 28 },
+      )
       const mag = []
-      for (let i = 0; i + 2 < buf.length; i += 3) mag.push(buf[i] > 200 && buf[i + 1] < 70 && buf[i + 2] > 200)
+      for (let i = 0; i + 2 < buf.length; i += 3)
+        mag.push(buf[i] > 200 && buf[i + 1] < 70 && buf[i + 2] > 200)
       const runs = []
-      for (let i = 0; i < mag.length; i++) if (mag[i] && (i === 0 || !mag[i - 1])) { let j = i; while (j < mag.length && mag[j]) j++; runs.push([i / 50, j / 50]) }
-      if (runs.length === 1 && vend === null && runs[0][0] > 1) console.warn(`${this.chapter}: WARNING start flash not found in the video; timeline sync unreliable`)
+      for (let i = 0; i < mag.length; i++)
+        if (mag[i] && (i === 0 || !mag[i - 1])) {
+          let j = i
+          while (j < mag.length && mag[j]) j++
+          runs.push([i / 50, j / 50])
+        }
+      if (runs.length === 1 && vend === null && runs[0][0] > 1)
+        console.warn(
+          `${this.chapter}: WARNING start flash not found in the video; timeline sync unreliable`,
+        )
       if (runs.length) {
         lead = runs[0][1]
         if (runs.length > 1 && endReal) {
@@ -310,35 +368,96 @@ class Recorder {
           drift = (vend - lead) / endReal
         }
       }
-      console.log(`${this.chapter}: sync flash ${runs.map((r) => r.map((x) => x.toFixed(2)).join('-')).join(' | ')} -> lead ${lead.toFixed(2)}s, drift ${drift.toFixed(4)}`)
+      console.log(
+        `${this.chapter}: sync flash ${runs.map((r) => r.map((x) => x.toFixed(2)).join('-')).join(' | ')} -> lead ${lead.toFixed(2)}s, drift ${drift.toFixed(4)}`,
+      )
       if (Math.abs(drift - 1) > 0.15) drift = 1
     }
     // Keep [lead, vend) minus the cut ranges (video time = lead + t * drift).
     const keepEnd = vend ?? 1e6
     let sel = `gte(t,${lead.toFixed(3)})*lt(t,${keepEnd.toFixed(3)})`
-    for (const [ca, cb] of this.cuts) sel += `*not(between(t,${(lead + ca * drift).toFixed(3)},${(lead + cb * drift).toFixed(3)}))`
+    for (const [ca, cb] of this.cuts)
+      sel += `*not(between(t,${(lead + ca * drift).toFixed(3)},${(lead + cb * drift).toFixed(3)}))`
     const vf = `fps=30,select='${sel}',setpts=N/(30*TB)`
     if (this.webm)
-      run(['-i', src, '-an', '-vf', vf, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '32', '-row-mt', '1', `${base}.webm`])
-    run(['-i', src, '-an', '-vf', vf, '-r', '30', '-c:v', 'libx264', '-crf', '23', '-preset', 'medium', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${base}.mp4`])
+      run([
+        '-i',
+        src,
+        '-an',
+        '-vf',
+        vf,
+        '-c:v',
+        'libvpx-vp9',
+        '-b:v',
+        '0',
+        '-crf',
+        '32',
+        '-row-mt',
+        '1',
+        `${base}.webm`,
+      ])
+    run([
+      '-i',
+      src,
+      '-an',
+      '-vf',
+      vf,
+      '-r',
+      '30',
+      '-c:v',
+      'libx264',
+      '-crf',
+      '23',
+      '-preset',
+      'medium',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      `${base}.mp4`,
+    ])
     const dur = +parseFloat(
-      execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', `${base}.mp4`]).toString(),
+      execFileSync('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'csv=p=0',
+        `${base}.mp4`,
+      ]).toString(),
     ).toFixed(2)
     // Timeline: real seconds since the flash -> output seconds (drift applied, cut stretches removed).
     const events = []
     for (const e of this.events) {
       if (this.cuts.some(([ca, cb]) => e.t >= ca && e.t < cb)) continue
-      const removed = this.cuts.filter(([, cb]) => cb <= e.t).reduce((n, [ca, cb]) => n + (cb - ca), 0)
+      const removed = this.cuts
+        .filter(([, cb]) => cb <= e.t)
+        .reduce((n, [ca, cb]) => n + (cb - ca), 0)
       events.push({ ...e, t: +((e.t - removed) * drift).toFixed(2) })
     }
     fs.writeFileSync(
       `${base}.json`,
-      JSON.stringify({ chapter: this.chapter, width: W, height: H, duration: dur, lead: +lead.toFixed(2), drift: +drift.toFixed(4), events }, null, 2),
+      JSON.stringify(
+        {
+          chapter: this.chapter,
+          width: W,
+          height: H,
+          duration: dur,
+          lead: +lead.toFixed(2),
+          drift: +drift.toFixed(4),
+          events,
+        },
+        null,
+        2,
+      ),
     )
     fs.mkdirSync(RAW, { recursive: true })
     fs.copyFileSync(src, path.join(RAW, `${this.chapter}.raw.webm`))
     fs.rmSync(this.tmp, { recursive: true, force: true })
-    console.log(`${this.chapter}: ${dur}s, ${events.length} events (recorded ${total.toFixed(1)}s, trimmed ${lead.toFixed(2)}s)`)
+    console.log(
+      `${this.chapter}: ${dur}s, ${events.length} events (recorded ${total.toFixed(1)}s, trimmed ${lead.toFixed(2)}s)`,
+    )
     return { duration: dur }
   }
 }
@@ -414,17 +533,63 @@ export class Api {
     const u = new URL(this.base + p)
     const payload = body === undefined ? undefined : JSON.stringify(body)
     const res = await new Promise((resolve, reject) => {
-      const r = http.request({ host: u.hostname, port: u.port, path: u.pathname + u.search, method, headers: { host: this.host, 'content-type': 'application/json', origin: `http://${this.host}`, cookie: Object.entries(this.cookies).map(([k, v]) => `${k}=${v}`).join('; '), ...(payload ? { 'content-length': Buffer.byteLength(payload) } : {}), ...headers } }, (resp) => {
-        const chunks = []; resp.on('data', (c) => chunks.push(c)); resp.on('end', () => resolve({ status: resp.statusCode, ok: resp.statusCode < 400, headers: resp.headers, body: Buffer.concat(chunks) }))
-      })
-      r.on('error', reject); if (payload) r.write(payload); r.end()
+      const r = http.request(
+        {
+          host: u.hostname,
+          port: u.port,
+          path: u.pathname + u.search,
+          method,
+          headers: {
+            host: this.host,
+            'content-type': 'application/json',
+            origin: `http://${this.host}`,
+            cookie: Object.entries(this.cookies)
+              .map(([k, v]) => `${k}=${v}`)
+              .join('; '),
+            ...(payload ? { 'content-length': Buffer.byteLength(payload) } : {}),
+            ...headers,
+          },
+        },
+        (resp) => {
+          const chunks = []
+          resp.on('data', (c) => chunks.push(c))
+          resp.on('end', () =>
+            resolve({
+              status: resp.statusCode,
+              ok: resp.statusCode < 400,
+              headers: resp.headers,
+              body: Buffer.concat(chunks),
+            }),
+          )
+        },
+      )
+      r.on('error', reject)
+      if (payload) r.write(payload)
+      r.end()
     })
-    for (const c of [].concat(res.headers['set-cookie'] ?? [])) { const [kv] = c.split(';'); const i = kv.indexOf('='); this.cookies[kv.slice(0, i)] = kv.slice(i + 1) }
-    if (res.status === 429 && attempt < 5) { await sleep(15000); return this.req(method, p, body, opts, attempt + 1) }
+    for (const c of [].concat(res.headers['set-cookie'] ?? [])) {
+      const [kv] = c.split(';')
+      const i = kv.indexOf('=')
+      this.cookies[kv.slice(0, i)] = kv.slice(i + 1)
+    }
+    if (res.status === 429 && attempt < 5) {
+      await sleep(15000)
+      return this.req(method, p, body, opts, attempt + 1)
+    }
     if (raw) return res
     const text = res.body.toString('utf8')
-    let json; try { json = text ? JSON.parse(text) : null } catch { json = text }
-    if (!res.ok) { const e = new Error(`${method} ${p} -> ${res.status} ${text.slice(0, 400)}`); e.status = res.status; e.body = json; throw e }
+    let json
+    try {
+      json = text ? JSON.parse(text) : null
+    } catch {
+      json = text
+    }
+    if (!res.ok) {
+      const e = new Error(`${method} ${p} -> ${res.status} ${text.slice(0, 400)}`)
+      e.status = res.status
+      e.body = json
+      throw e
+    }
     return json
   }
   get(p) {

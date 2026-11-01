@@ -46,7 +46,8 @@ export const srcToOut = (plan: Piece[], t: number) => {
 
 /** Output seconds -> source seconds (holds the last frame beyond the plan). */
 export const outToSrc = (plan: Piece[], t: number) => {
-  for (const p of plan) if (t < p.outStart + p.outDur) return p.from + Math.max(0, t - p.outStart) * p.rate
+  for (const p of plan)
+    if (t < p.outStart + p.outDur) return p.from + Math.max(0, t - p.outStart) * p.rate
   const last = plan[plan.length - 1]
   return last.to
 }

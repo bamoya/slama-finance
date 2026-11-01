@@ -19,3 +19,4 @@ docs/notification-email-examples/*_*.html
 **/.local
 marketing/video/out
 marketing/video/public
+marketing/video/src/recordings.generated.json
