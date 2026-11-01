@@ -190,8 +190,8 @@ class Recorder {
     const b = await this.boxOf(target)
     await this.moveTo(b.x + Math.min(b.width / 2, 120), b.y + b.height / 2)
     await sleep(100)
-    this.push('type', label, b)
     await this.page.mouse.down()
+    this.push('type', label, b)
     await sleep(60)
     await this.page.mouse.up()
     if (clear) {
@@ -223,11 +223,24 @@ class Recorder {
     if (label) this.push('pause', label, box ?? { x: 0, y: 0, width: W, height: H })
     await sleep(ms)
   }
-  async goto(url, label, { wait = 'networkidle' } = {}) {
-    if (label) this.push('navigate', label, { x: 0, y: 0, width: W, height: H })
-    await this.page.goto(url, { waitUntil: 'domcontentloaded' })
-    await this.page.waitForLoadState(wait).catch(() => {})
-    await sleep(500)
+  /**
+   * Navigate. With `ready` (selector / locator) the whole load is cut from the video and timeline, so no blank or
+   * "loading" frame is ever shown: the clip jumps from the previous screen to the fully rendered next one.
+   */
+  async goto(url, label, { wait = 'networkidle', ready = null } = {}) {
+    const go = async () => {
+      await this.page.goto(url, { waitUntil: 'domcontentloaded' })
+      await this.page.waitForLoadState(wait).catch(() => {})
+      if (ready) await this.loc(ready).waitFor({ state: 'visible', timeout: 30000 })
+      await sleep(500)
+    }
+    if (ready && this.t0) {
+      await this.cut(go)
+      if (label) this.push('navigate', label, { x: 0, y: 0, width: W, height: H })
+    } else {
+      if (label) this.push('navigate', label, { x: 0, y: 0, width: W, height: H })
+      await go()
+    }
   }
   async scroll(dy, label, steps = 12) {
     if (label) this.push('pause', label, { x: 0, y: 0, width: W, height: H })
@@ -243,7 +256,7 @@ class Recorder {
     await this.context.route('http://inbox.localhost/**', (r) =>
       r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }),
     )
-    await this.goto('http://inbox.localhost/', label)
+    await this.goto('http://inbox.localhost/', label, { ready: this.page.frameLocator('#mail').locator('body *').first() })
     return html
   }
   /** Show a downloaded PDF (first page rendered with Ghostscript) in a minimal viewer page. */

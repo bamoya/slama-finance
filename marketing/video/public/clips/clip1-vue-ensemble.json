@@ -2,12 +2,12 @@
   "chapter": "clip1-vue-ensemble",
   "width": 1440,
   "height": 900,
-  "duration": 13.87,
-  "lead": 2.04,
-  "drift": 1.0022,
+  "duration": 16.83,
+  "lead": 1.84,
+  "drift": 1.0055,
   "events": [
     {
-      "t": 0.46,
+      "t": 0.45,
       "type": "type",
       "label": "Saisie de l’adresse e-mail",
       "box": {
@@ -18,7 +18,7 @@
       }
     },
     {
-      "t": 1.68,
+      "t": 1.69,
       "type": "type",
       "label": "Saisie du mot de passe",
       "box": {
@@ -29,7 +29,7 @@
       }
     },
     {
-      "t": 2.57,
+      "t": 2.65,
       "type": "click",
       "label": "Clic sur « Se connecter »",
       "box": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "t": 3.46,
+      "t": 2.74,
       "type": "pause",
       "label": "Espace propriétaire : toutes les organisations",
       "box": {
@@ -51,7 +51,7 @@
       }
     },
     {
-      "t": 4.47,
+      "t": 3.91,
       "type": "click",
       "label": "Choix de la période",
       "box": {
@@ -62,7 +62,7 @@
       }
     },
     {
-      "t": 5.16,
+      "t": 4.71,
       "type": "click",
       "label": "Mois précédent",
       "box": {
@@ -73,7 +73,7 @@
       }
     },
     {
-      "t": 5.74,
+      "t": 5.25,
       "type": "click",
       "label": "Mois précédent",
       "box": {
@@ -84,7 +84,7 @@
       }
     },
     {
-      "t": 6.31,
+      "t": 6.21,
       "type": "click",
       "label": "Début de période",
       "box": {
@@ -95,7 +95,7 @@
       }
     },
     {
-      "t": 6.96,
+      "t": 7.45,
       "type": "click",
       "label": "Mois suivant",
       "box": {
@@ -106,7 +106,7 @@
       }
     },
     {
-      "t": 7.56,
+      "t": 9.08,
       "type": "click",
       "label": "Fin de période",
       "box": {
@@ -117,7 +117,7 @@
       }
     },
     {
-      "t": 8.27,
+      "t": 10.67,
       "type": "click",
       "label": "Appliquer la période",
       "box": {
@@ -128,7 +128,7 @@
       }
     },
     {
-      "t": 9.15,
+      "t": 11.37,
       "type": "pause",
       "label": "Vue consolidée des deux organisations",
       "box": {
@@ -139,7 +139,7 @@
       }
     },
     {
-      "t": 10.95,
+      "t": 13.19,
       "type": "pause",
       "label": "Détail par organisation",
       "box": {

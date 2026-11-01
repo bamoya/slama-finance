@@ -5,7 +5,7 @@ import type { Timeline } from '../config'
 import { IntroCard, OutroCard, QuestionCard } from './Cards'
 import { ClipScene } from './ClipScene'
 import { buildPlan, planDuration } from './plan'
-import { CUTDOWNS, FADE_FRAMES, FILM_FPS, HOLD_TAIL, SCENES, type Scene } from './storyboard'
+import { CUTDOWNS, FADE_FRAMES, FILM_FPS, HOLD_TAIL, SCENES, type Scene, type Speed } from './storyboard'
 
 export type FilmProps = { scenes: { scene: Scene; frames: number; mini?: boolean }[]; timelines: Record<string, Timeline> }
 
@@ -13,8 +13,12 @@ const sceneClip = (s: Scene) => ('clip' in s ? s.clip : null)
 
 /** Resolve the ordered scene list for a composition (full film or cut-down) with frame lengths. */
 const resolve = (timelines: Record<string, Timeline>, cutdown?: string): { scene: Scene; frames: number; mini?: boolean }[] => {
+  const withKeep = (c: { scene: string; keep?: Speed[] }): Scene => {
+    const base = SCENES.find((s) => s.id === c.scene)!
+    return c.keep && 'clip' in base ? ({ ...base, clip: { ...base.clip, keep: c.keep } } as Scene) : base
+  }
   const list = cutdown
-    ? CUTDOWNS[cutdown].scenes.map((c) => ({ scene: SCENES.find((s) => s.id === c.scene)!, seconds: c.seconds, mini: c.mini }))
+    ? CUTDOWNS[cutdown].scenes.map((c) => ({ scene: withKeep(c), seconds: c.seconds, mini: c.mini }))
     : SCENES.map((scene) => ({ scene, seconds: undefined as number | undefined, mini: false }))
   return list.map((c, i) => {
     const clip = sceneClip(c.scene)

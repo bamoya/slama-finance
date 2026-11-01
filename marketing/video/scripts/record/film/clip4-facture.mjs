@@ -1,6 +1,6 @@
 // Clip 4: quick invoice (client + 2 lines, 20 % VAT), issued and sent, then the client's inbox frame.
 import { openFilmWorkspace } from './common.mjs'
-import { clearMailFor, sleep } from '../lib.mjs'
+import { clearMailFor, mailFor, sleep } from '../lib.mjs'
 import { CLIENT } from '../data.mjs'
 
 export const meta = { id: 'clip4-facture', snapshot: 'ch09' }
@@ -48,10 +48,11 @@ export async function run() {
   await page.waitForLoadState('networkidle').catch(() => {})
   await rec.click(page.getByRole('button', { name: /Émettre la facture/ }), 'Émission de la facture', { settle: 1200 })
   await page.waitForLoadState('networkidle').catch(() => {})
-  await rec.click(page.getByRole('button', { name: 'Envoyer un e-mail' }), 'Envoi de la facture par e-mail', { settle: 700 })
-  await rec.click(page.locator('[role=dialog] button', { hasText: 'Envoyer un e-mail' }), 'Confirmation de l’envoi', { settle: 1200 })
-  await rec.inbox(CLIENT.email, { subjectIncludes: '', label: 'Le client reçoit la facture' })
-  await rec.pause(2200, 'E-mail de la facture reçu par le client', '#mail')
+  await rec.pause(1800, 'Facture émise : envoi automatique au client')
+  // issuing already sends the e-mail; wait for it (cut) and show the client's inbox
+  await rec.cut(async () => { await mailFor(CLIENT.email, { subjectIncludes: 'Facture', timeout: 60000 }) })
+  await rec.inbox(CLIENT.email, { subjectIncludes: 'Facture', label: 'Le client reçoit la facture' })
+  await rec.pause(3200, 'E-mail de la facture reçu par le client', '#mail')
   return rec
 }
 if (import.meta.url === `file://${process.argv[1]}`) { const rec = await run(); await rec.finish() }

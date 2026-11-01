@@ -14,10 +14,10 @@ export async function run() {
   if (await page.locator('[role=dialog]').count()) await rec.click(page.locator('[role=dialog] button').last(), 'Confirmation de l’envoi', { settle: 900 })
   await rec.cut(async () => { await mailFor(KARIM.email, { subjectIncludes: '', timeout: 60000 }) })
   await rec.inbox(KARIM.email, { label: 'Le dirigeant reçoit le rapport par e-mail' })
-  await rec.pause(1900, 'Rapport mensuel reçu par e-mail', '#mail')
-  await rec.goto(`${WS}/reports`, 'Rapports')
+  await rec.pause(3200, 'Rapport mensuel reçu par e-mail', '#mail')
+  await rec.goto(`${WS}/reports`, 'Rapports', { ready: page.getByText('Ventes hors TVA').first() })
   await pickRange(rec, page.getByText(/\d\d-\d\d-\d{4} – \d\d-\d\d-\d{4}/).first(), { back: 2, start: '2026-09-01', end: '2026-10-31' })
-  await rec.pause(2000, 'Rapports de gestion : évolution des ventes')
+  await rec.pause(3000, 'Rapports de gestion : évolution des ventes')
   return rec
 }
 if (import.meta.url === `file://${process.argv[1]}`) { await prepare(); const rec = await run(); await rec.finish() }

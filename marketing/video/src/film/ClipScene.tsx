@@ -91,7 +91,8 @@ export const ClipScene = ({
   const t = frame / fps
   const plan = buildPlan(clip, timeline.duration)
   const src = outToSrc(plan, t)
-  const cam = cameraAt(buildKeys(timeline), src)
+  // the dark problem scene keeps the full page in view (no zoom, so the sidebar is never cropped)
+  const cam = title ? { cx: VIDEO_W / 2, cy: VIDEO_H / 2, s: 1 } : cameraAt(buildKeys(timeline), src)
 
   const frameW = title ? (square ? 860 : 1100) : square ? 980 : 1300
   const viewH = frameW * (VIDEO_H / VIDEO_W)

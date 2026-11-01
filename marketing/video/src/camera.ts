@@ -3,12 +3,12 @@ import type { Timeline } from './config'
 
 export const VIDEO_W = 1440
 export const VIDEO_H = 900
-const MAX_ZOOM = 1.25
-const SNAP = 220 // a window ending within this many px of the frame edge snaps to it (no sliver of cut text)
+const MAX_ZOOM = 1.12
+const SNAP = 200 // a window ending within this many px of the frame edge snaps to it (no sliver of cut text)
 const LEAD = 0.4 // seconds the zoom starts before the event
-const TRAVEL = 0.5 // seconds a zoom move lasts (ends 0.1 s after the event)
+const TRAVEL = 0.7 // seconds a zoom move lasts (ends 0.1 s after the event)
 const HOLD = 1.3 // seconds to stay after the event
-const MARGIN = 70 // video px kept around the target box
+const MARGIN = 160 // video px kept around the target box
 
 type Key = { time: number; cx: number; cy: number; s: number }
 

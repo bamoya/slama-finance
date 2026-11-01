@@ -2,12 +2,12 @@
   "chapter": "clip4-facture",
   "width": 1440,
   "height": 900,
-  "duration": 19.67,
-  "lead": 5.68,
-  "drift": 0.9995,
+  "duration": 16.97,
+  "lead": 5.96,
+  "drift": 0.9994,
   "events": [
     {
-      "t": 0.02,
+      "t": 0.01,
       "type": "pause",
       "label": "Nouvelle facture",
       "box": {
@@ -18,7 +18,7 @@
       }
     },
     {
-      "t": 0.78,
+      "t": 0.62,
       "type": "click",
       "label": "Choix du client",
       "box": {
@@ -29,7 +29,7 @@
       }
     },
     {
-      "t": 2.22,
+      "t": 1.91,
       "type": "click",
       "label": "Coopérative Al Baraka",
       "box": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "t": 3.1,
+      "t": 2.67,
       "type": "click",
       "label": "Ajout d’un produit",
       "box": {
@@ -51,7 +51,7 @@
       }
     },
     {
-      "t": 3.95,
+      "t": 3.39,
       "type": "click",
       "label": "Recherche d’un produit du catalogue",
       "box": {
@@ -62,7 +62,7 @@
       }
     },
     {
-      "t": 5.34,
+      "t": 4.63,
       "type": "click",
       "label": "Produit sélectionné : prix repris du catalogue",
       "box": {
@@ -73,7 +73,7 @@
       }
     },
     {
-      "t": 6.24,
+      "t": 5.4,
       "type": "type",
       "label": "Quantité",
       "box": {
@@ -84,7 +84,7 @@
       }
     },
     {
-      "t": 7.04,
+      "t": 6.05,
       "type": "click",
       "label": "Taux de TVA",
       "box": {
@@ -95,7 +95,7 @@
       }
     },
     {
-      "t": 7.85,
+      "t": 6.72,
       "type": "click",
       "label": "TVA 20 %",
       "box": {
@@ -106,7 +106,7 @@
       }
     },
     {
-      "t": 8.18,
+      "t": 7.06,
       "type": "pause",
       "label": "Totaux HT, TVA, TTC",
       "box": {
@@ -117,7 +117,7 @@
       }
     },
     {
-      "t": 9.22,
+      "t": 8.02,
       "type": "click",
       "label": "Enregistrement du brouillon",
       "box": {
@@ -128,7 +128,7 @@
       }
     },
     {
-      "t": 10.96,
+      "t": 9.6,
       "type": "click",
       "label": "Émission de la facture",
       "box": {
@@ -139,29 +139,18 @@
       }
     },
     {
+      "t": 10.88,
+      "type": "pause",
+      "label": "Facture émise : envoi automatique au client",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
       "t": 12.69,
-      "type": "click",
-      "label": "Envoi de la facture par e-mail",
-      "box": {
-        "x": 1168,
-        "y": 178,
-        "width": 146,
-        "height": 29
-      }
-    },
-    {
-      "t": 13.97,
-      "type": "click",
-      "label": "Confirmation de l’envoi",
-      "box": {
-        "x": 765,
-        "y": 513,
-        "width": 146,
-        "height": 29
-      }
-    },
-    {
-      "t": 15.29,
       "type": "navigate",
       "label": "Le client reçoit la facture",
       "box": {
@@ -172,7 +161,7 @@
       }
     },
     {
-      "t": 16.57,
+      "t": 12.84,
       "type": "pause",
       "label": "E-mail de la facture reçu par le client",
       "box": {

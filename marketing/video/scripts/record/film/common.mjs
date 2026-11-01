@@ -34,6 +34,18 @@ export async function pickRange(rec, field, { back = 2, start, end, forward = 1 
   await rec.click(page.locator(`[data-day="${start}"] button, button[data-day="${start}"]`).first(), 'Début de période', { settle: 80 })
   for (let i = 0; i < forward; i++) await rec.click(nav.last(), 'Mois suivant', { settle: 60 })
   await rec.click(page.locator(`[data-day="${end}"] button, button[data-day="${end}"]`).first(), 'Fin de période', { settle: 200 })
-  await rec.click(page.getByRole('button', { name: 'Appliquer' }), 'Appliquer la période', { settle: 600 })
-  await page.waitForLoadState('networkidle').catch(() => {})
+  await rec.click(page.getByRole('button', { name: 'Appliquer' }), 'Appliquer la période', { settle: 0 })
+  // never show loading states: cut until the new period is fully rendered
+  await rec.cut(async () => {
+    await page.waitForLoadState('networkidle').catch(() => {})
+    await page.getByText(/Chargement/).first().waitFor({ state: 'detached', timeout: 15000 }).catch(() => {})
+    await sleep(700)
+  })
+}
+
+/** Open a recorded session on a blank page (the timeline starts at once); used by clips that begin on the inbox frame. */
+export async function openFilmBlank(clip, { signedIn = true } = {}) {
+  const rec = await openSession(clip, { ...base, storageState: signedIn ? `${OUT}/raw/ws.state.json` : undefined })
+  await rec.start()
+  return rec
 }

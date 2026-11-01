@@ -2,12 +2,12 @@
   "chapter": "clip3-tableau-de-bord",
   "width": 1440,
   "height": 900,
-  "duration": 14.77,
-  "lead": 2.32,
-  "drift": 0.9993,
+  "duration": 20.67,
+  "lead": 7.56,
+  "drift": 0.9995,
   "events": [
     {
-      "t": 0.02,
+      "t": 0.03,
       "type": "pause",
       "label": "Tableau de bord de l’organisation",
       "box": {
@@ -18,7 +18,7 @@
       }
     },
     {
-      "t": 0.72,
+      "t": 1.01,
       "type": "click",
       "label": "Choix de la période",
       "box": {
@@ -29,7 +29,7 @@
       }
     },
     {
-      "t": 1.61,
+      "t": 3.52,
       "type": "click",
       "label": "Mois précédent",
       "box": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "t": 2.19,
+      "t": 4.61,
       "type": "click",
       "label": "Mois précédent",
       "box": {
@@ -51,7 +51,7 @@
       }
     },
     {
-      "t": 2.7,
+      "t": 5.61,
       "type": "click",
       "label": "Début de période",
       "box": {
@@ -62,7 +62,7 @@
       }
     },
     {
-      "t": 3.34,
+      "t": 6.83,
       "type": "click",
       "label": "Mois suivant",
       "box": {
@@ -73,7 +73,7 @@
       }
     },
     {
-      "t": 4.01,
+      "t": 8.09,
       "type": "click",
       "label": "Fin de période",
       "box": {
@@ -84,7 +84,7 @@
       }
     },
     {
-      "t": 4.74,
+      "t": 9.49,
       "type": "click",
       "label": "Appliquer la période",
       "box": {
@@ -95,7 +95,7 @@
       }
     },
     {
-      "t": 5.61,
+      "t": 9.94,
       "type": "pause",
       "label": "Indicateurs : facturé, encaissé, solde, retards",
       "box": {
@@ -106,7 +106,7 @@
       }
     },
     {
-      "t": 7.11,
+      "t": 11.43,
       "type": "pause",
       "label": "Graphiques : ventes et encaissements",
       "box": {
@@ -117,7 +117,7 @@
       }
     },
     {
-      "t": 10.56,
+      "t": 16.31,
       "type": "pause",
       "label": "Créances et devis",
       "box": {

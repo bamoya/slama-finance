@@ -1,5 +1,5 @@
 // Clip 6: automatic reminder lands in the client's inbox, payment is recorded, dashboard updated.
-import { openFilmWorkspace, WS } from './common.mjs'
+import { openFilmBlank, WS } from './common.mjs'
 import { mailFor, clearMailFor, sleep } from '../lib.mjs'
 import { setDueReminder } from '../between.mjs'
 import { CLIENT, KARIM, ORG } from '../data.mjs'
@@ -20,16 +20,21 @@ export async function prepare() {
   await mailFor(CLIENT.email, { subjectIncludes: 'Échéance', timeout: 90000 })
 }
 export async function run() {
-  const rec = await openFilmWorkspace(meta.id, '/invoices')
+  const rec = await openFilmBlank(meta.id)
   const { page } = rec
   rec.delay = 20
   rec.mv = 0.35
   await rec.inbox(CLIENT.email, { subjectIncludes: 'Échéance', label: 'Le client reçoit le rappel automatique' })
-  await rec.pause(1800, 'Rappel automatique : montant restant dû', '#mail')
-  await rec.goto(`${WS}/invoices/${prepared.invoiceId}`, 'Facture du client')
+  await rec.pause(3200, 'Rappel automatique : montant restant dû', '#mail')
+  await rec.goto(`${WS}/invoices/${prepared.invoiceId}`, 'Facture du client', { ready: page.getByText('Solde de la facture').first() })
   await page.waitForLoadState('networkidle').catch(() => {})
-  await rec.click(page.getByRole('link', { name: 'Enregistrer un paiement' }).or(page.getByRole('button', { name: 'Enregistrer un paiement' })).first(), 'Enregistrer un paiement', { settle: 500 })
-  await page.waitForSelector('main input[type=number]')
+  await rec.click(page.getByRole('link', { name: 'Enregistrer un paiement' }).or(page.getByRole('button', { name: 'Enregistrer un paiement' })).first(), 'Enregistrer un paiement', { settle: 0 })
+  // never show the loading state: cut until the payment form is fully loaded
+  await rec.cut(async () => {
+    await page.waitForSelector('main input[type=number]')
+    await page.getByText('Chargement').first().waitFor({ state: 'detached', timeout: 15000 }).catch(() => {})
+    await sleep(400)
+  })
   await rec.type('main input[type=number]', '10780', 'Solde restant à payer', { fill: true })
   await rec.click(page.getByRole('button', { name: 'Enregistrer le paiement' }), 'Enregistrement du paiement', { settle: 1000 })
   await page.waitForLoadState('networkidle').catch(() => {})
@@ -40,9 +45,9 @@ export async function run() {
     if (await dlg.count()) await rec.click(dlg.last(), 'Confirmation de l’encaissement', { settle: 900 })
   }
   await page.waitForLoadState('networkidle').catch(() => {})
-  await rec.pause(500, 'Facture réglée')
-  await rec.goto(`${WS}/dashboard`, 'Tableau de bord mis à jour')
-  await rec.pause(1800, 'Tableau de bord : encaissé et solde mis à jour')
+  await rec.pause(1500, 'Facture réglée')
+  await rec.goto(`${WS}/dashboard`, 'Tableau de bord mis à jour', { ready: page.getByText('Situation de vos créances').first() })
+  await rec.pause(2600, 'Tableau de bord : encaissé et solde mis à jour')
   return rec
 }
 if (import.meta.url === `file://${process.argv[1]}`) { await prepare(); const rec = await run(); await rec.finish() }
