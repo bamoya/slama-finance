@@ -156,7 +156,11 @@ describe('Organization address', () => {
     expect(address()).toHaveValue('cafe-etoile-du-sud')
     fireEvent.change(address(), { target: { value: '--Mon  Shop__2--Rabat' } })
     expect(address()).toHaveValue('mon-shop-2-rabat')
-    expect(screen.getByText(/https:\/\/mon-shop-2-rabat\.localhost:3000/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        new RegExp(`${window.location.protocol}//mon-shop-2-rabat\\.localhost:3000`),
+      ),
+    ).toBeInTheDocument()
     fireEvent.change(address(), { target: { value: 'edited' } })
     await name('Another name')
     expect(address()).toHaveValue('edited')

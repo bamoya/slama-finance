@@ -194,7 +194,9 @@ describe('customer lifecycle actions', () => {
     const input = screen.getByLabelText('New address')
     fireEvent.change(input, { target: { value: 'Atlas  Conseil_2' } })
     expect(input).toHaveValue('atlas-conseil-2')
-    expect(screen.getByText('https://atlas-conseil-2.localhost:3000')).toBeInTheDocument()
+    expect(
+      screen.getByText(`${window.location.protocol}//atlas-conseil-2.localhost:3000`),
+    ).toBeInTheDocument()
     fireEvent.change(reasonField(), { target: { value: 'Rebranding' } })
     fireEvent.change(codeField(), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Change address' }))
