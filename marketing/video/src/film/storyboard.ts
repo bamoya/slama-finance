@@ -51,7 +51,7 @@ export const SCENES: Scene[] = [
     clip: {
       id: 'clip1-vue-ensemble',
       host: APP,
-      keep: [k(0.2, 3.0, 1.2), k(3.0, 4.0), k(4.0, 10.7, 1.3), k(10.7, 15.5)],
+      keep: [k(0.2, 2.8, 1.2), k(2.8, 3.7), k(3.7, 7.5), k(7.5, 12.4)],
     },
   },
   { id: 'q-societes', kind: 'question', seconds: 3.5, text: 'Vous gérez plus d’une société ?' },
