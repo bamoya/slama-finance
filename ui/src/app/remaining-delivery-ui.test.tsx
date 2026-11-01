@@ -226,7 +226,7 @@ describe('notification policies, preferences and sends', () => {
     expect(state.previewNotificationRule).not.toHaveBeenCalled()
     view.unmount()
     setup(ruleRoutes, `/settings/notifications/${ruleId}/edit`)
-    expect(await screen.findByText('Access denied')).toBeVisible()
+    expect(await screen.findByText('Restricted access')).toBeVisible()
     expect(screen.queryByLabelText('Subject')).not.toBeInTheDocument()
   })
   it('shows an explicit not-found state for an unknown rule', async () => {

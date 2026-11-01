@@ -243,7 +243,7 @@ describe('authentication UI', () => {
       </ProtectedRoute>,
       '/settings/staff/123/edit',
     )
-    expect(await screen.findByText(/do not have permission/)).toBeInTheDocument()
+    expect(await screen.findByText(/Your role does not allow/)).toBeInTheDocument()
     expect(screen.queryByText('Edit staff')).not.toBeInTheDocument()
   })
   it('validates login using the generated schema and routes successful sessions', async () => {

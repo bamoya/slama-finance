@@ -594,7 +594,7 @@ describe('API-integrated company settings pages', () => {
       permissionKeys: ['company_settings.read', 'bank_accounts.read', 'templates.read'],
     })
     visit(path)
-    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have permission')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your role does not allow')
     expect(api.getCompanySettings).not.toHaveBeenCalled()
     expect(api.getBankAccount).not.toHaveBeenCalled()
     expect(api.getDocumentTemplate).not.toHaveBeenCalled()
@@ -621,7 +621,7 @@ describe('API-integrated company settings pages', () => {
         <CompanySettingsPage />
       </ProtectedRoute>,
     )
-    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have permission')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your role does not allow')
     expect(api.getCompanySettings).not.toHaveBeenCalled()
   })
   it('combines bank filters and preserves them when visiting details and returning', async () => {

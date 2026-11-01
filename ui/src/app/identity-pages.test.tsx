@@ -270,7 +270,7 @@ describe('API-integrated identity pages', () => {
   it('shows forbidden reads explicitly', async () => {
     vi.mocked(api.listStaff).mockRejectedValue(new ApiError(403, 'FORBIDDEN', 'Forbidden'))
     setup(<StaffPage />, '/settings/staff')
-    expect(await screen.findByText('Access denied')).toBeInTheDocument()
+    expect(await screen.findByText('Restricted access')).toBeInTheDocument()
   })
   it('loads saved permission keys and clears them only after confirmation', async () => {
     setup(<RolesPage />, '/settings/roles')

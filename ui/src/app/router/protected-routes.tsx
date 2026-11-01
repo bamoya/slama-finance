@@ -48,6 +48,7 @@ import { CompanySettingsPage } from '../../features/organization/settings'
 import { DocumentTemplatesPage } from '../../features/organization/settings'
 import { SettingsRecordPage } from '../../features/organization/settings'
 import { ProtectedRoute } from './protected-route'
+import { SettingsEntry } from './settings-entry'
 
 export const protectedRoutes = (
   <>
@@ -254,6 +255,11 @@ export const protectedRoutes = (
     <Route path="/reports">
       <ProtectedRoute>
         <ReportsPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/settings">
+      <ProtectedRoute>
+        <SettingsEntry />
       </ProtectedRoute>
     </Route>
     <Route path="/settings/staff/invitations/new">

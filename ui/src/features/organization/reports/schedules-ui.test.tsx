@@ -406,7 +406,7 @@ describe('persisted schedules and frozen reports', () => {
     mocks.keys = ['reports.read', 'report_runs.read']
     mocks.getReportRun.mockRejectedValue(new ApiError(403, 'FORBIDDEN', 'Not allowed.'))
     setup(<ReportRunPage />, `/reports/runs/${id}`, '/reports/runs/:runId')
-    expect(await screen.findByText('Access denied')).toBeInTheDocument()
+    expect(await screen.findByText('Restricted access')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Download PDF' })).not.toBeInTheDocument()
   })
 })

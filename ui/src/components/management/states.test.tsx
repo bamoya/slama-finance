@@ -28,7 +28,7 @@ describe('shared feature feedback', () => {
       </>,
     )
     expect(screen.getByRole('heading', { name: 'No clients yet' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Access denied' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Restricted access' })).toBeInTheDocument()
   })
   it('shows safe form errors and field messages', () => {
     render(

@@ -934,10 +934,6 @@ export const french: Record<string, string> = {
   'Wheat · 500 g': 'Blé · 500 g',
   'Where your receivables stand': 'Situation de vos créances',
   Yes: 'Oui',
-  'You do not have permission to view this page.':
-    'Vous n’avez pas la permission de consulter cette page.',
-  'You do not have permission to view this page. Contact your administrator.':
-    'Vous n’avez pas la permission de consulter cette page. Contactez votre administrateur.',
   'You have read-only access to this account.': 'Vous avez un accès en lecture seule à ce compte.',
   'You need View and Edit permissions for roles to select them. This account will be created without roles; an administrator can assign them later.':
     'La sélection de rôles nécessite les droits de consultation et de modification des rôles. Ce compte sera créé sans rôle ; un administrateur pourra lui en attribuer ultérieurement.',
@@ -2094,7 +2090,11 @@ export const french: Record<string, string> = {
     'Accepté par le prestataire e-mail (sans garantie de réception)',
   'Accepted estimates': 'Devis acceptés',
   'Access & security': 'Accès et sécurité',
-  'Access denied': 'Accès refusé',
+  'Open {{page}}': 'Ouvrir {{page}}',
+  'Open my profile': 'Ouvrir mon profil',
+  'Restricted access': 'Accès réservé',
+  'Your role does not allow you to open this page. Ask an administrator of your organization for access.':
+    'Votre rôle ne permet pas d’ouvrir cette page. Demandez l’accès à un administrateur de votre organisation.',
   Account: 'Compte',
   'Account archived. Its history has been preserved.':
     'Compte archivé. Son historique a été conservé.',
