@@ -672,7 +672,7 @@ export function createScheduleService(
                 {
                   idempotencyKey: `report:${row.id}:${userId}`,
                   actor: null,
-                  from: options.sender!,
+                  from: { ...options.sender!, name: snapshot.companyName || options.sender!.name },
                   to: recipient!.email,
                   cc: [],
                   ...email,

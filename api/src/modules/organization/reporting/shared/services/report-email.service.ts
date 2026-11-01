@@ -13,6 +13,23 @@ const escape = (value: string) =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
+/** DD-MM-YYYY HH:mm in the report timezone, the same format as the rest of the application. */
+export function capturedAt(value: string, timeZone: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(new Date(value))
+      .map((part) => [part.type, part.value]),
+  )
+  return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}`
+}
 /** Business composition stays here. The notification worker only delivers this ready-made payload. */
 export function composeReportEmail(
   snapshot: ReportAnalysis,
@@ -35,7 +52,7 @@ export function composeReportEmail(
     : 'Confidential: company financial information. Saved or forwarded copies cannot be revoked.'
   const date = (value: string) => value.split('-').reverse().join('-')
   const period = `${date(snapshot.filters.from)} - ${date(snapshot.filters.to)}`
-  const captured = `${fr ? 'Données figées au' : 'Captured at'} ${new Intl.DateTimeFormat(fr ? 'fr-FR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: snapshot.filters.timezone }).format(new Date(snapshot.capturedAt))} · ${snapshot.filters.timezone}`
+  const captured = `${fr ? 'Données figées au' : 'Captured at'} ${capturedAt(snapshot.capturedAt, snapshot.filters.timezone)} · ${snapshot.filters.timezone}`
   const figures = snapshot.sections
     .flatMap((section) =>
       section.metrics

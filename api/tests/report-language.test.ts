@@ -99,6 +99,8 @@ describe('scheduled report languages and visual parity', () => {
       expect(email.html).not.toContain('<Weekly')
       expect(email.html).toContain('role="presentation"')
       expect(email.html).toContain('x=1&amp;y=2')
+      expect(email.text).toContain('04-10-2026 13:00 · Africa/Casablanca')
+      expect(email.text).not.toMatch(/oct\.|Oct/)
       expect(email.text).toContain(language === 'fr' ? 'Période sélectionnée' : 'Selected period')
       expect(email.subject).toBe(
         language === 'fr' ? 'Votre rapport financier programmé' : 'Your scheduled financial report',

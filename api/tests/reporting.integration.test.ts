@@ -277,6 +277,7 @@ describe('Live and frozen reporting', () => {
         subject: '[TEST] Your scheduled financial report',
         status: 'queued',
       })
+      expect(messages[0]!.from_name).not.toBe('B-Finance')
       expect(messages[0]!.html).toContain('<html lang="en">')
       const attachments =
         await fixture.client`select * from outbound_message_attachments where message_id=${messages[0]!.id}`
