@@ -1,4 +1,5 @@
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { numberFormatter } from '../../../../lib/number-format'
 
 export function UsageMeter({
   label,
@@ -15,7 +16,7 @@ export function UsageMeter({
   const percentage = limit > 0 ? Math.min(100, (used / limit) * 100) : used > 0 ? 100 : 0
   const warning = limit > 0 && used >= limit * 0.8
   const format = (n: number) =>
-    new Intl.NumberFormat(language === 'fr' ? 'fr-MA' : 'en-GB', {
+    numberFormatter(language === 'fr' ? 'fr-MA' : 'en-GB', {
       maximumFractionDigits: unit === 'GB' ? 2 : 0,
     }).format(n)
   return (

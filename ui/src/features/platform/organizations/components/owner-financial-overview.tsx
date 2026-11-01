@@ -14,6 +14,7 @@ import {
 import { Tooltip } from '../../../../components/ui/tooltip'
 import { displayDate } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { numberFormatter } from '../../../../lib/number-format'
 
 const metrics = [
   {
@@ -41,16 +42,18 @@ const metrics = [
     help: 'Overdue balances are already included in outstanding.',
   },
 ]
+const formatAmount = (value: string | number, language: string) =>
+  numberFormatter(language === 'fr' ? 'fr-MA' : 'en-GB', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  }).format(Number(value))
+
 export function OwnerFinancialSummary({ data }: { data?: FinanceData }) {
   const language = useUiLanguage()
   const values = data
     ? [data.totals.revenue, data.totals.collected, data.totals.outstanding, data.totals.overdue]
     : null
-  const format = (value: string) =>
-    new Intl.NumberFormat(language === 'fr' ? 'fr-MA' : 'en-GB', {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
-    }).format(Number(value))
+  const format = (value: string) => formatAmount(value, language)
   return (
     <section className="owner-metrics" aria-label={translate('Financial summary')}>
       {metrics.map(({ label, icon: Icon, note, help }, index) => (
@@ -84,7 +87,7 @@ export function OwnerFinancialSummary({ data }: { data?: FinanceData }) {
   )
 }
 export function OwnerFinancialOverview({ data }: { data?: FinanceData }) {
-  useUiLanguage()
+  const language = useUiLanguage()
   return (
     <Card
       className="owner-card owner-financial-chart"
@@ -122,8 +125,26 @@ export function OwnerFinancialOverview({ data }: { data?: FinanceData }) {
               tickFormatter={(date) => displayDate(String(date))}
               minTickGap={40}
             />
-            <YAxis width={65} />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <YAxis
+              width={65}
+              tickFormatter={(value) =>
+                numberFormatter(language === 'fr' ? 'fr-MA' : 'en-GB', {
+                  maximumFractionDigits: 0,
+                }).format(Number(value))
+              }
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value, name) => (
+                    <span>
+                      {translate(name === 'revenue' ? 'Revenue' : 'Collected')}:{' '}
+                      <strong>{formatAmount(Number(value), language)}</strong>
+                    </span>
+                  )}
+                />
+              }
+            />
             <ChartLegend content={<ChartLegendContent />} />
             <Line
               type="monotone"
