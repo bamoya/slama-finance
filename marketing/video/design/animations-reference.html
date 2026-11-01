@@ -1,341 +1,2150 @@
 <title>B-Finance Film Animations</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+/>
 <style>
-/* Layout: variant tabs on top, then two 16:9 film frames per variant (invoice sent, reminder) with notes. */
-:root {
-  --bg: #f7f8fa; --fg: #252a32; --muted: #687280; --line: #e3e5ea; --card: #ffffff; --gold: #946f29;
-  --display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #12151a; --fg: #eceef2; --muted: #9aa3b0; --line: #2a3038; --card: #1b2028; color-scheme: dark } }
-:root[data-theme="dark"] { --bg: #12151a; --fg: #eceef2; --muted: #9aa3b0; --line: #2a3038; --card: #1b2028; color-scheme: dark }
-body { background: var(--bg); color: var(--fg); font-family: var(--display);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 36px 64px; }
-.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
-h1 { font-size: clamp(24px, 4vw, 36px); letter-spacing: -.02em; margin: 0 0 6px; text-wrap: balance; }
-.lead { color: var(--muted); margin: 0; line-height: 1.55; max-width: 68ch; }
-.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-.tabs button { font: 600 14px var(--display); border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
-.tabs button[aria-selected="true"] { background: var(--gold); border-color: var(--gold); color: #fff; }
-.tabs button:focus-visible, .replay:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.variant { display: grid; gap: 26px; }
-.variant > p { margin: 0; color: var(--muted); line-height: 1.55; max-width: 70ch; }
-.scene { display: grid; gap: 12px; }
-.scene h2 { font-size: 18px; margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.replay { font: 600 13px var(--display); border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  /* Layout: variant tabs on top, then two 16:9 film frames per variant (invoice sent, reminder) with notes. */
+  :root {
+    --bg: #f7f8fa;
+    --fg: #252a32;
+    --muted: #687280;
+    --line: #e3e5ea;
+    --card: #ffffff;
+    --gold: #946f29;
+    --display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #12151a;
+      --fg: #eceef2;
+      --muted: #9aa3b0;
+      --line: #2a3038;
+      --card: #1b2028;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #12151a;
+    --fg: #eceef2;
+    --muted: #9aa3b0;
+    --line: #2a3038;
+    --card: #1b2028;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--display);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 36px 64px;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    gap: 28px;
+  }
+  h1 {
+    font-size: clamp(24px, 4vw, 36px);
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .lead {
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.55;
+    max-width: 68ch;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tabs button {
+    font: 600 14px var(--display);
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--fg);
+    border-radius: 999px;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  .tabs button[aria-selected='true'] {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #fff;
+  }
+  .tabs button:focus-visible,
+  .replay:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .variant {
+    display: grid;
+    gap: 26px;
+  }
+  .variant > p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.55;
+    max-width: 70ch;
+  }
+  .scene {
+    display: grid;
+    gap: 12px;
+  }
+  .scene h2 {
+    font-size: 18px;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .replay {
+    font: 600 13px var(--display);
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--fg);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
 
-/* Film frames are always light, like the rendered video. */
-.frame { --u: 10px; position: relative; width: 100%; max-width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
-  background: #f7f8fa; color: #252a32;  box-shadow: 0 20px 60px -30px rgb(0 0 0 / .35); }
-.frame * { box-sizing: border-box; }
-.cap { position: absolute; left: 0; right: 0; top: 6%; text-align: center; font: 800 calc(3 * var(--u)) var(--display); letter-spacing: -.02em; opacity: 0; }
-.cap.sub { top: 13%; font: 500 calc(1.55 * var(--u)) var(--display); color: #5b6472; letter-spacing: 0; }
-.cap.light { color: #fff; }
-.night { position: absolute; inset: 0; background: #161a20; opacity: 0; }
-.pill { display: inline-flex; align-items: center; gap: calc(.4 * var(--u)); font: 700 calc(1.05 * var(--u)) var(--display); border-radius: 999px; padding: calc(.35 * var(--u)) calc(.9 * var(--u)); }
-.ok { color: #1f8a5b; background: #dff3e8; } .late { color: #fff; background: #c2412d; } .gold { color: #946f29; background: #f4ead6; }
-.avatar { width: calc(4.2 * var(--u)); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font: 800 calc(1.6 * var(--u)) var(--display); color: #fff; flex: none; }
-.a-biz { background: #946f29; } .a-cli { background: #2f5d50; }
+  /* Film frames are always light, like the rendered video. */
+  .frame {
+    --u: 10px;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #f7f8fa;
+    color: #252a32;
+    box-shadow: 0 20px 60px -30px rgb(0 0 0 / 0.35);
+  }
+  .frame * {
+    box-sizing: border-box;
+  }
+  .cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 6%;
+    text-align: center;
+    font: 800 calc(3 * var(--u)) var(--display);
+    letter-spacing: -0.02em;
+    opacity: 0;
+  }
+  .cap.sub {
+    top: 13%;
+    font: 500 calc(1.55 * var(--u)) var(--display);
+    color: #5b6472;
+    letter-spacing: 0;
+  }
+  .cap.light {
+    color: #fff;
+  }
+  .night {
+    position: absolute;
+    inset: 0;
+    background: #161a20;
+    opacity: 0;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(0.4 * var(--u));
+    font: 700 calc(1.05 * var(--u)) var(--display);
+    border-radius: 999px;
+    padding: calc(0.35 * var(--u)) calc(0.9 * var(--u));
+  }
+  .ok {
+    color: #1f8a5b;
+    background: #dff3e8;
+  }
+  .late {
+    color: #fff;
+    background: #c2412d;
+  }
+  .gold {
+    color: #946f29;
+    background: #f4ead6;
+  }
+  .avatar {
+    width: calc(4.2 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font: 800 calc(1.6 * var(--u)) var(--display);
+    color: #fff;
+    flex: none;
+  }
+  .a-biz {
+    background: #946f29;
+  }
+  .a-cli {
+    background: #2f5d50;
+  }
 
-@keyframes in { to { opacity: 1; translate: 0 0; scale: 1; } }
-@keyframes fade { to { opacity: 1; } }
-@keyframes out { to { opacity: 0; } }
-@keyframes nightcycle { 0% { opacity: 0; } 8%,40% { opacity: 1; } 48%,100% { opacity: 0; } }
+  @keyframes in {
+    to {
+      opacity: 1;
+      translate: 0 0;
+      scale: 1;
+    }
+  }
+  @keyframes fade {
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes nightcycle {
+    0% {
+      opacity: 0;
+    }
+    8%,
+    40% {
+      opacity: 1;
+    }
+    48%,
+    100% {
+      opacity: 0;
+    }
+  }
 
-/* ===== Variant A: Avion (refined) ===== */
-.A .doc { position: absolute; left: 11%; top: 31%; width: calc(21 * var(--u)); aspect-ratio: .74; background: #fff; border: 1px solid #e3e5ea; border-radius: calc(1 * var(--u)); padding: calc(1.5 * var(--u)); display: grid; align-content: start; gap: calc(.9 * var(--u)); box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .25); opacity: 0; translate: 0 calc(2 * var(--u)); }
-.A .doc b { font: 800 calc(1.7 * var(--u)) var(--display); }
-.A .ln { height: calc(.7 * var(--u)); background: #eceef2; border-radius: 9px; }
-.A .tot { margin-top: calc(.6 * var(--u)); border-top: 1px solid #eceef2; padding-top: calc(.8 * var(--u)); display: flex; justify-content: space-between; font: 700 calc(1.3 * var(--u)) var(--display); }
-.A .plane { position: absolute; left: 30%; top: 47%; width: calc(4 * var(--u)); aspect-ratio: 1; opacity: 0; offset-path: path("M0 0 C 200 -170, 430 -150, 560 30"); offset-rotate: auto; }
-.A .trail { position: absolute; left: 32%; top: 30%; width: 40%; height: 28%; opacity: 0; }
-.A .trail path { stroke-dasharray: 600; stroke-dashoffset: 600; }
-.A .inbox { position: absolute; right: 9%; top: 27%; width: calc(27 * var(--u)); background: #fff; border-radius: calc(1.2 * var(--u)); box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .3); overflow: hidden; }
-.A .inbox .bar { font: 700 calc(1.2 * var(--u)) var(--display); padding: calc(1 * var(--u)) calc(1.3 * var(--u)); border-bottom: 1px solid #eceef2; display: flex; justify-content: space-between; }
-.A .row { display: flex; gap: calc(.9 * var(--u)); align-items: center; padding: calc(1 * var(--u)) calc(1.3 * var(--u)); border-bottom: 1px solid #f1f2f5; }
-.A .row.new { background: #fbf6ec; opacity: 0; max-height: 0; padding-block: 0; overflow: hidden; }
-.A .row div { display: grid; gap: calc(.2 * var(--u)); min-width: 0; }
-.A .row b { font: 700 calc(1.05 * var(--u)) var(--display); } .A .row span { font: 500 calc(.95 * var(--u)) var(--display); color: #687280; }
-.A .row .ph { width: 70%; height: calc(.6 * var(--u)); background: #eceef2; border-radius: 9px; }
-.A .sent { position: absolute; left: 15%; top: 74%; opacity: 0; scale: .6; }
-.play .A.inv .cap { animation: fade .5s .1s forwards; } .play .A.inv .cap.sub { animation: fade .5s .4s forwards; }
-.play .A.inv .doc { animation: in .5s .5s ease-out forwards; }
-.play .A.inv .trail { animation: fade .1s 1.3s forwards; } .play .A.inv .trail path { animation: draw 1.3s 1.3s ease-in-out forwards; }
-.play .A.inv .plane { animation: fly 1.3s 1.3s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .A.inv .sent { animation: in .35s 1.4s forwards; }
-.play .A.inv .row.new { animation: newrow .6s 2.6s cubic-bezier(.2,1.2,.4,1) forwards; }
-@keyframes draw { to { stroke-dashoffset: 0; } }
-@keyframes fly { 0% { opacity: 0; offset-distance: 0%; } 10%,90% { opacity: 1; } 100% { opacity: 0; offset-distance: 100%; } }
-@keyframes newrow { to { opacity: 1; max-height: calc(8 * var(--u)); padding-block: calc(1 * var(--u)); } }
-/* A reminder */
-.A .cal { position: absolute; left: 13%; top: 31%; width: calc(19 * var(--u)); background: #fff; border-radius: calc(1.2 * var(--u)); overflow: visible; box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .35); text-align: center; }
-.A .cal .top { background: #c2412d; color: #fff; font: 700 calc(1.25 * var(--u)) var(--display); padding: calc(.8 * var(--u)); border-radius: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 0; }
-.A .cal .day { font: 800 calc(6.4 * var(--u)) var(--display); padding-top: calc(.4 * var(--u)); } .A .cal .lab { font: 600 calc(1.1 * var(--u)) var(--display); color: #687280; padding-bottom: calc(1.1 * var(--u)); }
-.A .cal .pill { position: absolute; right: calc(-1.4 * var(--u)); top: calc(-1.4 * var(--u)); opacity: 0; scale: .6; }
-.A .client { position: absolute; right: 17%; top: 30%; display: grid; justify-items: center; gap: calc(.7 * var(--u)); }
-.A .client .avatar { width: calc(9 * var(--u)); font-size: calc(3.2 * var(--u)); }
-.A .client b { font: 700 calc(1.35 * var(--u)) var(--display); }
-.A .zz { position: absolute; right: 14%; top: 24%; font: 800 calc(2.2 * var(--u)) var(--display); color: #8a93a0; opacity: 0; }
-.A .env { position: absolute; left: 38%; top: 46%; padding: calc(.8 * var(--u)) calc(1.2 * var(--u)); background: #fff; border: calc(.2 * var(--u)) solid #946f29; border-radius: calc(.8 * var(--u)); font: 700 calc(1.1 * var(--u)) var(--display); color: #946f29; opacity: 0; }
-.A .bell { position: absolute; right: 17.5%; top: 21%; font-size: calc(3 * var(--u)); opacity: 0; }
-.A .owner { position: absolute; left: 13%; top: 23%; width: calc(19 * var(--u)); display: flex; gap: calc(.7 * var(--u)); align-items: center; font: 700 calc(1.15 * var(--u)) var(--display); }
-.A .owner .avatar { width: calc(2.6 * var(--u)); font-size: calc(1.05 * var(--u)); }
-.A .money { position: absolute; left: 66%; top: 52%; display: flex; gap: calc(.6 * var(--u)); align-items: center; background: #1f8a5b; color: #fff; border-radius: 999px; padding: calc(.4 * var(--u)) calc(.9 * var(--u)); font: 700 calc(1 * var(--u)) var(--display); box-shadow: 0 calc(.6 * var(--u)) calc(1.4 * var(--u)) calc(-.8 * var(--u)) rgb(31 138 91 / .6); opacity: 0; z-index: 2; }
-.A .moneytrail { position: absolute; left: 33%; top: 49%; width: 36%; height: 16%; opacity: 0; }
-.A .moneytrail path { stroke-dasharray: 600; stroke-dashoffset: -600; }
-.A .cal .paidtop { position: absolute; inset: 0 0 auto 0; background: #1f8a5b; color: #fff; font: 700 calc(1.25 * var(--u)) var(--display); padding: calc(.8 * var(--u)); border-radius: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 0; opacity: 0; }
-.A .cal .okpill { position: static; display: block; width: max-content; margin: 0 auto calc(1.1 * var(--u)); opacity: 0; scale: 1; font-size: calc(1.05 * var(--u)); padding: calc(.35 * var(--u)) calc(.9 * var(--u)); }
-.A .client .paidmark { opacity: 0; scale: .6; }
-.play .A.rem .night { animation: nightcycle 6.5s forwards; } .play .A.rem .cap.q { animation: nightcycle 6.5s forwards; }
-.play .A.rem .cap.a { animation: fade .5s 3.1s forwards; }
-.play .A.rem .cal .pill { animation: in .35s .9s forwards; }
-.play .A.rem .zz { animation: zz 2.2s .6s; }
-.play .A.rem .env { animation: env 1.3s 3.3s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .A.rem .bell { animation: ring .9s 4.5s forwards; }
-.play .A.rem .client .paidmark { animation: in .3s 5.2s forwards; }
-.play .A.rem .money { animation: payback 1.3s 5.5s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .A.rem .cal .pill.late { animation: in .35s .9s forwards, out .2s 6.7s forwards; }
-.play .A.rem .cal .paidtop { animation: fade .3s 6.7s forwards; }
-.play .A.rem .cal .okpill { animation: fade .4s 6.8s forwards; }
-@keyframes payback { 0% { opacity: 0; left: 66%; top: 52%; } 12% { opacity: 1; } 80% { opacity: 1; scale: 1; } 100% { opacity: 0; left: 24%; top: 50%; scale: .7; } }
-@keyframes zz { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; translate: calc(2 * var(--u)) calc(-3 * var(--u)); } }
-@keyframes env { 0% { opacity: 0; left: 36%; } 15%,85% { opacity: 1; } 100% { opacity: 0; left: 62%; top: 38%; } }
-@keyframes ring { 0% { opacity: 0; } 15% { opacity: 1; rotate: -18deg; } 35% { rotate: 16deg; } 55% { rotate: -10deg; } 75% { rotate: 6deg; } 100% { opacity: 1; rotate: 0deg; } }
+  /* ===== Variant A: Avion (refined) ===== */
+  .A .doc {
+    position: absolute;
+    left: 11%;
+    top: 31%;
+    width: calc(21 * var(--u));
+    aspect-ratio: 0.74;
+    background: #fff;
+    border: 1px solid #e3e5ea;
+    border-radius: calc(1 * var(--u));
+    padding: calc(1.5 * var(--u));
+    display: grid;
+    align-content: start;
+    gap: calc(0.9 * var(--u));
+    box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.25);
+    opacity: 0;
+    translate: 0 calc(2 * var(--u));
+  }
+  .A .doc b {
+    font: 800 calc(1.7 * var(--u)) var(--display);
+  }
+  .A .ln {
+    height: calc(0.7 * var(--u));
+    background: #eceef2;
+    border-radius: 9px;
+  }
+  .A .tot {
+    margin-top: calc(0.6 * var(--u));
+    border-top: 1px solid #eceef2;
+    padding-top: calc(0.8 * var(--u));
+    display: flex;
+    justify-content: space-between;
+    font: 700 calc(1.3 * var(--u)) var(--display);
+  }
+  .A .plane {
+    position: absolute;
+    left: 30%;
+    top: 47%;
+    width: calc(4 * var(--u));
+    aspect-ratio: 1;
+    opacity: 0;
+    offset-path: path('M0 0 C 200 -170, 430 -150, 560 30');
+    offset-rotate: auto;
+  }
+  .A .trail {
+    position: absolute;
+    left: 32%;
+    top: 30%;
+    width: 40%;
+    height: 28%;
+    opacity: 0;
+  }
+  .A .trail path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+  }
+  .A .inbox {
+    position: absolute;
+    right: 9%;
+    top: 27%;
+    width: calc(27 * var(--u));
+    background: #fff;
+    border-radius: calc(1.2 * var(--u));
+    box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.3);
+    overflow: hidden;
+  }
+  .A .inbox .bar {
+    font: 700 calc(1.2 * var(--u)) var(--display);
+    padding: calc(1 * var(--u)) calc(1.3 * var(--u));
+    border-bottom: 1px solid #eceef2;
+    display: flex;
+    justify-content: space-between;
+  }
+  .A .row {
+    display: flex;
+    gap: calc(0.9 * var(--u));
+    align-items: center;
+    padding: calc(1 * var(--u)) calc(1.3 * var(--u));
+    border-bottom: 1px solid #f1f2f5;
+  }
+  .A .row.new {
+    background: #fbf6ec;
+    opacity: 0;
+    max-height: 0;
+    padding-block: 0;
+    overflow: hidden;
+  }
+  .A .row div {
+    display: grid;
+    gap: calc(0.2 * var(--u));
+    min-width: 0;
+  }
+  .A .row b {
+    font: 700 calc(1.05 * var(--u)) var(--display);
+  }
+  .A .row span {
+    font: 500 calc(0.95 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .A .row .ph {
+    width: 70%;
+    height: calc(0.6 * var(--u));
+    background: #eceef2;
+    border-radius: 9px;
+  }
+  .A .sent {
+    position: absolute;
+    left: 15%;
+    top: 74%;
+    opacity: 0;
+    scale: 0.6;
+  }
+  .play .A.inv .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .A.inv .cap.sub {
+    animation: fade 0.5s 0.4s forwards;
+  }
+  .play .A.inv .doc {
+    animation: in 0.5s 0.5s ease-out forwards;
+  }
+  .play .A.inv .trail {
+    animation: fade 0.1s 1.3s forwards;
+  }
+  .play .A.inv .trail path {
+    animation: draw 1.3s 1.3s ease-in-out forwards;
+  }
+  .play .A.inv .plane {
+    animation: fly 1.3s 1.3s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .A.inv .sent {
+    animation: in 0.35s 1.4s forwards;
+  }
+  .play .A.inv .row.new {
+    animation: newrow 0.6s 2.6s cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+  }
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes fly {
+    0% {
+      opacity: 0;
+      offset-distance: 0%;
+    }
+    10%,
+    90% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      offset-distance: 100%;
+    }
+  }
+  @keyframes newrow {
+    to {
+      opacity: 1;
+      max-height: calc(8 * var(--u));
+      padding-block: calc(1 * var(--u));
+    }
+  }
+  /* A reminder */
+  .A .cal {
+    position: absolute;
+    left: 13%;
+    top: 31%;
+    width: calc(19 * var(--u));
+    background: #fff;
+    border-radius: calc(1.2 * var(--u));
+    overflow: visible;
+    box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.35);
+    text-align: center;
+  }
+  .A .cal .top {
+    background: #c2412d;
+    color: #fff;
+    font: 700 calc(1.25 * var(--u)) var(--display);
+    padding: calc(0.8 * var(--u));
+    border-radius: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 0;
+  }
+  .A .cal .day {
+    font: 800 calc(6.4 * var(--u)) var(--display);
+    padding-top: calc(0.4 * var(--u));
+  }
+  .A .cal .lab {
+    font: 600 calc(1.1 * var(--u)) var(--display);
+    color: #687280;
+    padding-bottom: calc(1.1 * var(--u));
+  }
+  .A .cal .pill {
+    position: absolute;
+    right: calc(-1.4 * var(--u));
+    top: calc(-1.4 * var(--u));
+    opacity: 0;
+    scale: 0.6;
+  }
+  .A .client {
+    position: absolute;
+    right: 17%;
+    top: 30%;
+    display: grid;
+    justify-items: center;
+    gap: calc(0.7 * var(--u));
+  }
+  .A .client .avatar {
+    width: calc(9 * var(--u));
+    font-size: calc(3.2 * var(--u));
+  }
+  .A .client b {
+    font: 700 calc(1.35 * var(--u)) var(--display);
+  }
+  .A .zz {
+    position: absolute;
+    right: 14%;
+    top: 24%;
+    font: 800 calc(2.2 * var(--u)) var(--display);
+    color: #8a93a0;
+    opacity: 0;
+  }
+  .A .env {
+    position: absolute;
+    left: 38%;
+    top: 46%;
+    padding: calc(0.8 * var(--u)) calc(1.2 * var(--u));
+    background: #fff;
+    border: calc(0.2 * var(--u)) solid #946f29;
+    border-radius: calc(0.8 * var(--u));
+    font: 700 calc(1.1 * var(--u)) var(--display);
+    color: #946f29;
+    opacity: 0;
+  }
+  .A .bell {
+    position: absolute;
+    right: 17.5%;
+    top: 21%;
+    font-size: calc(3 * var(--u));
+    opacity: 0;
+  }
+  .A .owner {
+    position: absolute;
+    left: 13%;
+    top: 23%;
+    width: calc(19 * var(--u));
+    display: flex;
+    gap: calc(0.7 * var(--u));
+    align-items: center;
+    font: 700 calc(1.15 * var(--u)) var(--display);
+  }
+  .A .owner .avatar {
+    width: calc(2.6 * var(--u));
+    font-size: calc(1.05 * var(--u));
+  }
+  .A .money {
+    position: absolute;
+    left: 66%;
+    top: 52%;
+    display: flex;
+    gap: calc(0.6 * var(--u));
+    align-items: center;
+    background: #1f8a5b;
+    color: #fff;
+    border-radius: 999px;
+    padding: calc(0.4 * var(--u)) calc(0.9 * var(--u));
+    font: 700 calc(1 * var(--u)) var(--display);
+    box-shadow: 0 calc(0.6 * var(--u)) calc(1.4 * var(--u)) calc(-0.8 * var(--u))
+      rgb(31 138 91 / 0.6);
+    opacity: 0;
+    z-index: 2;
+  }
+  .A .moneytrail {
+    position: absolute;
+    left: 33%;
+    top: 49%;
+    width: 36%;
+    height: 16%;
+    opacity: 0;
+  }
+  .A .moneytrail path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: -600;
+  }
+  .A .cal .paidtop {
+    position: absolute;
+    inset: 0 0 auto 0;
+    background: #1f8a5b;
+    color: #fff;
+    font: 700 calc(1.25 * var(--u)) var(--display);
+    padding: calc(0.8 * var(--u));
+    border-radius: calc(1.2 * var(--u)) calc(1.2 * var(--u)) 0 0;
+    opacity: 0;
+  }
+  .A .cal .okpill {
+    position: static;
+    display: block;
+    width: max-content;
+    margin: 0 auto calc(1.1 * var(--u));
+    opacity: 0;
+    scale: 1;
+    font-size: calc(1.05 * var(--u));
+    padding: calc(0.35 * var(--u)) calc(0.9 * var(--u));
+  }
+  .A .client .paidmark {
+    opacity: 0;
+    scale: 0.6;
+  }
+  .play .A.rem .night {
+    animation: nightcycle 6.5s forwards;
+  }
+  .play .A.rem .cap.q {
+    animation: nightcycle 6.5s forwards;
+  }
+  .play .A.rem .cap.a {
+    animation: fade 0.5s 3.1s forwards;
+  }
+  .play .A.rem .cal .pill {
+    animation: in 0.35s 0.9s forwards;
+  }
+  .play .A.rem .zz {
+    animation: zz 2.2s 0.6s;
+  }
+  .play .A.rem .env {
+    animation: env 1.3s 3.3s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .A.rem .bell {
+    animation: ring 0.9s 4.5s forwards;
+  }
+  .play .A.rem .client .paidmark {
+    animation: in 0.3s 5.2s forwards;
+  }
+  .play .A.rem .money {
+    animation: payback 1.3s 5.5s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .A.rem .cal .pill.late {
+    animation:
+      in 0.35s 0.9s forwards,
+      out 0.2s 6.7s forwards;
+  }
+  .play .A.rem .cal .paidtop {
+    animation: fade 0.3s 6.7s forwards;
+  }
+  .play .A.rem .cal .okpill {
+    animation: fade 0.4s 6.8s forwards;
+  }
+  @keyframes payback {
+    0% {
+      opacity: 0;
+      left: 66%;
+      top: 52%;
+    }
+    12% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+      scale: 1;
+    }
+    100% {
+      opacity: 0;
+      left: 24%;
+      top: 50%;
+      scale: 0.7;
+    }
+  }
+  @keyframes zz {
+    0% {
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      translate: calc(2 * var(--u)) calc(-3 * var(--u));
+    }
+  }
+  @keyframes env {
+    0% {
+      opacity: 0;
+      left: 36%;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      left: 62%;
+      top: 38%;
+    }
+  }
+  @keyframes ring {
+    0% {
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+      rotate: -18deg;
+    }
+    35% {
+      rotate: 16deg;
+    }
+    55% {
+      rotate: -10deg;
+    }
+    75% {
+      rotate: 6deg;
+    }
+    100% {
+      opacity: 1;
+      rotate: 0deg;
+    }
+  }
 
-/* ===== Variant B: Messagerie (chat) ===== */
-.B .chat { position: absolute; left: 50%; top: 23%; translate: -50% 0; width: calc(46 * var(--u)); height: 70%; background: #fff; border-radius: calc(1.6 * var(--u)); box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / .3); overflow: hidden; display: flex; flex-direction: column; }
-.B .chat .head { display: flex; gap: calc(1 * var(--u)); align-items: center; padding: calc(1.1 * var(--u)) calc(1.4 * var(--u)); border-bottom: 1px solid #eceef2; }
-.B .chat .head .avatar { width: calc(3.2 * var(--u)); font-size: calc(1.3 * var(--u)); }
-.B .chat .head b { font: 700 calc(1.25 * var(--u)) var(--display); display: block; } .B .chat .head span { font: 500 calc(.95 * var(--u)) var(--display); color: #1f8a5b; }
-.B .msgs { flex: 1; padding: calc(1.4 * var(--u)); display: flex; flex-direction: column; gap: calc(1 * var(--u)); justify-content: flex-end; background: #f6f3ee; }
-.B .m { max-width: 72%; padding: calc(.9 * var(--u)) calc(1.1 * var(--u)); border-radius: calc(1.1 * var(--u)); font: 500 calc(1.08 * var(--u))/1.35 var(--display); opacity: 0; translate: 0 calc(1.2 * var(--u)); scale: .96; }
-.B .m.me { align-self: flex-end; background: #946f29; color: #fff; border-bottom-right-radius: calc(.3 * var(--u)); }
-.B .m.them { align-self: flex-start; background: #fff; border-bottom-left-radius: calc(.3 * var(--u)); box-shadow: 0 calc(.3 * var(--u)) calc(.8 * var(--u)) calc(-.4 * var(--u)) rgb(0 0 0 / .2); }
-.B .m.sys { align-self: center; background: transparent; color: #8a93a0; font-size: calc(.95 * var(--u)); padding: 0; }
-.B .file { display: flex; gap: calc(.8 * var(--u)); align-items: center; background: rgb(255 255 255 / .16); border-radius: calc(.7 * var(--u)); padding: calc(.6 * var(--u)) calc(.8 * var(--u)); margin-top: calc(.5 * var(--u)); }
-.B .file i { width: calc(2.2 * var(--u)); aspect-ratio: .8; background: #fff; border-radius: calc(.3 * var(--u)); display: grid; place-items: center; font: 800 calc(.7 * var(--u)) var(--display); color: #c2412d; font-style: normal; }
-.B .ticks { display: block; text-align: right; font-size: calc(.85 * var(--u)); margin-top: calc(.3 * var(--u)); opacity: .8; }
-.B .ticks .blue { color: #9fd3ff; opacity: 0; }
-.B .typing { align-self: flex-start; background: #fff; border-radius: calc(1.1 * var(--u)); padding: calc(.9 * var(--u)) calc(1.1 * var(--u)); display: flex; gap: calc(.35 * var(--u)); opacity: 0; }
-.B .typing i { width: calc(.55 * var(--u)); aspect-ratio: 1; border-radius: 50%; background: #9aa3b0; animation: dot 1s infinite; }
-.B .typing i:nth-child(2) { animation-delay: .15s; } .B .typing i:nth-child(3) { animation-delay: .3s; }
-@keyframes dot { 50% { translate: 0 calc(-.4 * var(--u)); } }
-.play .B .cap { animation: fade .5s .1s forwards; }
-.play .B.inv .m1 { animation: in .45s .7s forwards; }
-.play .B.inv .ticks .blue { animation: fade .3s 2.2s forwards; }
-.play .B.inv .typing { animation: fade .3s 2.4s forwards, out .2s 3.4s forwards; }
-.play .B.inv .m2 { animation: in .45s 3.5s forwards; }
-.play .B.rem .night { animation: nightcycle 7s forwards; } .play .B.rem .cap.q { animation: nightcycle 7s forwards; } .play .B.rem .cap.a { animation: fade .5s 3.3s forwards; }
-.play .B.rem .s1 { animation: in .4s .5s forwards; }
-.play .B.rem .m1 { animation: in .4s .9s forwards; }
-.play .B.rem .s2 { animation: in .4s 1.6s forwards; }
-.play .B.rem .m2 { animation: in .45s 3.6s forwards; }
-.play .B.rem .typing { animation: fade .3s 4.5s forwards, out .2s 5.4s forwards; }
-.play .B.rem .m3 { animation: in .45s 5.5s forwards; }
-.B.rem .night { z-index: 0; } .B.rem .cap { z-index: 2; } .B.rem .chat { z-index: 1; }
+  /* ===== Variant B: Messagerie (chat) ===== */
+  .B .chat {
+    position: absolute;
+    left: 50%;
+    top: 23%;
+    translate: -50% 0;
+    width: calc(46 * var(--u));
+    height: 70%;
+    background: #fff;
+    border-radius: calc(1.6 * var(--u));
+    box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .B .chat .head {
+    display: flex;
+    gap: calc(1 * var(--u));
+    align-items: center;
+    padding: calc(1.1 * var(--u)) calc(1.4 * var(--u));
+    border-bottom: 1px solid #eceef2;
+  }
+  .B .chat .head .avatar {
+    width: calc(3.2 * var(--u));
+    font-size: calc(1.3 * var(--u));
+  }
+  .B .chat .head b {
+    font: 700 calc(1.25 * var(--u)) var(--display);
+    display: block;
+  }
+  .B .chat .head span {
+    font: 500 calc(0.95 * var(--u)) var(--display);
+    color: #1f8a5b;
+  }
+  .B .msgs {
+    flex: 1;
+    padding: calc(1.4 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(1 * var(--u));
+    justify-content: flex-end;
+    background: #f6f3ee;
+  }
+  .B .m {
+    max-width: 72%;
+    padding: calc(0.9 * var(--u)) calc(1.1 * var(--u));
+    border-radius: calc(1.1 * var(--u));
+    font: 500 calc(1.08 * var(--u))/1.35 var(--display);
+    opacity: 0;
+    translate: 0 calc(1.2 * var(--u));
+    scale: 0.96;
+  }
+  .B .m.me {
+    align-self: flex-end;
+    background: #946f29;
+    color: #fff;
+    border-bottom-right-radius: calc(0.3 * var(--u));
+  }
+  .B .m.them {
+    align-self: flex-start;
+    background: #fff;
+    border-bottom-left-radius: calc(0.3 * var(--u));
+    box-shadow: 0 calc(0.3 * var(--u)) calc(0.8 * var(--u)) calc(-0.4 * var(--u)) rgb(0 0 0 / 0.2);
+  }
+  .B .m.sys {
+    align-self: center;
+    background: transparent;
+    color: #8a93a0;
+    font-size: calc(0.95 * var(--u));
+    padding: 0;
+  }
+  .B .file {
+    display: flex;
+    gap: calc(0.8 * var(--u));
+    align-items: center;
+    background: rgb(255 255 255 / 0.16);
+    border-radius: calc(0.7 * var(--u));
+    padding: calc(0.6 * var(--u)) calc(0.8 * var(--u));
+    margin-top: calc(0.5 * var(--u));
+  }
+  .B .file i {
+    width: calc(2.2 * var(--u));
+    aspect-ratio: 0.8;
+    background: #fff;
+    border-radius: calc(0.3 * var(--u));
+    display: grid;
+    place-items: center;
+    font: 800 calc(0.7 * var(--u)) var(--display);
+    color: #c2412d;
+    font-style: normal;
+  }
+  .B .ticks {
+    display: block;
+    text-align: right;
+    font-size: calc(0.85 * var(--u));
+    margin-top: calc(0.3 * var(--u));
+    opacity: 0.8;
+  }
+  .B .ticks .blue {
+    color: #9fd3ff;
+    opacity: 0;
+  }
+  .B .typing {
+    align-self: flex-start;
+    background: #fff;
+    border-radius: calc(1.1 * var(--u));
+    padding: calc(0.9 * var(--u)) calc(1.1 * var(--u));
+    display: flex;
+    gap: calc(0.35 * var(--u));
+    opacity: 0;
+  }
+  .B .typing i {
+    width: calc(0.55 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #9aa3b0;
+    animation: dot 1s infinite;
+  }
+  .B .typing i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .B .typing i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes dot {
+    50% {
+      translate: 0 calc(-0.4 * var(--u));
+    }
+  }
+  .play .B .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .B.inv .m1 {
+    animation: in 0.45s 0.7s forwards;
+  }
+  .play .B.inv .ticks .blue {
+    animation: fade 0.3s 2.2s forwards;
+  }
+  .play .B.inv .typing {
+    animation:
+      fade 0.3s 2.4s forwards,
+      out 0.2s 3.4s forwards;
+  }
+  .play .B.inv .m2 {
+    animation: in 0.45s 3.5s forwards;
+  }
+  .play .B.rem .night {
+    animation: nightcycle 7s forwards;
+  }
+  .play .B.rem .cap.q {
+    animation: nightcycle 7s forwards;
+  }
+  .play .B.rem .cap.a {
+    animation: fade 0.5s 3.3s forwards;
+  }
+  .play .B.rem .s1 {
+    animation: in 0.4s 0.5s forwards;
+  }
+  .play .B.rem .m1 {
+    animation: in 0.4s 0.9s forwards;
+  }
+  .play .B.rem .s2 {
+    animation: in 0.4s 1.6s forwards;
+  }
+  .play .B.rem .m2 {
+    animation: in 0.45s 3.6s forwards;
+  }
+  .play .B.rem .typing {
+    animation:
+      fade 0.3s 4.5s forwards,
+      out 0.2s 5.4s forwards;
+  }
+  .play .B.rem .m3 {
+    animation: in 0.45s 5.5s forwards;
+  }
+  .B.rem .night {
+    z-index: 0;
+  }
+  .B.rem .cap {
+    z-index: 2;
+  }
+  .B.rem .chat {
+    z-index: 1;
+  }
 
-/* ===== Variant C: Parcours (timeline) ===== */
-.C .track { position: absolute; left: 10%; right: 10%; top: 52%; height: calc(.5 * var(--u)); background: #e3e5ea; border-radius: 9px; }
-.C .track .fill { position: absolute; inset: 0; width: 0; background: #946f29; border-radius: 9px; }
-.C .node { position: absolute; top: 52%; translate: -50% -50%; display: grid; justify-items: center; gap: calc(1.1 * var(--u)); }
-.C .dot { width: calc(3.4 * var(--u)); aspect-ratio: 1; border-radius: 50%; background: #fff; border: calc(.35 * var(--u)) solid #e3e5ea; display: grid; place-items: center; font: 800 calc(1.3 * var(--u)) var(--display); color: #fff; transition: none; }
-.C .node .lab { position: absolute; top: calc(4.2 * var(--u)); text-align: center; white-space: nowrap; display: grid; gap: calc(.25 * var(--u)); }
-.C .node .lab b { font: 700 calc(1.25 * var(--u)) var(--display); } .C .node .lab span { font: 500 calc(1 * var(--u)) var(--display); color: #687280; }
-.C .node .card { position: absolute; bottom: calc(4.6 * var(--u)); background: #fff; border-radius: calc(1 * var(--u)); padding: calc(.9 * var(--u)) calc(1.2 * var(--u)); box-shadow: 0 calc(1.5 * var(--u)) calc(3.5 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .3); white-space: nowrap; font: 600 calc(1.05 * var(--u)) var(--display); opacity: 0; translate: 0 calc(1 * var(--u)); display: flex; gap: calc(.7 * var(--u)); align-items: center; }
-.C .runner { position: absolute; top: 52%; left: 10%; translate: -50% -50%; width: calc(2.6 * var(--u)); aspect-ratio: 1; border-radius: 50%; background: #946f29; box-shadow: 0 0 0 calc(.8 * var(--u)) rgb(148 111 41 / .18); opacity: 0; }
-.play .C .cap { animation: fade .5s .1s forwards; }
-.play .C.inv .runner { animation: run3 3.6s .6s cubic-bezier(.6,0,.3,1) forwards; }
-.play .C.inv .fill { animation: fill3 3.6s .6s cubic-bezier(.6,0,.3,1) forwards; }
-.play .C.inv .n1 .dot { animation: on .3s .6s forwards; } .play .C.inv .n1 .card { animation: in .4s .7s forwards; }
-.play .C.inv .n2 .dot { animation: on .3s 1.9s forwards; } .play .C.inv .n2 .card { animation: in .4s 2s forwards; }
-.play .C.inv .n3 .dot { animation: onok .3s 3.6s forwards; } .play .C.inv .n3 .card { animation: in .4s 3.7s forwards; }
-@keyframes run3 { 0% { opacity: 1; left: 10%; } 33% { left: 50%; } 36% { left: 50%; } 100% { opacity: 1; left: 90%; } }
-@keyframes fill3 { 0% { width: 0; } 33%,36% { width: 50%; } 100% { width: 100%; } }
-@keyframes on { to { background: #946f29; border-color: #946f29; } }
-@keyframes onok { to { background: #1f8a5b; border-color: #1f8a5b; } }
-@keyframes onlate { to { background: #c2412d; border-color: #c2412d; } }
-.play .C.rem .night { animation: nightcycle 7.4s forwards; } .play .C.rem .cap.q { animation: nightcycle 7.4s forwards; } .play .C.rem .cap.a { animation: fade .5s 3.4s forwards; }
-.C.rem .night { z-index: 0; } .C.rem .cap, .C.rem .track, .C.rem .node, .C.rem .runner { z-index: 1; }
-.play .C.rem .runner { animation: run4 5.6s .5s cubic-bezier(.6,0,.3,1) forwards; }
-.play .C.rem .fill { animation: fill4 5.6s .5s cubic-bezier(.6,0,.3,1) forwards; }
-.play .C.rem .n1 .dot { animation: on .3s .5s forwards; } .play .C.rem .n1 .card { animation: in .4s .6s forwards; }
-.play .C.rem .n2 .dot { animation: onlate .3s 1.6s forwards; } .play .C.rem .n2 .card { animation: in .4s 1.7s forwards; }
-.play .C.rem .n3 .dot { animation: on .3s 3.6s forwards; } .play .C.rem .n3 .card { animation: in .4s 3.7s forwards; }
-.play .C.rem .n4 .dot { animation: onok .3s 5.9s forwards; } .play .C.rem .n4 .card { animation: in .4s 6s forwards; }
-.play .C.rem .fill { }
-@keyframes run4 { 0% { opacity: 1; left: 10%; } 20% { left: 36.6%; } 50% { left: 36.6%; } 62% { left: 63.3%; } 85% { left: 63.3%; } 100% { opacity: 1; left: 90%; } }
-@keyframes fill4 { 0% { width: 0; } 20%,50% { width: 33.3%; } 62%,85% { width: 66.6%; } 100% { width: 100%; } }
+  /* ===== Variant C: Parcours (timeline) ===== */
+  .C .track {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 52%;
+    height: calc(0.5 * var(--u));
+    background: #e3e5ea;
+    border-radius: 9px;
+  }
+  .C .track .fill {
+    position: absolute;
+    inset: 0;
+    width: 0;
+    background: #946f29;
+    border-radius: 9px;
+  }
+  .C .node {
+    position: absolute;
+    top: 52%;
+    translate: -50% -50%;
+    display: grid;
+    justify-items: center;
+    gap: calc(1.1 * var(--u));
+  }
+  .C .dot {
+    width: calc(3.4 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #fff;
+    border: calc(0.35 * var(--u)) solid #e3e5ea;
+    display: grid;
+    place-items: center;
+    font: 800 calc(1.3 * var(--u)) var(--display);
+    color: #fff;
+    transition: none;
+  }
+  .C .node .lab {
+    position: absolute;
+    top: calc(4.2 * var(--u));
+    text-align: center;
+    white-space: nowrap;
+    display: grid;
+    gap: calc(0.25 * var(--u));
+  }
+  .C .node .lab b {
+    font: 700 calc(1.25 * var(--u)) var(--display);
+  }
+  .C .node .lab span {
+    font: 500 calc(1 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .C .node .card {
+    position: absolute;
+    bottom: calc(4.6 * var(--u));
+    background: #fff;
+    border-radius: calc(1 * var(--u));
+    padding: calc(0.9 * var(--u)) calc(1.2 * var(--u));
+    box-shadow: 0 calc(1.5 * var(--u)) calc(3.5 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.3);
+    white-space: nowrap;
+    font: 600 calc(1.05 * var(--u)) var(--display);
+    opacity: 0;
+    translate: 0 calc(1 * var(--u));
+    display: flex;
+    gap: calc(0.7 * var(--u));
+    align-items: center;
+  }
+  .C .runner {
+    position: absolute;
+    top: 52%;
+    left: 10%;
+    translate: -50% -50%;
+    width: calc(2.6 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #946f29;
+    box-shadow: 0 0 0 calc(0.8 * var(--u)) rgb(148 111 41 / 0.18);
+    opacity: 0;
+  }
+  .play .C .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .C.inv .runner {
+    animation: run3 3.6s 0.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  }
+  .play .C.inv .fill {
+    animation: fill3 3.6s 0.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  }
+  .play .C.inv .n1 .dot {
+    animation: on 0.3s 0.6s forwards;
+  }
+  .play .C.inv .n1 .card {
+    animation: in 0.4s 0.7s forwards;
+  }
+  .play .C.inv .n2 .dot {
+    animation: on 0.3s 1.9s forwards;
+  }
+  .play .C.inv .n2 .card {
+    animation: in 0.4s 2s forwards;
+  }
+  .play .C.inv .n3 .dot {
+    animation: onok 0.3s 3.6s forwards;
+  }
+  .play .C.inv .n3 .card {
+    animation: in 0.4s 3.7s forwards;
+  }
+  @keyframes run3 {
+    0% {
+      opacity: 1;
+      left: 10%;
+    }
+    33% {
+      left: 50%;
+    }
+    36% {
+      left: 50%;
+    }
+    100% {
+      opacity: 1;
+      left: 90%;
+    }
+  }
+  @keyframes fill3 {
+    0% {
+      width: 0;
+    }
+    33%,
+    36% {
+      width: 50%;
+    }
+    100% {
+      width: 100%;
+    }
+  }
+  @keyframes on {
+    to {
+      background: #946f29;
+      border-color: #946f29;
+    }
+  }
+  @keyframes onok {
+    to {
+      background: #1f8a5b;
+      border-color: #1f8a5b;
+    }
+  }
+  @keyframes onlate {
+    to {
+      background: #c2412d;
+      border-color: #c2412d;
+    }
+  }
+  .play .C.rem .night {
+    animation: nightcycle 7.4s forwards;
+  }
+  .play .C.rem .cap.q {
+    animation: nightcycle 7.4s forwards;
+  }
+  .play .C.rem .cap.a {
+    animation: fade 0.5s 3.4s forwards;
+  }
+  .C.rem .night {
+    z-index: 0;
+  }
+  .C.rem .cap,
+  .C.rem .track,
+  .C.rem .node,
+  .C.rem .runner {
+    z-index: 1;
+  }
+  .play .C.rem .runner {
+    animation: run4 5.6s 0.5s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  }
+  .play .C.rem .fill {
+    animation: fill4 5.6s 0.5s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  }
+  .play .C.rem .n1 .dot {
+    animation: on 0.3s 0.5s forwards;
+  }
+  .play .C.rem .n1 .card {
+    animation: in 0.4s 0.6s forwards;
+  }
+  .play .C.rem .n2 .dot {
+    animation: onlate 0.3s 1.6s forwards;
+  }
+  .play .C.rem .n2 .card {
+    animation: in 0.4s 1.7s forwards;
+  }
+  .play .C.rem .n3 .dot {
+    animation: on 0.3s 3.6s forwards;
+  }
+  .play .C.rem .n3 .card {
+    animation: in 0.4s 3.7s forwards;
+  }
+  .play .C.rem .n4 .dot {
+    animation: onok 0.3s 5.9s forwards;
+  }
+  .play .C.rem .n4 .card {
+    animation: in 0.4s 6s forwards;
+  }
+  .play .C.rem .fill {
+  }
+  @keyframes run4 {
+    0% {
+      opacity: 1;
+      left: 10%;
+    }
+    20% {
+      left: 36.6%;
+    }
+    50% {
+      left: 36.6%;
+    }
+    62% {
+      left: 63.3%;
+    }
+    85% {
+      left: 63.3%;
+    }
+    100% {
+      opacity: 1;
+      left: 90%;
+    }
+  }
+  @keyframes fill4 {
+    0% {
+      width: 0;
+    }
+    20%,
+    50% {
+      width: 33.3%;
+    }
+    62%,
+    85% {
+      width: 66.6%;
+    }
+    100% {
+      width: 100%;
+    }
+  }
 
-/* ===== Variant D: Écran partagé (split) ===== */
-.D .half { position: absolute; top: 20%; bottom: 6%; width: 41%; background: #fff; border-radius: calc(1.4 * var(--u)); box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .25); padding: calc(1.6 * var(--u)); display: grid; align-content: start; gap: calc(1.1 * var(--u)); }
-.D .left { left: 6%; } .D .right { right: 6%; }
-.D .who { display: flex; gap: calc(1 * var(--u)); align-items: center; } .D .who b { font: 700 calc(1.3 * var(--u)) var(--display); display: block; } .D .who span { font: 500 calc(1 * var(--u)) var(--display); color: #687280; }
-.D .btn { justify-self: start; font: 700 calc(1.2 * var(--u)) var(--display); color: #fff; background: #946f29; border-radius: calc(.8 * var(--u)); padding: calc(.9 * var(--u)) calc(1.5 * var(--u)); }
-.D .press { animation: none; }
-.D .mail { position: absolute; left: 30%; top: 50%; width: calc(17 * var(--u)); background: #fff; border: calc(.2 * var(--u)) solid #946f29; border-radius: calc(1 * var(--u)); padding: calc(1 * var(--u)) calc(1.2 * var(--u)); box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .35); opacity: 0; display: grid; gap: calc(.3 * var(--u)); z-index: 3; }
-.D .mail b { font: 700 calc(1.1 * var(--u)) var(--display); } .D .mail span { font: 600 calc(1.25 * var(--u)) var(--display); color: #946f29; }
-.D .slot { border: calc(.2 * var(--u)) dashed #e3e5ea; border-radius: calc(1 * var(--u)); height: calc(8 * var(--u)); display: grid; place-items: center; font: 500 calc(1 * var(--u)) var(--display); color: #9aa3b0; }
-.D .landed { border: 1px solid #e9dcc2; background: #fbf6ec; border-radius: calc(1 * var(--u)); padding: calc(1 * var(--u)) calc(1.2 * var(--u)); display: grid; gap: calc(.3 * var(--u)); opacity: 0; scale: .94; }
-.D .landed b { font: 700 calc(1.1 * var(--u)) var(--display); } .D .landed span { font: 600 calc(1.25 * var(--u)) var(--display); color: #946f29; }
-.D .mid { position: absolute; left: 50%; top: 20%; bottom: 6%; width: 0; border-left: calc(.2 * var(--u)) dashed #d6d9df; }
-.play .D .cap { animation: fade .5s .1s forwards; }
-.play .D.inv .btn { animation: press .3s 1s; }
-.play .D.inv .mail { animation: cross 1.3s 1.3s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .D.inv .slot { animation: out .2s 2.5s forwards; }
-.play .D.inv .landed { animation: in .4s 2.6s forwards; }
-.play .D.inv .open { animation: fade .3s 3.4s forwards; }
-@keyframes press { 50% { scale: .92; } }
-@keyframes cross { 0% { opacity: 0; left: 22%; top: 52%; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; left: 60%; top: 46%; rotate: 0deg; } }
-.D .open { opacity: 0; justify-self: start; }
-.D .flip { font: 800 calc(4.8 * var(--u)) var(--display); text-align: center; display: grid; gap: calc(.4 * var(--u)); }
-.D .flip small { font: 600 calc(1.1 * var(--u)) var(--display); color: #687280; }
-.D .flip .n { position: relative; height: calc(6 * var(--u)); overflow: hidden; }
-.D .flip .n span { position: absolute; left: 0; right: 0; display: block; }
-.D .rem .flip .d2, .D .rem .flip .d3 { opacity: 0; }
-.D.rem .night { z-index: 0; } .D.rem .cap, .D.rem .half, .D.rem .mid, .D.rem .mail { z-index: 1; }
-.play .D.rem .night { animation: nightcycle 7s forwards; } .play .D.rem .cap.q { animation: nightcycle 7s forwards; } .play .D.rem .cap.a { animation: fade .5s 3.3s forwards; }
-.play .D.rem .d1 { animation: flipout .3s 1s forwards; } .play .D.rem .d2 { animation: flipin .3s 1s forwards, flipout .3s 1.8s forwards; } .play .D.rem .d3 { animation: flipin .3s 1.8s forwards; }
-.play .D.rem .latepill { animation: in .3s 1.9s forwards; }
-.play .D.rem .mail { animation: cross 1.3s 3.5s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .D.rem .landed { animation: in .4s 4.8s forwards; }
-.play .D.rem .payback { animation: back 1.2s 5.6s cubic-bezier(.45,.05,.3,1) forwards; }
-.play .D.rem .okpill { animation: in .4s 6.6s forwards; }
-.D .latepill, .D .okpill { opacity: 0; scale: .7; justify-self: center; }
-.D .payback { position: absolute; left: 60%; top: 60%; opacity: 0; z-index: 3; font: 800 calc(1.4 * var(--u)) var(--display); background: #dff3e8; color: #1f8a5b; border-radius: 999px; padding: calc(.6 * var(--u)) calc(1.2 * var(--u)); }
-@keyframes flipout { to { translate: 0 -100%; opacity: 0; } }
-@keyframes flipin { from { translate: 0 100%; opacity: 0; } to { translate: 0 0; opacity: 1; } }
-@keyframes back { 0% { opacity: 0; left: 60%; } 15%,85% { opacity: 1; } 100% { opacity: 0; left: 24%; } }
+  /* ===== Variant D: Écran partagé (split) ===== */
+  .D .half {
+    position: absolute;
+    top: 20%;
+    bottom: 6%;
+    width: 41%;
+    background: #fff;
+    border-radius: calc(1.4 * var(--u));
+    box-shadow: 0 calc(1.5 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.25);
+    padding: calc(1.6 * var(--u));
+    display: grid;
+    align-content: start;
+    gap: calc(1.1 * var(--u));
+  }
+  .D .left {
+    left: 6%;
+  }
+  .D .right {
+    right: 6%;
+  }
+  .D .who {
+    display: flex;
+    gap: calc(1 * var(--u));
+    align-items: center;
+  }
+  .D .who b {
+    font: 700 calc(1.3 * var(--u)) var(--display);
+    display: block;
+  }
+  .D .who span {
+    font: 500 calc(1 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .D .btn {
+    justify-self: start;
+    font: 700 calc(1.2 * var(--u)) var(--display);
+    color: #fff;
+    background: #946f29;
+    border-radius: calc(0.8 * var(--u));
+    padding: calc(0.9 * var(--u)) calc(1.5 * var(--u));
+  }
+  .D .press {
+    animation: none;
+  }
+  .D .mail {
+    position: absolute;
+    left: 30%;
+    top: 50%;
+    width: calc(17 * var(--u));
+    background: #fff;
+    border: calc(0.2 * var(--u)) solid #946f29;
+    border-radius: calc(1 * var(--u));
+    padding: calc(1 * var(--u)) calc(1.2 * var(--u));
+    box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.35);
+    opacity: 0;
+    display: grid;
+    gap: calc(0.3 * var(--u));
+    z-index: 3;
+  }
+  .D .mail b {
+    font: 700 calc(1.1 * var(--u)) var(--display);
+  }
+  .D .mail span {
+    font: 600 calc(1.25 * var(--u)) var(--display);
+    color: #946f29;
+  }
+  .D .slot {
+    border: calc(0.2 * var(--u)) dashed #e3e5ea;
+    border-radius: calc(1 * var(--u));
+    height: calc(8 * var(--u));
+    display: grid;
+    place-items: center;
+    font: 500 calc(1 * var(--u)) var(--display);
+    color: #9aa3b0;
+  }
+  .D .landed {
+    border: 1px solid #e9dcc2;
+    background: #fbf6ec;
+    border-radius: calc(1 * var(--u));
+    padding: calc(1 * var(--u)) calc(1.2 * var(--u));
+    display: grid;
+    gap: calc(0.3 * var(--u));
+    opacity: 0;
+    scale: 0.94;
+  }
+  .D .landed b {
+    font: 700 calc(1.1 * var(--u)) var(--display);
+  }
+  .D .landed span {
+    font: 600 calc(1.25 * var(--u)) var(--display);
+    color: #946f29;
+  }
+  .D .mid {
+    position: absolute;
+    left: 50%;
+    top: 20%;
+    bottom: 6%;
+    width: 0;
+    border-left: calc(0.2 * var(--u)) dashed #d6d9df;
+  }
+  .play .D .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .D.inv .btn {
+    animation: press 0.3s 1s;
+  }
+  .play .D.inv .mail {
+    animation: cross 1.3s 1.3s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .D.inv .slot {
+    animation: out 0.2s 2.5s forwards;
+  }
+  .play .D.inv .landed {
+    animation: in 0.4s 2.6s forwards;
+  }
+  .play .D.inv .open {
+    animation: fade 0.3s 3.4s forwards;
+  }
+  @keyframes press {
+    50% {
+      scale: 0.92;
+    }
+  }
+  @keyframes cross {
+    0% {
+      opacity: 0;
+      left: 22%;
+      top: 52%;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      left: 60%;
+      top: 46%;
+      rotate: 0deg;
+    }
+  }
+  .D .open {
+    opacity: 0;
+    justify-self: start;
+  }
+  .D .flip {
+    font: 800 calc(4.8 * var(--u)) var(--display);
+    text-align: center;
+    display: grid;
+    gap: calc(0.4 * var(--u));
+  }
+  .D .flip small {
+    font: 600 calc(1.1 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .D .flip .n {
+    position: relative;
+    height: calc(6 * var(--u));
+    overflow: hidden;
+  }
+  .D .flip .n span {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: block;
+  }
+  .D .rem .flip .d2,
+  .D .rem .flip .d3 {
+    opacity: 0;
+  }
+  .D.rem .night {
+    z-index: 0;
+  }
+  .D.rem .cap,
+  .D.rem .half,
+  .D.rem .mid,
+  .D.rem .mail {
+    z-index: 1;
+  }
+  .play .D.rem .night {
+    animation: nightcycle 7s forwards;
+  }
+  .play .D.rem .cap.q {
+    animation: nightcycle 7s forwards;
+  }
+  .play .D.rem .cap.a {
+    animation: fade 0.5s 3.3s forwards;
+  }
+  .play .D.rem .d1 {
+    animation: flipout 0.3s 1s forwards;
+  }
+  .play .D.rem .d2 {
+    animation:
+      flipin 0.3s 1s forwards,
+      flipout 0.3s 1.8s forwards;
+  }
+  .play .D.rem .d3 {
+    animation: flipin 0.3s 1.8s forwards;
+  }
+  .play .D.rem .latepill {
+    animation: in 0.3s 1.9s forwards;
+  }
+  .play .D.rem .mail {
+    animation: cross 1.3s 3.5s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .D.rem .landed {
+    animation: in 0.4s 4.8s forwards;
+  }
+  .play .D.rem .payback {
+    animation: back 1.2s 5.6s cubic-bezier(0.45, 0.05, 0.3, 1) forwards;
+  }
+  .play .D.rem .okpill {
+    animation: in 0.4s 6.6s forwards;
+  }
+  .D .latepill,
+  .D .okpill {
+    opacity: 0;
+    scale: 0.7;
+    justify-self: center;
+  }
+  .D .payback {
+    position: absolute;
+    left: 60%;
+    top: 60%;
+    opacity: 0;
+    z-index: 3;
+    font: 800 calc(1.4 * var(--u)) var(--display);
+    background: #dff3e8;
+    color: #1f8a5b;
+    border-radius: 999px;
+    padding: calc(0.6 * var(--u)) calc(1.2 * var(--u));
+  }
+  @keyframes flipout {
+    to {
+      translate: 0 -100%;
+      opacity: 0;
+    }
+  }
+  @keyframes flipin {
+    from {
+      translate: 0 100%;
+      opacity: 0;
+    }
+    to {
+      translate: 0 0;
+      opacity: 1;
+    }
+  }
+  @keyframes back {
+    0% {
+      opacity: 0;
+      left: 60%;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      left: 24%;
+    }
+  }
 
-/* ===== Mini B-Finance app screens (match the real SaaS UI) ===== */
-.app { position: absolute; left: 9%; right: 9%; top: 21%; bottom: 5%; background: #fff; border-radius: calc(1.1 * var(--u)); overflow: hidden; box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / .35); display: grid; grid-template-rows: calc(2.6 * var(--u)) 1fr; border: 1px solid #e3e5ea; }
-.app .chrome { background: #f1f2f5; display: flex; align-items: center; gap: calc(.5 * var(--u)); padding: 0 calc(1 * var(--u)); border-bottom: 1px solid #e3e5ea; }
-.app .chrome i { width: calc(.8 * var(--u)); aspect-ratio: 1; border-radius: 50%; background: #d6d9df; }
-.app .chrome i:nth-child(1) { background: #ef6a5e; } .app .chrome i:nth-child(2) { background: #f5bf4f; } .app .chrome i:nth-child(3) { background: #61c454; }
-.app .chrome span { margin-left: auto; margin-right: auto; font: 500 calc(.9 * var(--u)) var(--display); color: #5b6472; background: #fff; border-radius: 9px; padding: calc(.25 * var(--u)) calc(2.5 * var(--u)); }
-.app .body { display: grid; grid-template-columns: calc(13.5 * var(--u)) 1fr; min-height: 0; }
-.app .side { background: #23292b; padding: calc(1.1 * var(--u)) calc(.9 * var(--u)); display: grid; align-content: start; gap: calc(.25 * var(--u)); }
-.app .brand { color: #fff; font: 800 calc(1.2 * var(--u)) var(--display); display: flex; gap: calc(.5 * var(--u)); align-items: center; margin-bottom: calc(.3 * var(--u)); }
-.app .brand em { width: calc(1.6 * var(--u)); aspect-ratio: 1; border-radius: calc(.35 * var(--u)); background: #946f29; display: grid; place-items: center; font: 800 calc(1 * var(--u)) var(--display); font-style: normal; }
-.app .org { color: #dfe3e8; font: 600 calc(.85 * var(--u)) var(--display); display: flex; gap: calc(.5 * var(--u)); align-items: center; padding: calc(.4 * var(--u)) 0 calc(.7 * var(--u)); border-bottom: 1px solid #343a39; margin-bottom: calc(.4 * var(--u)); }
-.app .org b { width: calc(1.6 * var(--u)); aspect-ratio: 1; border-radius: calc(.35 * var(--u)); background: #f4ead6; color: #946f29; display: grid; place-items: center; font: 800 calc(.7 * var(--u)) var(--display); }
-.app .grp { color: #7d8790; font: 600 calc(.7 * var(--u)) var(--display); text-transform: uppercase; letter-spacing: .06em; margin-top: calc(.5 * var(--u)); }
-.app .nav { color: #b2bcbd; font: 500 calc(.9 * var(--u)) var(--display); padding: calc(.4 * var(--u)) calc(.6 * var(--u)); border-radius: calc(.45 * var(--u)); display: flex; justify-content: space-between; align-items: center; }
-.app .nav.on { background: #343a39; color: #dfc48c; font-weight: 600; }
-.app .nav.lock { color: #5d666e; } .app .nav.lock::after { content: "🔒"; font-size: calc(.75 * var(--u)); }
-.app .main { background: #f5f6f8; padding: calc(1.1 * var(--u)) calc(1.3 * var(--u)); display: grid; align-content: start; gap: calc(.9 * var(--u)); min-width: 0; position: relative; }
-.app .ph { background: #fff; border: 1px solid #e6e8ec; border-radius: calc(.9 * var(--u)); padding: calc(.9 * var(--u)) calc(1.1 * var(--u)); display: flex; justify-content: space-between; align-items: center; gap: calc(1 * var(--u)); }
-.app .ph small { display: block; font: 600 calc(.72 * var(--u)) var(--display); color: #946f29; }
-.app .ph b { font: 750 calc(1.35 * var(--u)) var(--display); letter-spacing: -.02em; }
-.app .btn { font: 700 calc(.85 * var(--u)) var(--display); color: #fff; background: #946f29; border-radius: calc(.5 * var(--u)); padding: calc(.5 * var(--u)) calc(.9 * var(--u)); white-space: nowrap; }
-.app .btn.ghost { background: #fff; color: #252a32; border: 1px solid #e3e5ea; }
-.app .card { background: #fff; border: 1px solid #e6e8ec; border-radius: calc(.9 * var(--u)); overflow: hidden; }
-.app table { width: 100%; border-collapse: collapse; font: 500 calc(.85 * var(--u)) var(--display); }
-.app th { text-align: left; font: 600 calc(.7 * var(--u)) var(--display); text-transform: uppercase; letter-spacing: .05em; color: #687280; background: #fafbfc; padding: calc(.6 * var(--u)) calc(.9 * var(--u)); border-bottom: 1px solid #eef0f3; }
-.app td { padding: calc(.7 * var(--u)) calc(.9 * var(--u)); border-bottom: 1px solid #f1f2f5; color: #252a32; }
-.badge { display: inline-block; font: 700 calc(.72 * var(--u)) var(--display); border-radius: 999px; padding: calc(.15 * var(--u)) calc(.6 * var(--u)); }
-.badge.ok { color: #1f7a52; background: #e3f5ec; border: 1px solid #bfe6d1; }
-.badge.gold { color: #946f29; background: #f7efe0; border: 1px solid #ead9b6; }
-.badge.grey { color: #5b6472; background: #eef0f3; }
-.app .toast { position: absolute; right: calc(1.3 * var(--u)); bottom: calc(1.2 * var(--u)); background: #fff; border: 1px solid #e6e8ec; border-radius: calc(.8 * var(--u)); padding: calc(.7 * var(--u)) calc(1 * var(--u)); box-shadow: 0 calc(1.2 * var(--u)) calc(2.5 * var(--u)) calc(-1.2 * var(--u)) rgb(0 0 0 / .3); display: flex; gap: calc(.7 * var(--u)); align-items: center; font: 600 calc(.85 * var(--u)) var(--display); opacity: 0; translate: 0 calc(1 * var(--u)); }
-.app .toast .ic { width: calc(1.8 * var(--u)); aspect-ratio: 1; border-radius: 50%; background: #946f29; color: #fff; display: grid; place-items: center; font: 800 calc(.8 * var(--u)) var(--display); }
-.ptr { position: absolute; width: calc(1.7 * var(--u)); z-index: 5; pointer-events: none; }
-.ptr .ring { position: absolute; left: calc(-.6 * var(--u)); top: calc(-.6 * var(--u)); width: calc(1.6 * var(--u)); aspect-ratio: 1; border-radius: 50%; border: calc(.2 * var(--u)) solid #946f29; opacity: 0; }
+  /* ===== Mini B-Finance app screens (match the real SaaS UI) ===== */
+  .app {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 21%;
+    bottom: 5%;
+    background: #fff;
+    border-radius: calc(1.1 * var(--u));
+    overflow: hidden;
+    box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / 0.35);
+    display: grid;
+    grid-template-rows: calc(2.6 * var(--u)) 1fr;
+    border: 1px solid #e3e5ea;
+  }
+  .app .chrome {
+    background: #f1f2f5;
+    display: flex;
+    align-items: center;
+    gap: calc(0.5 * var(--u));
+    padding: 0 calc(1 * var(--u));
+    border-bottom: 1px solid #e3e5ea;
+  }
+  .app .chrome i {
+    width: calc(0.8 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #d6d9df;
+  }
+  .app .chrome i:nth-child(1) {
+    background: #ef6a5e;
+  }
+  .app .chrome i:nth-child(2) {
+    background: #f5bf4f;
+  }
+  .app .chrome i:nth-child(3) {
+    background: #61c454;
+  }
+  .app .chrome span {
+    margin-left: auto;
+    margin-right: auto;
+    font: 500 calc(0.9 * var(--u)) var(--display);
+    color: #5b6472;
+    background: #fff;
+    border-radius: 9px;
+    padding: calc(0.25 * var(--u)) calc(2.5 * var(--u));
+  }
+  .app .body {
+    display: grid;
+    grid-template-columns: calc(13.5 * var(--u)) 1fr;
+    min-height: 0;
+  }
+  .app .side {
+    background: #23292b;
+    padding: calc(1.1 * var(--u)) calc(0.9 * var(--u));
+    display: grid;
+    align-content: start;
+    gap: calc(0.25 * var(--u));
+  }
+  .app .brand {
+    color: #fff;
+    font: 800 calc(1.2 * var(--u)) var(--display);
+    display: flex;
+    gap: calc(0.5 * var(--u));
+    align-items: center;
+    margin-bottom: calc(0.3 * var(--u));
+  }
+  .app .brand em {
+    width: calc(1.6 * var(--u));
+    aspect-ratio: 1;
+    border-radius: calc(0.35 * var(--u));
+    background: #946f29;
+    display: grid;
+    place-items: center;
+    font: 800 calc(1 * var(--u)) var(--display);
+    font-style: normal;
+  }
+  .app .org {
+    color: #dfe3e8;
+    font: 600 calc(0.85 * var(--u)) var(--display);
+    display: flex;
+    gap: calc(0.5 * var(--u));
+    align-items: center;
+    padding: calc(0.4 * var(--u)) 0 calc(0.7 * var(--u));
+    border-bottom: 1px solid #343a39;
+    margin-bottom: calc(0.4 * var(--u));
+  }
+  .app .org b {
+    width: calc(1.6 * var(--u));
+    aspect-ratio: 1;
+    border-radius: calc(0.35 * var(--u));
+    background: #f4ead6;
+    color: #946f29;
+    display: grid;
+    place-items: center;
+    font: 800 calc(0.7 * var(--u)) var(--display);
+  }
+  .app .grp {
+    color: #7d8790;
+    font: 600 calc(0.7 * var(--u)) var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: calc(0.5 * var(--u));
+  }
+  .app .nav {
+    color: #b2bcbd;
+    font: 500 calc(0.9 * var(--u)) var(--display);
+    padding: calc(0.4 * var(--u)) calc(0.6 * var(--u));
+    border-radius: calc(0.45 * var(--u));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .app .nav.on {
+    background: #343a39;
+    color: #dfc48c;
+    font-weight: 600;
+  }
+  .app .nav.lock {
+    color: #5d666e;
+  }
+  .app .nav.lock::after {
+    content: '🔒';
+    font-size: calc(0.75 * var(--u));
+  }
+  .app .main {
+    background: #f5f6f8;
+    padding: calc(1.1 * var(--u)) calc(1.3 * var(--u));
+    display: grid;
+    align-content: start;
+    gap: calc(0.9 * var(--u));
+    min-width: 0;
+    position: relative;
+  }
+  .app .ph {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.9 * var(--u));
+    padding: calc(0.9 * var(--u)) calc(1.1 * var(--u));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: calc(1 * var(--u));
+  }
+  .app .ph small {
+    display: block;
+    font: 600 calc(0.72 * var(--u)) var(--display);
+    color: #946f29;
+  }
+  .app .ph b {
+    font: 750 calc(1.35 * var(--u)) var(--display);
+    letter-spacing: -0.02em;
+  }
+  .app .btn {
+    font: 700 calc(0.85 * var(--u)) var(--display);
+    color: #fff;
+    background: #946f29;
+    border-radius: calc(0.5 * var(--u));
+    padding: calc(0.5 * var(--u)) calc(0.9 * var(--u));
+    white-space: nowrap;
+  }
+  .app .btn.ghost {
+    background: #fff;
+    color: #252a32;
+    border: 1px solid #e3e5ea;
+  }
+  .app .card {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.9 * var(--u));
+    overflow: hidden;
+  }
+  .app table {
+    width: 100%;
+    border-collapse: collapse;
+    font: 500 calc(0.85 * var(--u)) var(--display);
+  }
+  .app th {
+    text-align: left;
+    font: 600 calc(0.7 * var(--u)) var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #687280;
+    background: #fafbfc;
+    padding: calc(0.6 * var(--u)) calc(0.9 * var(--u));
+    border-bottom: 1px solid #eef0f3;
+  }
+  .app td {
+    padding: calc(0.7 * var(--u)) calc(0.9 * var(--u));
+    border-bottom: 1px solid #f1f2f5;
+    color: #252a32;
+  }
+  .badge {
+    display: inline-block;
+    font: 700 calc(0.72 * var(--u)) var(--display);
+    border-radius: 999px;
+    padding: calc(0.15 * var(--u)) calc(0.6 * var(--u));
+  }
+  .badge.ok {
+    color: #1f7a52;
+    background: #e3f5ec;
+    border: 1px solid #bfe6d1;
+  }
+  .badge.gold {
+    color: #946f29;
+    background: #f7efe0;
+    border: 1px solid #ead9b6;
+  }
+  .badge.grey {
+    color: #5b6472;
+    background: #eef0f3;
+  }
+  .app .toast {
+    position: absolute;
+    right: calc(1.3 * var(--u));
+    bottom: calc(1.2 * var(--u));
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.8 * var(--u));
+    padding: calc(0.7 * var(--u)) calc(1 * var(--u));
+    box-shadow: 0 calc(1.2 * var(--u)) calc(2.5 * var(--u)) calc(-1.2 * var(--u)) rgb(0 0 0 / 0.3);
+    display: flex;
+    gap: calc(0.7 * var(--u));
+    align-items: center;
+    font: 600 calc(0.85 * var(--u)) var(--display);
+    opacity: 0;
+    translate: 0 calc(1 * var(--u));
+  }
+  .app .toast .ic {
+    width: calc(1.8 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #946f29;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font: 800 calc(0.8 * var(--u)) var(--display);
+  }
+  .ptr {
+    position: absolute;
+    width: calc(1.7 * var(--u));
+    z-index: 5;
+    pointer-events: none;
+  }
+  .ptr .ring {
+    position: absolute;
+    left: calc(-0.6 * var(--u));
+    top: calc(-0.6 * var(--u));
+    width: calc(1.6 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: calc(0.2 * var(--u)) solid #946f29;
+    opacity: 0;
+  }
 
-/* Reports scene */
-.R .mail { position: absolute; right: 2%; top: 26%; width: calc(30 * var(--u)); background: #fff; border: 1px solid #e3e5ea; border-radius: calc(1 * var(--u)); box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / .4); overflow: hidden; opacity: 0; translate: calc(3 * var(--u)) 0; z-index: 4; }
-.R .mail .mh { padding: calc(.8 * var(--u)) calc(1.1 * var(--u)); border-bottom: 1px solid #eef0f3; display: grid; gap: calc(.2 * var(--u)); }
-.R .mail .mh b { font: 700 calc(.95 * var(--u)) var(--display); } .R .mail .mh span { font: 500 calc(.78 * var(--u)) var(--display); color: #687280; }
-.R .mail .mb { padding: calc(1 * var(--u)) calc(1.1 * var(--u)); display: grid; gap: calc(.8 * var(--u)); }
-.R .mail .gl { height: calc(.25 * var(--u)); background: #946f29; border-radius: 9px; }
-.R .mail .ti { font: 750 calc(1.1 * var(--u)) var(--display); }
-.R .bars { display: flex; align-items: flex-end; gap: calc(.6 * var(--u)); height: calc(6.5 * var(--u)); border-bottom: 1px solid #eef0f3; }
-.R .bars i { flex: 1; border-radius: calc(.25 * var(--u)) calc(.25 * var(--u)) 0 0; background: #946f29; height: 0; }
-.R .bars i:nth-child(even) { background: #c9b07a; }
-.R .k { display: flex; justify-content: space-between; font: 500 calc(.72 * var(--u)) var(--display); color: #687280; }
-.R .k b { display: block; font: 800 calc(.95 * var(--u)) var(--display); color: #252a32; }
-.R .next { transition: none; }
-.play .R .cap { animation: fade .5s .1s forwards; } .play .R .cap.sub { animation: fade .5s .4s forwards; }
-.play .R .ptr { animation: rptr 2.2s .6s ease-in-out forwards; }
-.play .R .ptr .ring { animation: ringp .4s 1.5s; }
-.play .R .toast { animation: in .35s 1.7s forwards, out .3s 3.1s forwards; }
-.play .R .mail { animation: in .5s 3.2s forwards; }
-.play .R .bars i { animation: barh .6s 3.6s cubic-bezier(.2,1.1,.4,1) forwards; }
-.play .R .bars i:nth-child(2) { animation-delay: 3.7s; } .play .R .bars i:nth-child(3) { animation-delay: 3.8s; } .play .R .bars i:nth-child(4) { animation-delay: 3.9s; } .play .R .bars i:nth-child(5) { animation-delay: 4s; } .play .R .bars i:nth-child(6) { animation-delay: 4.1s; }
-@keyframes rptr { 0% { left: 60%; top: 75%; } 60%,100% { left: 83.4%; top: 43.6%; } }
-@keyframes ringp { 0% { opacity: 1; scale: .4; } 100% { opacity: 0; scale: 1.6; } }
-@keyframes barh { to { height: var(--h); } }
+  /* Reports scene */
+  .R .mail {
+    position: absolute;
+    right: 2%;
+    top: 26%;
+    width: calc(30 * var(--u));
+    background: #fff;
+    border: 1px solid #e3e5ea;
+    border-radius: calc(1 * var(--u));
+    box-shadow: 0 calc(2 * var(--u)) calc(5 * var(--u)) calc(-2.5 * var(--u)) rgb(0 0 0 / 0.4);
+    overflow: hidden;
+    opacity: 0;
+    translate: calc(3 * var(--u)) 0;
+    z-index: 4;
+  }
+  .R .mail .mh {
+    padding: calc(0.8 * var(--u)) calc(1.1 * var(--u));
+    border-bottom: 1px solid #eef0f3;
+    display: grid;
+    gap: calc(0.2 * var(--u));
+  }
+  .R .mail .mh b {
+    font: 700 calc(0.95 * var(--u)) var(--display);
+  }
+  .R .mail .mh span {
+    font: 500 calc(0.78 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .R .mail .mb {
+    padding: calc(1 * var(--u)) calc(1.1 * var(--u));
+    display: grid;
+    gap: calc(0.8 * var(--u));
+  }
+  .R .mail .gl {
+    height: calc(0.25 * var(--u));
+    background: #946f29;
+    border-radius: 9px;
+  }
+  .R .mail .ti {
+    font: 750 calc(1.1 * var(--u)) var(--display);
+  }
+  .R .bars {
+    display: flex;
+    align-items: flex-end;
+    gap: calc(0.6 * var(--u));
+    height: calc(6.5 * var(--u));
+    border-bottom: 1px solid #eef0f3;
+  }
+  .R .bars i {
+    flex: 1;
+    border-radius: calc(0.25 * var(--u)) calc(0.25 * var(--u)) 0 0;
+    background: #946f29;
+    height: 0;
+  }
+  .R .bars i:nth-child(even) {
+    background: #c9b07a;
+  }
+  .R .k {
+    display: flex;
+    justify-content: space-between;
+    font: 500 calc(0.72 * var(--u)) var(--display);
+    color: #687280;
+  }
+  .R .k b {
+    display: block;
+    font: 800 calc(0.95 * var(--u)) var(--display);
+    color: #252a32;
+  }
+  .R .next {
+    transition: none;
+  }
+  .play .R .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .R .cap.sub {
+    animation: fade 0.5s 0.4s forwards;
+  }
+  .play .R .ptr {
+    animation: rptr 2.2s 0.6s ease-in-out forwards;
+  }
+  .play .R .ptr .ring {
+    animation: ringp 0.4s 1.5s;
+  }
+  .play .R .toast {
+    animation:
+      in 0.35s 1.7s forwards,
+      out 0.3s 3.1s forwards;
+  }
+  .play .R .mail {
+    animation: in 0.5s 3.2s forwards;
+  }
+  .play .R .bars i {
+    animation: barh 0.6s 3.6s cubic-bezier(0.2, 1.1, 0.4, 1) forwards;
+  }
+  .play .R .bars i:nth-child(2) {
+    animation-delay: 3.7s;
+  }
+  .play .R .bars i:nth-child(3) {
+    animation-delay: 3.8s;
+  }
+  .play .R .bars i:nth-child(4) {
+    animation-delay: 3.9s;
+  }
+  .play .R .bars i:nth-child(5) {
+    animation-delay: 4s;
+  }
+  .play .R .bars i:nth-child(6) {
+    animation-delay: 4.1s;
+  }
+  @keyframes rptr {
+    0% {
+      left: 60%;
+      top: 75%;
+    }
+    60%,
+    100% {
+      left: 83.4%;
+      top: 43.6%;
+    }
+  }
+  @keyframes ringp {
+    0% {
+      opacity: 1;
+      scale: 0.4;
+    }
+    100% {
+      opacity: 0;
+      scale: 1.6;
+    }
+  }
+  @keyframes barh {
+    to {
+      height: var(--h);
+    }
+  }
 
-/* Templates scene */
-.T .lays { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(.6 * var(--u)); }
-.T .lay { background: #fff; border: 1px solid #e6e8ec; border-radius: calc(.7 * var(--u)); padding: calc(.6 * var(--u)); display: grid; gap: calc(.35 * var(--u)); justify-items: center; font: 600 calc(.78 * var(--u)) var(--display); color: #5b6472; }
-.T .lay i { width: 70%; aspect-ratio: .8; border: 1px solid #e6e8ec; border-radius: calc(.3 * var(--u)); background: linear-gradient(#fff, #fff) padding-box; position: relative; }
-.T .lay i::before { content: ""; position: absolute; left: 12%; right: 12%; top: 12%; height: 12%; background: var(--c, #946f29); border-radius: 2px; }
-.T .lay i::after { content: ""; position: absolute; left: 12%; right: 30%; top: 34%; height: 40%; background: repeating-linear-gradient(#eceef2 0 2px, transparent 2px 6px); }
-.T .lay.sel { border-color: #946f29; background: #fbf6ec; color: #946f29; }
-.T .cols { display: grid; grid-template-columns: 1fr 1.1fr; gap: calc(.9 * var(--u)); min-height: 0; }
-.T .opts { display: grid; gap: calc(.7 * var(--u)); align-content: start; }
-.T .lbl { font: 600 calc(.8 * var(--u)) var(--display); color: #252a32; }
-.T .sw { display: flex; gap: calc(.6 * var(--u)); }
-.T .sw i { width: calc(1.9 * var(--u)); aspect-ratio: 1; border-radius: 50%; border: calc(.25 * var(--u)) solid #fff; box-shadow: 0 0 0 1px #e3e5ea; }
-.T .inp { background: #f3f4f6; border-radius: calc(.5 * var(--u)); padding: calc(.5 * var(--u)) calc(.7 * var(--u)); font: 500 calc(.8 * var(--u)) var(--display); color: #252a32; display: flex; justify-content: space-between; }
-.T .inp small { color: #946f29; font-weight: 700; }
-.T .prev { background: #fff; border: 1px solid #e6e8ec; border-radius: calc(.8 * var(--u)); padding: calc(.9 * var(--u)); display: grid; gap: calc(.6 * var(--u)); align-content: start; --acc: #946f29; }
-.T .prev .t { font: 600 calc(.78 * var(--u)) var(--display); color: #687280; display: flex; gap: calc(.4 * var(--u)); }
-.T .paper { border: 1px solid #eef0f3; border-radius: calc(.4 * var(--u)); padding: calc(.8 * var(--u)); display: grid; gap: calc(.45 * var(--u)); }
-.T .paper .hd { display: flex; justify-content: space-between; align-items: center; border-bottom: calc(.2 * var(--u)) solid var(--acc); padding-bottom: calc(.5 * var(--u)); }
-.T .paper .lg { width: calc(2 * var(--u)); aspect-ratio: 1; border-radius: calc(.35 * var(--u)); background: var(--acc); color: #fff; display: grid; place-items: center; font: 800 calc(.9 * var(--u)) var(--display); scale: 0; }
-.T .paper .hd b { font: 800 calc(1.05 * var(--u)) var(--display); color: var(--acc); }
-.T .paper .l { height: calc(.4 * var(--u)); background: #eceef2; border-radius: 9px; }
-.T .paper .tt { display: flex; justify-content: space-between; font: 800 calc(.8 * var(--u)) var(--display); color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, #fff); border-radius: calc(.3 * var(--u)); padding: calc(.35 * var(--u)) calc(.5 * var(--u)); }
-.play .T .cap { animation: fade .5s .1s forwards; } .play .T .cap.sub { animation: fade .5s .4s forwards; }
-.play .T .ptr { animation: tptr 4s .6s ease-in-out forwards; }
-.play .T .prev { animation: tacc 4s .6s steps(1) forwards; }
-.play .T .lay.l2 { animation: tsel .2s 3.1s forwards; } .play .T .lay.l1 { animation: tunsel .2s 3.1s forwards; }
-.play .T .paper .lg { animation: lgin .45s 4.2s cubic-bezier(.2,1.4,.4,1) forwards; }
-@keyframes tptr { 0% { left: 40%; top: 85%; } 15%,26% { left: 27.3%; top: 64.4%; } 38%,50% { left: 29.8%; top: 64.4%; } 65%,75% { left: 39.3%; top: 50%; } 88%,100% { left: 52.4%; top: 71.8%; } }
-@keyframes tacc { 0% { --acc: #946f29; } 25% { --acc: #2f6f5e; } 47% { --acc: #2d5a9e; } 100% { --acc: #2d5a9e; } }
-@keyframes tsel { to { border-color: #946f29; background: #fbf6ec; color: #946f29; } }
-@keyframes tunsel { to { border-color: #e6e8ec; background: #fff; color: #5b6472; } }
-@keyframes lgin { to { scale: 1; } }
-@property --acc { syntax: "<color>"; inherits: true; initial-value: #946f29; }
+  /* Templates scene */
+  .T .lays {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: calc(0.6 * var(--u));
+  }
+  .T .lay {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.7 * var(--u));
+    padding: calc(0.6 * var(--u));
+    display: grid;
+    gap: calc(0.35 * var(--u));
+    justify-items: center;
+    font: 600 calc(0.78 * var(--u)) var(--display);
+    color: #5b6472;
+  }
+  .T .lay i {
+    width: 70%;
+    aspect-ratio: 0.8;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.3 * var(--u));
+    background: linear-gradient(#fff, #fff) padding-box;
+    position: relative;
+  }
+  .T .lay i::before {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 12%;
+    height: 12%;
+    background: var(--c, #946f29);
+    border-radius: 2px;
+  }
+  .T .lay i::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 30%;
+    top: 34%;
+    height: 40%;
+    background: repeating-linear-gradient(#eceef2 0 2px, transparent 2px 6px);
+  }
+  .T .lay.sel {
+    border-color: #946f29;
+    background: #fbf6ec;
+    color: #946f29;
+  }
+  .T .cols {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: calc(0.9 * var(--u));
+    min-height: 0;
+  }
+  .T .opts {
+    display: grid;
+    gap: calc(0.7 * var(--u));
+    align-content: start;
+  }
+  .T .lbl {
+    font: 600 calc(0.8 * var(--u)) var(--display);
+    color: #252a32;
+  }
+  .T .sw {
+    display: flex;
+    gap: calc(0.6 * var(--u));
+  }
+  .T .sw i {
+    width: calc(1.9 * var(--u));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: calc(0.25 * var(--u)) solid #fff;
+    box-shadow: 0 0 0 1px #e3e5ea;
+  }
+  .T .inp {
+    background: #f3f4f6;
+    border-radius: calc(0.5 * var(--u));
+    padding: calc(0.5 * var(--u)) calc(0.7 * var(--u));
+    font: 500 calc(0.8 * var(--u)) var(--display);
+    color: #252a32;
+    display: flex;
+    justify-content: space-between;
+  }
+  .T .inp small {
+    color: #946f29;
+    font-weight: 700;
+  }
+  .T .prev {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: calc(0.8 * var(--u));
+    padding: calc(0.9 * var(--u));
+    display: grid;
+    gap: calc(0.6 * var(--u));
+    align-content: start;
+    --acc: #946f29;
+  }
+  .T .prev .t {
+    font: 600 calc(0.78 * var(--u)) var(--display);
+    color: #687280;
+    display: flex;
+    gap: calc(0.4 * var(--u));
+  }
+  .T .paper {
+    border: 1px solid #eef0f3;
+    border-radius: calc(0.4 * var(--u));
+    padding: calc(0.8 * var(--u));
+    display: grid;
+    gap: calc(0.45 * var(--u));
+  }
+  .T .paper .hd {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: calc(0.2 * var(--u)) solid var(--acc);
+    padding-bottom: calc(0.5 * var(--u));
+  }
+  .T .paper .lg {
+    width: calc(2 * var(--u));
+    aspect-ratio: 1;
+    border-radius: calc(0.35 * var(--u));
+    background: var(--acc);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font: 800 calc(0.9 * var(--u)) var(--display);
+    scale: 0;
+  }
+  .T .paper .hd b {
+    font: 800 calc(1.05 * var(--u)) var(--display);
+    color: var(--acc);
+  }
+  .T .paper .l {
+    height: calc(0.4 * var(--u));
+    background: #eceef2;
+    border-radius: 9px;
+  }
+  .T .paper .tt {
+    display: flex;
+    justify-content: space-between;
+    font: 800 calc(0.8 * var(--u)) var(--display);
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 12%, #fff);
+    border-radius: calc(0.3 * var(--u));
+    padding: calc(0.35 * var(--u)) calc(0.5 * var(--u));
+  }
+  .play .T .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .T .cap.sub {
+    animation: fade 0.5s 0.4s forwards;
+  }
+  .play .T .ptr {
+    animation: tptr 4s 0.6s ease-in-out forwards;
+  }
+  .play .T .prev {
+    animation: tacc 4s 0.6s steps(1) forwards;
+  }
+  .play .T .lay.l2 {
+    animation: tsel 0.2s 3.1s forwards;
+  }
+  .play .T .lay.l1 {
+    animation: tunsel 0.2s 3.1s forwards;
+  }
+  .play .T .paper .lg {
+    animation: lgin 0.45s 4.2s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  }
+  @keyframes tptr {
+    0% {
+      left: 40%;
+      top: 85%;
+    }
+    15%,
+    26% {
+      left: 27.3%;
+      top: 64.4%;
+    }
+    38%,
+    50% {
+      left: 29.8%;
+      top: 64.4%;
+    }
+    65%,
+    75% {
+      left: 39.3%;
+      top: 50%;
+    }
+    88%,
+    100% {
+      left: 52.4%;
+      top: 71.8%;
+    }
+  }
+  @keyframes tacc {
+    0% {
+      --acc: #946f29;
+    }
+    25% {
+      --acc: #2f6f5e;
+    }
+    47% {
+      --acc: #2d5a9e;
+    }
+    100% {
+      --acc: #2d5a9e;
+    }
+  }
+  @keyframes tsel {
+    to {
+      border-color: #946f29;
+      background: #fbf6ec;
+      color: #946f29;
+    }
+  }
+  @keyframes tunsel {
+    to {
+      border-color: #e6e8ec;
+      background: #fff;
+      color: #5b6472;
+    }
+  }
+  @keyframes lgin {
+    to {
+      scale: 1;
+    }
+  }
+  @property --acc {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #946f29;
+  }
 
-/* Team scene */
-.S .dialog { position: absolute; left: 50%; top: 52%; translate: -50% -50%; width: calc(26 * var(--u)); background: #fff; border-radius: calc(1 * var(--u)); box-shadow: 0 calc(2.5 * var(--u)) calc(6 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / .45); padding: calc(1.2 * var(--u)); display: grid; gap: calc(.7 * var(--u)); z-index: 4; opacity: 0; }
-.S .dialog b { font: 750 calc(1.1 * var(--u)) var(--display); }
-.S .inp { background: #f3f4f6; border-radius: calc(.5 * var(--u)); padding: calc(.5 * var(--u)) calc(.7 * var(--u)); font: 500 calc(.82 * var(--u)) var(--display); display: flex; justify-content: space-between; }
-.S .inp small { color: #687280; }
-.S .perm { display: grid; grid-template-columns: 1fr auto; gap: calc(.3 * var(--u)) calc(.8 * var(--u)); font: 500 calc(.78 * var(--u)) var(--display); color: #5b6472; }
-.S .perm span:nth-child(even) { font-weight: 700; } .S .yes { color: #1f7a52; } .S .no { color: #b23a28; }
-.S .row2 { display: flex; justify-content: flex-end; gap: calc(.5 * var(--u)); }
-.S .dialog .btn { font: 700 calc(.85 * var(--u)) var(--display); color: #fff; background: #946f29; border-radius: calc(.5 * var(--u)); padding: calc(.5 * var(--u)) calc(.9 * var(--u)); white-space: nowrap; }
-.S .dialog .btn.ghost { background: #fff; color: #252a32; border: 1px solid #e3e5ea; }
-.S .scrim { position: absolute; inset: 0; background: rgb(22 26 32 / .35); opacity: 0; z-index: 3; }
-.S .staffapp { opacity: 0; }
-.S .deny { position: absolute; left: calc(1.3 * var(--u)); bottom: calc(1.2 * var(--u)); background: #fdecea; border: 1px solid #f5c4bd; color: #b23a28; border-radius: calc(.7 * var(--u)); padding: calc(.6 * var(--u)) calc(.9 * var(--u)); font: 700 calc(.82 * var(--u)) var(--display); opacity: 0; translate: 0 calc(1 * var(--u)); }
-.play .S .cap { animation: fade .5s .1s forwards; } .play .S .cap.sub { animation: fade .5s .4s forwards; }
-.play .S .scrim { animation: fade .3s .8s forwards, out .3s 2.6s forwards; }
-.play .S .dialog { animation: fade .3s .8s forwards, out .3s 2.6s forwards; }
-.play .S .ptr.p1 { animation: sptr1 1.6s .9s ease-in-out forwards, out .2s 2.6s forwards; }
-.play .S .ptr.p1 .ring { animation: ringp .4s 2.2s; }
-.play .S .toast { animation: in .35s 2.5s forwards, out .3s 3.3s forwards; }
-.play .S .ownerapp { animation: out .4s 3.3s forwards; }
-.play .S .staffapp { animation: fade .4s 3.3s forwards; }
-.play .S .ptr.p2 { opacity: 0; animation: fade .1s 3.8s forwards, sptr2 .9s 3.8s ease-in-out forwards; }
-.play .S .ptr.p2 .ring { animation: ringp .4s 4.7s; }
-.play .S .nav.lock.set { animation: shake .45s 4.7s; }
-.play .S .deny { animation: in .35s 4.8s forwards; }
-@keyframes sptr1 { 0% { left: 62%; top: 80%; } 80%,100% { left: 57.2%; top: 63.6%; } }
-@keyframes sptr2 { 0% { left: 40%; top: 60%; } 100% { left: 13.3%; top: 71%; } }
-@keyframes shake { 20% { translate: calc(-.3 * var(--u)) 0; } 40% { translate: calc(.3 * var(--u)) 0; } 60% { translate: calc(-.2 * var(--u)) 0; } 80% { translate: calc(.2 * var(--u)) 0; } }
+  /* Team scene */
+  .S .dialog {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    translate: -50% -50%;
+    width: calc(26 * var(--u));
+    background: #fff;
+    border-radius: calc(1 * var(--u));
+    box-shadow: 0 calc(2.5 * var(--u)) calc(6 * var(--u)) calc(-2 * var(--u)) rgb(0 0 0 / 0.45);
+    padding: calc(1.2 * var(--u));
+    display: grid;
+    gap: calc(0.7 * var(--u));
+    z-index: 4;
+    opacity: 0;
+  }
+  .S .dialog b {
+    font: 750 calc(1.1 * var(--u)) var(--display);
+  }
+  .S .inp {
+    background: #f3f4f6;
+    border-radius: calc(0.5 * var(--u));
+    padding: calc(0.5 * var(--u)) calc(0.7 * var(--u));
+    font: 500 calc(0.82 * var(--u)) var(--display);
+    display: flex;
+    justify-content: space-between;
+  }
+  .S .inp small {
+    color: #687280;
+  }
+  .S .perm {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: calc(0.3 * var(--u)) calc(0.8 * var(--u));
+    font: 500 calc(0.78 * var(--u)) var(--display);
+    color: #5b6472;
+  }
+  .S .perm span:nth-child(even) {
+    font-weight: 700;
+  }
+  .S .yes {
+    color: #1f7a52;
+  }
+  .S .no {
+    color: #b23a28;
+  }
+  .S .row2 {
+    display: flex;
+    justify-content: flex-end;
+    gap: calc(0.5 * var(--u));
+  }
+  .S .dialog .btn {
+    font: 700 calc(0.85 * var(--u)) var(--display);
+    color: #fff;
+    background: #946f29;
+    border-radius: calc(0.5 * var(--u));
+    padding: calc(0.5 * var(--u)) calc(0.9 * var(--u));
+    white-space: nowrap;
+  }
+  .S .dialog .btn.ghost {
+    background: #fff;
+    color: #252a32;
+    border: 1px solid #e3e5ea;
+  }
+  .S .scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(22 26 32 / 0.35);
+    opacity: 0;
+    z-index: 3;
+  }
+  .S .staffapp {
+    opacity: 0;
+  }
+  .S .deny {
+    position: absolute;
+    left: calc(1.3 * var(--u));
+    bottom: calc(1.2 * var(--u));
+    background: #fdecea;
+    border: 1px solid #f5c4bd;
+    color: #b23a28;
+    border-radius: calc(0.7 * var(--u));
+    padding: calc(0.6 * var(--u)) calc(0.9 * var(--u));
+    font: 700 calc(0.82 * var(--u)) var(--display);
+    opacity: 0;
+    translate: 0 calc(1 * var(--u));
+  }
+  .play .S .cap {
+    animation: fade 0.5s 0.1s forwards;
+  }
+  .play .S .cap.sub {
+    animation: fade 0.5s 0.4s forwards;
+  }
+  .play .S .scrim {
+    animation:
+      fade 0.3s 0.8s forwards,
+      out 0.3s 2.6s forwards;
+  }
+  .play .S .dialog {
+    animation:
+      fade 0.3s 0.8s forwards,
+      out 0.3s 2.6s forwards;
+  }
+  .play .S .ptr.p1 {
+    animation:
+      sptr1 1.6s 0.9s ease-in-out forwards,
+      out 0.2s 2.6s forwards;
+  }
+  .play .S .ptr.p1 .ring {
+    animation: ringp 0.4s 2.2s;
+  }
+  .play .S .toast {
+    animation:
+      in 0.35s 2.5s forwards,
+      out 0.3s 3.3s forwards;
+  }
+  .play .S .ownerapp {
+    animation: out 0.4s 3.3s forwards;
+  }
+  .play .S .staffapp {
+    animation: fade 0.4s 3.3s forwards;
+  }
+  .play .S .ptr.p2 {
+    opacity: 0;
+    animation:
+      fade 0.1s 3.8s forwards,
+      sptr2 0.9s 3.8s ease-in-out forwards;
+  }
+  .play .S .ptr.p2 .ring {
+    animation: ringp 0.4s 4.7s;
+  }
+  .play .S .nav.lock.set {
+    animation: shake 0.45s 4.7s;
+  }
+  .play .S .deny {
+    animation: in 0.35s 4.8s forwards;
+  }
+  @keyframes sptr1 {
+    0% {
+      left: 62%;
+      top: 80%;
+    }
+    80%,
+    100% {
+      left: 57.2%;
+      top: 63.6%;
+    }
+  }
+  @keyframes sptr2 {
+    0% {
+      left: 40%;
+      top: 60%;
+    }
+    100% {
+      left: 13.3%;
+      top: 71%;
+    }
+  }
+  @keyframes shake {
+    20% {
+      translate: calc(-0.3 * var(--u)) 0;
+    }
+    40% {
+      translate: calc(0.3 * var(--u)) 0;
+    }
+    60% {
+      translate: calc(-0.2 * var(--u)) 0;
+    }
+    80% {
+      translate: calc(0.2 * var(--u)) 0;
+    }
+  }
 
-@media (prefers-reduced-motion: reduce) { .frame *, .frame *::before { animation-duration: .01s !important; animation-delay: 0s !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    .frame *,
+    .frame *::before {
+      animation-duration: 0.01s !important;
+      animation-delay: 0s !important;
+    }
+  }
 </style>
 
 <div class="wrap">
   <header>
     <h1>Animations du film, 4 variantes</h1>
-    <p class="lead">Chaque variante traite les deux moments du film : la facture envoyée au client, puis le client qui oublie de payer et la relance automatique. Choisissez une variante, ou combinez des éléments de plusieurs.</p>
+    <p class="lead">
+      Chaque variante traite les deux moments du film : la facture envoyée au client, puis le client
+      qui oublie de payer et la relance automatique. Choisissez une variante, ou combinez des
+      éléments de plusieurs.
+    </p>
   </header>
 
   <div class="tabs" role="tablist" aria-label="Variantes">
@@ -347,203 +2156,676 @@ h1 { font-size: clamp(24px, 4vw, 36px); letter-spacing: -.02em; margin: 0 0 6px;
 
   <!-- A -->
   <section class="variant" id="v-A" role="tabpanel" aria-labelledby="t-A">
-    <p>La première proposition, affinée : la trajectoire se dessine, et l'e-mail arrive dans une vraie boîte de réception plutôt que sur un téléphone. Lisible, proche de l'application.</p>
-    <div class="scene" data-len="4600"><h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="A inv" style="position:absolute;inset:0">
-        <div class="cap">Facturez et envoyez en un clic.</div><div class="cap sub">Votre client la reçoit aussitôt, avec le PDF.</div>
-        <div class="doc"><b>Facture</b><div class="ln" style="width:70%"></div><div class="ln" style="width:55%"></div><div class="ln"></div><div class="ln" style="width:80%"></div><div class="tot"><span>Total TTC</span><span>9 240,00 MAD</span></div></div>
-        <svg class="trail" viewBox="0 0 400 200" fill="none" aria-hidden="true"><path d="M5 150 C 120 10, 260 10, 395 120" stroke="#946f29" stroke-width="3" stroke-dasharray="6 9" stroke-linecap="round"/></svg>
-        <div class="plane" aria-hidden="true"><svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M2 11.5 22 3l-6.5 18-3.8-7.2L2 11.5Z" fill="#946f29"/></svg></div>
-        <span class="sent pill ok">✓ Envoyée</span>
-        <div class="inbox"><div class="bar"><span>Boîte de réception</span><span style="color:#687280;font-weight:500">contact@coop-albaraka.ma</span></div>
-          <div class="row new"><span class="avatar a-biz" style="width:calc(2.8 * var(--u));font-size:calc(1.1 * var(--u))">A</span><div><b>Atlas Négoce SARL</b><span>Facture FAC-2026 · 9 240,00 MAD · PDF joint</span></div></div>
-          <div class="row"><span class="avatar" style="width:calc(2.8 * var(--u));background:#d6d9df"></span><div style="flex:1"><div class="ph"></div><div class="ph" style="width:45%"></div></div></div>
-          <div class="row"><span class="avatar" style="width:calc(2.8 * var(--u));background:#d6d9df"></span><div style="flex:1"><div class="ph" style="width:60%"></div><div class="ph" style="width:35%"></div></div></div>
+    <p>
+      La première proposition, affinée : la trajectoire se dessine, et l'e-mail arrive dans une
+      vraie boîte de réception plutôt que sur un téléphone. Lisible, proche de l'application.
+    </p>
+    <div class="scene" data-len="4600">
+      <h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="A inv" style="position: absolute; inset: 0">
+          <div class="cap">Facturez et envoyez en un clic.</div>
+          <div class="cap sub">Votre client la reçoit aussitôt, avec le PDF.</div>
+          <div class="doc">
+            <b>Facture</b>
+            <div class="ln" style="width: 70%"></div>
+            <div class="ln" style="width: 55%"></div>
+            <div class="ln"></div>
+            <div class="ln" style="width: 80%"></div>
+            <div class="tot"><span>Total TTC</span><span>9 240,00 MAD</span></div>
+          </div>
+          <svg class="trail" viewBox="0 0 400 200" fill="none" aria-hidden="true">
+            <path
+              d="M5 150 C 120 10, 260 10, 395 120"
+              stroke="#946f29"
+              stroke-width="3"
+              stroke-dasharray="6 9"
+              stroke-linecap="round"
+            />
+          </svg>
+          <div class="plane" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="100%" height="100%">
+              <path d="M2 11.5 22 3l-6.5 18-3.8-7.2L2 11.5Z" fill="#946f29" />
+            </svg>
+          </div>
+          <span class="sent pill ok">✓ Envoyée</span>
+          <div class="inbox">
+            <div class="bar">
+              <span>Boîte de réception</span
+              ><span style="color: #687280; font-weight: 500">contact@coop-albaraka.ma</span>
+            </div>
+            <div class="row new">
+              <span
+                class="avatar a-biz"
+                style="width: calc(2.8 * var(--u)); font-size: calc(1.1 * var(--u))"
+                >A</span
+              >
+              <div>
+                <b>Atlas Négoce SARL</b><span>Facture FAC-2026 · 9 240,00 MAD · PDF joint</span>
+              </div>
+            </div>
+            <div class="row">
+              <span class="avatar" style="width: calc(2.8 * var(--u)); background: #d6d9df"></span>
+              <div style="flex: 1">
+                <div class="ph"></div>
+                <div class="ph" style="width: 45%"></div>
+              </div>
+            </div>
+            <div class="row">
+              <span class="avatar" style="width: calc(2.8 * var(--u)); background: #d6d9df"></span>
+              <div style="flex: 1">
+                <div class="ph" style="width: 60%"></div>
+                <div class="ph" style="width: 35%"></div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div></div></div>
-    <div class="scene" data-len="7600"><h2>Relance automatique, puis paiement reçu <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="A rem" style="position:absolute;inset:0">
-        <div class="night"></div>
-        <div class="owner"><span class="avatar a-biz">A</span>Vous · Atlas Négoce SARL</div>
-        <div class="cal"><div class="top">Échéance</div><div class="paidtop">Encaissé</div><div class="day">21</div><div class="lab">septembre 2026</div><span class="pill late">J+12</span><span class="pill ok okpill">✓ Payée · 39 228,00 MAD</span></div>
-        <div class="client"><span class="avatar a-cli">F</span><b>Ferme Oulad Saïd</b><span class="pill ok paidmark" style="font-size:calc(.85 * var(--u));padding:calc(.25 * var(--u)) calc(.7 * var(--u))">Virement effectué</span></div>
-        <div class="zz" aria-hidden="true">z z</div>
-        <div class="cap light q">Vos clients oublient de payer ?</div><div class="cap a">Les relances partent toutes seules.</div>
-        <div class="env">✉ Rappel automatique</div><div class="bell" aria-hidden="true">🔔</div>
-        <div class="money">← 39 228,00 MAD</div>
-      </div></div></div>
-    <div class="scene" data-len="5400"><h2>Rapports planifiés <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="R" style="position:absolute;inset:0">
-        <div class="cap">Suivez tout, sans y penser.</div><div class="cap sub">Votre rapport arrive chaque mois, tout seul.</div>
-        <div class="app"><div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div><div class="body"><div class="side"><div class="brand"><em>B</em>Finance</div><div class="org"><b>AN</b>Atlas Négoce SARL</div>
-<div class="grp">Ventes</div><div class="nav">Devis</div><div class="nav">Factures</div><div class="nav">Paiements</div>
-<div class="grp">Rapports</div><div class="nav">Rapports</div><div class="nav on">Rapports planifiés</div>
-<div class="grp">Paramètres</div><div class="nav ">Personnel</div><div class="nav ">Modèles de documents</div></div>
-          <div class="main"><div class="ph"><div><small>B-Finance / Rapports</small><b>Rapports planifiés</b></div><span class="btn">+ Nouvelle planification</span></div>
-            <div class="card"><table><thead><tr><th>Nom</th><th>Fréquence</th><th>Destinataires</th><th>Prochain envoi</th><th>Statut</th><th></th></tr></thead>
-              <tbody><tr><td><b>Rapport mensuel de gestion</b></td><td>Mensuel · le 1er</td><td>karim@atlas-negoce.ma</td><td>01-12-2026</td><td><span class="badge ok">Actif</span></td><td><span class="btn ghost">Envoyer un test</span></td></tr>
-              <tr><td>Synthèse des encaissements</td><td>Hebdomadaire · lundi</td><td>salma@cabinet-idrissi.ma</td><td>02-11-2026</td><td><span class="badge ok">Actif</span></td><td></td></tr></tbody></table></div>
-            <div class="toast"><span class="ic">✓</span>Rapport envoyé à karim@atlas-negoce.ma</div></div></div></div>
-        <div class="ptr "><span class="ring"></span><svg viewBox="0 0 24 24" width="100%" aria-hidden="true"><path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5"/></svg></div>
-        <div class="mail"><div class="mh"><b>Atlas Négoce SARL — Rapport mensuel de gestion</b><span>À : karim@atlas-negoce.ma · 01-11-2026 08:00</span></div>
-          <div class="mb"><div class="gl"></div><div class="ti">Octobre 2026</div>
-            <div class="bars"><i style="--h:42%"></i><i style="--h:58%"></i><i style="--h:50%"></i><i style="--h:71%"></i><i style="--h:64%"></i><i style="--h:88%"></i></div>
-            <div class="k"><span>Facturé<b>477 600,00</b></span><span>Encaissé<b>392 460,00</b></span><span>En retard<b>55 476,00</b></span></div>
-            <span class="badge gold" style="justify-self:start">PDF + Excel joints</span></div></div>
-      </div></div></div>
-    <div class="scene" data-len="5400"><h2>Personnalisation des modèles <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="T" style="position:absolute;inset:0">
-        <div class="cap">Des factures à votre image.</div><div class="cap sub">Couleur, mise en page et logo, avec l'aperçu immédiat.</div>
-        <div class="app"><div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div><div class="body"><div class="side"><div class="brand"><em>B</em>Finance</div><div class="org"><b>AN</b>Atlas Négoce SARL</div>
-<div class="grp">Ventes</div><div class="nav">Devis</div><div class="nav">Factures</div><div class="nav">Paiements</div>
-<div class="grp">Rapports</div><div class="nav">Rapports</div><div class="nav ">Rapports planifiés</div>
-<div class="grp">Paramètres</div><div class="nav ">Personnel</div><div class="nav on">Modèles de documents</div></div>
-          <div class="main"><div class="ph"><div><small>B-Finance / Paramètres</small><b>Créer un modèle</b></div><span class="btn">Enregistrer les modifications</span></div>
-            <div class="cols"><div class="opts">
-              <div class="lbl">Mise en page</div><div class="lays"><div class="lay sel l1"><i></i>Classique</div><div class="lay l2"><i></i>Moderne</div><div class="lay"><i></i>Compact</div></div>
-              <div class="lbl">Couleur d'accent</div><div class="sw"><i style="background:#946f29"></i><i style="background:#2f6f5e"></i><i style="background:#2d5a9e"></i><i style="background:#8b3a3a"></i></div>
-              <div class="lbl">Logo</div><div class="inp">logo-atlas.png <small>Importer</small></div></div>
-              <div class="prev"><div class="t"><span class="badge gold">Facture</span><span class="badge grey">Devis</span><span class="badge grey">Reçu</span></div>
-                <div class="paper"><div class="hd"><div class="lg">A</div><b>Facture</b></div><div class="l" style="width:60%"></div><div class="l" style="width:42%"></div><div class="l"></div><div class="l"></div><div class="l" style="width:75%"></div><div class="tt"><span>Total TTC</span><span>9 240,00 MAD</span></div></div></div></div>
-          </div></div></div>
-        <div class="ptr "><span class="ring"></span><svg viewBox="0 0 24 24" width="100%" aria-hidden="true"><path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5"/></svg></div>
-      </div></div></div>
-    <div class="scene" data-len="5800"><h2>Invitation de l'équipe et accès limités <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="S" style="position:absolute;inset:0">
-        <div class="cap">Chacun ses droits.</div><div class="cap sub">Invitez votre comptable : elle voit ce qu'il faut, rien de plus.</div>
-        <div class="app ownerapp"><div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div><div class="body"><div class="side"><div class="brand"><em>B</em>Finance</div><div class="org"><b>AN</b>Atlas Négoce SARL</div>
-<div class="grp">Ventes</div><div class="nav">Devis</div><div class="nav">Factures</div><div class="nav">Paiements</div>
-<div class="grp">Rapports</div><div class="nav">Rapports</div><div class="nav ">Rapports planifiés</div>
-<div class="grp">Paramètres</div><div class="nav on">Personnel</div><div class="nav ">Modèles de documents</div></div>
-          <div class="main"><div class="ph"><div><small>B-Finance / Identité</small><b>Personnel</b></div><span class="btn">+ Inviter un membre</span></div>
-            <div class="card"><table><thead><tr><th>Membre</th><th>Rôle</th><th>Statut</th></tr></thead>
-              <tbody><tr><td><b>Karim Benali</b></td><td>Administrateur</td><td><span class="badge ok">Actif</span></td></tr>
-              <tr><td>Nadia Chraibi</td><td>Commercial</td><td><span class="badge ok">Actif</span></td></tr></tbody></table></div>
-            <div class="toast"><span class="ic">✉</span>Invitation envoyée à Salma Idrissi</div></div></div></div>
-        <div class="app staffapp"><div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div><div class="body"><div class="side"><div class="brand"><em>B</em>Finance</div><div class="org"><b>AN</b>Atlas Négoce SARL</div>
-<div class="grp">Ventes</div><div class="nav lock">Devis</div><div class="nav on">Factures</div><div class="nav">Paiements</div>
-<div class="grp">Rapports</div><div class="nav">Rapports</div>
-<div class="grp">Paramètres</div><div class="nav lock">Clients</div><div class="nav lock">Personnel</div><div class="nav lock set">Paramètres</div></div>
-          <div class="main"><div class="ph"><div><small>Connectée : Salma Idrissi · Comptable</small><b>Factures</b></div></div>
-            <div class="card"><table><thead><tr><th>Facture</th><th>Client</th><th>Total</th><th>Statut</th></tr></thead>
-              <tbody><tr><td>FAC-2026-…2535</td><td>Coopérative Al Baraka</td><td>9 240,00 MAD</td><td><span class="badge gold">Émise</span></td></tr>
-              <tr><td>FAC-2026-…1000</td><td>Ferme Oulad Saïd</td><td>39 228,00 MAD</td><td><span class="badge ok">Payée</span></td></tr></tbody></table></div>
-            <div class="deny">🔒 Paramètres : accès réservé aux administrateurs</div></div></div></div>
-        <div class="scrim"></div>
-        <div class="dialog"><b>Inviter un membre</b><div class="inp">salma.idrissi@cabinet-idrissi.ma</div><div class="inp">Comptable <small>Rôle</small></div>
-          <div class="perm"><span>Factures, paiements</span><span class="yes">Accès</span><span>Rapports</span><span class="yes">Accès</span><span>Clients, personnel</span><span class="no">Aucun</span><span>Paramètres</span><span class="no">Aucun</span></div>
-          <div class="row2"><span class="btn ghost">Annuler</span><span class="btn">Envoyer l'invitation</span></div></div>
-        <div class="ptr p1"><span class="ring"></span><svg viewBox="0 0 24 24" width="100%" aria-hidden="true"><path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5"/></svg></div><div class="ptr p2"><span class="ring"></span><svg viewBox="0 0 24 24" width="100%" aria-hidden="true"><path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5"/></svg></div>
-      </div></div></div>
+      </div>
+    </div>
+    <div class="scene" data-len="7600">
+      <h2>
+        Relance automatique, puis paiement reçu
+        <button class="replay" type="button">Rejouer</button>
+      </h2>
+      <div class="frame">
+        <div class="A rem" style="position: absolute; inset: 0">
+          <div class="night"></div>
+          <div class="owner"><span class="avatar a-biz">A</span>Vous · Atlas Négoce SARL</div>
+          <div class="cal">
+            <div class="top">Échéance</div>
+            <div class="paidtop">Encaissé</div>
+            <div class="day">21</div>
+            <div class="lab">septembre 2026</div>
+            <span class="pill late">J+12</span
+            ><span class="pill ok okpill">✓ Payée · 39 228,00 MAD</span>
+          </div>
+          <div class="client">
+            <span class="avatar a-cli">F</span><b>Ferme Oulad Saïd</b
+            ><span
+              class="pill ok paidmark"
+              style="
+                font-size: calc(0.85 * var(--u));
+                padding: calc(0.25 * var(--u)) calc(0.7 * var(--u));
+              "
+              >Virement effectué</span
+            >
+          </div>
+          <div class="zz" aria-hidden="true">z z</div>
+          <div class="cap light q">Vos clients oublient de payer ?</div>
+          <div class="cap a">Les relances partent toutes seules.</div>
+          <div class="env">✉ Rappel automatique</div>
+          <div class="bell" aria-hidden="true">🔔</div>
+          <div class="money">← 39 228,00 MAD</div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="5400">
+      <h2>Rapports planifiés <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="R" style="position: absolute; inset: 0">
+          <div class="cap">Suivez tout, sans y penser.</div>
+          <div class="cap sub">Votre rapport arrive chaque mois, tout seul.</div>
+          <div class="app">
+            <div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div>
+            <div class="body">
+              <div class="side">
+                <div class="brand"><em>B</em>Finance</div>
+                <div class="org"><b>AN</b>Atlas Négoce SARL</div>
+                <div class="grp">Ventes</div>
+                <div class="nav">Devis</div>
+                <div class="nav">Factures</div>
+                <div class="nav">Paiements</div>
+                <div class="grp">Rapports</div>
+                <div class="nav">Rapports</div>
+                <div class="nav on">Rapports planifiés</div>
+                <div class="grp">Paramètres</div>
+                <div class="nav">Personnel</div>
+                <div class="nav">Modèles de documents</div>
+              </div>
+              <div class="main">
+                <div class="ph">
+                  <div><small>B-Finance / Rapports</small><b>Rapports planifiés</b></div>
+                  <span class="btn">+ Nouvelle planification</span>
+                </div>
+                <div class="card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nom</th>
+                        <th>Fréquence</th>
+                        <th>Destinataires</th>
+                        <th>Prochain envoi</th>
+                        <th>Statut</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>Rapport mensuel de gestion</b></td>
+                        <td>Mensuel · le 1er</td>
+                        <td>karim@atlas-negoce.ma</td>
+                        <td>01-12-2026</td>
+                        <td><span class="badge ok">Actif</span></td>
+                        <td><span class="btn ghost">Envoyer un test</span></td>
+                      </tr>
+                      <tr>
+                        <td>Synthèse des encaissements</td>
+                        <td>Hebdomadaire · lundi</td>
+                        <td>salma@cabinet-idrissi.ma</td>
+                        <td>02-11-2026</td>
+                        <td><span class="badge ok">Actif</span></td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="toast">
+                  <span class="ic">✓</span>Rapport envoyé à karim@atlas-negoce.ma
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ptr">
+            <span class="ring"></span
+            ><svg viewBox="0 0 24 24" width="100%" aria-hidden="true">
+              <path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5" />
+            </svg>
+          </div>
+          <div class="mail">
+            <div class="mh">
+              <b>Atlas Négoce SARL — Rapport mensuel de gestion</b
+              ><span>À : karim@atlas-negoce.ma · 01-11-2026 08:00</span>
+            </div>
+            <div class="mb">
+              <div class="gl"></div>
+              <div class="ti">Octobre 2026</div>
+              <div class="bars">
+                <i style="--h: 42%"></i><i style="--h: 58%"></i><i style="--h: 50%"></i
+                ><i style="--h: 71%"></i><i style="--h: 64%"></i><i style="--h: 88%"></i>
+              </div>
+              <div class="k">
+                <span>Facturé<b>477 600,00</b></span
+                ><span>Encaissé<b>392 460,00</b></span
+                ><span>En retard<b>55 476,00</b></span>
+              </div>
+              <span class="badge gold" style="justify-self: start">PDF + Excel joints</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="5400">
+      <h2>Personnalisation des modèles <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="T" style="position: absolute; inset: 0">
+          <div class="cap">Des factures à votre image.</div>
+          <div class="cap sub">Couleur, mise en page et logo, avec l'aperçu immédiat.</div>
+          <div class="app">
+            <div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div>
+            <div class="body">
+              <div class="side">
+                <div class="brand"><em>B</em>Finance</div>
+                <div class="org"><b>AN</b>Atlas Négoce SARL</div>
+                <div class="grp">Ventes</div>
+                <div class="nav">Devis</div>
+                <div class="nav">Factures</div>
+                <div class="nav">Paiements</div>
+                <div class="grp">Rapports</div>
+                <div class="nav">Rapports</div>
+                <div class="nav">Rapports planifiés</div>
+                <div class="grp">Paramètres</div>
+                <div class="nav">Personnel</div>
+                <div class="nav on">Modèles de documents</div>
+              </div>
+              <div class="main">
+                <div class="ph">
+                  <div><small>B-Finance / Paramètres</small><b>Créer un modèle</b></div>
+                  <span class="btn">Enregistrer les modifications</span>
+                </div>
+                <div class="cols">
+                  <div class="opts">
+                    <div class="lbl">Mise en page</div>
+                    <div class="lays">
+                      <div class="lay sel l1"><i></i>Classique</div>
+                      <div class="lay l2"><i></i>Moderne</div>
+                      <div class="lay"><i></i>Compact</div>
+                    </div>
+                    <div class="lbl">Couleur d'accent</div>
+                    <div class="sw">
+                      <i style="background: #946f29"></i><i style="background: #2f6f5e"></i
+                      ><i style="background: #2d5a9e"></i><i style="background: #8b3a3a"></i>
+                    </div>
+                    <div class="lbl">Logo</div>
+                    <div class="inp">logo-atlas.png <small>Importer</small></div>
+                  </div>
+                  <div class="prev">
+                    <div class="t">
+                      <span class="badge gold">Facture</span><span class="badge grey">Devis</span
+                      ><span class="badge grey">Reçu</span>
+                    </div>
+                    <div class="paper">
+                      <div class="hd">
+                        <div class="lg">A</div>
+                        <b>Facture</b>
+                      </div>
+                      <div class="l" style="width: 60%"></div>
+                      <div class="l" style="width: 42%"></div>
+                      <div class="l"></div>
+                      <div class="l"></div>
+                      <div class="l" style="width: 75%"></div>
+                      <div class="tt"><span>Total TTC</span><span>9 240,00 MAD</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ptr">
+            <span class="ring"></span
+            ><svg viewBox="0 0 24 24" width="100%" aria-hidden="true">
+              <path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="5800">
+      <h2>
+        Invitation de l'équipe et accès limités
+        <button class="replay" type="button">Rejouer</button>
+      </h2>
+      <div class="frame">
+        <div class="S" style="position: absolute; inset: 0">
+          <div class="cap">Chacun ses droits.</div>
+          <div class="cap sub">
+            Invitez votre comptable : elle voit ce qu'il faut, rien de plus.
+          </div>
+          <div class="app ownerapp">
+            <div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div>
+            <div class="body">
+              <div class="side">
+                <div class="brand"><em>B</em>Finance</div>
+                <div class="org"><b>AN</b>Atlas Négoce SARL</div>
+                <div class="grp">Ventes</div>
+                <div class="nav">Devis</div>
+                <div class="nav">Factures</div>
+                <div class="nav">Paiements</div>
+                <div class="grp">Rapports</div>
+                <div class="nav">Rapports</div>
+                <div class="nav">Rapports planifiés</div>
+                <div class="grp">Paramètres</div>
+                <div class="nav on">Personnel</div>
+                <div class="nav">Modèles de documents</div>
+              </div>
+              <div class="main">
+                <div class="ph">
+                  <div><small>B-Finance / Identité</small><b>Personnel</b></div>
+                  <span class="btn">+ Inviter un membre</span>
+                </div>
+                <div class="card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Membre</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><b>Karim Benali</b></td>
+                        <td>Administrateur</td>
+                        <td><span class="badge ok">Actif</span></td>
+                      </tr>
+                      <tr>
+                        <td>Nadia Chraibi</td>
+                        <td>Commercial</td>
+                        <td><span class="badge ok">Actif</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="toast"><span class="ic">✉</span>Invitation envoyée à Salma Idrissi</div>
+              </div>
+            </div>
+          </div>
+          <div class="app staffapp">
+            <div class="chrome"><i></i><i></i><i></i><span>atlas-negoce.bfinance.ma</span></div>
+            <div class="body">
+              <div class="side">
+                <div class="brand"><em>B</em>Finance</div>
+                <div class="org"><b>AN</b>Atlas Négoce SARL</div>
+                <div class="grp">Ventes</div>
+                <div class="nav lock">Devis</div>
+                <div class="nav on">Factures</div>
+                <div class="nav">Paiements</div>
+                <div class="grp">Rapports</div>
+                <div class="nav">Rapports</div>
+                <div class="grp">Paramètres</div>
+                <div class="nav lock">Clients</div>
+                <div class="nav lock">Personnel</div>
+                <div class="nav lock set">Paramètres</div>
+              </div>
+              <div class="main">
+                <div class="ph">
+                  <div><small>Connectée : Salma Idrissi · Comptable</small><b>Factures</b></div>
+                </div>
+                <div class="card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Facture</th>
+                        <th>Client</th>
+                        <th>Total</th>
+                        <th>Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>FAC-2026-…2535</td>
+                        <td>Coopérative Al Baraka</td>
+                        <td>9 240,00 MAD</td>
+                        <td><span class="badge gold">Émise</span></td>
+                      </tr>
+                      <tr>
+                        <td>FAC-2026-…1000</td>
+                        <td>Ferme Oulad Saïd</td>
+                        <td>39 228,00 MAD</td>
+                        <td><span class="badge ok">Payée</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="deny">🔒 Paramètres : accès réservé aux administrateurs</div>
+              </div>
+            </div>
+          </div>
+          <div class="scrim"></div>
+          <div class="dialog">
+            <b>Inviter un membre</b>
+            <div class="inp">salma.idrissi@cabinet-idrissi.ma</div>
+            <div class="inp">Comptable <small>Rôle</small></div>
+            <div class="perm">
+              <span>Factures, paiements</span><span class="yes">Accès</span><span>Rapports</span
+              ><span class="yes">Accès</span><span>Clients, personnel</span
+              ><span class="no">Aucun</span><span>Paramètres</span><span class="no">Aucun</span>
+            </div>
+            <div class="row2">
+              <span class="btn ghost">Annuler</span><span class="btn">Envoyer l'invitation</span>
+            </div>
+          </div>
+          <div class="ptr p1">
+            <span class="ring"></span
+            ><svg viewBox="0 0 24 24" width="100%" aria-hidden="true">
+              <path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5" />
+            </svg>
+          </div>
+          <div class="ptr p2">
+            <span class="ring"></span
+            ><svg viewBox="0 0 24 24" width="100%" aria-hidden="true">
+              <path d="M4 2l15 11-6.5 1.2L9 21z" fill="#252a32" stroke="#fff" stroke-width="1.5" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- B -->
   <section class="variant" id="v-B" role="tabpanel" aria-labelledby="t-B" hidden>
-    <p>Le récit sous forme de conversation, comme une messagerie : très parlant pour des clients marocains habitués à WhatsApp, avec les accusés de lecture et une réponse du client.</p>
-    <div class="scene" data-len="4600"><h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="B inv" style="position:absolute;inset:0">
-        <div class="cap">Facturez et envoyez en un clic.</div>
-        <div class="chat"><div class="head"><span class="avatar a-cli">C</span><div><b>Coopérative Al Baraka</b><span>en ligne</span></div></div>
-          <div class="msgs">
-            <div class="m me m1">Bonjour, voici votre facture du 01-11-2026.<div class="file"><i>PDF</i><span>FAC-2026 · 9 240,00 MAD</span></div><span class="ticks">10:02 ✓✓<span class="blue"> lu</span></span></div>
-            <div class="typing"><i></i><i></i><i></i></div>
-            <div class="m them m2">Bien reçue, merci ! Règlement par virement cette semaine.</div>
-          </div></div>
-      </div></div></div>
-    <div class="scene" data-len="7000"><h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="B rem" style="position:absolute;inset:0">
-        <div class="night"></div>
-        <div class="cap light q">Vos clients oublient de payer ?</div><div class="cap a">Les relances partent toutes seules.</div>
-        <div class="chat"><div class="head"><span class="avatar a-cli">F</span><div><b>Ferme Oulad Saïd</b><span style="color:#9aa3b0">vu il y a 12 jours</span></div></div>
-          <div class="msgs">
-            <div class="m sys s1">21-09-2026 · échéance</div>
-            <div class="m me m1">Facture FAC-2026 · 39 228,00 MAD · à régler aujourd'hui.</div>
-            <div class="m sys s2">… 12 jours sans réponse</div>
-            <div class="m me m2">🔔 Rappel automatique : votre facture est en retard de 12 jours. Solde : 39 228,00 MAD.</div>
-            <div class="typing"><i></i><i></i><i></i></div>
-            <div class="m them m3">Désolé, c'est réglé ✓ <span class="pill ok" style="margin-left:calc(.4 * var(--u))">Payée</span></div>
-          </div></div>
-      </div></div></div>
+    <p>
+      Le récit sous forme de conversation, comme une messagerie : très parlant pour des clients
+      marocains habitués à WhatsApp, avec les accusés de lecture et une réponse du client.
+    </p>
+    <div class="scene" data-len="4600">
+      <h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="B inv" style="position: absolute; inset: 0">
+          <div class="cap">Facturez et envoyez en un clic.</div>
+          <div class="chat">
+            <div class="head">
+              <span class="avatar a-cli">C</span>
+              <div><b>Coopérative Al Baraka</b><span>en ligne</span></div>
+            </div>
+            <div class="msgs">
+              <div class="m me m1">
+                Bonjour, voici votre facture du 01-11-2026.
+                <div class="file"><i>PDF</i><span>FAC-2026 · 9 240,00 MAD</span></div>
+                <span class="ticks">10:02 ✓✓<span class="blue"> lu</span></span>
+              </div>
+              <div class="typing"><i></i><i></i><i></i></div>
+              <div class="m them m2">Bien reçue, merci ! Règlement par virement cette semaine.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="7000">
+      <h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="B rem" style="position: absolute; inset: 0">
+          <div class="night"></div>
+          <div class="cap light q">Vos clients oublient de payer ?</div>
+          <div class="cap a">Les relances partent toutes seules.</div>
+          <div class="chat">
+            <div class="head">
+              <span class="avatar a-cli">F</span>
+              <div>
+                <b>Ferme Oulad Saïd</b><span style="color: #9aa3b0">vu il y a 12 jours</span>
+              </div>
+            </div>
+            <div class="msgs">
+              <div class="m sys s1">21-09-2026 · échéance</div>
+              <div class="m me m1">Facture FAC-2026 · 39 228,00 MAD · à régler aujourd'hui.</div>
+              <div class="m sys s2">… 12 jours sans réponse</div>
+              <div class="m me m2">
+                🔔 Rappel automatique : votre facture est en retard de 12 jours. Solde : 39 228,00
+                MAD.
+              </div>
+              <div class="typing"><i></i><i></i><i></i></div>
+              <div class="m them m3">
+                Désolé, c'est réglé ✓
+                <span class="pill ok" style="margin-left: calc(0.4 * var(--u))">Payée</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- C -->
   <section class="variant" id="v-C" role="tabpanel" aria-labelledby="t-C" hidden>
-    <p>Le cycle de vie de la facture sur une ligne : un point avance d'étape en étape. Sobre et très « produit », il montre que B-Finance suit chaque facture jusqu'au paiement.</p>
-    <div class="scene" data-len="4800"><h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="C inv" style="position:absolute;inset:0">
-        <div class="cap">Facturez et envoyez en un clic.</div><div class="cap sub">Chaque étape est suivie pour vous.</div>
-        <div class="track"><div class="fill"></div></div><div class="runner"></div>
-        <div class="node n1" style="left:10%"><div class="card">🧾 FAC-2026 · 9 240,00 MAD</div><div class="dot">1</div><div class="lab"><b>Émise</b><span>10:00</span></div></div>
-        <div class="node n2" style="left:50%"><div class="card">✉ Envoyée à contact@coop-albaraka.ma</div><div class="dot">2</div><div class="lab"><b>Envoyée</b><span>10:00</span></div></div>
-        <div class="node n3" style="left:90%"><div class="card"><span class="pill ok">✓</span> Ouverte par le client</div><div class="dot">3</div><div class="lab"><b>Reçue</b><span>10:02</span></div></div>
-      </div></div></div>
-    <div class="scene" data-len="7400"><h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="C rem" style="position:absolute;inset:0">
-        <div class="night"></div>
-        <div class="cap light q">Vos clients oublient de payer ?</div><div class="cap a">Les relances partent toutes seules.</div>
-        <div class="track"><div class="fill"></div></div><div class="runner"></div>
-        <div class="node n1" style="left:10%"><div class="card">Échéance · 39 228,00 MAD</div><div class="dot">1</div><div class="lab"><b>21-09</b><span>À payer</span></div></div>
-        <div class="node n2" style="left:36.6%"><div class="card"><span class="pill late">En retard</span></div><div class="dot">2</div><div class="lab"><b>J+3</b><span>Pas de paiement</span></div></div>
-        <div class="node n3" style="left:63.3%"><div class="card">🔔 Rappel automatique envoyé</div><div class="dot">3</div><div class="lab"><b>J+7</b><span>Relance</span></div></div>
-        <div class="node n4" style="left:90%"><div class="card"><span class="pill ok">✓ Payée</span></div><div class="dot">4</div><div class="lab"><b>J+9</b><span>Encaissé</span></div></div>
-      </div></div></div>
+    <p>
+      Le cycle de vie de la facture sur une ligne : un point avance d'étape en étape. Sobre et très
+      « produit », il montre que B-Finance suit chaque facture jusqu'au paiement.
+    </p>
+    <div class="scene" data-len="4800">
+      <h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="C inv" style="position: absolute; inset: 0">
+          <div class="cap">Facturez et envoyez en un clic.</div>
+          <div class="cap sub">Chaque étape est suivie pour vous.</div>
+          <div class="track"><div class="fill"></div></div>
+          <div class="runner"></div>
+          <div class="node n1" style="left: 10%">
+            <div class="card">🧾 FAC-2026 · 9 240,00 MAD</div>
+            <div class="dot">1</div>
+            <div class="lab"><b>Émise</b><span>10:00</span></div>
+          </div>
+          <div class="node n2" style="left: 50%">
+            <div class="card">✉ Envoyée à contact@coop-albaraka.ma</div>
+            <div class="dot">2</div>
+            <div class="lab"><b>Envoyée</b><span>10:00</span></div>
+          </div>
+          <div class="node n3" style="left: 90%">
+            <div class="card"><span class="pill ok">✓</span> Ouverte par le client</div>
+            <div class="dot">3</div>
+            <div class="lab"><b>Reçue</b><span>10:02</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="7400">
+      <h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="C rem" style="position: absolute; inset: 0">
+          <div class="night"></div>
+          <div class="cap light q">Vos clients oublient de payer ?</div>
+          <div class="cap a">Les relances partent toutes seules.</div>
+          <div class="track"><div class="fill"></div></div>
+          <div class="runner"></div>
+          <div class="node n1" style="left: 10%">
+            <div class="card">Échéance · 39 228,00 MAD</div>
+            <div class="dot">1</div>
+            <div class="lab"><b>21-09</b><span>À payer</span></div>
+          </div>
+          <div class="node n2" style="left: 36.6%">
+            <div class="card"><span class="pill late">En retard</span></div>
+            <div class="dot">2</div>
+            <div class="lab"><b>J+3</b><span>Pas de paiement</span></div>
+          </div>
+          <div class="node n3" style="left: 63.3%">
+            <div class="card">🔔 Rappel automatique envoyé</div>
+            <div class="dot">3</div>
+            <div class="lab"><b>J+7</b><span>Relance</span></div>
+          </div>
+          <div class="node n4" style="left: 90%">
+            <div class="card"><span class="pill ok">✓ Payée</span></div>
+            <div class="dot">4</div>
+            <div class="lab"><b>J+9</b><span>Encaissé</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- D -->
   <section class="variant" id="v-D" role="tabpanel" aria-labelledby="t-D" hidden>
-    <p>Deux côtés de l'écran : à gauche votre entreprise, à droite votre client. L'e-mail traverse la ligne, et l'argent revient. Le plus explicite sur « qui fait quoi ».</p>
-    <div class="scene" data-len="4600"><h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="D inv" style="position:absolute;inset:0">
-        <div class="cap">Facturez et envoyez en un clic.</div>
-        <div class="half left"><div class="who"><span class="avatar a-biz">A</span><div><b>Vous</b><span>Atlas Négoce SARL</span></div></div>
-          <div style="font:600 calc(1.15 * var(--u)) Inter,sans-serif">Facture FAC-2026 · Coopérative Al Baraka</div>
-          <div style="font:800 calc(2.6 * var(--u)) Inter,sans-serif">9 240,00 MAD</div><div class="btn">Émettre et envoyer</div></div>
-        <div class="mid"></div>
-        <div class="half right"><div class="who"><span class="avatar a-cli">C</span><div><b>Votre client</b><span>contact@coop-albaraka.ma</span></div></div>
-          <div class="slot">En attente…</div>
-          <div class="landed"><b>Atlas Négoce SARL</b><span>Facture · 9 240,00 MAD · PDF</span></div>
-          <span class="open pill ok">✓ Ouverte</span></div>
-        <div class="mail"><b>✉ Atlas Négoce SARL</b><span>Facture · 9 240,00 MAD</span></div>
-      </div></div></div>
-    <div class="scene" data-len="7200"><h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
-      <div class="frame"><div class="D rem" style="position:absolute;inset:0">
-        <div class="night"></div>
-        <div class="cap light q">Vos clients oublient de payer ?</div><div class="cap a">Les relances partent toutes seules.</div>
-        <div class="half left"><div class="who"><span class="avatar a-biz">A</span><div><b>Vous</b><span>Atlas Négoce SARL</span></div></div>
-          <div class="flip"><small>Échéance dépassée depuis</small><div class="n"><span class="d1">0 j</span><span class="d2">5 j</span><span class="d3">12 j</span></div></div>
-          <span class="pill late latepill">En retard · 39 228,00 MAD</span><span class="pill ok okpill">✓ Payée · encaissé</span></div>
-        <div class="mid"></div>
-        <div class="half right"><div class="who"><span class="avatar a-cli">F</span><div><b>Votre client</b><span>Ferme Oulad Saïd</span></div></div>
-          <div class="slot">Aucun nouveau message</div>
-          <div class="landed"><b>🔔 Rappel automatique</b><span>Solde : 39 228,00 MAD</span></div></div>
-        <div class="mail"><b>✉ Rappel automatique</b><span>39 228,00 MAD</span></div>
-        <div class="payback">← 39 228,00 MAD</div>
-      </div></div></div>
+    <p>
+      Deux côtés de l'écran : à gauche votre entreprise, à droite votre client. L'e-mail traverse la
+      ligne, et l'argent revient. Le plus explicite sur « qui fait quoi ».
+    </p>
+    <div class="scene" data-len="4600">
+      <h2>Facture envoyée <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="D inv" style="position: absolute; inset: 0">
+          <div class="cap">Facturez et envoyez en un clic.</div>
+          <div class="half left">
+            <div class="who">
+              <span class="avatar a-biz">A</span>
+              <div><b>Vous</b><span>Atlas Négoce SARL</span></div>
+            </div>
+            <div
+              style="
+                font:
+                  600 calc(1.15 * var(--u)) Inter,
+                  sans-serif;
+              "
+            >
+              Facture FAC-2026 · Coopérative Al Baraka
+            </div>
+            <div
+              style="
+                font:
+                  800 calc(2.6 * var(--u)) Inter,
+                  sans-serif;
+              "
+            >
+              9 240,00 MAD
+            </div>
+            <div class="btn">Émettre et envoyer</div>
+          </div>
+          <div class="mid"></div>
+          <div class="half right">
+            <div class="who">
+              <span class="avatar a-cli">C</span>
+              <div><b>Votre client</b><span>contact@coop-albaraka.ma</span></div>
+            </div>
+            <div class="slot">En attente…</div>
+            <div class="landed">
+              <b>Atlas Négoce SARL</b><span>Facture · 9 240,00 MAD · PDF</span>
+            </div>
+            <span class="open pill ok">✓ Ouverte</span>
+          </div>
+          <div class="mail"><b>✉ Atlas Négoce SARL</b><span>Facture · 9 240,00 MAD</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="scene" data-len="7200">
+      <h2>Relance automatique <button class="replay" type="button">Rejouer</button></h2>
+      <div class="frame">
+        <div class="D rem" style="position: absolute; inset: 0">
+          <div class="night"></div>
+          <div class="cap light q">Vos clients oublient de payer ?</div>
+          <div class="cap a">Les relances partent toutes seules.</div>
+          <div class="half left">
+            <div class="who">
+              <span class="avatar a-biz">A</span>
+              <div><b>Vous</b><span>Atlas Négoce SARL</span></div>
+            </div>
+            <div class="flip">
+              <small>Échéance dépassée depuis</small>
+              <div class="n">
+                <span class="d1">0 j</span><span class="d2">5 j</span><span class="d3">12 j</span>
+              </div>
+            </div>
+            <span class="pill late latepill">En retard · 39 228,00 MAD</span
+            ><span class="pill ok okpill">✓ Payée · encaissé</span>
+          </div>
+          <div class="mid"></div>
+          <div class="half right">
+            <div class="who">
+              <span class="avatar a-cli">F</span>
+              <div><b>Votre client</b><span>Ferme Oulad Saïd</span></div>
+            </div>
+            <div class="slot">Aucun nouveau message</div>
+            <div class="landed"><b>🔔 Rappel automatique</b><span>Solde : 39 228,00 MAD</span></div>
+          </div>
+          <div class="mail"><b>✉ Rappel automatique</b><span>39 228,00 MAD</span></div>
+          <div class="payback">← 39 228,00 MAD</div>
+        </div>
+      </div>
+    </div>
   </section>
 </div>
 
 <script>
-const sizeFrames = () => document.querySelectorAll('.frame').forEach((f) => { if (f.offsetWidth) f.style.setProperty('--u', f.offsetWidth / 100 + 'px') })
-new ResizeObserver(sizeFrames).observe(document.body)
-const timers = new Map();
-function play(scene) {
-  const frame = scene.querySelector('.frame');
-  clearTimeout(timers.get(scene));
-  frame.classList.remove('play'); void frame.offsetWidth; frame.classList.add('play');
-  timers.set(scene, setTimeout(() => play(scene), Number(scene.dataset.len) + 1600));
-}
-function stop(scene) { clearTimeout(timers.get(scene)); scene.querySelector('.frame').classList.remove('play'); }
-document.querySelectorAll('.scene').forEach((s) => s.querySelector('.replay').addEventListener('click', () => play(s)));
-const tabs = [...document.querySelectorAll('[role=tab]')];
-function show(id) {
-  tabs.forEach((t) => t.setAttribute('aria-selected', String(t.id === 't-' + id)));
-  document.querySelectorAll('.variant').forEach((v) => {
-    const on = v.id === 'v-' + id; v.hidden = !on;
-    v.querySelectorAll('.scene').forEach((s) => (on ? play(s) : stop(s)));
-  });
-  sizeFrames();
-}
-tabs.forEach((t) => t.addEventListener('click', () => show(t.id.slice(2))));
-const start = ['A','B','C','D'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'A';
-show(start);
+  const sizeFrames = () =>
+    document.querySelectorAll('.frame').forEach((f) => {
+      if (f.offsetWidth) f.style.setProperty('--u', f.offsetWidth / 100 + 'px')
+    })
+  new ResizeObserver(sizeFrames).observe(document.body)
+  const timers = new Map()
+  function play(scene) {
+    const frame = scene.querySelector('.frame')
+    clearTimeout(timers.get(scene))
+    frame.classList.remove('play')
+    void frame.offsetWidth
+    frame.classList.add('play')
+    timers.set(
+      scene,
+      setTimeout(() => play(scene), Number(scene.dataset.len) + 1600),
+    )
+  }
+  function stop(scene) {
+    clearTimeout(timers.get(scene))
+    scene.querySelector('.frame').classList.remove('play')
+  }
+  document
+    .querySelectorAll('.scene')
+    .forEach((s) => s.querySelector('.replay').addEventListener('click', () => play(s)))
+  const tabs = [...document.querySelectorAll('[role=tab]')]
+  function show(id) {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.id === 't-' + id)))
+    document.querySelectorAll('.variant').forEach((v) => {
+      const on = v.id === 'v-' + id
+      v.hidden = !on
+      v.querySelectorAll('.scene').forEach((s) => (on ? play(s) : stop(s)))
+    })
+    sizeFrames()
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => show(t.id.slice(2))))
+  const start = ['A', 'B', 'C', 'D'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'A'
+  show(start)
 </script>

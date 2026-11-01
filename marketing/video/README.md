@@ -46,27 +46,38 @@ node run-all.mjs --from ch05     # re-record ch05..ch09
   after the payment in ch07 (demo date is fixed), monthly report schedule before ch09.
 - `raw/` and `*.webm` are git-ignored; mp4 + json are committed (about 8 MB). `.demo-run/` holds logs and pids.
 
-## Marketing film (problem -> solution, French, about 2 min, no voice-over)
+## Marketing film (problem -> solution, French, about 2 min 20, no voice-over)
 
-Short clips (3-8 s of useful footage each) recorded from the demo snapshots, assembled by the `Film` composition.
+Short clips (3-8 s of useful footage each) recorded from the demo snapshots, plus five approved animations
+(variant A "Avion", reference in `design/animations-reference.html`), assembled by the `Film` composition.
 
 ```bash
 cd marketing/video
 pnpm demo:record     # starts the demo env if needed, restores the right snapshot per clip, records clip1..clip9 -> public/clips
 pnpm demo:render     # Film, Film-Square, Film-Facturation / -Relances / -Rapports / -Modeles (+ -Square) and poster PNGs -> out/
 node scripts/record/film.mjs --only clip4      # re-record a single clip (id prefix; repeatable)
+node --experimental-strip-types scripts/camera-check.mjs   # cursor + popups inside the camera window on every frame
+node --experimental-strip-types scripts/film-timeline.mjs  # scene -> start / duration of the film (or a cut-down)
 ```
 
 - Prerequisite: the snapshots `seeded`, `ch03`, `ch06`, `ch07`, `ch09` (created by `scripts/record/run-all.mjs`, ~15 min, once).
   Clips: `clip1-vue-ensemble` (login + owner overview, ch09), `clip2-nouvelle-organisation` (seeded; wizard cut),
-  `clip3-tableau-de-bord`, `clip4-facture` (ch09), `clip5-retards` (ch09), `clip6-relance-paiement` (ch06, reminder e-mail
-  triggered silently via a first payment), `clip7-rapport` (ch09), `clip8-invitation` (ch07, role "Comptable" prepared silently),
-  `clip9-modele` (ch03). Each writes `public/clips/<id>.mp4` + `.json` (same event format as the chapters; `highlight` events mark rows).
+  `clip3-tableau-de-bord`, `clip4-facture` (ch09), `clip5-retards` (no longer used in the film), `clip6-relance-paiement` (ch06,
+  reminder e-mail triggered silently via a first payment), `clip7-rapport` (ch09), `clip8-invitation` (ch07, role "Comptable"
+  prepared silently), `clip9-modele` (ch03). Each writes `public/clips/<id>.mp4` + `.json`
+  `{duration, events:[{t,type,label,box}], cursor:[[t,x,y]...]}`; `popup` events carry the bounding box of an open
+  dialog / listbox / popover (zero size = closed), `cursor` the visible cursor path (video pixels).
 - Everything editable lives in `src/film/storyboard.ts`: scene order, wording (titles, questions, CTA), per-clip `keep` pieces
-  `[from, to, rate]` in source seconds (jump cuts + speed-ups), badges (e.g. green "Payée" at a timeline label), scene length
-  (derived from the kept pieces unless `seconds` is set) and the cut-downs (`CUTDOWNS`). The title scenes use `src/theme.ts`.
+  `[from, to, rate]` in source seconds (jump cuts + speed-ups), badges (e.g. green "Payee" at a timeline label), scene length
+  (derived from the kept pieces unless `seconds` is set) and the cut-downs (`CUTDOWNS`). Scene kinds: `intro`, `clip`, `question`,
+  `anim` (one of `src/film/animations`: invoice, reminder, reports, template, staff), `ask-clip`, `outro`.
+- Animations (`src/film/animations/*.tsx`): the approved markup and CSS keyframes, seeked frame by frame (`AnimStage.tsx`) so timing
+  and easing are exactly the approved ones; cursor targets are measured in the DOM (`data-t`), the square layout is a 72-unit stage.
+  Preview them as `Anim-<name>` / `Anim-<name>-Square` compositions.
 - Sync: `Recorder.start()` shows a magenta full-screen flash; `finish()` finds it (and a second one at the end) in the raw
-  video, trims exactly there, corrects clock drift and shifts the timeline by the same offset. `rec.cut(fn)` removes a stretch
-  (e.g. the rest of the wizard) from both video and timeline. The camera (`src/camera.ts`) starts zooming 0.4 s before an event (gentle, 0.7 s travel),
-  max 1.12x, and never leaves the recording frame.
+  video, trims exactly there, corrects clock drift and shifts the timeline by the same offset. If it logs "start flash not found",
+  re-record that clip. `rec.cut(fn)` removes a stretch from both video and timeline.
+- Camera (`src/camera.ts`): events close in time are framed together; the window always contains the cursor (recorded path) and any
+  open popup (with margins), is clamped inside the recording frame, goes through the full frame when a move would lose the cursor,
+  and stays on the full frame when targets are too far apart for a 1.04x+ zoom (max 1.12x).
 - Compositions: `Film` (1920x1080) and `Film-Square`; cut-downs `Film-Facturation`, `Film-Relances`, `Film-Rapports`, `Film-Modeles`.

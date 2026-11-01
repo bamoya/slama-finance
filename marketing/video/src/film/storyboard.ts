@@ -104,7 +104,7 @@ export const SCENES: Scene[] = [
     clip: {
       id: 'clip6-relance-paiement',
       host: H,
-      keep: [k(0.3, 2.3), k(3.7, 7.6, 1.3), k(8.7, 11.2)],
+      keep: [k(0.3, 2.3), k(4.1, 7.6, 1.3), k(8.7, 11.2)],
       badges: [{ event: 'Facture réglée', text: 'Payée', tone: 'green' }],
     },
   },
