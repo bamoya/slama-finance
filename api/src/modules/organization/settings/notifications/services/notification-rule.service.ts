@@ -16,8 +16,8 @@ import type {
   createNotificationRuleRepository,
   RuleRow,
 } from '../repositories/notification-rule.repository.js'
-import { emailDocument, emailPlainText, escapeEmailText, sanitizeEmailHtml } from './email-html.js'
 import { formatEmailValues, useOrganizationBranding } from './email-format.js'
+import { emailDocument, emailPlainText, escapeEmailText, sanitizeEmailHtml } from './email-html.js'
 import { emailSample } from './email-sample.js'
 
 export const eventVariables: Record<string, string[]> = {
