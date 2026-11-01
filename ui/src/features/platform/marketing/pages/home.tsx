@@ -12,8 +12,9 @@ import {
 } from 'lucide-react'
 import { Link } from 'wouter'
 
+import { DemoVideo } from '../components/demo-video'
 import { FinalCTA } from '../components/layout'
-import { ClientPreview, DashboardPreview } from '../components/previews'
+import { ClientPreview } from '../components/previews'
 import { PricingPlans } from '../components/pricing-plans'
 import { Eyebrow, FAQ, RouteButton, SectionHeading, TrialButton } from '../components/ui'
 import { useMarketing } from '../hooks/marketing-context'
@@ -80,7 +81,12 @@ export function Home() {
             {t('One or several businesses')}
           </span>
         </div>
-        <DashboardPreview />
+        <DemoVideo
+          name="Film"
+          mode="film"
+          label={t('B-Finance demo film: from the first estimate to collection and reports')}
+          caption={t('See B-Finance in action · 2-minute demo with fictional data in MAD')}
+        />
       </section>
       <section className="capability-strip">
         <div className="container">

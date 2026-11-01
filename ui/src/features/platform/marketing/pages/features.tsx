@@ -12,13 +12,9 @@ import {
   Wallet,
 } from 'lucide-react'
 
+import { DemoVideo } from '../components/demo-video'
 import { FinalCTA } from '../components/layout'
-import {
-  ClientPreview,
-  CollectionPreview,
-  DashboardPreview,
-  DocumentPreview,
-} from '../components/previews'
+import { ClientPreview } from '../components/previews'
 import { ReadingStepper } from '../components/reading-stepper'
 import { Eyebrow, RouteButton, SectionHeading, TrialButton } from '../components/ui'
 import { useMarketing } from '../hooks/marketing-context'
@@ -88,7 +84,12 @@ export function Features() {
         </section>
         <section className="section-tint">
           <div id="facturer" className="container section feature-row reversed">
-            <DocumentPreview />
+            <DemoVideo
+              name="Film-Facturation"
+              mode="clip"
+              label={t('Demo: creating and sending an invoice')}
+              caption={t('Create an invoice in a few clicks · fictional data')}
+            />
             <div>
               <Eyebrow>{t('02 / INVOICE')}</Eyebrow>
               <h2>
@@ -154,7 +155,12 @@ export function Features() {
               )}
             </span>
           </div>
-          <CollectionPreview />
+          <DemoVideo
+            name="Film-Relances"
+            mode="clip"
+            label={t('Demo: payment reminders for overdue invoices')}
+            caption={t('Reminders for overdue invoices · fictional data')}
+          />
         </section>
         <section className="section-tint">
           <div id="piloter" className="container section analytics-feature">
@@ -165,7 +171,13 @@ export function Features() {
                 'Compare invoiced and collected amounts, spot overdue balances and understand each organization’s contribution. Revenue is not profit: expenses are not tracked.',
               )}
             />
-            <DashboardPreview compact />
+            <DemoVideo
+              name="Film-Rapports"
+              mode="clip"
+              className="demo-video-wide"
+              label={t('Demo: reports and indicators')}
+              caption={t('Reports and indicators · fictional data in MAD')}
+            />
             <div className="analytics-benefits">
               <span>
                 <ChartNoAxesCombined />
@@ -264,6 +276,13 @@ export function Features() {
                 </div>
               ))}
             </div>
+            <DemoVideo
+              name="Film-Modeles"
+              mode="clip"
+              className="demo-video-wide"
+              label={t('Demo: customizing document templates')}
+              caption={t('Customize your document templates · fictional data')}
+            />
             <RouteButton href="/tarifs">
               {t('Compare features by plan')}
               <ArrowRight size={16} />

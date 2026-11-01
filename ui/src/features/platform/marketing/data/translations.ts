@@ -170,6 +170,24 @@ export const marketingFrench: Record<string, string> = {
   'Email delivery and reminders: Business and Pro. Payments are recorded; no bank transfer is executed.':
     'Envois et relances par email : Business et Pro. Les paiements sont enregistrés ; aucun virement bancaire n’est exécuté.',
   'Email, notifications and reminders': 'Emails, notifications et relances',
+  'Play the video': 'Lire la vidéo',
+  'B-Finance demo film: from the first estimate to collection and reports':
+    'Film de démonstration de B-Finance : du premier devis à l’encaissement et aux rapports',
+  'See B-Finance in action · 2-minute demo with fictional data in MAD':
+    'Voir B-Finance en action · démo de 2 minutes avec des données fictives en MAD',
+  'Demo: creating and sending an invoice': 'Démo : créer et envoyer une facture',
+  'Create an invoice in a few clicks · fictional data':
+    'Créez une facture en quelques clics · données fictives',
+  'Demo: payment reminders for overdue invoices':
+    'Démo : relances de paiement des factures en retard',
+  'Reminders for overdue invoices · fictional data':
+    'Relances des factures en retard · données fictives',
+  'Demo: reports and indicators': 'Démo : rapports et indicateurs',
+  'Reports and indicators · fictional data in MAD':
+    'Rapports et indicateurs · données fictives en MAD',
+  'Demo: customizing document templates': 'Démo : personnaliser les modèles de documents',
+  'Customize your document templates · fictional data':
+    'Personnalisez vos modèles de documents · données fictives',
   Enlarge: 'Agrandir',
   'Enlarge the dashboard preview': 'Agrandir l’aperçu du tableau de bord',
   'Enlarged dashboard': 'Tableau de bord agrandi',

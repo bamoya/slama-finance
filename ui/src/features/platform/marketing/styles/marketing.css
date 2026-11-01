@@ -5711,3 +5711,85 @@ html.marketing-document::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
   border-radius: 20px;
 }
+
+/* Demo videos */
+.marketing-site .demo-video,
+.marketing-portal .demo-video,
+.marketing-portal.demo-video {
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--preview-shadow);
+  text-align: left;
+  min-width: 0;
+}
+.marketing-site .demo-video-film,
+.marketing-portal .demo-video-film,
+.marketing-portal.demo-video-film {
+  margin-top: 30px;
+}
+.marketing-site .demo-video-wide,
+.marketing-portal .demo-video-wide,
+.marketing-portal.demo-video-wide {
+  max-width: 980px;
+  margin: 30px auto 0;
+}
+.marketing-site .demo-video-frame,
+.marketing-portal .demo-video-frame,
+.marketing-portal.demo-video-frame {
+  position: relative;
+  background: var(--surface);
+}
+.marketing-site .demo-video video,
+.marketing-portal .demo-video video,
+.marketing-site .demo-video-poster img,
+.marketing-portal .demo-video-poster img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--surface);
+}
+.marketing-site .demo-video-poster,
+.marketing-portal .demo-video-poster {
+  display: block;
+  width: 100%;
+  position: relative;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+.marketing-site .demo-video-play,
+.marketing-portal .demo-video-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--surface);
+  opacity: 0.9;
+}
+.marketing-site .demo-video figcaption,
+.marketing-portal .demo-video figcaption {
+  font-size: 11px;
+  color: var(--caption);
+  text-align: center;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .marketing-site .demo-video-clip video,
+  .marketing-portal .demo-video-clip video,
+  .marketing-site .demo-video-clip .demo-video-poster img,
+  .marketing-portal .demo-video-clip .demo-video-poster img {
+    aspect-ratio: 1 / 1;
+  }
+}
