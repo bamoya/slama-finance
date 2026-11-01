@@ -18,6 +18,7 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { Label } from '../../../../components/ui/label'
+import { NumberInput } from '../../../../components/ui/number-input'
 import { Select, SelectOption } from '../../../../components/ui/select'
 import { Textarea } from '../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
@@ -215,17 +216,17 @@ export function DocumentEditorPage({
                     placeholder={translate('Search product or reference')}
                     aria-label={translate('Product')}
                   />
-                  <Input
+                  <NumberInput
                     disabled={readOnly}
                     value={line.quantity}
-                    onChange={(e) => update(line.id, 'quantity', e.target.value)}
-                    type="number"
+                    onValueChange={(value) => update(line.id, 'quantity', value)}
+                    aria-label={translate('Quantity')}
                   />
-                  <Input
+                  <NumberInput
                     disabled={readOnly}
                     value={line.price}
-                    onChange={(e) => update(line.id, 'price', e.target.value)}
-                    type="number"
+                    onValueChange={(value) => update(line.id, 'price', value)}
+                    aria-label={translate('Price')}
                   />
                   <Select
                     aria-label={translate('VAT for line {{value0}}', { value0: line.id })}

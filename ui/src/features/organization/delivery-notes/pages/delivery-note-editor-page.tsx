@@ -9,6 +9,7 @@ import { Button, buttonVariants } from '../../../../components/ui/button'
 import { Combobox } from '../../../../components/ui/combobox'
 import { Input } from '../../../../components/ui/input'
 import { Label } from '../../../../components/ui/label'
+import { NumberInput } from '../../../../components/ui/number-input'
 import { Textarea } from '../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { products } from '../../catalog'
@@ -153,17 +154,15 @@ export function DeliveryNoteEditorPage({ readOnly = false }: { readOnly?: boolea
                       aria-label={translate('Product')}
                     />
                   </div>
-                  <Input
+                  <NumberInput
                     disabled={readOnly}
-                    type="number"
                     min="1"
+                    aria-label={translate('Quantity')}
                     value={line.quantity}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setLines((current) =>
                         current.map((item) =>
-                          item.id === line.id
-                            ? { ...item, quantity: Number(event.target.value) }
-                            : item,
+                          item.id === line.id ? { ...item, quantity: Number(value) } : item,
                         ),
                       )
                     }
