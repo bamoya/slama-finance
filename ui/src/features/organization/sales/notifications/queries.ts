@@ -8,9 +8,11 @@ export const useDocumentNotifications = (
   documentType: NotificationDocumentType,
   id: string,
   params?: Parameters<typeof api.listDocumentNotifications>[2],
+  enabled = true,
 ) =>
   api.useListDocumentNotifications(documentType, id, params, {
     query: {
+      enabled,
       refetchInterval: (query) =>
         query.state.data?.items.some((row) => ['queued', 'running', 'sending'].includes(row.status))
           ? 3000

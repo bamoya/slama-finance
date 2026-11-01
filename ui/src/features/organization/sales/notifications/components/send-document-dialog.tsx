@@ -21,11 +21,16 @@ import {
   DialogTrigger,
 } from '../../../../../components/ui/dialog'
 import { ApiError } from '../../../../../lib/api-error'
+import { displayDate } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { useClientNotificationPreferences } from '../../../clients'
 import { useAuthorization } from '../../../identity'
 import { refreshSales } from '../../refresh'
-import { refreshDocumentNotifications, useSendDocumentActions } from '../queries'
+import {
+  refreshDocumentNotifications,
+  useDocumentNotifications,
+  useSendDocumentActions,
+} from '../queries'
 
 export function SendDocumentDialog({
   documentType,
@@ -52,6 +57,11 @@ export function SendDocumentDialog({
   const request = useRef<SendDocumentInput>()
   const canPreview = can('clients.read') && can('client_notification_preferences.read')
   const query = useClientNotificationPreferences(clientId ?? '', open && canPreview && !!clientId)
+  const canReadHistory = can('notification_dispatches.read')
+  const history = useDocumentNotifications(documentType, id, undefined, canReadHistory)
+  const lastSent = history.data?.items.find(
+    (row) => row.kind === 'dispatch' && row.status === 'sent',
+  )
   const eventKey = documentType === 'delivery_note' ? 'delivery_prepared' : `${documentType}_sent`
   const preference = query.data?.items.find((row) => row.eventKey === eventKey)
   const needsOverride =
@@ -62,6 +72,8 @@ export function SendDocumentDialog({
     if (busy || query.isFetching || !canPreview || !eligible) return
     setBusy(true)
     setError(undefined)
+    if (request.current && request.current.expectedVersion !== version && !queued)
+      request.current = undefined
     request.current ??= {
       expectedVersion: version,
       requestId: crypto.randomUUID(),
@@ -81,7 +93,12 @@ export function SendDocumentDialog({
         setConfirmedOverride(false)
         void query.refetch()
       }
-      setError(cause)
+      if (cause instanceof ApiError && cause.code === 'STALE_VERSION') {
+        request.current = undefined
+        void refreshSales(cache)
+        void refreshDocumentNotifications(cache, documentType, id)
+        setError(new Error('This document was already sent or changed. Refresh and try again.'))
+      } else setError(cause)
     } finally {
       setBusy(false)
     }
@@ -100,13 +117,19 @@ export function SendDocumentDialog({
       <DialogTrigger asChild>
         <Button variant="outline">
           <Send data-icon="inline-start" />
-          {t('send')}
+          {lastSent ? t('resend') : t('send')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogTitle>{t('sendTitle')}</DialogTitle>
         <DialogDescription>{t('sendDescription')}</DialogDescription>
         <div className="mt-4 grid gap-4">
+          {lastSent && (
+            <p role="status" className="text-sm">
+              {t('lastSent', { date: displayDate(lastSent.createdAt), email: lastSent.recipient })}
+              <span className="block text-xs text-muted-foreground">{t('resendHint')}</span>
+            </p>
+          )}
           {!canPreview ? (
             <p role="status" className="text-sm text-[var(--error-text)]">
               {t('loadPreferences')}
@@ -191,7 +214,7 @@ export function SendDocumentDialog({
               onClick={() => void send()}
             >
               <Send data-icon="inline-start" />
-              {t('send')}
+              {lastSent ? t('resend') : t('send')}
             </Button>
           </div>
         </div>

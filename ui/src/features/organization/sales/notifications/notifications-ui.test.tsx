@@ -194,6 +194,42 @@ describe('document notification actions', () => {
       state.sendInvoice.mock.calls[0]![1].requestId,
     )
   })
+  it('offers resend with the last sent date and recipient after a previous send', async () => {
+    state.listDocumentNotifications.mockResolvedValue({
+      items: [
+        {
+          id,
+          kind: 'dispatch',
+          status: 'sent',
+          createdAt: '2026-10-02T10:00:00Z',
+          attempts: 1,
+          errorCode: null,
+          recipient: 'client@example.test',
+          eventKey: 'invoice_sent',
+        },
+      ],
+      total: 1,
+      limit: 25,
+      offset: 0,
+    })
+    setup()
+    const trigger = await screen.findByRole('button', { name: 'Resend email' })
+    fireEvent.click(trigger)
+    const dialog = within(screen.getByRole('dialog'))
+    expect(dialog.getByText(/Sent on 02-10-2026 to client@example.test/)).toBeInTheDocument()
+    await waitFor(() => expect(dialog.getByRole('button', { name: 'Resend email' })).toBeEnabled())
+    fireEvent.click(dialog.getByRole('button', { name: 'Resend email' }))
+    await waitFor(() => expect(state.sendInvoice).toHaveBeenCalledTimes(1))
+  })
+  it('explains a stale version conflict instead of a generic error and refreshes', async () => {
+    state.sendInvoice.mockRejectedValueOnce(
+      new ApiError(409, 'STALE_VERSION', 'This record changed.'),
+    )
+    setup()
+    const dialog = await openSend()
+    fireEvent.click(dialog.getByRole('button', { name: 'Send email' }))
+    await dialog.findByText(/already sent or changed/)
+  })
   it('blocks confirmation when current recipient preview permission is missing', () => {
     state.keys = ['invoices.read', 'invoices.update']
     setup()

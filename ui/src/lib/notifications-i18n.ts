@@ -85,6 +85,9 @@ registerTranslations('notifications', {
     CLIENT_ARCHIVED: 'Client archived',
   },
   send: 'Send email',
+  resend: 'Resend email',
+  lastSent: 'Sent on {{date}} to {{email}}',
+  resendHint: 'This document was already emailed. Resending creates another email.',
   newSend: 'Start a new send',
   newSendHint:
     'A new send creates another email. Confirm the recipients again; use history to retry the existing delivery.',

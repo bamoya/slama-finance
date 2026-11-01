@@ -30,6 +30,8 @@ export function errorMessage(error: unknown): string {
       INVITATION_REVOKED: 'Cette invitation a été révoquée. Contactez votre administrateur.',
       INVITATION_ALREADY_USED:
         'Cette invitation a déjà été acceptée. Connectez-vous à votre organisation.',
+      STALE_VERSION:
+        'Cet élément a été modifié depuis votre dernier chargement. Actualisez la page puis réessayez.',
       INVITATION_CONFLICT: 'Cette invitation ne peut plus être modifiée.',
       STAFF_LIMIT: 'La limite de membres est atteinte. Contactez votre administrateur.',
       PAYMENT_PENDING: 'Un paiement est déjà en attente de vérification pour votre abonnement.',

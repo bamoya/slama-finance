@@ -761,6 +761,12 @@ export const french: Record<string, string> = {
   Stage: 'Étape',
   Standard: 'Standard',
   'Start a new send': 'Commencer un nouvel envoi',
+  'This document was already sent or changed. Refresh and try again.':
+    'Ce document a déjà été envoyé ou modifié. Actualisez la page puis réessayez.',
+  'Resend email': 'Renvoyer l’e-mail',
+  'Sent on {{date}} to {{email}}': 'Envoyé le {{date}} à {{email}}',
+  'This document was already emailed. Resending creates another email.':
+    'Ce document a déjà été envoyé par e-mail. Un renvoi crée un nouvel e-mail.',
   Status: 'Statut',
   'Status:': 'Statut :',
   Subject: 'Objet',
