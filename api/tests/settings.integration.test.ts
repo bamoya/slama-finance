@@ -340,7 +340,7 @@ describe('Company settings module', () => {
       })
       expect(preview.statusCode).toBe(200)
       expect(preview.json().pageCount).toBeGreaterThan(1)
-      expect(preview.json().html).toContain('Item 45')
+      expect(preview.json().html).toContain('Article 45')
       const updated = await app.inject({
         method: 'PATCH',
         url: `/api/v1/document-templates/${row.id}`,

@@ -45,7 +45,13 @@ export function createSettingsModule(
             scope,
             createSettingsController(
               service,
-              createPreviewService(media, async () => (await service.getCompany()).locale),
+              createPreviewService(media, async () => {
+                const company = await service.getCompany()
+                const bank = company.defaultBankAccountId
+                  ? await service.getBank(company.defaultBankAccountId).catch(() => null)
+                  : null
+                return { company, bank, locale: company.locale, logoAssetId: company.logoAssetId }
+              }),
             ),
             permission,
           )

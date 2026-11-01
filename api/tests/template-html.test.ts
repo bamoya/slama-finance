@@ -156,9 +156,9 @@ describe('canonical document preview', () => {
         const pages = result.html.match(/<svg\b[\s\S]*?<\/svg>/g) ?? []
         expect(pages).toHaveLength(result.pageCount)
         // Bank/payment sections can occupy a final page without product rows.
-        for (const page of pages.filter((page) => /Item \d+</.test(page)))
+        for (const page of pages.filter((page) => /Article \d+</.test(page)))
           expect(page.match(/>Nom du produit<\/text>/g)).toHaveLength(1)
-        for (let index = 1; index <= 45; index++) expect(result.html).toContain(`Item ${index}<`)
+        for (let index = 1; index <= 45; index++) expect(result.html).toContain(`Article ${index}<`)
         expect(result.html).toContain('4\u00a0500,00 MAD')
       })
     }
@@ -177,7 +177,7 @@ describe('canonical document preview', () => {
     )
     expect(compact.pageCount).toBeLessThanOrEqual(standard.pageCount)
     const firstPageRows = (html: string) =>
-      (html.split('</svg>')[0]!.match(/Item \d+</g) ?? []).length
+      (html.split('</svg>')[0]!.match(/Article \d+</g) ?? []).length
     expect(firstPageRows(compact.html)).toBeGreaterThan(firstPageRows(standard.html))
   })
   it('hides disabled signatures and does not change immutable presets', async () => {
@@ -187,5 +187,44 @@ describe('canonical document preview', () => {
     })
     expect(result.html).not.toContain('Company signature')
     expect(JSON.stringify(data)).toBe(before)
+  })
+
+  it('uses the organization profile and realistic French sample lines, never invented identities', async () => {
+    const result = await renderTemplatePreview(data, 'invoice', {}, 'short', 'fr-MA', {
+      company: {
+        legalName: 'Domaine Atlas SARL',
+        tradeName: null,
+        addressLine1: '8 Rue des Orangers',
+        addressLine2: null,
+        city: 'Meknès',
+        postalCode: '50000',
+        ice: '001122334455667',
+        taxIdentifier: '12345678',
+        registrationNumber: '998877',
+        registrationCity: 'Meknès',
+        email: 'contact@atlas.ma',
+        phone: '+212 535 00 00 00',
+        currency: 'MAD',
+      },
+      bank: {
+        bankName: 'Banque Populaire',
+        accountHolder: 'Domaine Atlas',
+        rib: '225091032701984651012213',
+        iban: null,
+      },
+    })
+    for (const expected of [
+      'Domaine Atlas SARL',
+      'ICE: 001122334455667',
+      'RC: 998877',
+      'IF: 12345678',
+      'Meknès',
+      'Banque Populaire',
+      'Huile d’olive',
+      '20%',
+    ])
+      expect(result.html).toContain(expected)
+    for (const forbidden of ['Slama', 'Sample company', 'Wheat', 'Crédit Agricole'])
+      expect(result.html).not.toContain(forbidden)
   })
 })
