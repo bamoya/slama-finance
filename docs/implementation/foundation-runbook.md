@@ -49,11 +49,12 @@ The GitHub Actions check workflow runs `pnpm check` and the real PostgreSQL suit
 against its own service database. It requires no production credentials.
 
 The API server reads `api/.env` when launched from `api` (as workspace dev does).
-See `api/.env.example`; never commit populated secrets. `CORS_ORIGIN` is a comma-
-separated exact origin allowlist, no wildcard/path/trailing slash. Production
-requires HTTPS origins and secure cookies. CLI mutation tests must send a trusted
-Origin too, for example `Origin: http://localhost:5173`. CORS alone is not the
-CSRF defense. Reverse-proxy trust is disabled until a specific topology is approved.
+See `api/.env.example`; never commit populated secrets. Browsers call the API on
+their own origin (`PLATFORM_DOMAIN`, `PLATFORM_SCHEME`), so there is no CORS allowlist;
+production requires `PLATFORM_SCHEME=https` and secure cookies. See
+[domains, DNS and TLS](../deployment/domains-and-tls.md). Mutation tests must
+send a trusted `Origin` (for example `Origin: http://localhost:5173`); origin checks
+are not a complete CSRF defense. Reverse-proxy trust is disabled until a specific topology is approved.
 
 ## Real database integration tests
 

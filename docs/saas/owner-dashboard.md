@@ -1,18 +1,18 @@
 # Owner portal — Classic dashboard integration
 
-Current implementation: the dashboard uses `/v1/owner/analytics/financial-summary` for real MAD totals and daily revenue/collection trends. The organization selector and inclusive date range scope period figures; outstanding/overdue remain current snapshots. Dedicated platform repositories check ownership and run read-only repeatable-read aggregate queries against the shared schema. Organization links open the independent organization login. This supersedes the earlier financial-placeholder boundary described below.
+Current implementation: the dashboard uses `/api/v1/owner/analytics/financial-summary` for real MAD totals and daily revenue/collection trends. The organization selector and inclusive date range scope period figures; outstanding/overdue remain current snapshots. Dedicated platform repositories check ownership and run read-only repeatable-read aggregate queries against the shared schema. Organization links open the independent organization login. This supersedes the earlier financial-placeholder boundary described below.
 
 The approved Classic direction is integrated into the application under `ui/src/features/identity/owners`. The isolated prototype is a design reference, not a runtime dependency.
 
 ## Routes
 
-| Route                                  | Purpose                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `/owner`                               | Owner overview                                                                                         |
-| `/owner/organizations`                 | Existing API-backed organization search, status filters and pagination                                 |
-| `/owner/organizations/:organizationId` | Owned organization identity and access details                                                         |
-| `/owner/subscription`                  | Explicit unavailable state until subscription services are implemented; link to public plan comparison |
-| `/owner/account`                       | Existing owner profile and logout                                                                      |
+| Route                            | Purpose                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `app.<domain>/`                  | Owner overview                                                                                         |
+| `app.<domain>/organizations`     | Existing API-backed organization search, status filters and pagination                                 |
+| `app.<domain>/organizations/:id` | Owned organization identity and access details                                                         |
+| `app.<domain>/subscription`      | Explicit unavailable state until subscription services are implemented; link to public plan comparison |
+| `app.<domain>/account`           | Existing owner profile and logout                                                                      |
 
 The common owner layout uses the shared shadcn sidebar, global buttons, language/theme controls, dropdown menu and BaMoYa branding. Desktop navigation collapses with the shared sidebar component; mobile uses bottom navigation. This portal is separate from organization finance workspaces.
 

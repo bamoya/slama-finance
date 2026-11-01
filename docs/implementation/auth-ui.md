@@ -45,8 +45,7 @@ The local Finance database and initial administrator are now provisioned; see
 
 - Run the API and UI, with an existing provisioned account and the intended database.
   This change does not seed users, apply migrations or create an administrator.
-- Set `API_BASE_URL` at UI container runtime (`VITE_API_BASE_URL` for local development) and allow the UI's exact origin in API `CORS_ORIGIN`.
-  Use matching hostnames (for example localhost for both) for local cookie handling.
+- Set `PLATFORM_DOMAIN` and `PLATFORM_SCHEME` (UI runtime `config.js` and API). The UI calls `/api/v1` on its own host, so no CORS setting is needed. Use `*.localhost` hosts for local cookie handling; see [domains, DNS and TLS](../deployment/domains-and-tls.md).
 - Configure Resend and set `PASSWORD_RESET_URL` to the deployed UI's
   `/reset-password` URL, without a query or fragment. Local example:
   `http://localhost:5173/reset-password`. Production uses HTTPS.

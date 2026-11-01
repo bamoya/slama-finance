@@ -9,7 +9,7 @@ subscription enforcement or a completed owner-to-workspace journey.
 Owner portal                         Organization staff
 owner session                        organization login + staff session
       |                                      |
-owner-scoped transactions            X-Organization-Id (finance requests)
+owner-scoped transactions            <slug>. host (finance requests)
       |                                      |
 owner metadata/onboarding            authenticated scope + permission check
                                              |
@@ -21,11 +21,11 @@ owner metadata/onboarding            authenticated scope + permission check
                                    FORCE RLS + relationship constraints
 ```
 
-`X-Organization-Id` selects a UUID; it grants no permission. The staff session must belong
+The organization slug from the request host selects the scope; it grants no permission. The staff session must belong
 to that organization, the organization must be available, and the requested permission
 must be granted. Organization authentication selects scope in its existing route. Missing,
 invalid or conflicting scope is rejected. Owner endpoints keep their independent owner scope.
-The staff cookie covers `/v1`; server checks, rather than cookie paths, isolate organizations.
+Staff cookies are host-only and cover `/api/v1`; server checks, rather than cookie paths, isolate organizations.
 Logging into another organization replaces that browser's current staff cookie.
 
 Contracts declare organization scope as an API-key header alongside the appropriate session

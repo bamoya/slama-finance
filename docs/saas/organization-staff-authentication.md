@@ -21,7 +21,7 @@ Owner registration is the entry point. There is no supported legacy-data adoptio
 
 Contracts: `api/openapi/modules/identity/organization-auth.yaml`.
 
-Under `/v1/organizations/{organizationId}/auth`:
+Under `/api/v1/auth` on the organization's `<slug>.` host (scope comes from the host, not the path):
 
 - POST login, logout, change-password and password-reset/request or password-reset/confirm.
 - GET session.
@@ -32,7 +32,7 @@ cookie. Staff credentials and recovery tokens cannot authenticate another organi
 Paused, suspended, unactivated or deletion-pending organizations deny login and revoke sessions.
 The UI shows an unavailable page instead of an actionable workspace.
 
-The scoped personal authentication pages live under `/organizations/{organizationId}`.
+The personal authentication pages live on the `<slug>.` host (`/login`, `/workspace/...`).
 Custom-domain discovery, owner workspace entry and finance activation remain separate tasks.
 
 ## Verification

@@ -65,16 +65,16 @@ organizations 1 --- N staff_invitations N --- 0..1 users (inviter)
 
 `staff_invitations` stores the normalized email, language, inviter/accepted account references, lifecycle timestamps, token hash/expiry, and leased delivery state. `staff_invitation_roles` preserves a null reference when a role is deleted; acceptance then rejects the missing required role. Both tables require organization scope and FORCE RLS; generated composite foreign keys enforce tenant consistency even with a privileged connection. Delivery metadata lives on the invitation rather than a second generic job queue. No plaintext token or password is persisted.
 
-| Method | Route                                                        | Access                                                     |
-| ------ | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| GET    | `/v1/staff/invitations`                                      | `staff.read`                                               |
-| POST   | `/v1/staff/invitations`                                      | `staff.create`; assigned roles also require `roles.update` |
-| POST   | `/v1/staff/invitations/:id/resend`                           | `staff.update`; original inviter authority is rechecked    |
-| POST   | `/v1/staff/invitations/:id/revoke`                           | `staff.update`                                             |
-| POST   | `/v1/organizations/:organizationId/auth/invitations/inspect` | Public, valid token, rate limited                          |
-| POST   | `/v1/organizations/:organizationId/auth/invitations/accept`  | Public, valid token, rate limited                          |
+| Method | Route                                               | Access                                                     |
+| ------ | --------------------------------------------------- | ---------------------------------------------------------- |
+| GET    | `/api/v1/staff/invitations`                         | `staff.read`                                               |
+| POST   | `/api/v1/staff/invitations`                         | `staff.create`; assigned roles also require `roles.update` |
+| POST   | `/api/v1/staff/invitations/:id/resend`              | `staff.update`; original inviter authority is rechecked    |
+| POST   | `/api/v1/staff/invitations/:id/revoke`              | `staff.update`                                             |
+| POST   | `/api/v1/auth/invitations/inspect` (`<slug>.` host) | Public, valid token, rate limited                          |
+| POST   | `/api/v1/auth/invitations/accept` (`<slug>.` host)  | Public, valid token, rate limited                          |
 
-UI paths inside an organization workspace: `/settings/staff/invitations` and `/settings/staff/invitations/new`. Public acceptance uses `/organizations/:organizationId/accept-invitation#token=…`; the fragment is removed immediately and API requests carry the token in the body. No automatic session is created on acceptance.
+UI paths inside an organization workspace: `/settings/staff/invitations` and `/settings/staff/invitations/new`. Public acceptance uses `/accept-invitation#token=…` on the `<slug>.` host; the fragment is removed immediately and API requests carry the token in the body. No automatic session is created on acceptance.
 
 Invitation delivery uses the existing notification-worker interval but bypasses business notification rules and email quotas. Initial setup invitations wait for the administrator's mandatory password replacement. Other invalidated inviter/role cases become failed delivery instead of retrying indefinitely. Resend has a one-minute cooldown; provider delivery retries at most five times, with a new token per attempt. Revocation fences completion of in-flight jobs; an already-sent email may still arrive, but its revoked link cannot grant access.
 

@@ -1,6 +1,6 @@
 # Guided organization onboarding
 
-The owner portal now offers a persisted six-step setup at `/owner/organizations/new`. Existing drafts resume at `/owner/organizations/:organizationId/setup`.
+The owner portal (`app.<domain>`) now offers a persisted six-step setup at `/organizations/new`. Existing drafts resume at `/organizations/:organizationId/setup`.
 
 ## Experience
 
@@ -19,14 +19,14 @@ The preview is a layout illustration, not the PDF generation pipeline. Placehold
 
 Contract source: `api/openapi/modules/identity/owner-onboarding.yaml`; creation is exposed alongside the existing organization-list contract. Validators, transport types and Orval clients/hooks are generated, not handwritten.
 
-| Method | Path                                                          | Behavior                                                                 |
-| ------ | ------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| POST   | `/v1/owner/organizations`                                     | Create an independent setup draft; request UUID makes retries idempotent |
-| GET    | `/v1/owner/organizations/:organizationId/onboarding`          | Read the owned configuration and version                                 |
-| PUT    | `/v1/owner/organizations/:organizationId/onboarding`          | Save configuration/current step with expected-version concurrency        |
-| POST   | `/v1/owner/organizations/:organizationId/onboarding/complete` | Record setup completion once                                             |
-| POST   | `/v1/owner/organizations/:organizationId/branding`            | Normalize and privately store a logo/signature                           |
-| GET    | `/v1/owner/organizations/:organizationId/branding/:assetId`   | Read an authorized image for preview                                     |
+| Method | Path                                                              | Behavior                                                                 |
+| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| POST   | `/api/v1/owner/organizations`                                     | Create an independent setup draft; request UUID makes retries idempotent |
+| GET    | `/api/v1/owner/organizations/:organizationId/onboarding`          | Read the owned configuration and version                                 |
+| PUT    | `/api/v1/owner/organizations/:organizationId/onboarding`          | Save configuration/current step with expected-version concurrency        |
+| POST   | `/api/v1/owner/organizations/:organizationId/onboarding/complete` | Record setup completion once                                             |
+| POST   | `/api/v1/owner/organizations/:organizationId/branding`            | Normalize and privately store a logo/signature                           |
+| GET    | `/api/v1/owner/organizations/:organizationId/branding/:assetId`   | Read an authorized image for preview                                     |
 
 Identity owns owner authorization, controllers, services, profile repository and wizard. Its service collaborates with the media module through a public interface. Media owns image normalization, private object storage and its asset repository. UI uses shared buttons, controls, dialogs, theme/language resources, Axios and generated TanStack Query consumers. The unsaved-changes component is now shared under `components/management`, with the previous settings import preserved as a re-export.
 

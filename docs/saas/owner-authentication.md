@@ -14,16 +14,16 @@ organization finance, custom-domain handoffs and external identity providers are
 - Migration: `0000_initial_schema.sql` adds owner sessions, purpose-bound security tokens and
   owner language. All existing migrations and staff identities remain unchanged.
 
-| Method | Endpoint                                | Behavior                                                              |
-| ------ | --------------------------------------- | --------------------------------------------------------------------- |
-| POST   | `/v1/owner-auth/register`               | Generic 202 response; creates pending owner and requests verification |
-| POST   | `/v1/owner-auth/verification/request`   | Generic 202 response, verification resend                             |
-| POST   | `/v1/owner-auth/verification/confirm`   | Consumes a valid one-use verification token                           |
-| POST   | `/v1/owner-auth/login`                  | Requires verified, enabled owner; creates independent session         |
-| GET    | `/v1/owner-auth/session`                | Returns only public owner account fields                              |
-| POST   | `/v1/owner-auth/logout`                 | Revokes the owner session and clears its cookie                       |
-| POST   | `/v1/owner-auth/password-reset/request` | Generic 202 response, eligible-owner recovery email                   |
-| POST   | `/v1/owner-auth/password-reset/confirm` | Consumes one-use reset token and revokes all owner sessions           |
+| Method | Endpoint                                    | Behavior                                                              |
+| ------ | ------------------------------------------- | --------------------------------------------------------------------- |
+| POST   | `/api/v1/owner-auth/register`               | Generic 202 response; creates pending owner and requests verification |
+| POST   | `/api/v1/owner-auth/verification/request`   | Generic 202 response, verification resend                             |
+| POST   | `/api/v1/owner-auth/verification/confirm`   | Consumes a valid one-use verification token                           |
+| POST   | `/api/v1/owner-auth/login`                  | Requires verified, enabled owner; creates independent session         |
+| GET    | `/api/v1/owner-auth/session`                | Returns only public owner account fields                              |
+| POST   | `/api/v1/owner-auth/logout`                 | Revokes the owner session and clears its cookie                       |
+| POST   | `/api/v1/owner-auth/password-reset/request` | Generic 202 response, eligible-owner recovery email                   |
+| POST   | `/api/v1/owner-auth/password-reset/confirm` | Consumes one-use reset token and revokes all owner sessions           |
 
 Sensitive POST endpoints are limited to five requests/minute per client IP per API instance, per route.
 All browser mutations retain exact trusted-Origin validation. Owner endpoints additionally reject
@@ -54,16 +54,16 @@ Secure in production and host-only. Owner cookie `slama_owner_session` is separa
 ## UI routes
 
 ```text
-/owner/login
-/owner/register
-/owner/resend-verification
-/owner/verify-email#token=...
-/owner/forgot-password
-/owner/reset-password#token=...
-/owner
+app.<domain>/login
+app.<domain>/register
+app.<domain>/resend-verification
+app.<domain>/verify-email#token=...
+app.<domain>/forgot-password
+app.<domain>/reset-password#token=...
+app.<domain>/
 ```
 
-`/owner` currently displays the authenticated owner account and sign-out action. It is not yet an
+The owner overview (`app.<domain>/`) currently displays the authenticated owner account and sign-out action. It is not yet an
 organization dashboard. Each auth mode has an independent component key so navigation clears previous
 form/status/token state. Staff sign-in stays at `/login`.
 
@@ -75,11 +75,12 @@ initializer, which grants its reviewed runtime access to `platform_users`, `owne
 
 ```dotenv
 OWNER_AUTH_ENABLED=true
-OWNER_PORTAL_ORIGIN=http://localhost:5173
+PLATFORM_DOMAIN=localhost:5173
+PLATFORM_SCHEME=http
 ```
 
-In production, use the exact central portal HTTPS origin instead. It must be included in `CORS_ORIGIN`
-and cannot contain a path, query, fragment or trailing slash. Keep the existing Resend credentials and
+The owner portal is served on `app.<PLATFORM_DOMAIN>`; in production use `PLATFORM_DOMAIN=bfinance.ma` and
+`PLATFORM_SCHEME=https`. No CORS origin is configured. See [domains, DNS and TLS](../deployment/domains-and-tls.md). Keep the existing Resend credentials and
 verified `EMAIL_FROM` configuration; production owner security emails use the backend's Resend adapter,
 independent of business notification preferences or quotas. In development, `NOTIFICATION_TRANSPORT=smtp`
 uses the existing local Mailpit adapter (`SMTP_HOST`/`SMTP_PORT`), with a local-only sender fallback.
@@ -130,5 +131,5 @@ Mailpit now exposes SMTP on localhost:1025 and its inbox on http://localhost:802
 check passed registration, captured verification email, verification confirmation and login. Its
 random temporary owner was removed afterward; no default owner credentials were created.
 
-To use the feature, register at http://localhost:5173/owner/register, open the verification email in
-Mailpit, then sign in at http://localhost:5173/owner/login. No real email is sent in local SMTP mode.
+To use the feature, register at http://app.localhost:5173/register, open the verification email in
+Mailpit, then sign in at http://app.localhost:5173/login. No real email is sent in local SMTP mode.

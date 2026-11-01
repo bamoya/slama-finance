@@ -123,12 +123,11 @@ test success.
 ### Container and ingress configuration
 
 The UI image serves static assets and SPA deep links through Nginx. Configure its
-public API URL with the container environment variable `API_BASE_URL` (default
-`https://api-slama-finance.bamoya.com`). Startup generates a non-cached `/config.js`;
-recreate the UI container to change the URL without rebuilding. Route the UI and
-API domains to their respective containers through the ingress. Local development
-retains `VITE_API_BASE_URL`, defaulting to `http://localhost:3000`.
-Terminate HTTPS at the ingress.
+the platform domain and scheme (`PLATFORM_DOMAIN`, `PLATFORM_SCHEME`). Every host
+(apex, `app.`, `admin.`, `api.`, `<slug>.`) is routed to the UI container, which
+sends `/api/v1/*` to the API. Startup generates a non-cached `/config.js`; recreate the
+UI container to change the domain without rebuilding. Terminate HTTPS at the ingress.
+See [domains, DNS and TLS](deployment/domains-and-tls.md).
 
 Set `TRUST_PROXY_IPS` to the comma-separated exact IPs of trusted reverse proxies
 only. The safe default is empty (forwarded IPs ignored). Restrict direct API access,

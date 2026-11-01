@@ -9,11 +9,11 @@ financial analytics are still separate tasks.
 ## Delivered UI
 
 ```text
-/owner                             Classic owner overview (see owner-dashboard.md)
-/owner/organizations               Owned organization cards, search, status and pagination
-/owner/organizations/{id}           Organization details and owner-access summary
-/owner/account                     Owner profile summary and logout
-/auth/login                        Central owner authentication
+app.<domain>/                      Classic owner overview (see owner-dashboard.md)
+app.<domain>/organizations         Owned organization cards, search, status and pagination
+app.<domain>/organizations/{id}    Organization details and owner-access summary
+app.<domain>/account               Owner profile summary and logout
+app.<domain>/login                 Central owner authentication
 ```
 
 The portal uses a shared OwnerPortalLayout with Classic desktop/sidebar and mobile bottom navigation,
@@ -35,10 +35,10 @@ for current overview behavior and remaining capabilities.
 Modular OpenAPI source: `api/openapi/modules/identity/owner-organizations.yaml`.
 API validators, UI transport types and Orval query hooks are generated; generated artifacts stay ignored.
 
-| Method | Route                                      | Behavior                                                           |
-| ------ | ------------------------------------------ | ------------------------------------------------------------------ |
-| GET    | `/v1/owner/organizations`                  | Owned organizations only; page/pageSize, search and status filters |
-| GET    | `/v1/owner/organizations/{organizationId}` | Owned organization metadata; non-owned and missing both return 404 |
+| Method | Route                                          | Behavior                                                           |
+| ------ | ---------------------------------------------- | ------------------------------------------------------------------ |
+| GET    | `/api/v1/owner/organizations`                  | Owned organizations only; page/pageSize, search and status filters |
+| GET    | `/api/v1/owner/organizations/{organizationId}` | Owned organization metadata; non-owned and missing both return 404 |
 
 The existing `identity/owners` feature now has organization routes, controllers, services, repositories
 and a mapper. It preserves the layered modular monolith rather than introducing a new top-level module.

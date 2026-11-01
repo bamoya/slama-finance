@@ -32,7 +32,7 @@ plugins, UI layout, OpenAPI generation, environment validation and migrations.
 | `GET /health` | Process liveness; no configuration/secrets                    |
 | `GET /ready`  | Bounded DB connectivity/readiness check; 503 when unavailable |
 
-All domain routes below use `/v1`. Lists accept `page`, bounded `pageSize`, `q`
+All domain routes below use `/api/v1` on every host (see [domains, DNS and TLS](../deployment/domains-and-tls.md)). Lists accept `page`, bounded `pageSize`, `q`
 and allowlisted sort/filter fields; return `{items, page, pageSize, total}`.
 Specify stable secondary sorting by ID. Use 201 for creation, 202 for accepted
 jobs, 204 for successful no-body actions. Standard errors contain `code`,
@@ -44,7 +44,7 @@ Define distinct create/update/detail DTOs rather than exposing database rows.
 ## Middleware and services
 
 - Request IDs, structured/redacted logs, central Zod/DB error mapping, request
-  body limits and safe CORS origin allowlist. Secure cookie defaults and headers.
+  body limits and host-based site resolution (no CORS; browsers call the API on their own origin). Secure cookie defaults and headers.
 - Cookie-authenticated mutations require trusted Origin/CSRF protection, not
   just CORS. Apply this to login, logout and password changes too.
 - Reusable validation, pagination, transaction and audit helpers. Auth/RBAC
