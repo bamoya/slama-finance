@@ -316,8 +316,11 @@ class Recorder {
     return html
   }
   /** Show a downloaded PDF (first page rendered with Ghostscript) in a minimal viewer page. */
-  async pdfViewer(pdfFile, { title = path.basename(pdfFile), label = 'Visionneuse PDF' } = {}) {
-    const png = path.join(this.tmp, 'pdf-page.png')
+  async pdfViewer(
+    pdfFile,
+    { title = path.basename(pdfFile), label = 'Visionneuse PDF', maxPages = 1 } = {},
+  ) {
+    const pngPattern = path.join(this.tmp, 'pdf-page-%d.png')
     execFileSync('gs', [
       '-q',
       '-dNOPAUSE',
@@ -325,8 +328,8 @@ class Recorder {
       '-sDEVICE=png16m',
       '-r200',
       '-dFirstPage=1',
-      '-dLastPage=1',
-      `-sOutputFile=${png}`,
+      `-dLastPage=${maxPages}`,
+      `-sOutputFile=${pngPattern}`,
       pdfFile,
     ])
     const pages = execFileSync('gs', [
@@ -338,8 +341,11 @@ class Recorder {
     ])
       .toString()
       .trim()
-    const b64 = fs.readFileSync(png).toString('base64')
-    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>*{box-sizing:border-box}body{margin:0;background:#525659;font-family:Inter,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}.bar{height:48px;background:#323639;color:#f1f3f4;display:flex;align-items:center;padding:0 20px;gap:18px;font-size:14px}.bar b{font-weight:500}.bar span{opacity:.75}.pg{flex:1;overflow:hidden;display:flex;justify-content:center;padding:22px 0}.pg img{height:auto;max-height:none;width:900px;align-self:flex-start;box-shadow:0 4px 18px rgba(0,0,0,.5);background:#fff}</style></head><body><div class="bar"><b>${esc(title)}</b><span>1 / ${pages}</span><span style="margin-left:auto">100 %</span></div><div class="pg"><img src="data:image/png;base64,${b64}"></div></body></html>`
+    const imgs = Array.from({ length: Math.min(maxPages, Number(pages) || 1) }, (_, i) => {
+      const b64 = fs.readFileSync(pngPattern.replace('%d', String(i + 1))).toString('base64')
+      return `<img src="data:image/png;base64,${b64}">`
+    }).join('')
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><style>*{box-sizing:border-box}body{margin:0;background:#525659;font-family:Inter,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}.bar{height:48px;background:#323639;color:#f1f3f4;display:flex;align-items:center;padding:0 20px;gap:18px;font-size:14px}.bar b{font-weight:500}.bar span{opacity:.75}.pg{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 0}.pg img{height:auto;max-height:none;width:900px;flex:none;box-shadow:0 4px 18px rgba(0,0,0,.5);background:#fff}</style></head><body><div class="bar"><b>${esc(title)}</b><span>1 / ${pages}</span><span style="margin-left:auto">100 %</span></div><div class="pg">${imgs}</div></body></html>`
     await this.context.route('http://pdf.localhost/**', (r) =>
       r.fulfill({ contentType: 'text/html; charset=utf-8', body: html }),
     )

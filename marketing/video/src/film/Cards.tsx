@@ -68,7 +68,8 @@ export const IntroCard = ({ title, subtitle }: { title: string; subtitle?: strin
         {subtitle && (
           <div
             style={{
-              fontSize: square ? 54 : 66,
+              fontSize: square ? 41 : 66, // square: one line within 1080 px
+              whiteSpace: square ? 'nowrap' : undefined,
               fontWeight: 700,
               lineHeight: 1.12,
               letterSpacing: -1,

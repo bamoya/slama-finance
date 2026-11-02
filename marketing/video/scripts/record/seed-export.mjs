@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { OUT, clearMailFor } from './lib.mjs'
 import { ownerApi, staffApi, stateFor } from './seed.mjs'
-import { COMPANY, KARIM } from './data.mjs'
+import { COMPANY, KARIM, daysFromToday } from './data.mjs'
 
 export async function seedExport() {
   await clearMailFor(KARIM.email) // drop old temporary-password mails so the new org's one is used
@@ -93,13 +93,13 @@ export async function seedExport() {
     suggestedVatRate: '0.00',
     variants: [{ weightG: 600000, pricePerItem: '7800.00', costPerItem: '5400.00', active: true }],
   })
-  const dates = ['2026-09-12', '2026-09-28', '2026-10-09', '2026-10-21', '2026-10-27']
+  const dates = [50, 34, 23, 11, 5].map((n) => daysFromToday(-n))
   for (let i = 0; i < dates.length; i++) {
     const d = await w.post('/api/v1/invoices', {
       clientId: clients[i % 3],
       templateId: null,
       issueDate: dates[i],
-      dueDate: dates[i].slice(0, 8) + '28',
+      dueDate: daysFromToday([-34, -18, -7, 5, 11][i]),
       notes: null,
       paymentTerms: 'Paiement à 30 jours',
       bankAccountId: bank.id,
@@ -123,8 +123,8 @@ export async function seedExport() {
         currency: 'MAD',
         method: 'bank_transfer',
         status: 'confirmed',
-        paymentDate: dates[i].slice(0, 8) + '26',
-        collectedOn: dates[i].slice(0, 8) + '26',
+        paymentDate: daysFromToday([-40, -26, -15][i]),
+        collectedOn: daysFromToday([-40, -26, -15][i]),
         bankAccountId: bank.id,
         reference: `VIR-EXP-${i + 1}`,
         chequeBank: null,

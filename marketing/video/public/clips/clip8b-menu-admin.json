@@ -1,0 +1,33 @@
+{
+  "chapter": "clip8b-menu-admin",
+  "width": 1440,
+  "height": 900,
+  "duration": 3.9,
+  "lead": 14.68,
+  "drift": 0.9655,
+  "events": [
+    {
+      "t": 0,
+      "type": "pause",
+      "label": "Karim voit tous les modules",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 0.69,
+      "type": "pause",
+      "label": "Menu complet de l’administrateur",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ],
+  "cursor": []
+}

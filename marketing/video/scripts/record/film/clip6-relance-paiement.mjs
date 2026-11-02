@@ -2,7 +2,7 @@
 import { openFilmBlank, WS } from './common.mjs'
 import { mailFor, clearMailFor, sleep } from '../lib.mjs'
 import { setDueReminder } from '../between.mjs'
-import { CLIENT, KARIM, ORG } from '../data.mjs'
+import { CLIENT, KARIM, ORG, daysFromToday } from '../data.mjs'
 import { staffApi } from '../seed.mjs'
 import { randomUUID } from 'node:crypto'
 
@@ -13,7 +13,7 @@ export async function prepare() {
   // a first partial payment (silent, through the API) is what makes the reminder fire with the remaining balance
   const w = await staffApi(ORG.slug, KARIM.email)
   const inv = (await w.get('/api/v1/invoices?search=Baraka')).items.find(
-    (i) => i.dueDate === '2026-12-01',
+    (i) => i.dueDate === daysFromToday(30),
   )
   prepared.invoiceId = inv.id
   const bank = (await w.get('/api/v1/bank-accounts')).items?.[0]
@@ -24,14 +24,14 @@ export async function prepare() {
     currency: 'MAD',
     method: 'bank_transfer',
     status: 'confirmed',
-    paymentDate: '2026-11-01',
-    collectedOn: '2026-11-01',
+    paymentDate: daysFromToday(0),
+    collectedOn: daysFromToday(0),
     bankAccountId: bank?.id ?? null,
     reference: 'VIR-ACOMPTE',
     chequeBank: null,
     chequeNumber: null,
   })
-  await setDueReminder(30) // demo date is fixed: make the reminder fire for the invoice due 01-12-2026 (not shown)
+  await setDueReminder(30) // demo date is fixed: make the reminder fire for the invoice due in 30 days (not shown)
   await mailFor(CLIENT.email, { subjectIncludes: 'Échéance', timeout: 90000 })
 }
 export async function run() {

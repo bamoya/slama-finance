@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { HERE, clearMailFor } from './lib.mjs'
 import { resetApiCache } from './seed.mjs'
-import { CLIENT, KARIM } from './data.mjs'
+import { CLIENT, KARIM, SALMA } from './data.mjs'
 
 const CLIPS = [
   'clip1-vue-ensemble',
@@ -17,6 +17,8 @@ const CLIPS = [
   'clip6-relance-paiement',
   'clip7-rapport',
   'clip8-invitation',
+  'clip8b-menu-admin',
+  'clip8b-acces-limite',
   'clip9-modele',
 ]
 const args = process.argv.slice(2)
@@ -37,8 +39,7 @@ for (const m of order) {
     env('restore', m.meta.snapshot)
     current = m.meta.snapshot
     resetApiCache()
-    for (const a of [KARIM.email, CLIENT.email, 'salma.idrissi@atlas-negoce.ma'])
-      await clearMailFor(a)
+    for (const a of [KARIM.email, CLIENT.email, SALMA.email]) await clearMailFor(a)
     try {
       await m.prepare?.()
       const rec = await m.run()

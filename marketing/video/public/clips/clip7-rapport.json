@@ -2,12 +2,12 @@
   "chapter": "clip7-rapport",
   "width": 1440,
   "height": 900,
-  "duration": 17.37,
-  "lead": 12.12,
-  "drift": 1,
+  "duration": 15.53,
+  "lead": 8.04,
+  "drift": 0.9982,
   "events": [
     {
-      "t": 0.19,
+      "t": 0.15,
       "type": "pause",
       "label": "Rapports planifiés : rapport mensuel",
       "box": {
@@ -18,40 +18,7 @@
       }
     },
     {
-      "t": 1.24,
-      "type": "click",
-      "label": "Envoi du rapport par e-mail",
-      "box": {
-        "x": 1354,
-        "y": 253,
-        "width": 32,
-        "height": 32
-      }
-    },
-    {
-      "t": 2.21,
-      "type": "popup",
-      "label": "Popup ouvert",
-      "box": {
-        "x": 515,
-        "y": 358,
-        "width": 410,
-        "height": 184
-      }
-    },
-    {
-      "t": 2.86,
-      "type": "click",
-      "label": "Confirmation de l’envoi",
-      "box": {
-        "x": 830,
-        "y": 500,
-        "width": 81,
-        "height": 29
-      }
-    },
-    {
-      "t": 4.03,
+      "t": 1.96,
       "type": "navigate",
       "label": "Le dirigeant reçoit le rapport par e-mail",
       "box": {
@@ -62,7 +29,7 @@
       }
     },
     {
-      "t": 4.27,
+      "t": 2.17,
       "type": "pause",
       "label": "Rapport mensuel reçu par e-mail",
       "box": {
@@ -73,9 +40,9 @@
       }
     },
     {
-      "t": 7.48,
+      "t": 5.84,
       "type": "navigate",
-      "label": "Rapports",
+      "label": "Ouverture du PDF joint",
       "box": {
         "x": 0,
         "y": 0,
@@ -84,108 +51,31 @@
       }
     },
     {
-      "t": 7.88,
-      "type": "click",
-      "label": "Choix de la période",
-      "box": {
-        "x": 916,
-        "y": 250,
-        "width": 147,
-        "height": 17
-      }
-    },
-    {
-      "t": 8.34,
-      "type": "popup",
-      "label": "Popup ouvert",
-      "box": {
-        "x": 886,
-        "y": 280,
-        "width": 307,
-        "height": 404
-      }
-    },
-    {
-      "t": 8.77,
-      "type": "click",
-      "label": "Mois précédent",
-      "box": {
-        "x": 909,
-        "y": 363,
-        "width": 26,
-        "height": 26
-      }
-    },
-    {
-      "t": 9.09,
-      "type": "popup",
-      "label": "Popup ouvert",
-      "box": {
-        "x": 886,
-        "y": 280,
-        "width": 307,
-        "height": 372
-      }
-    },
-    {
-      "t": 9.68,
-      "type": "click",
-      "label": "Mois précédent",
-      "box": {
-        "x": 909,
-        "y": 363,
-        "width": 26,
-        "height": 26
-      }
-    },
-    {
-      "t": 10.52,
-      "type": "click",
-      "label": "Début de période",
-      "box": {
-        "x": 935,
-        "y": 426,
-        "width": 26,
-        "height": 26
-      }
-    },
-    {
-      "t": 11.31,
-      "type": "click",
-      "label": "Mois suivant",
-      "box": {
-        "x": 1063,
-        "y": 363,
-        "width": 26,
-        "height": 26
-      }
-    },
-    {
-      "t": 12.25,
-      "type": "click",
-      "label": "Fin de période",
-      "box": {
-        "x": 1037,
-        "y": 554,
-        "width": 26,
-        "height": 26
-      }
-    },
-    {
-      "t": 13.21,
-      "type": "click",
-      "label": "Appliquer la période",
-      "box": {
-        "x": 1101,
-        "y": 609,
-        "width": 79,
-        "height": 29
-      }
-    },
-    {
-      "t": 13.52,
+      "t": 6.96,
       "type": "pause",
-      "label": "Rapports de gestion : évolution des ventes",
+      "label": "Rapport PDF : chiffres clés",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 8.75,
+      "type": "pause",
+      "label": "Graphiques et détail",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 11.88,
+      "type": "pause",
+      "label": "Suite du rapport",
       "box": {
         "x": 0,
         "y": 0,
@@ -194,231 +84,5 @@
       }
     }
   ],
-  "cursor": [
-    [
-      0.77,
-      725,
-      449
-    ],
-    [
-      0.84,
-      857,
-      412
-    ],
-    [
-      0.88,
-      1045,
-      360
-    ],
-    [
-      0.94,
-      1330,
-      281
-    ],
-    [
-      1.13,
-      1365,
-      271
-    ],
-    [
-      1.18,
-      1370,
-      269
-    ],
-    [
-      2.56,
-      1366,
-      271
-    ],
-    [
-      2.6,
-      1339,
-      285
-    ],
-    [
-      2.64,
-      1265,
-      321
-    ],
-    [
-      2.7,
-      976,
-      462
-    ],
-    [
-      2.77,
-      874,
-      512
-    ],
-    [
-      2.82,
-      870,
-      514
-    ],
-    [
-      7.64,
-      871,
-      512
-    ],
-    [
-      7.7,
-      895,
-      460
-    ],
-    [
-      7.75,
-      964,
-      312
-    ],
-    [
-      7.81,
-      988,
-      260
-    ],
-    [
-      7.85,
-      989,
-      258
-    ],
-    [
-      8.55,
-      988,
-      259
-    ],
-    [
-      8.6,
-      975,
-      283
-    ],
-    [
-      8.65,
-      936,
-      351
-    ],
-    [
-      8.7,
-      923,
-      374
-    ],
-    [
-      9.4,
-      922,
-      375
-    ],
-    [
-      9.46,
-      922,
-      375
-    ],
-    [
-      9.52,
-      922,
-      375
-    ],
-    [
-      9.59,
-      922,
-      375
-    ],
-    [
-      9.63,
-      922,
-      375
-    ],
-    [
-      10.22,
-      922,
-      376
-    ],
-    [
-      10.29,
-      928,
-      389
-    ],
-    [
-      10.34,
-      942,
-      425
-    ],
-    [
-      10.42,
-      948,
-      438
-    ],
-    [
-      10.47,
-      948,
-      439
-    ],
-    [
-      11.08,
-      949,
-      438
-    ],
-    [
-      11.13,
-      975,
-      425
-    ],
-    [
-      11.18,
-      1049,
-      389
-    ],
-    [
-      11.24,
-      1075,
-      376
-    ],
-    [
-      11.91,
-      1076,
-      377
-    ],
-    [
-      11.97,
-      1070,
-      416
-    ],
-    [
-      12.04,
-      1056,
-      526
-    ],
-    [
-      12.13,
-      1050,
-      565
-    ],
-    [
-      12.2,
-      1050,
-      567
-    ],
-    [
-      12.9,
-      1051,
-      567
-    ],
-    [
-      12.96,
-      1069,
-      579
-    ],
-    [
-      13.02,
-      1121,
-      612
-    ],
-    [
-      13.1,
-      1139,
-      623
-    ],
-    [
-      13.16,
-      1140,
-      624
-    ]
-  ]
+  "cursor": []
 }

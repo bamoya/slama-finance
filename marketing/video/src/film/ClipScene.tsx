@@ -19,7 +19,7 @@ import type { ClipRef } from './storyboard'
 
 export const green = '#1f8a5b'
 
-const Video = ({
+export const Video = ({
   clip,
   plan,
   endFrame,

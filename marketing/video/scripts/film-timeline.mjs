@@ -20,8 +20,11 @@ let at = 0
 list.forEach((c, i) => {
   const s = c.scene
   const intro = s.questionSeconds ?? 0
-  const auto = s.clip
-    ? intro + planDuration(buildPlan(s.clip, tl(s.clip.id).duration)) + HOLD_TAIL
+  const clips = s.clip ? [s.clip] : s.kind === 'compare' ? [s.left.clip, s.right.clip] : []
+  const auto = clips.length
+    ? intro +
+      Math.max(...clips.map((c) => planDuration(buildPlan(c, tl(c.id).duration)))) +
+      HOLD_TAIL
     : 3
   const sec = c.seconds ?? s.seconds ?? auto
   const frames = Math.round(sec * FILM_FPS) + (i < list.length - 1 ? FADE_FRAMES : 0)

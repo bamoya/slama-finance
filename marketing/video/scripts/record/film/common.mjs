@@ -1,7 +1,7 @@
 // Shared helpers for the short marketing film clips (recorded from DB snapshots, no sign-up).
 import path from 'node:path'
 import { HOSTS, HERE, OUT, openSession, sleep } from '../lib.mjs'
-import { ORG } from '../data.mjs'
+import { ORG, demoPeriod } from '../data.mjs'
 
 export const CLIPS_OUT = path.resolve(HERE, '../../public/clips')
 export const WS = HOSTS.org(ORG.slug) + '/workspace'
@@ -28,23 +28,24 @@ export async function openFilmOwner(clip, p = '/', { signedIn = true } = {}) {
   await rec.start()
   return rec
 }
-/** Pick a date range in the shared range picker (previous months, then start/end days). */
-export async function pickRange(rec, field, { back = 2, start, end, forward = 1 }) {
+/**
+ * Pick the scenario period (DEMO_PERIOD in data.mjs, the 3 months ending today) in the shared range picker.
+ * The picker has no presets: go back `monthsBack` months, click the first day, come forward, click today.
+ */
+export async function pickRange(rec, field) {
   const { page } = rec
+  const { start, monthsBack } = demoPeriod()
   await rec.click(field, 'Choix de la période', { settle: 200 })
   const nav = page.locator('nav.rdp-nav button')
-  for (let i = 0; i < back; i++) await rec.click(nav.first(), 'Mois précédent', { settle: 60 })
+  for (let i = 0; i < monthsBack; i++)
+    await rec.click(nav.first(), 'Mois précédent', { settle: 60 })
   await rec.click(
     page.locator(`[data-day="${start}"] button, button[data-day="${start}"]`).first(),
     'Début de période',
     { settle: 80 },
   )
-  for (let i = 0; i < forward; i++) await rec.click(nav.last(), 'Mois suivant', { settle: 60 })
-  await rec.click(
-    page.locator(`[data-day="${end}"] button, button[data-day="${end}"]`).first(),
-    'Fin de période',
-    { settle: 200 },
-  )
+  for (let i = 0; i < monthsBack; i++) await rec.click(nav.last(), 'Mois suivant', { settle: 60 })
+  // the picker opens on today..today: clicking an earlier first day already gives start..today (clicking today again would reset it)
   await rec.click(page.getByRole('button', { name: 'Appliquer' }), 'Appliquer la période', {
     settle: 0,
   })
@@ -68,4 +69,21 @@ export async function openFilmBlank(clip, { signedIn = true } = {}) {
   })
   await rec.start()
   return rec
+}
+
+/** Throws unless the picker label shows the scenario period (guards against a silently wrong range). */
+export async function assertPeriod(rec) {
+  const { start, end } = demoPeriod()
+  const fr = (d) => d.split('-').reverse().join('-')
+  await rec.page
+    .getByText(new RegExp(`${fr(start)} – \\d\\d-\\d\\d-\\d{4}`))
+    .first()
+    .waitFor({ timeout: 8000 })
+    .catch(async (e) => {
+      const labels = await rec.page.getByText(/\d\d-\d\d-\d{4} – \d\d-\d\d-\d{4}/).allTextContents()
+      await rec.page.screenshot({ path: '/tmp/period-fail.png' })
+      throw new Error(
+        `period label is ${JSON.stringify(labels)}, expected ${fr(start)} – ${fr(end)}: ${e.message}`,
+      )
+    })
 }

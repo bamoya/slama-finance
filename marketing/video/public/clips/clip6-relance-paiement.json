@@ -2,12 +2,12 @@
   "chapter": "clip6-relance-paiement",
   "width": 1440,
   "height": 900,
-  "duration": 12.27,
-  "lead": 1.24,
-  "drift": 1,
+  "duration": 11.8,
+  "lead": 2.24,
+  "drift": 1.0003,
   "events": [
     {
-      "t": 0.06,
+      "t": 0.04,
       "type": "navigate",
       "label": "Le client reçoit le rappel automatique",
       "box": {
@@ -18,7 +18,7 @@
       }
     },
     {
-      "t": 0.59,
+      "t": 0.24,
       "type": "pause",
       "label": "Rappel automatique : montant restant dû",
       "box": {
@@ -29,7 +29,7 @@
       }
     },
     {
-      "t": 3.8,
+      "t": 3.45,
       "type": "navigate",
       "label": "Facture du client",
       "box": {
@@ -40,7 +40,7 @@
       }
     },
     {
-      "t": 4.26,
+      "t": 3.82,
       "type": "click",
       "label": "Enregistrer un paiement",
       "box": {
@@ -51,7 +51,7 @@
       }
     },
     {
-      "t": 5,
+      "t": 4.6,
       "type": "type",
       "label": "Solde restant à payer",
       "box": {
@@ -62,7 +62,7 @@
       }
     },
     {
-      "t": 6.04,
+      "t": 5.57,
       "type": "click",
       "label": "Enregistrement du paiement",
       "box": {
@@ -73,7 +73,7 @@
       }
     },
     {
-      "t": 7.3,
+      "t": 6.81,
       "type": "pause",
       "label": "Facture réglée",
       "box": {
@@ -84,7 +84,7 @@
       }
     },
     {
-      "t": 8.81,
+      "t": 8.31,
       "type": "navigate",
       "label": "Tableau de bord mis à jour",
       "box": {
@@ -95,7 +95,7 @@
       }
     },
     {
-      "t": 8.81,
+      "t": 8.31,
       "type": "pause",
       "label": "Tableau de bord : encaissé et solde mis à jour",
       "box": {
@@ -108,87 +108,72 @@
   ],
   "cursor": [
     [
-      3.97,
+      3.61,
       719,
       448
     ],
     [
-      4.04,
-      646,
-      321
+      3.65,
+      689,
+      396
     ],
     [
-      4.1,
-      581,
-      209
+      3.69,
+      603,
+      247
     ],
     [
-      4.2,
-      572,
-      193
+      3.74,
+      573,
+      195
     ],
     [
-      4.72,
+      4.32,
       570,
       193
     ],
     [
-      4.77,
-      469,
-      237
+      4.37,
+      528,
+      211
     ],
     [
-      4.82,
-      379,
-      276
+      4.41,
+      409,
+      263
     ],
     [
-      4.89,
+      4.48,
       366,
       282
     ],
     [
-      5.56,
+      5.19,
       368,
       281
     ],
     [
-      5.6,
-      383,
-      279
-    ],
-    [
-      5.65,
+      5.24,
       425,
       271
     ],
     [
-      5.71,
+      5.3,
       638,
       232
     ],
     [
-      5.76,
-      836,
-      195
-    ],
-    [
-      5.8,
+      5.37,
       1034,
       159
     ],
     [
-      5.88,
-      1248,
-      119
-    ],
-    [
-      5.92,
+      5.44,
       1289,
       112
     ],
     [
-      5.98,
+      5.51,
       1306,
       108
     ]

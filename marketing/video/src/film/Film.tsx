@@ -5,6 +5,7 @@ import type { Timeline } from '../config'
 import { ANIMATIONS } from './animations'
 import { IntroCard, OutroCard, QuestionCard } from './Cards'
 import { ClipScene } from './ClipScene'
+import { CompareScene } from './Compare'
 import { buildPlan, planDuration } from './plan'
 import {
   CUTDOWNS,
@@ -12,6 +13,7 @@ import {
   FILM_FPS,
   HOLD_TAIL,
   SCENES,
+  type ClipRef,
   type Scene,
   type Speed,
 } from './storyboard'
@@ -21,7 +23,11 @@ export type FilmProps = {
   timelines: Record<string, Timeline>
 }
 
-const sceneClip = (s: Scene) => ('clip' in s ? s.clip : null)
+const sceneClips = (s: Scene): ClipRef[] =>
+  'clip' in s ? [s.clip] : s.kind === 'compare' ? [s.left.clip, s.right.clip] : []
+const sceneClip = (s: Scene) => sceneClips(s)[0] ?? null
+const clipsLength = (s: Scene, timelines: Record<string, Timeline>) =>
+  Math.max(0, ...sceneClips(s).map((c) => planDuration(buildPlan(c, timelines[c.id].duration))))
 
 /** Resolve the ordered scene list for a composition (full film or cut-down) with frame lengths. */
 const resolve = (
@@ -42,11 +48,8 @@ const resolve = (
       }))
     : SCENES.map((scene) => ({ scene, seconds: undefined as number | undefined, mini: false }))
   return list.map((c, i) => {
-    const clip = sceneClip(c.scene)
     const intro = 'questionSeconds' in c.scene ? c.scene.questionSeconds : 0
-    const auto = clip
-      ? intro + planDuration(buildPlan(clip, timelines[clip.id].duration)) + HOLD_TAIL
-      : 3
+    const auto = sceneClip(c.scene) ? intro + clipsLength(c.scene, timelines) + HOLD_TAIL : 3
     const seconds = c.seconds ?? c.scene.seconds ?? auto
     // each scene is extended by the crossfade so the next one fades in over its tail
     return {
@@ -62,7 +65,7 @@ const neededClips = (cutdown?: string) => [
     (cutdown
       ? CUTDOWNS[cutdown].scenes.map((c) => SCENES.find((s) => s.id === c.scene)!)
       : SCENES
-    ).flatMap((s) => (sceneClip(s) ? [sceneClip(s)!.id] : [])),
+    ).flatMap((s) => sceneClips(s).map((c) => c.id)),
   ),
 ]
 
@@ -74,9 +77,8 @@ export const filmMeta =
       timelines[id] = (await (await fetch(staticFile(`clips/${id}.json`))).json()) as Timeline
     const scenes = resolve(timelines, cutdown)
     for (const { scene, frames } of scenes) {
-      const clip = sceneClip(scene)
-      if (!clip) continue
-      const need = planDuration(buildPlan(clip, timelines[clip.id].duration)) * FILM_FPS
+      if (!sceneClip(scene)) continue
+      const need = clipsLength(scene, timelines) * FILM_FPS
       const have = frames - ('questionSeconds' in scene ? scene.questionSeconds * FILM_FPS : 0)
       if (need > have + 3)
         console.warn(
@@ -109,6 +111,15 @@ const Body = ({
       const Anim = ANIMATIONS[scene.anim]
       return <Anim />
     }
+    case 'compare':
+      return (
+        <CompareScene
+          left={scene.left}
+          right={scene.right}
+          caption={scene.caption}
+          timelines={timelines}
+        />
+      )
     case 'clip':
       return (
         <ClipScene clip={scene.clip} timeline={timelines[scene.clip.id]} caption={scene.caption} />

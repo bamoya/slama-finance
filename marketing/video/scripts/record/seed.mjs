@@ -4,18 +4,17 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import fs from 'node:fs'
 import { Api, HERE, OUT, mailFor, clearMailFor } from './lib.mjs'
-import { COMPANY, KARIM, ORG } from './data.mjs'
+import { COMPANY, KARIM, ORG, daysFromToday, isoDate } from './data.mjs'
 
 export const STAFF_PASSWORD = 'Atlas#Negoce2026'
 const ROOT = path.resolve(HERE, '../../../..')
-let seedN = 20260801
+let seedN = 20260801 // fixed random sequence: same story whatever the recording date
 const rnd = () => (seedN = (seedN * 1664525 + 1013904223) % 4294967296) / 4294967296
 const pick = (a) => a[Math.floor(rnd() * a.length)]
-const iso = (d) => d.toISOString().slice(0, 10)
 const addDays = (s, n) => {
-  const d = new Date(s + 'T12:00:00Z')
-  d.setUTCDate(d.getUTCDate() + n)
-  return iso(d)
+  const d = new Date(s + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return isoDate(d)
 }
 
 async function tempPassword(email, slug) {
@@ -309,19 +308,19 @@ export async function seed() {
       }
     })
 
-  // invoices Aug-Oct 2026, chronological so numbers are ordered
+  // invoices over the 3 months ending today (offsets in days before today), chronological so numbers are ordered
   const plan = []
-  for (const [month, count] of [
-    ['2026-08', 8],
-    ['2026-09', 11],
-    ['2026-10', 13],
+  for (const [oldest, count] of [
+    [90, 8],
+    [60, 11],
+    [30, 13],
   ]) {
-    const days = Array.from({ length: count }, () => 1 + Math.floor(rnd() * 27)).sort(
-      (a, b) => a - b,
+    const days = Array.from({ length: count }, () => oldest - Math.floor(rnd() * 30)).sort(
+      (a, b) => b - a,
     )
-    for (const d of days) plan.push(`${month}-${String(d).padStart(2, '0')}`)
+    for (const d of days) plan.push(daysFromToday(-d))
   }
-  const today = '2026-11-01'
+  const today = daysFromToday(0)
   const stats = { invoices: 0, payments: 0, estimates: 0 }
   for (const date of plan) {
     const client = pick(clients)
@@ -390,7 +389,7 @@ export async function seed() {
   }
   // estimates (recent), some accepted
   for (let i = 0; i < 8; i++) {
-    const date = addDays('2026-10-04', i * 3)
+    const date = addDays(daysFromToday(-28), i * 3)
     const e = await w.post('/api/v1/estimates', {
       clientId: pick(clients).id,
       templateId: null,

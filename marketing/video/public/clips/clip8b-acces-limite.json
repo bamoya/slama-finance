@@ -1,0 +1,163 @@
+{
+  "chapter": "clip8b-acces-limite",
+  "width": 1440,
+  "height": 900,
+  "duration": 10.47,
+  "lead": 4.92,
+  "drift": 0.9994,
+  "events": [
+    {
+      "t": 0.6,
+      "type": "type",
+      "label": "Saisie de l’e-mail de Salma",
+      "box": {
+        "x": 901,
+        "y": 441,
+        "width": 358,
+        "height": 29
+      }
+    },
+    {
+      "t": 1.37,
+      "type": "popup",
+      "label": "Popup fermé",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      }
+    },
+    {
+      "t": 1.92,
+      "type": "type",
+      "label": "Saisie du mot de passe",
+      "box": {
+        "x": 901,
+        "y": 501,
+        "width": 358,
+        "height": 29
+      }
+    },
+    {
+      "t": 2.91,
+      "type": "click",
+      "label": "Clic sur « Se connecter »",
+      "box": {
+        "x": 901,
+        "y": 542,
+        "width": 358,
+        "height": 32
+      }
+    },
+    {
+      "t": 3.18,
+      "type": "pause",
+      "label": "Le menu de Salma : uniquement ses modules",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "t": 6.38,
+      "type": "pause",
+      "label": "Accès aux paramètres refusé",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      }
+    }
+  ],
+  "cursor": [
+    [
+      0.18,
+      721,
+      450
+    ],
+    [
+      0.22,
+      730,
+      450
+    ],
+    [
+      0.28,
+      797,
+      451
+    ],
+    [
+      0.35,
+      944,
+      454
+    ],
+    [
+      0.42,
+      1011,
+      455
+    ],
+    [
+      0.48,
+      1021,
+      455
+    ],
+    [
+      1.57,
+      1021,
+      455
+    ],
+    [
+      1.63,
+      1021,
+      468
+    ],
+    [
+      1.67,
+      1021,
+      485
+    ],
+    [
+      1.73,
+      1021,
+      511
+    ],
+    [
+      1.77,
+      1021,
+      515
+    ],
+    [
+      1.81,
+      1021,
+      515
+    ],
+    [
+      2.6,
+      1021,
+      516
+    ],
+    [
+      2.67,
+      1033,
+      524
+    ],
+    [
+      2.73,
+      1068,
+      549
+    ],
+    [
+      2.77,
+      1076,
+      556
+    ],
+    [
+      2.83,
+      1080,
+      558
+    ]
+  ]
+}

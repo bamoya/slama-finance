@@ -1,5 +1,6 @@
 // Chapter 9: monthly report e-mail, then the owner overview across both organizations.
 import { openWorkspace } from './common.mjs'
+import { pickRange } from './film/common.mjs'
 import { HOSTS, OUT, clearMailFor, mailFor, sleep } from './lib.mjs'
 import { KARIM } from './data.mjs'
 
@@ -31,27 +32,8 @@ export async function run() {
   await rec.goto(`${HOSTS.owner}/`, 'Espace propriétaire : toutes les organisations')
   await page.waitForLoadState('networkidle').catch(() => {})
   await sleep(1500)
-  await rec.click(page.getByText('01-11-2026 – 01-11-2026').first(), 'Choix de la période', {
-    settle: 600,
-  })
-  const nav = page.locator('nav.rdp-nav button')
-  await rec.click(nav.first(), 'Mois précédent', { settle: 250 })
-  await rec.click(nav.first(), 'Mois précédent', { settle: 400 })
-  await rec.click(
-    page.locator('[data-day="2026-09-01"] button, button[data-day="2026-09-01"]').first(),
-    'Début : 1er septembre',
-    { settle: 300 },
-  )
-  await rec.click(nav.last(), 'Mois suivant', { settle: 400 })
-  await rec.click(
-    page.locator('[data-day="2026-10-31"] button, button[data-day="2026-10-31"]').first(),
-    'Fin : 31 octobre',
-    { settle: 300 },
-  )
-  await rec.click(page.getByRole('button', { name: 'Appliquer' }), 'Appliquer la période', {
-    settle: 1800,
-  })
-  await rec.pause(2200, 'Vue consolidée des deux organisations sur septembre–octobre')
+  await pickRange(rec, page.getByText(/\d\d-\d\d-\d{4} – \d\d-\d\d-\d{4}/).first())
+  await rec.pause(2200, 'Vue consolidée des deux organisations sur les 3 derniers mois')
   await rec.scroll(420, 'Détail par organisation')
   await rec.pause(1500)
   return rec

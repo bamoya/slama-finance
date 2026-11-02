@@ -2,6 +2,7 @@
 import path from 'node:path'
 import { openWorkspace } from './common.mjs'
 import { sleep } from './lib.mjs'
+import { daysFromToday, frDate } from './data.mjs'
 
 export async function run() {
   const rec = await openWorkspace('ch06-facture', '/estimates')
@@ -26,7 +27,7 @@ export async function run() {
   await rec.pause(700, 'Facture créée à partir du devis')
   await rec.type(
     page.locator('input[placeholder="JJ-MM-AAAA"]').first(),
-    '01-12-2026',
+    frDate(daysFromToday(30)),
     'Date d’échéance',
     { fill: true },
   )

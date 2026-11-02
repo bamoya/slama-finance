@@ -15,10 +15,21 @@ export type ClipRef = {
   badges?: Badge[]
 }
 
+// Compare scene: two browser frames side by side, each showing a window (source pixels x, y, width) of its clip.
+export type CompareView = { t: number; x: number; y: number; w: number } // t = source seconds, eased between keyframes
+export type CompareSide = {
+  clip: ClipRef
+  label: string
+  role: string
+  view: CompareView[]
+  viewSquare?: CompareView[]
+}
+
 export type Scene =
   | { id: string; kind: 'intro'; seconds?: number; title: string; subtitle?: string }
   | { id: string; kind: 'clip'; seconds?: number; caption: string; clip: ClipRef; mood?: 'light' }
   | { id: string; kind: 'question'; seconds?: number; text: string }
+  | { id: string; kind: 'compare'; seconds?: number; caption: string; left: CompareSide; right: CompareSide }
   // approved animation (src/film/animations)
   | { id: string; kind: 'anim'; seconds: number; anim: AnimationId }
   // question card first, then the clip with its caption
@@ -108,20 +119,39 @@ export const SCENES: Scene[] = [
       badges: [{ event: 'Facture réglée', text: 'Payée', tone: 'green' }],
     },
   },
-  { id: 'anim-reports', kind: 'anim', anim: 'reports', seconds: 6.2 },
   {
     id: 'clip7',
     kind: 'clip',
-    caption: 'Le rapport arrive par e-mail, prêt à lire.',
-    clip: { id: 'clip7-rapport', host: H, keep: [k(0.2, 3.4), k(4.0, 6.0), k(13.4, 16.4)] },
+    caption: 'Suivez tout, sans y penser.',
+    // real scheduled send: schedule page, report e-mail received, PDF attachment opened and scrolled
+    clip: { id: 'clip7-rapport', host: H, keep: [k(0.2, 14)] },
   },
   { id: 'q-equipe', kind: 'question', seconds: 3.2, text: 'Votre comptable a besoin d’accès ?' },
-  { id: 'anim-staff', kind: 'anim', anim: 'staff', seconds: 7.0 },
   {
     id: 'clip8',
     kind: 'clip',
     caption: 'Un rôle, des droits précis.',
     clip: { id: 'clip8-invitation', host: H, keep: [k(0.1, 2.8, 1.3), k(2.8, 4.6), k(4.6, 8.0)] },
+  },
+  {
+    id: 'clip8b',
+    kind: 'compare',
+    caption: 'Salma ne voit que ce dont elle a besoin.',
+    // left: Karim (administrateur) sees the whole menu; right: Salma logs in for real and tries the settings page
+    left: {
+      clip: { id: 'clip8b-menu-admin', host: H, keep: [k(0.2, 5.2)] },
+      label: 'Karim',
+      role: 'Administrateur',
+      view: [{ t: 0, x: 0, y: 0, w: 1000 }],
+      viewSquare: [{ t: 0, x: 0, y: 0, w: 520 }],
+    },
+    right: {
+      clip: { id: 'clip8b-acces-limite', host: H, keep: [k(0.2, 12)] },
+      label: 'Salma',
+      role: 'Comptable',
+      view: [{ t: 0, x: 0, y: 0, w: 1000 }],
+      viewSquare: [{ t: 0, x: 0, y: 0, w: 520 }],
+    },
   },
   { id: 'q-modeles', kind: 'question', seconds: 3.2, text: 'Des factures qui vous ressemblent ?' },
   { id: 'anim-template', kind: 'anim', anim: 'template', seconds: 6.2 },
@@ -159,7 +189,6 @@ export const CUTDOWNS: Record<string, { compositionId: string; scenes: CutdownSc
   rapports: {
     compositionId: 'Film-Rapports',
     scenes: [
-      { scene: 'anim-reports' },
       { scene: 'clip7' },
       { scene: 'outro', seconds: 4, mini: true },
     ],

@@ -49,7 +49,7 @@ export async function run() {
     await rec.click(dlg.last(), 'Confirmation de l’encaissement', { settle: 1500 })
   await page.waitForLoadState('networkidle').catch(() => {})
   await rec.pause(1000, 'Paiement confirmé : solde restant mis à jour')
-  // Demo date is fixed: make the due-date reminder (30 days before) match the invoice due 01-12-2026 (not shown).
+  // Demo date is fixed: make the due-date reminder (30 days before) match the invoice due in 30 days (not shown).
   await setDueReminder(30)
   await mailFor(CLIENT.email, { subjectIncludes: 'Échéance', timeout: 60000 })
   await rec.inbox(CLIENT.email, {
