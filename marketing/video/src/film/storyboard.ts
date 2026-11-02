@@ -29,7 +29,14 @@ export type Scene =
   | { id: string; kind: 'intro'; seconds?: number; title: string; subtitle?: string }
   | { id: string; kind: 'clip'; seconds?: number; caption: string; clip: ClipRef; mood?: 'light' }
   | { id: string; kind: 'question'; seconds?: number; text: string }
-  | { id: string; kind: 'compare'; seconds?: number; caption: string; left: CompareSide; right: CompareSide }
+  | {
+      id: string
+      kind: 'compare'
+      seconds?: number
+      caption: string
+      left: CompareSide
+      right: CompareSide
+    }
   // approved animation (src/film/animations)
   | { id: string; kind: 'anim'; seconds: number; anim: AnimationId }
   // question card first, then the clip with its caption
@@ -188,10 +195,7 @@ export const CUTDOWNS: Record<string, { compositionId: string; scenes: CutdownSc
   },
   rapports: {
     compositionId: 'Film-Rapports',
-    scenes: [
-      { scene: 'clip7' },
-      { scene: 'outro', seconds: 4, mini: true },
-    ],
+    scenes: [{ scene: 'clip7' }, { scene: 'outro', seconds: 4, mini: true }],
   },
   modeles: {
     compositionId: 'Film-Modeles',
