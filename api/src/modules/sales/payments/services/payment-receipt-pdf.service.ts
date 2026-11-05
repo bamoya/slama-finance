@@ -21,6 +21,14 @@ export async function renderPaymentReceiptPdf(
       date: row.paymentDate,
       reference: ['Invoice', saved.invoiceNumber],
       receipt: {
+        balanceTitle:
+          saved.balanceStage === 'confirmation'
+            ? 'INVOICE BALANCE AFTER COLLECTION'
+            : saved.balanceStage === 'restoration'
+              ? 'INVOICE BALANCE AFTER PAYMENT RESTORATION'
+              : saved.balanceStage === 'receipt_generation'
+                ? 'INVOICE BALANCE AT RECEIPT GENERATION'
+                : 'INVOICE BALANCE AT PAYMENT RECORDING',
         amount: `${row.amount} ${row.currency}`,
         status:
           row.status === 'cancelled'
@@ -56,7 +64,7 @@ export async function renderPaymentReceiptPdf(
             : []),
         ],
         note: historical
-          ? `Recorded at: ${saved.capturedAt}. Historical snapshot, not the current invoice balance. Pending payments are excluded.`
+          ? `Balance captured at: ${saved.capturedAt}. Historical snapshot, not the current invoice balance. Pending payments are excluded.`
           : 'Historical balance unavailable: this payment predates receipt snapshots.',
       },
       sections: [

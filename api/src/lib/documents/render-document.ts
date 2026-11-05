@@ -317,7 +317,7 @@ export async function renderDocument(
     }
     await ensure(30 + receipt.balances.length * 23)
     y += 6
-    c.text(label('INVOICE BALANCE AT PAYMENT RECORDING'), left, y, 8, muted)
+    c.text(label(receipt.balanceTitle ?? 'INVOICE BALANCE AT PAYMENT RECORDING'), left, y, 8, muted)
     y += 22
     for (const [index, [label, value]] of receipt.balances.entries()) {
       const last = index === receipt.balances.length - 1

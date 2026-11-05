@@ -86,6 +86,20 @@ export function createPaymentRepository(database: () => Database) {
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
       .leftJoin(clients, eq(invoices.clientId, clients.id))
   return {
+    async hasConfirmation(id: string, tx: Transaction) {
+      const [event] = await tx
+        .select({ id: auditEvents.id })
+        .from(auditEvents)
+        .where(
+          and(
+            eq(auditEvents.entityTable, 'payments'),
+            eq(auditEvents.action, 'confirm'),
+            sql`${auditEvents.entityKey}->>'id' = ${id}`,
+          ),
+        )
+        .limit(1)
+      return !!event
+    },
     bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async authorize(tx: Transaction, actor: string, permission: string) {

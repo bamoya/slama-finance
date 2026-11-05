@@ -16,6 +16,7 @@ import {
   type PaymentListFilters,
   type PaymentRow,
 } from '../repositories/payment.repository.js'
+import { captureReceiptBalance } from './receipt-balance.js'
 
 type Repository = ReturnType<typeof createPaymentRepository>
 const dto = <T>(schema: { parse(value: unknown): T }, value: unknown): T =>
@@ -167,6 +168,7 @@ export function createPaymentService(
           .plus(input.status === 'confirmed' ? input.amount : 0)
           .toFixed(2)
         const receiptSnapshot = PaymentReceiptSnapshotSchema.parse({
+          balanceStage: input.status === 'confirmed' ? 'confirmation' : 'recording',
           invoiceNumber: invoice.number,
           invoiceTotal: invoice.total,
           issuer: {
@@ -256,6 +258,16 @@ export function createPaymentService(
           { status: 'confirmed', collectedOn, confirmedAt: new Date(), updatedByUserId: actor },
           tx,
         )
+        if (row.receiptSnapshot) {
+          const balance = await paymentBalanceForInvoice(tx, invoice.id)
+          if (!balance) throw new AppError(404, 'INVOICE_NOT_FOUND', 'Invoice not found.')
+          row.receiptSnapshot = captureReceiptBalance(
+            row.receiptSnapshot,
+            balance.paidAmount,
+            'confirmation',
+          )
+          await repo.receiptMetadata(id, { receiptSnapshot: row.receiptSnapshot }, tx)
+        }
         const result = await output(row, tx)
         await repo.audit(tx, actor, 'confirm', id, before, result)
         await callbacks?.paymentConfirmed(tx, id)
@@ -344,6 +356,16 @@ export function createPaymentService(
           )
             throw new AppError(409, 'DUPLICATE_CHEQUE', 'This cheque is already recorded.')
           throw error
+        }
+        if (wasConfirmed && row.receiptSnapshot) {
+          const restoredBalance = await paymentBalanceForInvoice(tx, invoice.id)
+          if (!restoredBalance) throw new AppError(404, 'INVOICE_NOT_FOUND', 'Invoice not found.')
+          row.receiptSnapshot = captureReceiptBalance(
+            row.receiptSnapshot,
+            restoredBalance.paidAmount,
+            'restoration',
+          )
+          await repo.receiptMetadata(id, { receiptSnapshot: row.receiptSnapshot }, tx)
         }
         const result = await output(row, tx)
         await repo.audit(tx, actor, 'restore', id, before, result)

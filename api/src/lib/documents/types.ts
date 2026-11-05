@@ -24,6 +24,7 @@ export type DocumentModel = {
   sections?: { title: string; text: string }[]
   receptionSignature?: boolean
   receipt?: {
+    balanceTitle?: string
     amount: string
     status: string
     fields: [string, string][]

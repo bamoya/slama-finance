@@ -65,9 +65,12 @@ deletion and replacement before receipt issuance; otherwise cancel and replace.
 
 The fresh baseline includes nullable `receipt_snapshot` and
 `receipt_issued_at` to payments and `payment_receipt` to artifact owner types.
-New payments freeze invoice/customer/company/design data and confirmed totals
-inside the recording transaction. Balance is **at recording**, not backdated to
-the payment date, and excludes pending funds. Legacy records explicitly show
+New payments freeze invoice/customer/company/design data inside the recording
+transaction. Pending receipts capture confirmed totals at recording. Confirmation
+and restoration of a collected payment capture the balance after that transition,
+under the invoice lock. Each snapshot records its capture time and `balanceStage`;
+headings distinguish recording, collection, restoration and receipt generation.
+Balances are not backdated to the payment date and exclude pending funds. Legacy records explicitly show
 historical balance unavailable, never a fabricated current balance.
 
 The receipt number is `REC-<year>-<random suffix>`, using the payment's unique
@@ -83,7 +86,14 @@ remain unchanged.
 Pending cheques say “Cheque received - awaiting collection.” Confirmed cheques
 say “Cheque collected.” Cancelled receipts prominently state that they are invalid
 as proof of payment. Confirmation, cancellation and restoration invalidate the
-previous PDF. Regeneration never changes the recorded financial snapshot.
+previous PDF. Regeneration normally preserves the financial snapshot. The exception
+is an older confirmed receipt without `balanceStage`, with saved recording totals
+and an audited pending-to-confirmed transition: explicit regeneration captures the
+current balance, labels it **at receipt generation**, increments the payment version
+and audits `correct_receipt_balance`. This is a one-time correction; it never
+claims to reconstruct a missing historical confirmation balance. Downloads alone
+do not rewrite snapshots, and legacy receipts without trustworthy saved totals
+remain marked historical balance unavailable.
 
 One active artifact row per receipt is replaced atomically, including its payment
 version. Old storage objects become eligible for the existing 24-hour unreferenced

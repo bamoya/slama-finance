@@ -193,6 +193,13 @@ describe('Payments lifecycle', () => {
         .statusCode,
     ).toBe(200)
     expect((await app.inject({ url, cookies })).statusCode).toBe(409)
+    const [confirmedSnapshot] =
+      await fixture.client`select receipt_snapshot from payments where id=${id}`
+    expect(confirmedSnapshot!.receipt_snapshot).toMatchObject({
+      balanceStage: 'confirmation',
+      paidAtRecording: '50.00',
+      remainingAtRecording: '50.00',
+    })
     expect((await post(`/v1/payments/${id}/receipt`, {})).statusCode).toBe(200)
     expect(
       (await post(`/v1/payments/${id}/cancel`, { expectedVersion: 2, reason: 'Returned cheque' }))
@@ -203,6 +210,13 @@ describe('Payments lifecycle', () => {
     expect((await app.inject({ url, cookies })).statusCode).toBe(200)
     expect((await remove(id, 3)).json().code).toBe('RECEIPT_ISSUED')
     expect((await post(`/v1/payments/${id}/restore`, { expectedVersion: 3 })).statusCode).toBe(200)
+    const [restoredSnapshot] =
+      await fixture.client`select receipt_snapshot from payments where id=${id}`
+    expect(restoredSnapshot!.receipt_snapshot).toMatchObject({
+      balanceStage: 'restoration',
+      paidAtRecording: '50.00',
+      remainingAtRecording: '50.00',
+    })
     expect((await app.inject({ url, cookies })).statusCode).toBe(409)
     expect((await post(`/v1/payments/${id}/receipt`, {})).statusCode).toBe(200)
     const rows =

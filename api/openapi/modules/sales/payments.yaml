@@ -210,6 +210,10 @@ components:
       additionalProperties: false
       required: [invoiceNumber, invoiceTotal, issuer, client, appearance, templateId, capturedAt, paidAtRecording, remainingAtRecording]
       properties:
+        balanceStage:
+          type: string
+          enum: [recording, confirmation, restoration, receipt_generation]
+          description: Event when the saved balance was captured. Missing on older snapshots.
         invoiceNumber: { type: string }
         invoiceTotal: { type: string }
         issuer: { type: object, additionalProperties: true }

@@ -1,5 +1,6 @@
 import { PaymentReceiptSnapshotSchema } from '../../../../contracts/generated/sales/payments.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
+import { AppError } from '../../../../lib/errors.js'
 import { assertVersion } from '../../../../lib/validation.js'
 import type {
   ArtifactOwnerAccess,
@@ -9,7 +10,11 @@ import {
   type RenderedDesign,
   saveDocumentDesign,
 } from '../../shared/repositories/document-design.repository.js'
-import type { createPaymentRepository } from '../repositories/payment.repository.js'
+import {
+  type createPaymentRepository,
+  paymentBalanceForInvoice,
+} from '../repositories/payment.repository.js'
+import { captureReceiptBalance } from './receipt-balance.js'
 
 type Repository = ReturnType<typeof createPaymentRepository>
 type Artifacts = ReturnType<typeof createArtifactSupport>['service']
@@ -49,7 +54,7 @@ export function createPaymentReceiptService(
     templateId?: string | null,
   ) => Promise<{ bytes: Uint8Array; design?: RenderedDesign }>,
 ) {
-  async function prepare(id: string, actor: string) {
+  async function prepare(id: string, actor: string, repair: boolean) {
     return repo.transaction(async (tx) => {
       await repo.authorize(tx, actor, 'payments.read')
       const initial = await repo.one(id, tx)
@@ -57,7 +62,39 @@ export function createPaymentReceiptService(
       // Use the same lock order as payment lifecycle operations.
       const invoice = await repo.invoice(initial.invoiceId, tx)
       const row = await repo.one(id, tx, true)
-      if (row.receiptSnapshot) return row
+      if (row.receiptSnapshot) {
+        const saved = PaymentReceiptSnapshotSchema.parse(row.receiptSnapshot)
+        if (
+          repair &&
+          row.status === 'confirmed' &&
+          !saved.balanceStage &&
+          saved.capturedAt &&
+          saved.paidAtRecording !== null &&
+          saved.remainingAtRecording !== null &&
+          (await repo.hasConfirmation(id, tx))
+        ) {
+          await repo.authorize(tx, actor, 'payments.update')
+          const balance = await paymentBalanceForInvoice(tx, invoice.id)
+          if (!balance) throw new AppError(404, 'INVOICE_NOT_FOUND', 'Invoice not found.')
+          const receiptSnapshot = captureReceiptBalance(
+            saved,
+            balance.paidAmount,
+            'receipt_generation',
+          )
+          const corrected = await repo.update(id, { receiptSnapshot, updatedByUserId: actor }, tx)
+          await repo.audit(
+            tx,
+            actor,
+            'correct_receipt_balance',
+            id,
+            row,
+            corrected,
+            'Replaced pre-confirmation balance with the balance at receipt generation.',
+          )
+          return corrected
+        }
+        return row
+      }
       // Legacy records have no trustworthy balance at recording. Never invent one.
       return repo.receiptMetadata(
         id,
@@ -88,7 +125,7 @@ export function createPaymentReceiptService(
     force: boolean,
     templateId?: string | null,
   ) {
-    const row = await prepare(id, actor)
+    const row = await prepare(id, actor, force)
     if (!force) {
       const existing = (await artifacts.list('payment_receipt', id, actor)).find(
         (file) => file.sourceVersion === row.version,
