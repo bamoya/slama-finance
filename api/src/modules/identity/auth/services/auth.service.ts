@@ -41,7 +41,7 @@ export function createAuthService(
           { firstName: body.firstName, lastName: body.lastName, email: body.email },
           tx,
         )
-        return { user, purpose: live.purpose }
+        return { user, purpose: live.purpose, idleExpiresAt: live.idleExpiresAt }
       })
     },
     async login(email: string, password: string) {
@@ -79,6 +79,11 @@ export function createAuthService(
     async getSession(token?: string) {
       const result = await sessions.inspect(token)
       if (!result) throw new AppError(401, 'UNAUTHENTICATED', 'Unauthenticated')
+      return result
+    },
+    async recordActivity(token?: string) {
+      const result = await sessions.recordActivity(token)
+      if (!result) throw new AppError(401, 'UNAUTHENTICATED', 'Session expired')
       return result
     },
     async changePassword(token: string | undefined, newPassword: string, currentPassword?: string) {

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { DateRange } from 'react-day-picker'
 import { useTranslation } from 'react-i18next'
 
-import { displayDate } from '../../lib/dates'
+import { displayDate, rollingDateRange } from '../../lib/dates'
 import { registerTranslations, useUiLanguage } from '../../lib/i18n'
 import { Button } from './button'
 import { Calendar } from './calendar'
@@ -17,6 +17,11 @@ registerTranslations('dateRange', {
   hint: 'Select the first and last day. Both dates are included.',
   from: 'From {{date}}',
   until: 'Until {{date}}',
+  last1: 'Last 1 month',
+  last3: 'Last 3 months',
+  last6: 'Last 6 months',
+  last12: 'Last year',
+  custom: 'Or select custom dates',
 })
 
 function parseDate(value: string) {
@@ -36,11 +41,15 @@ export function DateRangePicker({
   to = '',
   onChange,
   label,
+  presets = false,
+  timezone = 'Africa/Casablanca',
 }: {
   from?: string
   to?: string
   onChange: (from: string, to: string) => void
   label?: string
+  presets?: boolean
+  timezone?: string
 }) {
   useUiLanguage()
 
@@ -51,6 +60,10 @@ export function DateRangePicker({
     end = parseDate(to)
   const format = (date: Date) => displayDate(dateString(date))
   const title = label ?? t('title')
+  const periods = presets
+    ? [1, 3, 6, 12].map((months) => ({ months, ...rollingDateRange(months, timezone) }))
+    : []
+  const activePeriod = periods.find((period) => period.from === from && period.to === to)
   const display =
     start && end
       ? `${format(start)} – ${format(end)}`
@@ -72,12 +85,36 @@ export function DateRangePicker({
         aria-label={`${title}: ${display}`}
       >
         <CalendarDays size={16} aria-hidden="true" />
-        <span className="truncate">{display}</span>
+        <span className="truncate">
+          {activePeriod ? `${t(`last${activePeriod.months}`)} · ${display}` : display}
+        </span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="start" className="date-range-positioner">
           <Popover.Popup className="date-range-popup rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text)] shadow-lg">
             <Popover.Title className="text-sm font-semibold">{title}</Popover.Title>
+            {presets && (
+              <div className="my-3 border-b border-[var(--border)] pb-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {periods.map((period) => (
+                    <Button
+                      key={period.months}
+                      size="sm"
+                      variant={activePeriod?.months === period.months ? 'default' : 'outline'}
+                      aria-pressed={activePeriod?.months === period.months}
+                      onClick={() => {
+                        onChange(period.from, period.to)
+                        setOpen(false)
+                      }}
+                    >
+                      {t(`last${period.months}`)}
+                    </Button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-[var(--muted)]">{display}</p>
+                <p className="mt-3 text-xs font-semibold">{t('custom')}</p>
+              </div>
+            )}
             <Popover.Description className="mb-3 mt-1 max-w-64 text-xs text-[var(--muted)]">
               {t('hint')}
             </Popover.Description>

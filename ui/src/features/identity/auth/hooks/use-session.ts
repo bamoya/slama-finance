@@ -4,11 +4,24 @@ import { useLocation } from 'wouter'
 import { getGetSessionQueryKey } from '../../../../api/generated/identity/identity'
 import type { Session } from '../../../../api/generated/schemas/identity/auth.schemas'
 import { getSession } from '../api/auth-client'
+import { publishSessionMessage, rememberSessionExpiry } from '../session-sync'
 export const sessionKey = getGetSessionQueryKey()
 export function useSession() {
+  const client = useQueryClient()
   return useQuery({
     queryKey: sessionKey,
-    queryFn: ({ signal }) => getSession(signal),
+    queryFn: async ({ signal }) => {
+      const previous = client.getQueryData<Session | null>(sessionKey)
+      const session = await getSession(signal)
+      if (!session && previous) {
+        client.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionKey[0] })
+      }
+      if (!session && previous?.idleExpiresAt && Date.parse(previous.idleExpiresAt) <= Date.now()) {
+        rememberSessionExpiry()
+        publishSessionMessage({ userId: previous.user.id, type: 'inactivity' })
+      }
+      return session
+    },
     staleTime: 0,
     retry: false,
     refetchInterval: 60_000,

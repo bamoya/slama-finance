@@ -181,6 +181,8 @@ export function ReportFilters({
         )}
         <div className="table-date-range">
           <DateRangePicker
+            presets={visual}
+            timezone={filters.timezone ?? 'Africa/Casablanca'}
             from={filters.from}
             to={filters.to}
             label={t('dateRange')}

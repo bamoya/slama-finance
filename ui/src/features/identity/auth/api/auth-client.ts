@@ -25,6 +25,9 @@ export async function getSession(signal?: AbortSignal): Promise<Session | null> 
   }
 }
 export const logout = () => generated.logout()
+export async function recordActivity() {
+  return SessionSchema.parse(await generated.recordSessionActivity())
+}
 export async function updateProfile(data: UpdateProfile) {
   return SessionSchema.parse(await generated.updateProfile(data))
 }

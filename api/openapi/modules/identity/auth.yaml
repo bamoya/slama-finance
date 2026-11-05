@@ -68,6 +68,19 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
+  /v1/auth/session/activity:
+    post:
+      operationId: recordSessionActivity
+      description: Records user interaction for an active session. Idle sessions expire after one hour and cannot be revived. Background polling must not call this endpoint.
+      responses:
+        '200':
+          description: Active session with refreshed inactivity deadline
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Session
+        '401':
+          description: No active session
   /v1/auth/logout:
     post:
       operationId: logout
@@ -197,6 +210,10 @@ components:
     Session:
       type: object
       properties:
+        idleExpiresAt:
+          type: string
+          format: date-time
+          description: Server deadline for inactivity, bounded by the absolute session expiry.
         permissionKeys:
           type: array
           items:

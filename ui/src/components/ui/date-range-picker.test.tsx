@@ -4,6 +4,25 @@ import { describe, expect, it, vi } from 'vitest'
 import { DateRangePicker } from './date-range-picker'
 
 describe('date range picker', () => {
+  it('highlights matching shortcuts and immediately applies a new period', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-11-05T12:00:00Z'))
+    try {
+      const change = vi.fn()
+      render(<DateRangePicker presets from="2026-08-05" to="2026-11-05" onChange={change} />)
+      fireEvent.click(screen.getByRole('button', { name: /^Date range:/ }))
+      expect(screen.getByRole('button', { name: 'Last 3 months' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      fireEvent.click(screen.getByRole('button', { name: 'Last 6 months' }))
+      expect(change).toHaveBeenCalledOnce()
+      expect(change).toHaveBeenCalledWith('2026-05-05', '2026-11-05')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('applies both local calendar dates together only after confirmation', async () => {
     const change = vi.fn()
     render(<DateRangePicker from="2026-10-01" to="2026-10-15" onChange={change} />)

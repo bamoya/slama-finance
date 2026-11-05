@@ -16,6 +16,7 @@ import { RequestState } from '../../../components/management/request-state'
 import { buttonVariants } from '../../../components/ui/button'
 import { Switch } from '../../../components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
+import { rollingDateRange } from '../../../lib/dates'
 import { useUiLanguage } from '../../../lib/i18n'
 import { Can, useAuthorization } from '../../identity'
 import { useAnalysis, useReportSections } from '../api/queries'
@@ -64,6 +65,9 @@ export function AnalyticsPage({ dashboard = false }: { dashboard?: boolean }) {
     limit: 25,
     bucket: 'day',
     ...filters,
+    ...(dashboard && !params.has('from') && !params.has('to') && params.get('period') !== 'all'
+      ? rollingDateRange(3, filters?.timezone ?? 'Africa/Casablanca')
+      : {}),
     sections,
     detailSection: undefined,
     segment: undefined,
@@ -154,11 +158,20 @@ export function AnalyticsPage({ dashboard = false }: { dashboard?: boolean }) {
           visual
           filters={{
             ...criteria,
-            from: filters?.from ?? current?.from,
-            to: filters?.to ?? current?.to,
+            from: criteria.from ?? current?.from,
+            to: criteria.to ?? current?.to,
           }}
           registry={registry.data}
-          set={(values) => set({ ...values, detailSection: undefined, segment: undefined })}
+          set={(values) =>
+            set({
+              ...values,
+              ...('from' in values || 'to' in values
+                ? { period: !values.from && !values.to ? 'all' : undefined }
+                : {}),
+              detailSection: undefined,
+              segment: undefined,
+            })
+          }
         />
       )}
       {sections.includes('revenue') && (

@@ -13,6 +13,7 @@ export function registerAuthRoutes(
   app.patch('/profile', { config }, controller.updateProfile)
   app.post('/change-password', { config }, controller.changePassword)
   app.get('/session', controller.getSession)
+  app.post('/session/activity', controller.recordActivity)
   app.post('/logout', controller.logout)
   app.post('/password-reset/request', { config }, controller.requestPasswordReset)
   app.post('/password-reset/confirm', { config }, controller.confirmPasswordReset)

@@ -3,6 +3,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import type { Transaction } from '../../../../lib/db.js'
 import type { createAuthRepository } from '../repositories/auth.repository.js'
 import type { createSessionRepository } from '../repositories/session.repository.js'
+import { sessionIdleDeadline } from '../session-policy.js'
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 export function createSessionService(
@@ -22,7 +23,9 @@ export function createSessionService(
       (!user.mustChangePassword || !user.temporaryPasswordConsumedAt)
     )
       return null
-    return { user, purpose: session.purpose }
+    const idleExpiresAt = sessionIdleDeadline(session.lastSeenAt, session.expiresAt)
+    if (idleExpiresAt.getTime() <= Date.now()) return null
+    return { user, purpose: session.purpose, idleExpiresAt: idleExpiresAt.toISOString() }
   }
   return {
     async issue(userId: string, purpose: 'full' | 'password_change' = 'full', tx?: Transaction) {
@@ -35,9 +38,22 @@ export function createSessionService(
         purpose,
         tx,
       )
-      return { token, maxAge, purpose }
+      return {
+        token,
+        maxAge,
+        purpose,
+        idleExpiresAt: sessionIdleDeadline(
+          new Date(),
+          new Date(Date.now() + maxAge * 1000),
+        ).toISOString(),
+      }
     },
     inspect,
+    async recordActivity(token?: string) {
+      if (!token || !(await inspect(token))) return null
+      if (!(await repository.recordActivity(hash(token)))) return null
+      return inspect(token)
+    },
     async resolve(token?: string) {
       const result = await inspect(token)
       return result?.purpose === 'full' ? result.user : null

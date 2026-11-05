@@ -360,6 +360,22 @@ describe('authentication UI', () => {
     await waitFor(() => expect(client.getQueryData(sessionKey)).toBeNull())
     expect(client.getQueryData(['private-data'])).toBeUndefined()
   })
+  it('clears private data when another tab logs out the same user', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(session)
+    const { client } = setup(<SessionEvents />)
+    client.setQueryData(sessionKey, session)
+    client.setQueryData(['private-data'], 'secret')
+    act(() =>
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'slama.session.sync',
+          newValue: JSON.stringify({ userId: session.user.id, type: 'inactivity' }),
+        }),
+      ),
+    )
+    await waitFor(() => expect(client.getQueryData(sessionKey)).toBeNull())
+    expect(client.getQueryData(['private-data'])).toBeUndefined()
+  })
   it('uses exact permission keys, never role names or wildcards', () => {
     expect(routePermission('/settings/staff/123/edit')).toBe('staff.update')
     expect(routePermission('/settings/roles/new')).toBe('roles.create')

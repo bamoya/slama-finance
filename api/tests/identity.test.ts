@@ -24,6 +24,37 @@ const user = {
   updatedAt: new Date(),
 }
 describe('identity services', () => {
+  it('does not renew sessions on inspection and rejects inactivity at one hour', async () => {
+    const now = Date.now()
+    const record = {
+      userId: user.id,
+      purpose: 'full',
+      lastSeenAt: new Date(now - 3_600_000),
+      expiresAt: new Date(now + 86_400_000),
+    }
+    const repository = {
+      create: vi.fn(),
+      revoke: vi.fn(),
+      recordActivity: vi.fn().mockResolvedValue(true),
+      findActive: vi.fn().mockResolvedValue(record),
+    }
+    const service = createSessionService(
+      repository,
+      { findById: vi.fn().mockResolvedValue(user) },
+      30,
+    )
+    expect(await service.inspect('token')).toBeNull()
+    expect(await service.recordActivity('token')).toBeNull()
+    expect(repository.recordActivity).not.toHaveBeenCalled()
+    record.lastSeenAt = new Date()
+    expect(await service.inspect('token')).toMatchObject({ user, purpose: 'full' })
+    expect(repository.recordActivity).not.toHaveBeenCalled()
+    expect(await service.recordActivity('token')).toMatchObject({ user })
+    expect(repository.recordActivity).toHaveBeenCalledOnce()
+    // The atomic write can reject a session that expired/revoked after inspection.
+    repository.recordActivity.mockResolvedValue(false)
+    expect(await service.recordActivity('token')).toBeNull()
+  })
   it('updates only the signed-in profile after password verification', async () => {
     const repository = {
       findByEmail: vi.fn(),
@@ -36,6 +67,7 @@ describe('identity services', () => {
     }
     const passwords = { hash: vi.fn(), verify: vi.fn().mockResolvedValue(true) }
     const sessions = {
+      recordActivity: vi.fn(),
       issue: vi.fn(),
       inspect: vi.fn().mockResolvedValue({ user, purpose: 'full' }),
       resolve: vi.fn(),
@@ -89,6 +121,7 @@ describe('identity services', () => {
     }
     const passwords = { hash: vi.fn(), verify: vi.fn().mockResolvedValue(true) }
     const sessions = {
+      recordActivity: vi.fn(),
       issue: vi.fn().mockResolvedValue({ token: 'token', maxAge: 100, purpose: 'full' }),
       inspect: vi.fn(),
       resolve: vi.fn(),
@@ -119,7 +152,13 @@ describe('identity services', () => {
   it('hashes session tokens and rejects missing sessions or disabled users', async () => {
     const repository = {
       create: vi.fn(),
-      findActive: vi.fn().mockResolvedValue({ userId: user.id, purpose: 'full' }),
+      recordActivity: vi.fn(),
+      findActive: vi.fn().mockResolvedValue({
+        userId: user.id,
+        purpose: 'full',
+        lastSeenAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      }),
       revoke: vi.fn(),
     }
     const users = { findByEmail: vi.fn(), findById: vi.fn().mockResolvedValue(user) }

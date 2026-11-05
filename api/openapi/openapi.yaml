@@ -234,6 +234,8 @@ paths:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1login
   /v1/auth/session:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1session
+  /v1/auth/session/activity:
+    $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1session~1activity
   /v1/auth/logout:
     $ref: ./modules/identity/auth.yaml#/paths/~1v1~1auth~1logout
   /v1/rbac/permissions:

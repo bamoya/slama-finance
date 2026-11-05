@@ -23,7 +23,12 @@ export function createAuthController(
         request.cookies.slama_session,
         UpdateProfileSchema.parse(request.body),
       )
-      return toSession(result.user, result.purpose, await permissionKeys(result.user.id))
+      return toSession(
+        result.user,
+        result.purpose,
+        await permissionKeys(result.user.id),
+        result.idleExpiresAt,
+      )
     },
     async requestPasswordReset(request: FastifyRequest, reply: FastifyReply) {
       await recovery.request(requestSchema.parse(request.body).email)
@@ -51,6 +56,7 @@ export function createAuthController(
         result.user,
         result.purpose,
         result.purpose === 'full' ? await permissionKeys(result.user.id) : [],
+        result.idleExpiresAt,
       )
     },
     async getSession(request: FastifyRequest) {
@@ -59,6 +65,7 @@ export function createAuthController(
         result.user,
         result.purpose,
         result.purpose === 'full' ? await permissionKeys(result.user.id) : [],
+        result.idleExpiresAt,
       )
     },
     async changePassword(request: FastifyRequest, reply: FastifyReply) {
@@ -75,7 +82,21 @@ export function createAuthController(
         path: '/',
         maxAge: result.maxAge,
       })
-      return toSession(result.user, result.purpose, await permissionKeys(result.user.id))
+      return toSession(
+        result.user,
+        result.purpose,
+        await permissionKeys(result.user.id),
+        result.idleExpiresAt,
+      )
+    },
+    async recordActivity(request: FastifyRequest) {
+      const result = await service.recordActivity(request.cookies.slama_session)
+      return toSession(
+        result.user,
+        result.purpose,
+        result.purpose === 'full' ? await permissionKeys(result.user.id) : [],
+        result.idleExpiresAt,
+      )
     },
     async logout(request: FastifyRequest, reply: FastifyReply) {
       await service.logout(request.cookies.slama_session)

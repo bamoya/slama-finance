@@ -1440,6 +1440,19 @@ export const french: Record<string, string> = {
     'Retirer toutes les permissions de ce rôle ? Le personnel disposant uniquement de ce rôle perdra l’accès à la gestion du personnel et des rôles.',
   'Clear currency filter': 'Effacer le filtre de devise',
   'Clear dates': 'Effacer les dates',
+  'Your session is about to expire': 'Votre session va bientôt expirer',
+  'You will be signed out due to inactivity in {{seconds}} seconds. Unsaved changes may be lost.':
+    'Vous serez déconnecté pour inactivité dans {{seconds}} secondes. Les modifications non enregistrées risquent d’être perdues.',
+  'Stay signed in': 'Rester connecté',
+  'Unable to extend your session. Check your connection and try again.':
+    'Impossible de prolonger votre session. Vérifiez votre connexion et réessayez.',
+  'Your session expired due to inactivity. Please sign in again.':
+    'Votre session a expiré pour inactivité. Veuillez vous reconnecter.',
+  'Last 1 month': 'Le mois écoulé',
+  'Last 3 months': 'Les 3 derniers mois',
+  'Last 6 months': 'Les 6 derniers mois',
+  'Last year': 'L’année écoulée',
+  'Or select custom dates': 'Ou sélectionnez des dates personnalisées',
   'Clear filters': 'Effacer les filtres',
   'Clear selection': 'Effacer la sélection',
   'Click the swatch to open the color picker.':

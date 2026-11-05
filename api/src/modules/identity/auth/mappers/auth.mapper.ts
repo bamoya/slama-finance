@@ -4,8 +4,10 @@ export function toSession(
   user: User,
   purpose: Session['purpose'] = 'full',
   permissionKeys: string[] = [],
+  idleExpiresAt?: string,
 ): Session {
   return {
+    ...(idleExpiresAt ? { idleExpiresAt } : {}),
     permissionKeys: purpose === 'full' ? permissionKeys : [],
     purpose,
     user: {

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
@@ -51,6 +53,34 @@ describe('identity HTTP and persistence regression', () => {
     const logout = await app.inject({ method: 'POST', url: '/v1/auth/logout', cookies, headers })
     expect(logout.statusCode).toBe(204)
     expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(401)
+  })
+  it('keeps polling idle, records explicit activity, and prevents revival of expired sessions', async () => {
+    const token = await login()
+    const cookies = { slama_session: token }
+    const hash = createHash('sha256').update(token).digest('hex')
+    await fixture.client`update sessions set last_seen_at=now() - interval '59 minutes' where token_hash=${hash}`
+    const before = await fixture.client`select last_seen_at from sessions where token_hash=${hash}`
+    const session = await app.inject({ url: '/v1/auth/session', cookies })
+    expect(session.statusCode).toBe(200)
+    expect(Date.parse(session.json().idleExpiresAt) - Date.now()).toBeLessThan(60_001)
+    expect(
+      await fixture.client`select last_seen_at from sessions where token_hash=${hash}`,
+    ).toEqual(before)
+    const activity = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/session/activity',
+      cookies,
+      headers,
+    })
+    expect(activity.statusCode).toBe(200)
+    expect(Date.parse(activity.json().idleExpiresAt) - Date.now()).toBeGreaterThan(3_590_000)
+    await fixture.client`update sessions set last_seen_at=now() - interval '61 minutes' where token_hash=${hash}`
+    expect((await app.inject({ url: '/v1/auth/session', cookies })).statusCode).toBe(401)
+    expect((await app.inject({ url: '/v1/rbac/roles', cookies })).statusCode).toBe(403)
+    expect(
+      (await app.inject({ method: 'POST', url: '/v1/auth/session/activity', cookies, headers }))
+        .statusCode,
+    ).toBe(401)
   })
   it('creates staff atomically, maps fields and retains role/permission operations', async () => {
     const cookies = { slama_session: await login() }
