@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
@@ -11,6 +11,12 @@ describe('identity HTTP and persistence regression', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
   const headers = { origin: 'http://localhost:5173' }
+  let clientNumber = 0
+  let clientAddress: string
+  beforeEach(() => {
+    // Each test represents a separate client; login attempts within a test still share a limit.
+    clientAddress = `192.0.2.${++clientNumber}`
+  })
   beforeAll(async () => {
     fixture = await isolatedDatabase()
     const hash = await createPasswordService().hash('test-password-123')
@@ -30,6 +36,7 @@ describe('identity HTTP and persistence regression', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
+      remoteAddress: clientAddress,
       headers,
       payload: { email: 'OPERATOR@example.test', password: 'test-password-123' },
     })
@@ -217,6 +224,7 @@ describe('identity HTTP and persistence regression', () => {
     const wrong = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
+      remoteAddress: clientAddress,
       headers,
       payload: { email: 'operator@example.test', password: 'wrong-password' },
     })
