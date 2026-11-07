@@ -29,6 +29,7 @@ services:
       - NOTIFICATION_TRANSPORT=resend
       - NOTIFICATION_WORKER_ENABLED=true
       - PLATFORM_DOMAIN=${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      - ADMIN_TOTP_KEY=${ADMIN_TOTP_KEY:-}
       - PLATFORM_SCHEME=${PLATFORM_SCHEME:-https}
       - PASSWORD_RESET_URL=${PLATFORM_SCHEME:-https}://app.${PLATFORM_DOMAIN:?Set the platform domain}/reset-password
       - PORT=3000

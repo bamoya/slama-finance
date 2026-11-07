@@ -50,6 +50,8 @@ services:
       DATABASE_POOL_SIZE: '5'
       # Every site derives from one platform domain; browsers call /api on their own origin.
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
+      # 32 random bytes, base64; encrypts admin 2FA secrets. Keep it stable. Admin sign-in returns 503 without it.
+      ADMIN_TOTP_KEY: ${ADMIN_TOTP_KEY:-}
       PLATFORM_SCHEME: ${PLATFORM_SCHEME:-https}
       # Empty is fail-safe: forwarded addresses are ignored until proxy IPs are verified.
       # Set to UI_PROXY_IP plus the verified Traefik address on the Dokploy network.
