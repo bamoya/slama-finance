@@ -188,6 +188,10 @@ promise a response-time SLA.
 - Enforce plan entitlements, quotas and permissions in the API, with consistent locked-feature UI.
 - Keep plan entitlements separate from RBAC; use configured feature flags/limits rather than checks
   scattered around the code comparing plan names. Allow audited platform-managed exceptions.
+- Refinement confirmed 2026-11-08: first-release exceptions belong to the owner subscription only; organizations
+  inherit them and have no separate override records. New plan versions apply to existing customers at a
+  notified renewal with at least 30 days of notice, preserving purchased current coverage and already-paid
+  future renewals. See the [decision record](../implementation/subscription-billing/decisions.md).
 - Approved metering rules and implementation are recorded in [subscription usage](subscription-usage.md): decimal GB, monthly paid-email reset in Africa/Casablanca, trial-wide allowance and deduplicated queued recipients.
 
 ## 8. Trial and owner onboarding
@@ -229,7 +233,11 @@ Expired -- confirmed payment --> Active, subject to independent restrictions
 - Owner sees payment instructions, submits a reference, and sees current plan, status and expiry.
 - SaaS administrator verifies actual receipt and records payment reference, plan and coverage dates.
   A submitted reference alone never activates a subscription.
-- Accepted payment methods remain configurable; no specific list was confirmed.
+- Accepted payment methods remain configurable.
+- Launch-method refinement confirmed 2026-11-08: cash and bank transfers. TVA remains configurable through
+  platform administration and can be disabled at launch, then enabled later with an explicitly configured rate.
+- Subscription-suspension refinement confirmed 2026-11-08: an administrator's subscription suspension freezes
+  trial, paid and grace time and shifts future coverage on resume. Organization-only pauses do not extend it.
 - Previously paid subscriptions have seven calendar days of continued access after unpaid renewal,
   with owner reminders. With manual billing, past due means unpaid expiry, not necessarily a failed card.
 - After grace expires, revoke organization sessions and show the static unavailable page.
@@ -345,7 +353,8 @@ Global permission catalog --> organization role permissions
 Actor-aware sessions, credentials, recovery tokens and audit events
 ```
 
-- Add new forward migrations: the database is deployed. Do not rewrite applied migrations.
+- Pre-client phase (2026-11-09): one regenerated fresh baseline, no forward migrations; the operator replaces
+  the database volume. Reintroduce forward-only migrations before the first real client.
 - Existing Slama data becomes the first organization; preserve identifiers, links, files and history.
 - Separate existing staff identities from new owner identities without assuming matching emails imply
   the same account or copying password hashes into a second identity.

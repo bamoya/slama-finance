@@ -1,12 +1,19 @@
 import { createHash, randomBytes } from 'node:crypto'
 
+import { sql } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import { base32Decode, totp } from '../src/lib/totp.js'
 import { createAdminAccounts } from '../src/modules/platform/administration/index.js'
-import { attachTestDatabase, isolatedDatabase, testOwnerId } from './helpers/postgres.js'
+import { createBillingRepository } from '../src/modules/platform/subscriptions/repositories/billing.repository.js'
+import {
+  attachTestDatabase,
+  isolatedDatabase,
+  seedPaidCoverage,
+  testOwnerId,
+} from './helpers/postgres.js'
 
 const origin = 'http://localhost:5173'
 const headers = { origin }
@@ -18,8 +25,10 @@ describe('SaaS administration portal', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   let app: Awaited<ReturnType<typeof buildApp>>
   let accounts: ReturnType<typeof createAdminAccounts>
-  beforeEach(async () => {
-    fixture = await isolatedDatabase()
+  // The lifecycle counts include the fixture owner as a trial; the others use paid coverage.
+  const trialOwner = new Set(['counts subscriptions by lifecycle with the coverage rules'])
+  beforeEach(async ({ task }) => {
+    fixture = await isolatedDatabase({ owner: trialOwner.has(task.name) ? 'trial' : 'paid' })
     app = await buildApp({
       environment: loadEnvironment({
         NODE_ENV: 'test',
@@ -87,6 +96,10 @@ describe('SaaS administration portal', () => {
     expect(done.statusCode).toBe(200)
     return { cookie: cookieOf(done)!, key }
   }
+  async function freshCode(key: Buffer) {
+    await fixture.client`update platform_admins set totp_last_step=null`
+    return totp(key, Date.now())
+  }
   const auditRows = (action: string) =>
     fixture.client`select * from platform_admin_audit where action=${action} order by created_at`
   async function submittedPayment(reference: string) {
@@ -109,9 +122,30 @@ describe('SaaS administration portal', () => {
     ) {
       const id = randomBytesUuid()
       await fixture.client`insert into platform_users (id,email,password_hash,created_at) values (${id},${`${name.toLowerCase()}@example.test`},'x',${at(trialStartDays)})`
-      await fixture.client`insert into owner_subscriptions(owner_id,plan_code,trial_started_at,trial_ends_at,cancel_at_period_end) values (${id},'trial',${at(trialStartDays)},${at(trialStartDays + 7)},${cancel})`
+      await fixture.client`insert into owner_subscriptions(owner_id,plan_code,trial_started_at,trial_ends_at) values (${id},'trial',${at(trialStartDays)},${at(trialStartDays + 7)})`
       if (coverage)
-        await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${id},'pro','monthly','activation','cash',${name},'MAD',100,0,100,'confirmed',${at(coverage[0])},${at(coverage[1])},now())`
+        await seedPaidCoverage(fixture.db, {
+          ownerId: id,
+          planCode: 'pro',
+          start: new Date(at(coverage[0])),
+          end: new Date(at(coverage[1])),
+          reference: name,
+        })
+      if (cancel) {
+        // Owner-scheduled cancellation at the end of the paid coverage (period model and legacy flag).
+        const billing = createBillingRepository(() => fixture.db)
+        await billing.admin(async (tx) => {
+          await billing.scheduleCancel(
+            id,
+            new Date(at(coverage![1])),
+            { type: 'owner', ownerId: id },
+            tx,
+          )
+          await tx.execute(
+            sql`update owner_subscriptions set cancel_at_period_end=true where owner_id=${id}`,
+          )
+        })
+      }
       return id
     }
     const trial = await owner('trial', -4, null)
@@ -267,13 +301,15 @@ describe('SaaS administration portal', () => {
   })
 
   it('confirms payments idempotently with exactly one audit row', async () => {
-    const { cookie } = await signIn()
+    const { cookie, key } = await signIn()
     const id = await submittedPayment('bank-1')
     const list = await as(cookie).get('/api/v1/admin/payments?status=submitted')
     expect(list.statusCode).toBe(200)
     expect(list.json().items[0]).toMatchObject({ id, ownerEmail: 'fixture-owner@example.test' })
     const first = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
       receivedReference: 'VIR-42',
+      code: await freshCode(key),
+      auditReason: 'receipt checked internally',
     })
     expect(first.statusCode).toBe(200)
     expect(first.json()).toMatchObject({
@@ -281,7 +317,10 @@ describe('SaaS administration portal', () => {
       decidedBy: email,
       receivedReference: 'VIR-42',
     })
-    const second = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`)
+    const second = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
+      code: await freshCode(key),
+      auditReason: 'retry receipt',
+    })
     expect(second.statusCode).toBe(200)
     expect(second.json().coverageEnd).toBe(first.json().coverageEnd)
     const audit = await auditRows('payment.confirm')
@@ -290,19 +329,138 @@ describe('SaaS administration portal', () => {
     expect(audit[0]!.before.status).toBe('submitted')
     expect(audit[0]!.after.status).toBe('confirmed')
     expect(
-      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: 'x' })).json().code,
+      (
+        await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
+          reason: 'x',
+          code: await freshCode(key),
+          auditReason: 'internal decision',
+        })
+      ).json().code,
     ).toBe('PAYMENT_CONFIRMED')
   })
 
+  it.each(['confirm', 'reject'] as const)(
+    'requires fresh step-up for payment %s and rolls back all decision state on failure',
+    async (operation) => {
+      const { cookie, key } = await signIn()
+      const id = await submittedPayment('secure-decision')
+      const url = `/api/v1/admin/payments/${id}/${operation}`
+      const action = `payment.${operation}`
+      const payload = {
+        auditReason: 'private internal investigation',
+        ...(operation === 'reject'
+          ? { reason: 'Transfer not received' }
+          : { receivedReference: 'VIR-43' }),
+      }
+      const snapshot = async () =>
+        Promise.all(
+          [
+            'subscription_payments',
+            'owner_subscriptions',
+            'subscription_periods',
+            'subscription_period_notes',
+            'subscription_scheduled_changes',
+            'platform_admin_audit',
+          ].map(async (table) =>
+            JSON.stringify(
+              await fixture.client.unsafe(`select * from ${table} t order by row_to_json(t)::text`),
+            ),
+          ),
+        )
+      const before = await snapshot()
+      const code = await freshCode(key)
+      expect((await as(cookie).post(url, payload)).statusCode).toBe(400)
+      expect(
+        (await as(cookie).post(url, { ...payload, auditReason: undefined, code })).statusCode,
+      ).toBe(400)
+      expect(
+        (await as(cookie).post(url, { ...payload, auditReason: '   ', code })).statusCode,
+      ).toBe(400)
+      const validCodes = [-30_000, 0, 30_000].map((offset) => totp(key, Date.now() + offset))
+      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
+        (candidate) => !validCodes.includes(candidate),
+      )!
+      const wrong = await as(cookie).post(url, { ...payload, code: invalid })
+      expect(wrong.statusCode).toBe(403)
+      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toEqual(before)
+      await fixture.client
+        .unsafe(`create function reject_decision_audit() returns trigger language plpgsql as $$
+        begin if NEW.action='${action}' then raise exception 'test audit failure'; end if; return NEW; end $$`)
+      await fixture.client.unsafe(
+        'create trigger reject_decision_audit before insert on platform_admin_audit for each row execute function reject_decision_audit()',
+      )
+      expect((await as(cookie).post(url, { ...payload, code })).statusCode).toBe(500)
+      expect(await snapshot()).toEqual(before)
+      expect(
+        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
+      ).toBeNull()
+      await fixture.client.unsafe('drop trigger reject_decision_audit on platform_admin_audit')
+      const success = await as(cookie).post(url, { ...payload, code })
+      expect(success.statusCode, success.body).toBe(200)
+      expect(success.body).not.toContain('private internal investigation')
+      expect(success.json()).not.toHaveProperty('code')
+      const [actor] = await fixture.client`select id from platform_admins where email=${email}`
+      const [audit] = await auditRows(action)
+      expect(audit).toMatchObject({
+        admin_id: actor!.id,
+        actor: email,
+        target_id: id,
+        after: { auditReason: 'private internal investigation' },
+      })
+      expect(audit!.after).not.toHaveProperty('code')
+      const committed = await snapshot()
+      const replay = await as(cookie).post(url, { ...payload, code })
+      expect(replay.statusCode).toBe(403)
+      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toEqual(committed)
+      const retry = await as(cookie).post(url, { ...payload, code: await freshCode(key) })
+      expect(retry.statusCode).toBe(200)
+      expect(retry.json()).toEqual(success.json())
+      expect(await snapshot()).toEqual(committed)
+      expect(await auditRows(action)).toHaveLength(1)
+      const conflictCode = await freshCode(key)
+      const opposite = operation === 'confirm' ? 'reject' : 'confirm'
+      const conflict = await as(cookie).post(`/api/v1/admin/payments/${id}/${opposite}`, {
+        code: conflictCode,
+        auditReason: 'conflicting decision',
+        ...(opposite === 'reject' ? { reason: 'Not received' } : {}),
+      })
+      expect(conflict.statusCode).toBe(409)
+      expect(conflict.json().code).toBe(
+        operation === 'confirm' ? 'PAYMENT_CONFIRMED' : 'PAYMENT_REJECTED',
+      )
+      expect(
+        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
+      ).toBeNull()
+      expect((await as(cookie).post(url, { ...payload, code: conflictCode })).statusCode).toBe(200)
+      expect(await snapshot()).toEqual(committed)
+      const concurrentCode = await freshCode(key)
+      const concurrent = await Promise.all(
+        [1, 2].map(() => as(cookie).post(url, { ...payload, code: concurrentCode })),
+      )
+      expect(concurrent.map((response) => response.statusCode).sort()).toEqual([200, 403])
+      expect(await snapshot()).toEqual(committed)
+    },
+  )
+
   it('requires a rejection reason and shows it to the owner', async () => {
-    const { cookie } = await signIn()
+    const { cookie, key } = await signIn()
     const id = await submittedPayment('bank-2')
     expect((await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {})).statusCode).toBe(400)
     expect(
-      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: '   ' })).statusCode,
+      (
+        await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
+          reason: '   ',
+          code: await freshCode(key),
+          auditReason: 'internal decision',
+        })
+      ).statusCode,
     ).toBe(400)
     const rejected = await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
       reason: 'Transfer not received',
+      code: await freshCode(key),
+      auditReason: 'private investigation detail',
     })
     expect(rejected.statusCode).toBe(200)
     expect(rejected.json()).toMatchObject({
@@ -310,8 +468,13 @@ describe('SaaS administration portal', () => {
       rejectionReason: 'Transfer not received',
     })
     expect(
-      (await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, { reason: 'again' })).json()
-        .rejectionReason,
+      (
+        await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
+          reason: 'again',
+          code: await freshCode(key),
+          auditReason: 'internal decision',
+        })
+      ).json().rejectionReason,
     ).toBe('Transfer not received')
     expect(await auditRows('payment.reject')).toHaveLength(1)
 
@@ -324,6 +487,8 @@ describe('SaaS administration portal', () => {
       cookies: { slama_owner_session: token },
     })
     expect(owner.statusCode).toBe(200)
+    expect(owner.body).not.toContain('private investigation detail')
+    expect(rejected.body).not.toContain('private investigation detail')
     expect(owner.json().data[0]).toMatchObject({
       id,
       status: 'rejected',

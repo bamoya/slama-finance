@@ -20,3 +20,6 @@ docs/notification-email-examples/*_*.html
 marketing/video/out
 marketing/video/public
 marketing/video/src/recordings.generated.json
+
+# Separate Git worktree checkouts.
+.claude/worktrees/

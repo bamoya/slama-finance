@@ -238,7 +238,10 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
         .insert(backgroundJobs)
         .values({ jobType: 'prepare_pdf', payload: {}, idempotencyKey: 'same:key' })
     await fixture.client`update organizations set paused_at=now() where id=${orgB}`
-    const runner = createTenantWorkerRunner(() => runtime)
+    const runner = createTenantWorkerRunner(
+      () => runtime,
+      async () => true,
+    )
     const seen: string[] = []
     await runner(async (id) => {
       seen.push(id)

@@ -1,5 +1,11 @@
-import { and, asc, desc, eq, gt, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull, lt, ne, or, sql } from 'drizzle-orm'
 
+import {
+  subscriptionPeriodNotes,
+  subscriptionPeriods,
+  subscriptionScheduledChanges,
+  subscriptionSuspensions,
+} from '../../../../../db/schema/subscription-periods.js'
 import {
   billingSettings,
   ownerSubscriptions,
@@ -91,7 +97,64 @@ export function createBillingRepository(database: () => Database) {
           ...(values.planCode ? { planCode: values.planCode } : {}),
         })
         .where(eq(ownerSubscriptions.ownerId, ownerId)),
-    /** Administrator grant or adjustment: a confirmed zero-amount coverage row. */
+    /**
+     * Coverage period (S5b dual write). Paid periods are idempotent on their payment; complimentary
+     * periods carry the administrator's note. Overlap/supersession rules are checked at commit.
+     */
+    async insertPeriod(
+      values: {
+        ownerId: string
+        kind: 'paid' | 'complimentary'
+        planCode: string
+        cycle: 'monthly' | 'annual' | null
+        start: Date
+        end: Date
+        paymentId?: string
+        note?: { reason: string; adminId: string }
+      },
+      tx: Transaction,
+    ) {
+      const [row] = await tx
+        .insert(subscriptionPeriods)
+        .values({
+          ownerId: values.ownerId,
+          kind: values.kind,
+          planCode: values.planCode,
+          cycle: values.cycle,
+          startsAt: values.start,
+          endsAt: values.end,
+          source: values.kind === 'paid' ? 'payment' : 'admin_grant',
+          paymentId: values.paymentId ?? null,
+        })
+        .onConflictDoNothing({ target: subscriptionPeriods.paymentId })
+        .returning({ id: subscriptionPeriods.id })
+      if (row && values.note)
+        await tx.insert(subscriptionPeriodNotes).values({
+          periodId: row.id,
+          reason: values.note.reason,
+          createdBy: values.note.adminId,
+        })
+      return row?.id ?? null
+    },
+    /** The rest of the coverage period running at `at` is replaced by `by` (later start wins). */
+    supersedeAt: (ownerId: string, at: Date, by: string, tx: Transaction) =>
+      tx
+        .update(subscriptionPeriods)
+        .set({ supersededAt: at, supersededBy: by })
+        .where(
+          and(
+            eq(subscriptionPeriods.ownerId, ownerId),
+            ne(subscriptionPeriods.kind, 'trial'),
+            ne(subscriptionPeriods.id, by),
+            isNull(subscriptionPeriods.supersededAt),
+            lt(subscriptionPeriods.startsAt, at),
+            gt(subscriptionPeriods.endsAt, at),
+          ),
+        ),
+    /**
+     * Administrator grant or adjustment: a confirmed zero-amount coverage row. Still written during
+     * the S5b dual write so the legacy resolver and every legacy SQL mirror stay unchanged (S5c removes it).
+     */
     async adjustment(
       values: {
         ownerId: string
@@ -130,6 +193,63 @@ export function createBillingRepository(database: () => Database) {
         .returning()
       return row!
     },
+    /** Latest end of all coverage periods (paid-through of the period model). */
+    async periodsEnd(ownerId: string, tx: Transaction) {
+      const [row] = await tx
+        .select({
+          end: sql<
+            string | null
+          >`max(coalesce(${subscriptionPeriods.supersededAt},${subscriptionPeriods.endsAt}))`,
+        })
+        .from(subscriptionPeriods)
+        .where(and(eq(subscriptionPeriods.ownerId, ownerId), ne(subscriptionPeriods.kind, 'trial')))
+      return row?.end ? new Date(row.end) : null
+    },
+    openSuspension: (ownerId: string, startedAt: Date, tx: Transaction) =>
+      tx.insert(subscriptionSuspensions).values({ ownerId, startedAt }),
+    /** Controlled shift (SECURITY DEFINER): closes the suspension and moves periods/changes. */
+    async shiftPeriods(ownerId: string, since: Date, byMs: number, tx: Transaction) {
+      await tx.execute(
+        sql`select subscription_periods_shift(${ownerId}::uuid,${since.toISOString()}::timestamptz,${byMs}::bigint)`,
+      )
+    },
+    async scheduledCancel(ownerId: string, tx: Transaction) {
+      const [row] = await tx
+        .select()
+        .from(subscriptionScheduledChanges)
+        .where(
+          and(
+            eq(subscriptionScheduledChanges.ownerId, ownerId),
+            eq(subscriptionScheduledChanges.kind, 'cancel'),
+            eq(subscriptionScheduledChanges.status, 'scheduled'),
+          ),
+        )
+      return row
+    },
+    scheduleCancel: (
+      ownerId: string,
+      effectiveAt: Date,
+      actor: { type: 'owner'; ownerId: string } | { type: 'admin'; adminId: string },
+      tx: Transaction,
+    ) =>
+      tx.insert(subscriptionScheduledChanges).values({
+        ownerId,
+        kind: 'cancel',
+        effectiveAt,
+        createdBy: actor.type,
+        actorOwnerId: actor.type === 'owner' ? actor.ownerId : null,
+        actorAdminId: actor.type === 'admin' ? actor.adminId : null,
+      }),
+    endScheduledChange: (id: string, status: 'cancelled' | 'superseded', tx: Transaction) =>
+      tx
+        .update(subscriptionScheduledChanges)
+        .set({ status })
+        .where(
+          and(
+            eq(subscriptionScheduledChanges.id, id),
+            eq(subscriptionScheduledChanges.status, 'scheduled'),
+          ),
+        ),
     extendPaidThrough: (
       ownerId: string,
       paidThroughAt: Date,
@@ -157,6 +277,36 @@ export function createBillingRepository(database: () => Database) {
     async shiftCoverage(ownerId: string, from: Date, byMs: number, tx: Transaction) {
       const at = sql`${from.toISOString()}::timestamptz`
       const by = sql`(${byMs} * interval '1 millisecond')`
+      // Preserve paid grace in the legacy rollback mirror too. Synthetic free adjustments never
+      // earn this shift; a cancellation or fully elapsed grace cannot restore expired access.
+      const [last] = await tx
+        .select({
+          payment: subscriptionPayments,
+          cancel: ownerSubscriptions.cancelAtPeriodEnd,
+          // Compare before shifting, in PostgreSQL, preserving imported microsecond precision.
+          matchesMarker: sql<boolean>`${ownerSubscriptions.paidThroughAt}=${subscriptionPayments.coverageEnd}`,
+        })
+        .from(subscriptionPayments)
+        .innerJoin(ownerSubscriptions, eq(ownerSubscriptions.ownerId, subscriptionPayments.ownerId))
+        .where(
+          and(
+            eq(subscriptionPayments.ownerId, ownerId),
+            eq(subscriptionPayments.status, 'confirmed'),
+          ),
+        )
+        .orderBy(desc(subscriptionPayments.coverageEnd), desc(subscriptionPayments.coverageStart))
+        .limit(1)
+      const end = last?.payment.coverageEnd
+      const grace =
+        last &&
+        !last.cancel &&
+        last.payment.method !== 'admin_adjustment' &&
+        end &&
+        end.getTime() <= from.getTime() &&
+        end.getTime() + 7 * 86_400_000 > from.getTime()
+          ? last.payment
+          : null
+
       await tx
         .update(subscriptionPayments)
         .set({
@@ -167,13 +317,16 @@ export function createBillingRepository(database: () => Database) {
           and(
             eq(subscriptionPayments.ownerId, ownerId),
             eq(subscriptionPayments.status, 'confirmed'),
-            gt(subscriptionPayments.coverageEnd, from),
+            or(
+              gt(subscriptionPayments.coverageEnd, from),
+              grace ? eq(subscriptionPayments.id, grace.id) : undefined,
+            ),
           ),
         )
       await tx
         .update(ownerSubscriptions)
         .set({
-          paidThroughAt: sql`case when ${ownerSubscriptions.paidThroughAt}>${at} then ${ownerSubscriptions.paidThroughAt}+${by} else ${ownerSubscriptions.paidThroughAt} end`,
+          paidThroughAt: sql`case when ${ownerSubscriptions.paidThroughAt}>${at} or ${Boolean(grace && last?.matchesMarker)} then ${ownerSubscriptions.paidThroughAt}+${by} else ${ownerSubscriptions.paidThroughAt} end`,
           trialEndsAt: sql`case when ${ownerSubscriptions.trialEndsAt}>${at} then ${ownerSubscriptions.trialEndsAt}+${by} else ${ownerSubscriptions.trialEndsAt} end`,
         })
         .where(eq(ownerSubscriptions.ownerId, ownerId))
@@ -198,12 +351,5 @@ export function createBillingRepository(database: () => Database) {
         .update(ownerSubscriptions)
         .set({ cancelAtPeriodEnd: cancel })
         .where(eq(ownerSubscriptions.ownerId, ownerId)),
-    /** Calendar months in Africa/Casablanca, so coverage keeps the local day across offset changes. */
-    async addCycle(start: Date, cycle: 'monthly' | 'annual', tx: Transaction) {
-      const [r] = await tx.execute(
-        sql`select (((${start.toISOString()}::timestamptz at time zone 'Africa/Casablanca') + ${cycle === 'annual' ? '12 months' : '1 month'}::interval) at time zone 'Africa/Casablanca')::text as finish`,
-      )
-      return new Date(String(r!.finish))
-    },
   }
 }

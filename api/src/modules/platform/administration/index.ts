@@ -27,6 +27,10 @@ import { createCustomerLifecycleController } from './lifecycle/controllers/custo
 import { createCustomerLifecycleRepository } from './lifecycle/repositories/customer-lifecycle.repository.js'
 import { registerCustomerLifecycleRoutes } from './lifecycle/routes/customer-lifecycle.routes.js'
 import { createCustomerLifecycleService } from './lifecycle/services/customer-lifecycle.service.js'
+import { createOverrideController } from './overrides/controllers/override.controller.js'
+import { createOverrideRepository } from './overrides/repositories/override.repository.js'
+import { registerOverrideRoutes } from './overrides/routes/override.routes.js'
+import { createOverrideService } from './overrides/services/override.service.js'
 import { createAdminOverviewController } from './overview/controllers/admin-overview.controller.js'
 import { createAdminOverviewRepository } from './overview/repositories/admin-overview.repository.js'
 import { registerAdminOverviewRoutes } from './overview/routes/admin-overview.routes.js'
@@ -57,6 +61,8 @@ export function createAdministrationModule(options: {
   clock?: () => Date
   /** Owner account emails (customer invitations); links point at portalOrigin. */
   ownerDelivery?: OwnerAccountDelivery
+  /** Subscription timezone-data guard: blocks override writes on a mismatch. */
+  timezoneWritable?: () => void
 }) {
   const { withAdmin, accounts, audit } = createAdministrationServices(options.database)
   const authService = createAdminAuthService(accounts, audit, withAdmin, createPasswordService(), {
@@ -66,11 +72,11 @@ export function createAdministrationModule(options: {
   const auth = createAdminAuthController(authService, options.secure)
   const payments = createAdminPaymentRepository()
   const paymentsController = createAdminPaymentsController(
-    createAdminPaymentsService(payments, audit, withAdmin, options.billing),
+    createAdminPaymentsService(payments, audit, withAdmin, options.billing, authService.stepUp),
     auth.currentAdmin,
   )
   const customers = createAdminCustomersService(
-    createAdminCustomerRepository(),
+    createAdminCustomerRepository(options.billing.lifecycleStatus),
     payments,
     audit,
     withAdmin,
@@ -96,9 +102,23 @@ export function createAdministrationModule(options: {
     createBillingSettingsService(createBillingSettingsRepository(), audit, withAdmin),
     auth.currentAdmin,
   )
+  const overrideController = createOverrideController(
+    createOverrideService({
+      repo: createOverrideRepository(),
+      audit,
+      withAdmin,
+      stepUp: authService.stepUp,
+      writable: options.timezoneWritable,
+    }),
+    auth.currentAdmin,
+  )
   const auditController = createAdminAuditController(audit)
   const overviewController = createAdminOverviewController(
-    createAdminOverviewService(createAdminOverviewRepository(), withAdmin, options.clock),
+    createAdminOverviewService(
+      createAdminOverviewRepository(options.billing.lifecycleStatus),
+      withAdmin,
+      options.clock,
+    ),
   )
 
   /** Mounted at /api/v1/admin; the host guard serves it only on the admin. site. */
@@ -112,6 +132,7 @@ export function createAdministrationModule(options: {
       registerAdminCustomersRoutes(scope, customersController)
       registerCustomerLifecycleRoutes(scope, lifecycleController)
       registerBillingSettingsRoutes(scope, billingController)
+      registerOverrideRoutes(scope, overrideController)
       registerAdminAuditRoutes(scope, auditController)
     })
   }

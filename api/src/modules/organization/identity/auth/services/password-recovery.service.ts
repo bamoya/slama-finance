@@ -1,12 +1,12 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import type { PasswordResetDelivery } from '../../../../../integrations/contracts.js'
 import { AppError } from '../../../../../lib/errors.js'
 import { resolveLanguage } from '../../../../../lib/language.js'
+import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import type { createPasswordRecoveryRepository } from '../repositories/password-recovery.repository.js'
 import type { createPasswordService } from './password.service.js'
 
-const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 export function createPasswordRecoveryService(
   repository: ReturnType<typeof createPasswordRecoveryRepository>,
   passwords: ReturnType<typeof createPasswordService>,

@@ -8,12 +8,18 @@ import type {
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import type { createBillingRepository, PaymentRow } from '../repositories/billing.repository.js'
+import type { CoverageReads } from '../repositories/coverage-lifecycle.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
+import { addCycle } from './billing-calendar.service.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
+import { resolvePeriods } from './period-resolver.service.js'
 
 const DAY_MS = 86_400_000
 const suspended = () =>
   new AppError(409, 'SUBSCRIPTION_SUSPENDED', 'This subscription is suspended.')
+
+/** Administrator performing a lifecycle action; the reason becomes the period note. */
+export type AdminActor = { adminId: string; email: string; reason: string }
 
 export type AdminGrant = {
   planCode: string
@@ -53,16 +59,82 @@ export function createBillingService(
   repo: ReturnType<typeof createBillingRepository>,
   subscriptions: ReturnType<typeof createSubscriptionRepository>,
   clock = () => new Date(),
+  /**
+   * Throws 503 (TIMEZONE_DATA_MISMATCH/UNCHECKED) when calendar boundaries cannot be computed
+   * reliably. Only operations that compute a calendar boundary (addCycle) call it; fixed-duration
+   * shifts and extensions do not.
+   */
+  writable: () => void = () => {},
+  /**
+   * S5b dual write (SUBSCRIPTION_PERIOD_WRITES). When false only the legacy rows are written, exactly
+   * as before S5b; the reconciliation can append the missed periods later.
+   */
+  periodWrites = true,
+  /**
+   * S5c read authority (SUBSCRIPTION_COVERAGE_READS). `periods` resolves every decision from
+   * subscription_periods (no grace after complimentary coverage) and requires period writes.
+   */
+  reads: CoverageReads = 'legacy',
 ) {
-  /** Confirmed coverage, falling back to a legacy paid-through marker without payment rows. */
-  async function state(ownerId: string, tx: Transaction, now = clock()) {
+  if (reads === 'periods' && !periodWrites)
+    throw new Error('Period coverage reads require SUBSCRIPTION_PERIOD_WRITES=on')
+  // Administration supplies its step-up transaction; operator callers retain the standalone path.
+  const inAdminTransaction = <T>(
+    tx: Transaction | undefined,
+    work: (tx: Transaction) => Promise<T>,
+  ) => (tx ? work(tx) : repo.admin(work))
+
+  /**
+   * Coverage state from the selected authority. `graceless` says whether a lapse ends access at the
+   * paid-through instant (cancellation; with period reads also complimentary coverage).
+   */
+  async function state(ownerId: string, tx: Transaction, now = clock(), from = reads) {
     const row = (await subscriptions.subscription(ownerId, tx))?.owner_subscriptions ?? null
-    const coverage: Coverage[] = (await repo.coverage(ownerId, tx)).map((p) => ({
-      planCode: p.planCode,
-      cycle: p.cycle,
-      start: p.coverageStart!,
-      end: p.coverageEnd!,
-    }))
+    if (from === 'periods') {
+      const periods = await subscriptions.periodState(ownerId, tx)
+      // Fail closed: a started subscription needs its trial period, and periods need a subscription.
+      // Never fall back to the legacy resolver (and its complimentary grace) for one owner.
+      if (row ? !periods.periods.some((p) => p.kind === 'trial') : periods.periods.length)
+        throw new AppError(
+          503,
+          'SUBSCRIPTION_PERIODS_INCONSISTENT',
+          'Subscription coverage is temporarily unavailable. Please try again later.',
+        )
+      const coverage: Coverage[] = periods.periods
+        .filter((p) => p.kind !== 'trial')
+        .map((p) => ({
+          planCode: p.planCode,
+          cycle: p.cycle,
+          start: p.startsAt,
+          end: p.supersededAt ?? p.endsAt,
+        }))
+        .filter((c) => c.end.getTime() > c.start.getTime())
+      const last = periods.periods
+        .filter((p) => p.kind !== 'trial')
+        .reduce<(typeof periods.periods)[number] | null>((a, b) => {
+          const end = (p: typeof b) => (p.supersededAt ?? p.endsAt).getTime()
+          return !a || end(b) > end(a) || (end(b) === end(a) && b.startsAt >= a.startsAt) ? b : a
+        }, null)
+      const cancelAtPeriodEnd = periods.scheduled.some(
+        (c) => c.kind === 'cancel' && c.status === 'scheduled',
+      )
+      return {
+        row,
+        coverage,
+        cancelAtPeriodEnd,
+        graceless: cancelAtPeriodEnd || last?.kind === 'complimentary',
+        lastKind: last?.kind ?? null,
+        ...resolvePeriods(periods, now),
+      }
+    }
+    const coverage: Coverage[] = [...(await repo.coverage(ownerId, tx))]
+      .map((p) => ({
+        planCode: p.planCode,
+        cycle: p.cycle,
+        start: p.coverageStart!,
+        end: p.coverageEnd!,
+      }))
+      .sort((a, b) => a.start.getTime() - b.start.getTime())
     if (!coverage.length && row && row.planCode !== 'trial' && row.paidThroughAt)
       coverage.push({
         planCode: row.planCode,
@@ -70,7 +142,15 @@ export function createBillingService(
         start: row.trialStartedAt,
         end: row.paidThroughAt,
       })
-    return { row, coverage, ...resolveCoverage(row, coverage, now) }
+    const cancelAtPeriodEnd = row?.cancelAtPeriodEnd ?? false
+    return {
+      row,
+      coverage,
+      cancelAtPeriodEnd,
+      graceless: cancelAtPeriodEnd,
+      lastKind: null,
+      ...resolveCoverage(row, coverage, now),
+    }
   }
 
   async function quote(
@@ -115,7 +195,7 @@ export function createBillingService(
       kind: continues ? 'renewal' : 'activation',
       amount: amount(price),
       coverageStart: start.toISOString(),
-      coverageEnd: (await repo.addCycle(start, input.cycle, tx)).toISOString(),
+      coverageEnd: addCycle(start, input.cycle).toISOString(),
     }
   }
 
@@ -123,6 +203,62 @@ export function createBillingService(
    * Administrator lifecycle operations. They run inside the caller's platform_admin transaction so
    * the change, the 2FA step and the audit row commit together.
    */
+  /** Keeps a scheduled cancellation on the current paid-through after coverage changes. */
+  async function realignCancel(ownerId: string, tx: Transaction) {
+    const cancel = await repo.scheduledCancel(ownerId, tx)
+    const end = await repo.periodsEnd(ownerId, tx)
+    if (!cancel || !end || cancel.effectiveAt.getTime() === end.getTime()) return
+    await repo.endScheduledChange(cancel.id, 'superseded', tx)
+    await repo.scheduleCancel(
+      ownerId,
+      end,
+      cancel.createdBy === 'admin'
+        ? { type: 'admin', adminId: cancel.actorAdminId! }
+        : { type: 'owner', ownerId: cancel.actorOwnerId ?? ownerId },
+      tx,
+    )
+  }
+  /**
+   * Administrator coverage: the legacy zero-value adjustment payment (unchanged) and, with period
+   * writes on, its complimentary period linked by payment_id (the shape the reconciliation expects),
+   * replacing the rest of the period running at its start, with the administrator's note.
+   */
+  async function complimentary(
+    ownerId: string,
+    values: {
+      planCode: string
+      cycle: 'monthly' | 'annual'
+      kind: 'activation' | 'renewal' | 'upgrade'
+      start: Date
+      end: Date
+    },
+    actor: AdminActor,
+    now: Date,
+    tx: Transaction,
+  ) {
+    const settings = await repo.settings(tx)
+    const payment = await repo.adjustment(
+      { ownerId, ...values, decidedBy: actor.email, currency: settings.currency, now },
+      tx,
+    )
+    if (!periodWrites) return
+    const id = await repo.insertPeriod(
+      {
+        ownerId,
+        kind: 'complimentary',
+        planCode: values.planCode,
+        cycle: values.cycle,
+        start: values.start,
+        end: values.end,
+        paymentId: payment.id,
+        note: { reason: actor.reason, adminId: actor.adminId },
+      },
+      tx,
+    )
+    await repo.supersedeAt(ownerId, values.start, id!, tx)
+    await realignCancel(ownerId, tx)
+  }
+
   const administration = {
     state,
     async suspend(ownerId: string, tx: Transaction) {
@@ -130,7 +266,9 @@ export function createBillingService(
       const s = await state(ownerId, tx)
       if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
       if (s.status === 'suspended') throw suspended()
-      await repo.setSuspended(ownerId, clock(), tx)
+      const at = clock()
+      await repo.setSuspended(ownerId, at, tx)
+      if (periodWrites) await repo.openSuspension(ownerId, at, tx)
     },
     async resume(ownerId: string, tx: Transaction) {
       await subscriptions.lock(ownerId, tx)
@@ -139,17 +277,17 @@ export function createBillingService(
       if (!since)
         throw new AppError(409, 'SUBSCRIPTION_NOT_SUSPENDED', 'This subscription is not suspended.')
       const now = clock()
-      await repo.shiftCoverage(ownerId, since, Math.max(0, now.getTime() - since.getTime()), tx)
+      const shift = Math.max(0, now.getTime() - since.getTime())
+      // Legacy rows still shift (the legacy resolver reads payment coverage until S5c); periods,
+      // scheduled changes and the suspension row move through the controlled DB function.
+      await repo.shiftCoverage(ownerId, since, shift, tx)
+      if (periodWrites) await repo.shiftPeriods(ownerId, since, shift, tx)
       await repo.setSuspended(ownerId, null, tx)
     },
-    async changePlan(ownerId: string, planCode: string, decidedBy: string, tx: Transaction) {
+    async changePlan(ownerId: string, planCode: string, actor: AdminActor, tx: Transaction) {
       await subscriptions.lock(ownerId, tx)
       const now = clock()
-      const [s, plan, settings] = await Promise.all([
-        state(ownerId, tx, now),
-        repo.plan(planCode, tx),
-        repo.settings(tx),
-      ])
+      const [s, plan] = await Promise.all([state(ownerId, tx, now), repo.plan(planCode, tx)])
       if (!plan || plan.code === 'trial')
         throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
       if (s.status === 'suspended') throw suspended()
@@ -158,23 +296,22 @@ export function createBillingService(
       if (s.current.planCode === plan.code)
         throw new AppError(409, 'SAME_PLAN', 'The subscription already uses this plan.')
       const active = await repo.plan(s.current.planCode, tx)
-      await repo.adjustment(
+      await complimentary(
+        ownerId,
         {
-          ownerId,
           planCode: plan.code,
           cycle: s.current.cycle ?? 'monthly',
           kind: active && plan.rank > active.rank ? 'upgrade' : 'activation',
           start: now,
           end: s.current.end,
-          decidedBy,
-          currency: settings.currency,
-          now,
         },
+        actor,
+        now,
         tx,
       )
       await repo.extendPaidThrough(ownerId, s.current.end, plan.code, tx)
     },
-    async extend(ownerId: string, days: number, decidedBy: string, tx: Transaction) {
+    async extend(ownerId: string, days: number, actor: AdminActor, tx: Transaction) {
       await subscriptions.lock(ownerId, tx)
       const now = clock()
       const s = await state(ownerId, tx, now)
@@ -189,25 +326,18 @@ export function createBillingService(
       const last = s.coverage.reduce((a, b) => (b.end.getTime() >= a.end.getTime() ? b : a))
       const start = s.status === 'active' || s.status === 'past_due' ? s.paidThroughAt : now
       const end = new Date(start.getTime() + add)
-      const settings = await repo.settings(tx)
-      await repo.adjustment(
-        {
-          ownerId,
-          planCode: last.planCode,
-          cycle: last.cycle ?? 'monthly',
-          kind: 'renewal',
-          start,
-          end,
-          decidedBy,
-          currency: settings.currency,
-          now,
-        },
+      await complimentary(
+        ownerId,
+        { planCode: last.planCode, cycle: last.cycle ?? 'monthly', kind: 'renewal', start, end },
+        actor,
+        now,
         tx,
       )
       await repo.extendPaidThrough(ownerId, end, start <= now ? last.planCode : null, tx)
     },
     /** Paid subscription granted when an administrator creates the account. */
-    async grant(ownerId: string, grant: AdminGrant, decidedBy: string, tx: Transaction) {
+    async grant(ownerId: string, grant: AdminGrant, actor: AdminActor, tx: Transaction) {
+      writable()
       const now = clock()
       const plan = await repo.plan(grant.planCode, tx)
       if (!plan || plan.code === 'trial')
@@ -218,20 +348,18 @@ export function createBillingService(
           'INVALID_COVERAGE',
           'Coverage must have started and must end in the future.',
         )
-      const settings = await repo.settings(tx)
       await repo.createPaid(ownerId, plan.code, grant.end, now, tx)
-      await repo.adjustment(
+      await complimentary(
+        ownerId,
         {
-          ownerId,
           planCode: plan.code,
           cycle: grant.cycle,
           kind: 'activation',
           start: grant.start,
           end: grant.end,
-          decidedBy,
-          currency: settings.currency,
-          now,
         },
+        actor,
+        now,
         tx,
       )
     },
@@ -266,6 +394,7 @@ export function createBillingService(
       })),
     submit: (ownerId: string, input: SubscriptionPaymentSubmission) =>
       subscriptions.owner(ownerId, async (tx) => {
+        writable()
         await subscriptions.lock(ownerId, tx)
         const settings = await repo.settings(tx)
         if (!settings.paymentMethods.includes(input.method))
@@ -299,6 +428,12 @@ export function createBillingService(
             'Only an active paid subscription can be cancelled.',
           )
         await repo.setCancellation(ownerId, cancel, tx)
+        // Typed owner actor; the legacy flag above stays in sync until S5c.
+        if (!periodWrites) return
+        const scheduled = await repo.scheduledCancel(ownerId, tx)
+        if (cancel && !scheduled && s.paidThroughAt)
+          await repo.scheduleCancel(ownerId, s.paidThroughAt, { type: 'owner', ownerId }, tx)
+        if (!cancel && scheduled) await repo.endScheduledChange(scheduled.id, 'cancelled', tx)
       }),
     /**
      * Administrator confirmation of actual receipt. Idempotent: confirming twice returns the
@@ -309,8 +444,10 @@ export function createBillingService(
       decidedBy: string,
       receivedReference?: string,
       onDecided?: DecisionHook,
+      transaction?: Transaction,
     ) =>
-      repo.admin(async (tx) => {
+      inAdminTransaction(transaction, async (tx) => {
+        writable()
         const found = await repo.payment(id, tx)
         if (!found) throw new AppError(404, 'NOT_FOUND', 'Payment not found.')
         await subscriptions.lock(found.ownerId, tx)
@@ -327,12 +464,13 @@ export function createBillingService(
             throw new AppError(409, 'UPGRADE_STALE', 'The upgraded period is no longer active.')
           end = s.current.end
         } else {
+          // Continuation within the paid grace only; none after a cancellation or (period reads)
+          // complimentary coverage, so a lapsed free grant never backdates a payment.
           const continues =
             s.paidThroughAt &&
-            !(s.row?.cancelAtPeriodEnd && now >= s.paidThroughAt) &&
-            now.getTime() < s.paidThroughAt.getTime() + GRACE_MS
+            now.getTime() < s.paidThroughAt.getTime() + (s.graceless ? 0 : GRACE_MS)
           if (continues) start = s.paidThroughAt!
-          end = await repo.addCycle(start, payment.cycle, tx)
+          end = addCycle(start, payment.cycle)
         }
         const confirmed = await repo.decide(
           id,
@@ -351,17 +489,44 @@ export function createBillingService(
           { paidThroughAt: end, ...(start <= now ? { planCode: payment.planCode } : {}) },
           tx,
         )
+        // Paid period in the same transaction, idempotent on the payment. An upgrade replaces the
+        // rest of the running period; a renewal is adjacent. Confirmation clears a cancellation.
+        if (periodWrites) {
+          const period = await repo.insertPeriod(
+            {
+              ownerId: payment.ownerId,
+              kind: 'paid',
+              planCode: payment.planCode,
+              cycle: payment.cycle,
+              start,
+              end,
+              paymentId: payment.id,
+            },
+            tx,
+          )
+          if (period) await repo.supersedeAt(payment.ownerId, start, period, tx)
+          const cancel = await repo.scheduledCancel(payment.ownerId, tx)
+          if (cancel) await repo.endScheduledChange(cancel.id, 'cancelled', tx)
+        }
         await onDecided?.(tx, payment, confirmed!)
         return toPayment(confirmed!)
       }),
     /** Idempotent; the reason is stored and shown to the owner. */
-    reject: (id: string, decidedBy: string, reason: string, onDecided?: DecisionHook) =>
-      repo.admin(async (tx) => {
+    reject: (
+      id: string,
+      decidedBy: string,
+      reason: string,
+      onDecided?: DecisionHook,
+      transaction?: Transaction,
+    ) =>
+      inAdminTransaction(transaction, async (tx) => {
         const rejectionReason = reason.trim()
         if (!rejectionReason)
           throw new AppError(400, 'REJECTION_REASON_REQUIRED', 'Give a reason for the rejection.')
-        const payment = await repo.payment(id, tx)
-        if (!payment) throw new AppError(404, 'NOT_FOUND', 'Payment not found.')
+        const found = await repo.payment(id, tx)
+        if (!found) throw new AppError(404, 'NOT_FOUND', 'Payment not found.')
+        await subscriptions.lock(found.ownerId, tx)
+        const payment = (await repo.payment(id, tx))!
         if (payment.status === 'rejected') return toPayment(payment)
         const row = await repo.decide(
           id,

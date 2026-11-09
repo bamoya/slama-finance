@@ -123,7 +123,18 @@ export async function initializeDatabase(env = process.env) {
           `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.${identifier(table)} TO ${role}`,
         )
       for (const [privileges, tables] of [
-        ['SELECT', ['permissions', 'subscription_plans', 'billing_settings']],
+        [
+          'SELECT',
+          [
+            'permissions',
+            'subscription_plans',
+            'billing_settings',
+            'entitlement_definitions',
+            'plan_versions',
+            'plan_entitlements',
+            'plan_version_prices',
+          ],
+        ],
         ['SELECT, INSERT', ['organizations']],
         // Former addresses; delete only when an organization takes back its own old slug.
         ['SELECT, INSERT, DELETE', ['organization_slug_history']],
@@ -135,6 +146,8 @@ export async function initializeDatabase(env = process.env) {
             'owner_subscriptions',
             'subscription_emails',
             'subscription_payments',
+            'subscription_overrides',
+            'subscription_override_notes',
           ],
         ],
         ['SELECT, INSERT, UPDATE, DELETE', ['subscription_storage']],
@@ -168,6 +181,28 @@ export async function initializeDatabase(env = process.env) {
       )
       await tx.unsafe(
         `GRANT UPDATE (status, coverage_start, coverage_end, decided_at, decided_by, received_reference, rejection_reason) ON public.subscription_payments TO ${role}`,
+      )
+      // S5b coverage writers (dual write). Rows are append-only (trigger guards): the runtime inserts,
+      // records a supersession or a scheduled-change status, and shifts windows only through the
+      // administrator-only SECURITY DEFINER function on resume.
+      for (const table of [
+        'subscription_periods',
+        'subscription_period_notes',
+        'subscription_suspensions',
+        'subscription_scheduled_changes',
+      ])
+        await tx.unsafe(`GRANT SELECT, INSERT ON TABLE public.${identifier(table)} TO ${role}`)
+      await tx.unsafe(
+        `GRANT UPDATE (superseded_at, superseded_by) ON public.subscription_periods TO ${role}`,
+      )
+      await tx.unsafe(`GRANT UPDATE (status) ON public.subscription_scheduled_changes TO ${role}`)
+      await tx.unsafe(
+        `GRANT EXECUTE ON FUNCTION public.subscription_periods_shift(uuid, timestamptz, bigint) TO ${role}`,
+      )
+      // Override history is append-only; revocation fills its fields once (trigger guards).
+      await tx.unsafe(`GRANT UPDATE (revoked_at) ON public.subscription_overrides TO ${role}`)
+      await tx.unsafe(
+        `GRANT UPDATE (revoked_by, revocation_reason) ON public.subscription_override_notes TO ${role}`,
       )
       await tx.unsafe(
         `GRANT UPDATE (tax_rate_basis_points, payment_methods, payment_instructions) ON public.billing_settings TO ${role}`,

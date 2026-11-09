@@ -6,12 +6,20 @@ import type { FastifyInstance } from 'fastify'
 import postgres from 'postgres'
 
 import * as tables from '../../db/schema/index.js'
+import { createBillingRepository } from '../../src/modules/platform/subscriptions/repositories/billing.repository.js'
 
 export const testOrganizationId = '10000000-0000-4000-8000-000000000001'
 export const testOwnerId = '10000000-0000-4000-8000-000000000002'
 
 export const testUserId = '11111111-1111-4111-8111-111111111111'
-export async function isolatedDatabase() {
+/**
+ * Fixture owner subscription: `legacy` is the legacy-only `pro` paid-through marker (no period, so
+ * periods reads see the trial); `paid` is confirmed `pro` coverage written like a confirmation;
+ * `trial` leaves the trial only.
+ */
+export async function isolatedDatabase({
+  owner = 'legacy',
+}: { owner?: 'legacy' | 'paid' | 'trial' } = {}) {
   const value = process.env.TEST_DATABASE_URL
   if (!value)
     throw new Error(
@@ -64,7 +72,17 @@ export async function isolatedDatabase() {
     }
     await client`insert into platform_users (id,email,password_hash) values (${testOwnerId},'fixture-owner@example.test','not-a-login-hash')`
     await client`insert into organizations(id,owner_id,name,slug,activated_at) values (${testOrganizationId},${testOwnerId},'Fixture','fixture',now())`
-    await client`update owner_subscriptions set plan_code='pro',paid_through_at=now()+interval '30 days' where owner_id=${testOwnerId}`
+    const db = drizzle(client, { schema: tables })
+    if (owner === 'legacy')
+      await client`update owner_subscriptions set plan_code='pro',paid_through_at=now()+interval '30 days' where owner_id=${testOwnerId}`
+    if (owner === 'paid')
+      await seedPaidCoverage(db, {
+        ownerId: testOwnerId,
+        planCode: 'pro',
+        start: new Date(Date.now() - 30 * DAY),
+        end: new Date(Date.now() + 30 * DAY),
+        reference: 'fixture-coverage',
+      })
     await client`INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password) VALUES (${testUserId}, 'operator@example.test', 'fixture-not-a-login-hash', 'Test', 'Operator', false)`
     await admin.unsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".actors TO "${role}"`)
@@ -72,7 +90,7 @@ export async function isolatedDatabase() {
     await admin.unsafe(`GRANT SELECT ON "${schema}".organization_slug_history TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT, UPDATE ON "${schema}".users TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".audit_events TO "${role}"`)
-    return { db: drizzle(client, { schema: tables }), client, role, cleanup }
+    return { db, client, role, cleanup }
   } catch (error) {
     await cleanup()
     throw error
@@ -85,6 +103,67 @@ export async function isolatedDatabase() {
  * organization named by the test-only `x-organization-id` header (default: the fixture). The
  * legacy test origin is rewritten to the request's own site origin; explicit hosts are kept.
  */
+const DAY = 86_400_000
+
+/**
+ * Confirmed paid coverage written like a payment confirmation (S5b dual write): the confirmed payment,
+ * its paid period superseding the rest of the running coverage (later start wins) and the legacy
+ * paid-through/plan.
+ */
+export async function seedPaidCoverage(
+  db: ReturnType<typeof drizzle<typeof tables>>,
+  values: {
+    ownerId: string
+    planCode: string
+    start: Date
+    end: Date
+    reference: string
+    kind?: 'activation' | 'renewal' | 'upgrade'
+  },
+) {
+  const billing = createBillingRepository(() => db)
+  return billing.admin(async (tx) => {
+    const [payment] = await tx
+      .insert(tables.subscriptionPayments)
+      .values({
+        ownerId: values.ownerId,
+        planCode: values.planCode,
+        cycle: 'monthly',
+        kind: values.kind ?? 'activation',
+        method: 'cash',
+        reference: values.reference,
+        currency: 'MAD',
+        amountHt: 100,
+        taxAmount: 0,
+        amountTtc: 100,
+        status: 'confirmed',
+        coverageStart: values.start,
+        coverageEnd: values.end,
+        decidedAt: new Date(),
+      })
+      .returning()
+    const period = await billing.insertPeriod(
+      {
+        ownerId: values.ownerId,
+        kind: 'paid',
+        planCode: values.planCode,
+        cycle: 'monthly',
+        start: values.start,
+        end: values.end,
+        paymentId: payment!.id,
+      },
+      tx,
+    )
+    await billing.supersedeAt(values.ownerId, values.start, period!, tx)
+    await billing.applyCoverage(
+      values.ownerId,
+      { paidThroughAt: values.end, planCode: values.planCode },
+      tx,
+    )
+    return payment!
+  })
+}
+
 export function routeToSites(
   app: FastifyInstance,
   slugOf: (organizationId: string) => Promise<string | undefined>,

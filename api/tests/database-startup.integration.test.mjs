@@ -67,6 +67,111 @@ test('startup migrates once, serializes, provisions restricted access, and prese
       audit_delete: false,
       truncate: false,
     })
+    // Exercise the initializer's real grants, not synthetic fixture permissions.
+    await runtime.begin(async (tx) => {
+      await tx`select set_config('app.actor_type','owner',true)`
+      for (const [table, count] of [
+        ['entitlement_definitions', 11],
+        ['plan_versions', 4],
+        ['plan_entitlements', 44],
+        ['plan_version_prices', 6],
+      ]) {
+        expect(Number((await tx.unsafe(`select count(*) n from public.${table}`))[0].n)).toBe(count)
+        const [privilege] =
+          await tx`select has_table_privilege(current_user,${'public.' + table},'INSERT,UPDATE,DELETE,TRUNCATE') writable`
+        expect(privilege.writable).toBe(false)
+      }
+    })
+    await expect(
+      runtime`insert into public.plan_versions(plan_code,version_number,display_name,rank) values ('business',2,'Forbidden draft',2)`,
+    ).rejects.toThrow(/permission denied/)
+    await expect(runtime`update public.plan_versions set display_name='Forbidden'`).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(runtime`delete from public.plan_version_prices`).rejects.toThrow(
+      /permission denied/,
+    )
+    // S5b coverage writers: insert-only rows, supersession/status columns, controlled shift function.
+    const [periods] = await runtime`select
+      has_table_privilege(current_user,'public.subscription_periods','SELECT,INSERT') period_insert,
+      has_table_privilege(current_user,'public.subscription_periods','DELETE,TRUNCATE') period_delete,
+      has_column_privilege(current_user,'public.subscription_periods','superseded_at','UPDATE') superseded,
+      has_column_privilege(current_user,'public.subscription_periods','ends_at','UPDATE') window_update,
+      has_table_privilege(current_user,'public.subscription_period_notes','INSERT') note_insert,
+      has_table_privilege(current_user,'public.subscription_period_notes','UPDATE,DELETE,TRUNCATE') note_change,
+      has_table_privilege(current_user,'public.subscription_suspensions','INSERT') suspension_insert,
+      has_table_privilege(current_user,'public.subscription_suspensions','UPDATE,DELETE,TRUNCATE') suspension_change,
+      has_column_privilege(current_user,'public.subscription_scheduled_changes','status','UPDATE') change_status,
+      has_column_privilege(current_user,'public.subscription_scheduled_changes','effective_at','UPDATE') change_effective,
+      has_function_privilege(current_user,'public.subscription_periods_shift(uuid,timestamptz,bigint)','EXECUTE') shift,
+      has_function_privilege(current_user,'public.subscription_periods_reconcile(text)','EXECUTE') reconcile,
+      has_function_privilege(current_user,'public.mirror_subscription_trial()','EXECUTE') mirror`
+    expect(periods).toEqual({
+      period_insert: true,
+      period_delete: false,
+      superseded: true,
+      window_update: false,
+      note_insert: true,
+      note_change: false,
+      suspension_insert: true,
+      suspension_change: false,
+      change_status: true,
+      change_effective: false,
+      shift: true,
+      reconcile: false,
+      mirror: false,
+    })
+    // The shift function refuses outside an administrator transaction.
+    await expect(
+      runtime`select public.subscription_periods_shift(gen_random_uuid(), now(), 0)`,
+    ).rejects.toThrow(/Platform administrator context required/)
+    // Override history: append-only through grants, administrator-only through RLS.
+    const [columns] = await runtime`select
+      has_column_privilege(current_user,'public.subscription_overrides','revoked_at','UPDATE') revoked_at,
+      has_column_privilege(current_user,'public.subscription_overrides','integer_value','UPDATE') integer_value,
+      has_column_privilege(current_user,'public.subscription_overrides','starts_at','UPDATE') starts_at,
+      has_column_privilege(current_user,'public.subscription_overrides','ends_at','UPDATE') ends_at,
+      has_column_privilege(current_user,'public.subscription_overrides','owner_id','UPDATE') owner_id,
+      has_column_privilege(current_user,'public.subscription_override_notes','revoked_by','UPDATE') revoked_by,
+      has_column_privilege(current_user,'public.subscription_override_notes','revocation_reason','UPDATE') revocation_reason,
+      has_column_privilege(current_user,'public.subscription_override_notes','reason','UPDATE') reason,
+      has_column_privilege(current_user,'public.subscription_override_notes','created_by','UPDATE') created_by,
+      has_table_privilege(current_user,'public.subscription_overrides','DELETE') override_delete,
+      has_table_privilege(current_user,'public.subscription_override_notes','DELETE') note_delete,
+      has_table_privilege(current_user,'public.subscription_overrides','TRUNCATE') override_truncate`
+    expect(columns).toEqual({
+      revoked_at: true,
+      integer_value: false,
+      starts_at: false,
+      ends_at: false,
+      owner_id: false,
+      revoked_by: true,
+      revocation_reason: true,
+      reason: false,
+      created_by: false,
+      override_delete: false,
+      note_delete: false,
+      override_truncate: false,
+    })
+    await expect(runtime`update public.subscription_overrides set integer_value=1`).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(runtime`update public.subscription_override_notes set reason='x'`).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(runtime`delete from public.subscription_overrides`).rejects.toThrow(
+      /permission denied/,
+    )
+    await expect(runtime`truncate public.subscription_overrides`).rejects.toThrow(
+      /permission denied/,
+    )
+    for (const actor of ['owner', 'worker', ''])
+      await expect(
+        runtime.begin(async (tx) => {
+          await tx`select set_config('app.actor_type',${actor},true),set_config('app.owner_id','10000000-0000-4000-8000-000000000002',true)`
+          await tx`insert into public.subscription_overrides(owner_id,entitlement_key,value_type,boolean_value,starts_at) values ('10000000-0000-4000-8000-000000000002','staff_roles','boolean',true,now())`
+        }),
+      ).rejects.toThrow(/row-level security/)
     await expect(runtime`CREATE TABLE public.forbidden (id int)`).rejects.toThrow()
     url.password = 'different_password_do_not_rotate'
     await expect(initializeDatabase({ ...env, DATABASE_URL: url.toString() })).rejects.toThrow()

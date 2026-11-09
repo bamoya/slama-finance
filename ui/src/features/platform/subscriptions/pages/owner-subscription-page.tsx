@@ -14,6 +14,24 @@ export function OwnerSubscriptionPage() {
   useUiLanguage()
   const query = useGetOwnerSubscription({ query: { retry: false } }),
     s = query.data
+  const sources = new Map((s?.entitlementSources ?? []).map((x) => [x.entitlementKey, x]))
+  /** Customer-specific allowance agreed with B-Finance, shown without internal notes. */
+  const custom = (key: string) => {
+    const source = sources.get(key as never)
+    if (source?.source !== 'override') return null
+    return source.effectiveUntil
+      ? translate('Custom allowance until {{date}}', {
+          date: displayDateTime(source.effectiveUntil, 'Africa/Casablanca'),
+        })
+      : translate('Custom allowance')
+  }
+  const customFeatures = [...sources.values()].some(
+    (x) =>
+      x.source === 'override' &&
+      !['organizations', 'staffPerOrganization', 'storageBytes', 'businessEmails'].includes(
+        x.entitlementKey,
+      ),
+  )
   return (
     <OwnerPortalLayout>
       <header className="owner-page-heading">
@@ -39,15 +57,22 @@ export function OwnerSubscriptionPage() {
               <dl className="grid grid-cols-2 gap-5">
                 {[
                   [
+                    'organizations',
                     translate('Organizations'),
                     `${s.organizationCount} / ${s.entitlements.organizations ?? translate('Unlimited')}`,
                   ],
                   [
+                    'staffPerOrganization',
                     translate('Members per organization'),
                     String(s.entitlements.staffPerOrganization ?? translate('Unlimited')),
                   ],
-                  [translate('Storage allowance'), `${s.entitlements.storageBytes / 1e9} GB`],
                   [
+                    'storageBytes',
+                    translate('Storage allowance'),
+                    `${s.entitlements.storageBytes / 1e9} GB`,
+                  ],
+                  [
+                    'businessEmails',
                     translate(
                       s.planCode === 'trial'
                         ? 'Business emails during trial'
@@ -55,13 +80,21 @@ export function OwnerSubscriptionPage() {
                     ),
                     String(s.entitlements.businessEmails),
                   ],
-                ].map(([label, value]) => (
-                  <div key={label}>
+                ].map(([key, label, value]) => (
+                  <div key={key}>
                     <dt className="text-sm text-[var(--muted)]">{label}</dt>
                     <dd className="mt-1 text-lg font-semibold">{value}</dd>
+                    {custom(key!) && (
+                      <dd className="text-xs text-[var(--accent)]">{custom(key!)}</dd>
+                    )}
                   </div>
                 ))}
               </dl>
+              {customFeatures && (
+                <p className="mt-4 text-sm text-[var(--muted)]">
+                  {translate('Some features of your subscription are customized.')}
+                </p>
+              )}
               <div className="mt-5 space-y-5 border-t border-[var(--border)] pt-5">
                 <UsageMeter
                   label={translate('Storage used')}

@@ -15,9 +15,10 @@ PostgreSQL) and `ui/` (React, Vite). French is the default language; English is 
 - Contract first: change `api/openapi/` before code, then run `pnpm contracts:generate` (api) and
   `pnpm api:generate` (ui). Never hand-write or edit generated files (`api/src/contracts/generated`,
   `ui/src/api/generated`); use generated validators, types and clients.
-- Database: edit `api/db/schema` and rebuild the baseline with `node api/scripts/rebuild-baseline.mjs --fresh`
-  while the product is undeployed (read `api/db/migrations/README.md` first). After deployment, add forward
-  migrations only; never rewrite applied ones.
+- Database: edit `api/db/schema` (and `api/db/integrity`/`reference` SQL) and rebuild the single fresh baseline
+  with `node api/scripts/rebuild-baseline.mjs --fresh` (read `api/db/migrations/README.md` first). Pre-client
+  phase: no forward migrations; the operator replaces the database volume. Switch to forward-only migrations
+  before the first real client.
 - Tests use the isolated test database. Never point tests at, or reset, the development database.
 - API layering: routes -> controllers -> services -> repositories. Controllers never touch repositories; only
   repositories touch tables or Drizzle. Other modules are used through their root `index.ts` / `*.public.ts`.

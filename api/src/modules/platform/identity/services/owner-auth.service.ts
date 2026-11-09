@@ -1,12 +1,12 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import type { OwnerRegister } from '../../../../contracts/generated/identity/owner-auth.schemas.js'
 import type { OwnerAccountDelivery } from '../../../../integrations/contracts.js'
 import { AppError } from '../../../../lib/errors.js'
 import type { createPasswordService } from '../../../../lib/password.js'
+import { hashToken as hash } from '../../../../lib/token-hash.js'
 import type { createOwnerAuthRepository } from '../repositories/owner-auth.repository.js'
 
-const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 // Valid scrypt shape to keep unknown-user password verification expensive too.
 const dummyHash = `${'0'.repeat(32)}:${'0'.repeat(128)}`
 const normalize = (email: string) => email.trim().toLowerCase()

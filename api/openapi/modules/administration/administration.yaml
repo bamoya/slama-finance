@@ -98,6 +98,7 @@ paths:
   /api/v1/admin/payments/{paymentId}/confirm:
     post:
       operationId: confirmAdminPayment
+      description: Requires a fresh administrator TOTP code and an internal audit reason.
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
       parameters:
@@ -121,6 +122,7 @@ paths:
   /api/v1/admin/payments/{paymentId}/reject:
     post:
       operationId: rejectAdminPayment
+      description: Requires a fresh administrator TOTP code and an internal audit reason.
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
       parameters:
@@ -173,7 +175,7 @@ paths:
       operationId: createAdminOwner
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Creates an owner account without organization and emails a one-time set-password invitation valid 72 hours. 409 EMAIL_TAKEN when the email exists; 503 EMAIL_UNAVAILABLE when owner email is not configured.'
+      description: 'Creates an owner account without organization and emails a one-time set-password invitation valid 72 hours. A paid subscription grant requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). 409 EMAIL_TAKEN when the email exists; 503 EMAIL_UNAVAILABLE when owner email is not configured.'
       requestBody:
         required: true
         content:
@@ -258,14 +260,14 @@ paths:
       operationId: unblockAdminOwner
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Lifts the block. Other restrictions (scheduled deletion, organization or subscription suspension) remain. 409 NOT_BLOCKED.'
+      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Lifts the block. Other restrictions (scheduled deletion, organization or subscription suspension) remain. 409 NOT_BLOCKED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AdminReason' }
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
       responses:
         '200':
           description: Updated customer.
@@ -306,14 +308,14 @@ paths:
       operationId: cancelAdminOwnerDeletion
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Cancels a scheduled deletion before its due date, restoring the previous state including any outstanding restriction. 409 DELETION_NOT_SCHEDULED or DELETION_DUE.'
+      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Cancels a scheduled deletion before its due date, restoring the previous state including any outstanding restriction. 409 DELETION_NOT_SCHEDULED or DELETION_DUE.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AdminReason' }
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
       responses:
         '200':
           description: Updated customer.
@@ -354,14 +356,14 @@ paths:
       operationId: resumeAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Restores access and shifts remaining paid or trial time by the suspended duration. 409 SUBSCRIPTION_NOT_SUSPENDED.'
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Restores access and shifts remaining paid or trial time by the suspended duration. 409 SUBSCRIPTION_NOT_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AdminReason' }
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
       responses:
         '200':
           description: Updated customer.
@@ -378,7 +380,7 @@ paths:
       operationId: changeAdminSubscriptionPlan
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Switches the current paid period to another plan immediately without payment (recorded as a confirmed 0-amount admin_adjustment payment). Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Switches the current paid period to another plan immediately without payment (recorded as a confirmed 0-amount admin_adjustment payment and a complimentary coverage period). Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -402,7 +404,7 @@ paths:
       operationId: extendAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Adds days to paid coverage (an admin_adjustment payment continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Adds days to paid coverage (an admin_adjustment payment and complimentary period continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -416,6 +418,73 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/owners/{ownerId}/entitlement-overrides:
+    get:
+      operationId: listAdminEntitlementOverrides
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Override history of one owner subscription, newest first, including revoked and expired records. 404 NOT_FOUND.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Override records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminEntitlementOverrideList' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+    post:
+      operationId: createAdminEntitlementOverride
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Replaces one plan value for this owner subscription over a half-open window. startsOn/endsOn are calendar days in the customer timezone (Africa/Casablanca by default, returned as timezone); an absent start or today starts now, a later day at its midnight, a past day is 400 OVERRIDE_START_IN_PAST; endsOn is exclusive (ends at the midnight of that day) and must be after the start (400 OVERRIDE_VALUE_INVALID). Stored and returned as UTC instants. replacesId revokes that record in the same transaction (amendment). 400 OVERRIDE_VALUE_INVALID, 409 OVERRIDE_OVERLAP, 409 OVERRIDE_NOT_REPLACEABLE, 404 NOT_FOUND.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminEntitlementOverrideCreate' }
+      responses:
+        '201':
+          description: Created override.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminEntitlementOverride' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/owners/{ownerId}/entitlement-overrides/{overrideId}/revoke:
+    post:
+      operationId: revokeAdminEntitlementOverride
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires a fresh TOTP code. Ends the override now (or cancels it before its start); the record is kept for review. 409 OVERRIDE_NOT_REVOCABLE when already revoked or ended, 404 NOT_FOUND.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: overrideId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminOverrideRevocation' }
+      responses:
+        '200':
+          description: Revoked override.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminEntitlementOverride' }
         default:
           description: Request failed
           content:
@@ -474,14 +543,14 @@ paths:
       operationId: reactivateAdminOrganization
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Lifts an administrator suspension; users sign in again. Returns the owning customer. 409 ORGANIZATION_NOT_SUSPENDED.'
+      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Lifts an administrator suspension; users sign in again. Returns the owning customer. 409 ORGANIZATION_NOT_SUSPENDED.'
       parameters:
         - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/AdminReason' }
+            schema: { $ref: '#/components/schemas/AdminSensitiveAction' }
       responses:
         '200':
           description: Updated customer.
@@ -674,7 +743,21 @@ components:
     AdminPaymentConfirmation:
       type: object
       additionalProperties: false
+      required: [auditReason, code]
       properties:
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
+          }
+        auditReason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            description: 'Internal note kept only in the administrator audit trail; never shown to owners or staff.',
+          }
         receivedReference:
           {
             type: string,
@@ -685,8 +768,21 @@ components:
     AdminPaymentRejection:
       type: object
       additionalProperties: false
-      required: [reason]
+      required: [reason, auditReason, code]
       properties:
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
+          }
+        auditReason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            description: 'Internal note kept only in the administrator audit trail; never shown to owners or staff.',
+          }
         reason: { type: string, minLength: 1, maxLength: 500, description: Shown to the owner. }
     AdminOwnerSummary:
       type: object
@@ -817,26 +913,125 @@ components:
             pattern: '^[0-9]{6}$',
             description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
           }
+    AdminEntitlementOverride:
+      type: object
+      additionalProperties: false
+      description: 'Exactly one value representation: booleanValue for features, integerValue for finite limits, unlimited=true for permitted unlimited counts.'
+      required:
+        [
+          id,
+          entitlementKey,
+          booleanValue,
+          integerValue,
+          unlimited,
+          startsAt,
+          endsAt,
+          reason,
+          createdBy,
+          createdAt,
+          revokedAt,
+          revokedBy,
+          revocationReason,
+          replacesId,
+          state,
+          timezone,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        entitlementKey: { $ref: ../../openapi.yaml#/components/schemas/EntitlementKey }
+        booleanValue: { type: [boolean, 'null'] }
+        integerValue: { type: [integer, 'null'], minimum: 0 }
+        unlimited: { type: boolean }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: [string, 'null'], format: date-time }
+        reason: { type: string }
+        createdBy: { type: string, description: 'Administrator email.' }
+        createdAt: { type: string, format: date-time }
+        revokedAt: { type: [string, 'null'], format: date-time }
+        revokedBy: { type: [string, 'null'] }
+        revocationReason: { type: [string, 'null'] }
+        replacesId: { type: [string, 'null'], format: uuid }
+        state: { type: string, enum: [scheduled, active, ended, revoked] }
+        timezone:
+          {
+            type: string,
+            description: 'Timezone used to interpret calendar days; instants above are UTC.',
+          }
+    AdminEntitlementOverrideList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/AdminEntitlementOverride' } }
+    AdminEntitlementOverrideCreate:
+      type: object
+      additionalProperties: false
+      required: [entitlementKey, booleanValue, integerValue, unlimited, reason, code]
+      properties:
+        entitlementKey: { $ref: ../../openapi.yaml#/components/schemas/EntitlementKey }
+        booleanValue: { type: [boolean, 'null'] }
+        integerValue: { type: [integer, 'null'], minimum: 0, maximum: 9007199254740991 }
+        unlimited: { type: boolean }
+        startsOn:
+          {
+            type: [string, 'null'],
+            format: date,
+            description: 'Calendar day in the customer timezone; absent, null or today means now.',
+          }
+        endsOn:
+          {
+            type: [string, 'null'],
+            format: date,
+            description: 'Exclusive calendar day in the customer timezone; absent or null means until revoked.',
+          }
+        replacesId: { type: [string, 'null'], format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    AdminOverrideRevocation:
+      type: object
+      additionalProperties: false
+      required: [reason, code]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
+        code: { type: string, pattern: '^[0-9]{6}$' }
     AdminPlanChange:
       type: object
       additionalProperties: false
-      required: [planCode, reason]
+      required: [planCode, reason, code]
       properties:
         planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
         reason: { type: string, minLength: 1, maxLength: 500 }
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
+          }
     AdminCoverageExtension:
       type: object
       additionalProperties: false
-      required: [days, reason]
+      required: [days, reason, code]
       properties:
         days: { type: integer, minimum: 1, maximum: 366 }
         reason: { type: string, minLength: 1, maxLength: 500 }
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
+          }
     AdminOwnerCreate:
       type: object
       additionalProperties: false
       required: [firstName, lastName, email, locale, subscription, reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
+        code:
+          {
+            type: string,
+            pattern: '^[0-9]{6}$',
+            description: 'Fresh TOTP code; required when subscription.kind is paid (a coverage grant), otherwise ignored.',
+          }
         firstName: { type: string, minLength: 1, maxLength: 100 }
         lastName: { type: string, minLength: 1, maxLength: 100 }
         email: { type: string, format: email, maxLength: 254 }

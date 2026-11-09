@@ -1,16 +1,26 @@
 import { and, asc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import { organizations, platformUsers } from '../../db/schema/organizations.js'
-import { ownerSubscriptions, subscriptionPlans } from '../../db/schema/subscriptions.js'
 import type { Database } from './db.js'
 import { inTenantScope } from './tenant-database.js'
 
-/** Discovery reads metadata only. Every business operation then uses a separate tenant scope. */
-export function createTenantWorkerRunner(database: () => Database) {
+export type WorkerFeature = 'business_emails' | 'scheduled_reports'
+
+/**
+ * Discovery reads metadata only (pagination plus organization/customer restrictions). Every business
+ * operation then uses a separate tenant scope. Subscription eligibility is injected (the
+ * subscriptions public API) and checked per organization at execution, featureless jobs included,
+ * so workers use the same coverage authority and effective entitlements as API admissions.
+ * includeInactive maintenance skips eligibility except for an explicit feature.
+ */
+export function createTenantWorkerRunner(
+  database: () => Database,
+  eligible: (feature?: WorkerFeature) => Promise<boolean>,
+) {
   return async (
     work: (organizationId: string) => Promise<unknown>,
     includeInactive = false,
-    feature?: 'business_emails' | 'scheduled_reports',
+    feature?: WorkerFeature,
   ) => {
     let cursor: string | undefined
     const failures: unknown[] = []
@@ -21,21 +31,17 @@ export function createTenantWorkerRunner(database: () => Database) {
           .select({ id: organizations.id })
           .from(organizations)
           .innerJoin(platformUsers, eq(platformUsers.id, organizations.ownerId))
-          .leftJoin(ownerSubscriptions, eq(ownerSubscriptions.ownerId, organizations.ownerId))
-          .leftJoin(subscriptionPlans, eq(subscriptionPlans.code, ownerSubscriptions.planCode))
           .where(
             and(
               cursor ? gt(organizations.id, cursor) : undefined,
-              feature ? sql`${subscriptionPlans.entitlements}->'features' ? ${feature}` : undefined,
               ...(!includeInactive
                 ? [
                     isNotNull(organizations.activatedAt),
-                    sql`((${ownerSubscriptions.planCode}='trial' and ${ownerSubscriptions.trialEndsAt}>now()) or (${ownerSubscriptions.planCode}<>'trial' and ${ownerSubscriptions.paidThroughAt}+case when ${ownerSubscriptions.cancelAtPeriodEnd} then interval '0' else interval '7 days' end>now()))`,
                     isNull(organizations.pausedAt),
                     isNull(organizations.suspendedAt),
                     isNull(organizations.deletionRequestedAt),
-                    // Administrator restrictions: suspended subscription, blocked or deleting customer.
-                    isNull(ownerSubscriptions.suspendedAt),
+                    // Administrator restrictions: blocked or deleting customer (subscription
+                    // suspension and coverage are part of the injected eligibility).
                     isNull(platformUsers.blockedAt),
                     isNull(platformUsers.deletionRequestedAt),
                   ]
@@ -47,7 +53,13 @@ export function createTenantWorkerRunner(database: () => Database) {
       })
       for (const organization of page) {
         try {
-          await inTenantScope(organization.id, () => work(organization.id))
+          await inTenantScope(organization.id, async () => {
+            if (
+              includeInactive ? feature && !(await eligible(feature)) : !(await eligible(feature))
+            )
+              return
+            await work(organization.id)
+          })
         } catch (error) {
           failures.push(error)
         }

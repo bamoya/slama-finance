@@ -2,15 +2,16 @@ import { sql } from 'drizzle-orm'
 
 import type { AdminOverview } from '../../../../../contracts/generated/administration/administration.schemas.js'
 import type { Transaction } from '../../../../../lib/db.js'
-import { subscriptionLifecycle } from '../../shared/repositories/subscription-lifecycle.repository.js'
+import type { LifecycleStatusSource } from '../../shared/repositories/lifecycle-status.repository.js'
 
-export function createAdminOverviewRepository() {
+/** `lifecycle` is the subscriptions module's set-based status source for the selected read authority. */
+export function createAdminOverviewRepository(lifecycle: LifecycleStatusSource) {
   return {
     /** Counts per lifecycle status; suspended subscriptions are counted only as suspended. */
     async counts(now: Date, tx: Transaction): Promise<AdminOverview> {
       const at = sql`${now.toISOString()}::timestamptz`
       const rows = await tx.execute<AdminOverview>(sql`
-        with lifecycle as (${subscriptionLifecycle(at)})
+        with lifecycle as (${lifecycle(at)})
         select
           (select count(*)::int from subscription_payments where status = 'submitted') as "pendingPayments",
           (count(*) filter (where status = 'active'))::int as "activeSubscriptions",

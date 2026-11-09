@@ -110,7 +110,7 @@ describe('customer lifecycle actions', () => {
     })
   })
 
-  it('unblocking needs only a reason and no code', async () => {
+  it('unblocking requires a reason and fresh code', async () => {
     setup(
       ownerDetail({
         restriction: {
@@ -124,15 +124,17 @@ describe('customer lifecycle actions', () => {
     )
     expect(await screen.findByText(/Chargeback dispute/)).toBeInTheDocument()
     await openAction('Unblock customer')
-    expect(screen.queryByLabelText('Authenticator code')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Unblock customer' }))
     expect(await screen.findByText('Indicate the reason for this action.')).toBeInTheDocument()
     fireEvent.change(reasonField(), { target: { value: 'Resolved' } })
     fireEvent.click(screen.getByRole('button', { name: 'Unblock customer' }))
+    expect(posts()).toHaveLength(0)
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Unblock customer' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
       url: `/api/v1/admin/owners/${ownerId}/unblock`,
-      data: { reason: 'Resolved' },
+      data: { reason: 'Resolved', code: '123456' },
     })
   })
 
@@ -142,10 +144,14 @@ describe('customer lifecycle actions', () => {
     expect(screen.getByText(/no payment is requested or recorded/i)).toBeInTheDocument()
     fireEvent.change(reasonField(), { target: { value: 'Goodwill' } })
     fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
+    expect(posts()).toHaveLength(0)
+    expect(codeField()).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
       url: `/api/v1/admin/owners/${ownerId}/subscription/plan`,
-      data: { planCode: 'business', reason: 'Goodwill' },
+      data: { planCode: 'business', reason: 'Goodwill', code: '123456' },
     })
   })
 
@@ -157,12 +163,41 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Extend coverage' }))
     expect(posts()).toHaveLength(0)
     fireEvent.change(screen.getByLabelText('Days to add'), { target: { value: '15' } })
+    fireEvent.change(codeField(), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Extend coverage' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
       url: `/api/v1/admin/owners/${ownerId}/subscription/extension`,
-      data: { days: 15, reason: 'Outage compensation' },
+      data: { days: 15, reason: 'Outage compensation', code: '123456' },
     })
+  })
+
+  it('requires and submits a fresh code to resume a subscription', async () => {
+    const detail = ownerDetail()
+    detail.subscription.status = 'suspended'
+    setup(detail)
+    await openAction('Resume subscription')
+    fireEvent.change(reasonField(), { target: { value: 'Resolved' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Resume subscription' }))
+    expect(posts()).toHaveLength(0)
+    expect(codeField()).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Resume subscription' }))
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(posts()[0]).toMatchObject({
+      url: `/api/v1/admin/owners/${ownerId}/subscription/resume`,
+      data: { reason: 'Resolved', code: '123456' },
+    })
+  })
+
+  it('clears the code when a plan change is refused', async () => {
+    setup(ownerDetail(), () => apiError(403, 'TWO_FACTOR_INVALID'))
+    await openAction('Change plan')
+    fireEvent.change(reasonField(), { target: { value: 'Goodwill' } })
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
+    await screen.findByText('server TWO_FACTOR_INVALID')
+    expect(codeField()).toHaveValue('')
   })
 
   it('suspends an organization from its row menu with a sensitive code', async () => {
@@ -232,6 +267,52 @@ describe('customer lifecycle actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change address' }))
     expect(await screen.findByText(`server ${code}`)).toBeInTheDocument()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('requires a fresh code to cancel scheduled deletion', async () => {
+    setup(
+      ownerDetail({
+        restriction: {
+          blockedAt: null,
+          blockReason: null,
+          deletionRequestedAt: '2026-10-21T09:00:00Z',
+          deletionDueAt: '2026-11-20T09:00:00Z',
+          deletionReason: 'Request',
+        },
+      }),
+    )
+    await openAction('Cancel deletion')
+    fireEvent.change(reasonField(), { target: { value: 'Resolved' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel deletion' }))
+    expect(posts()).toHaveLength(0)
+    expect(codeField()).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel deletion' }))
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(posts()[0]).toMatchObject({
+      url: `/api/v1/admin/owners/${ownerId}/deletion/cancel`,
+      data: { reason: 'Resolved', code: '123456' },
+    })
+  })
+
+  it('requires a fresh code to reactivate an organization', async () => {
+    const detail = ownerDetail()
+    detail.organizations[0]!.state = 'suspended'
+    setup(detail)
+    const row = await screen.findByRole('button', { name: 'Actions for Atlas Conseil' })
+    fireEvent.pointerDown(row, { button: 0, ctrlKey: false })
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Reactivate organization' }))
+    fireEvent.change(reasonField(), { target: { value: 'Resolved' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate organization' }))
+    expect(posts()).toHaveLength(0)
+    expect(codeField()).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(codeField(), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate organization' }))
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(posts()[0]).toMatchObject({
+      url: `/api/v1/admin/organizations/${organizationId}/reactivate`,
+      data: { reason: 'Resolved', code: '123456' },
+    })
   })
 
   it('offers resend invitation only while the invitation is pending', async () => {

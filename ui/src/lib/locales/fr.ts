@@ -2529,4 +2529,58 @@ export const french: Record<string, string> = {
   'Customers whose access is blocked.': 'Clients dont l’accès est bloqué.',
   'Invoicing and finance, in one place.': 'Facturation et finance, au même endroit.',
   'Sign in': 'Connexion',
+  // Owner-subscription overrides
+  'Until revoked': 'Jusqu’à révocation',
+  Amend: 'Modifier',
+  Revoke: 'Révoquer',
+  'Plan exceptions': 'Exceptions à l’offre',
+  'Add override': 'Ajouter une exception',
+  'Effective limits': 'Limites effectives',
+  'Override until {{date}}': 'Exception jusqu’au {{date}}',
+  Override: 'Exception',
+  'Override history': 'Historique des exceptions',
+  'Amend override': 'Modifier l’exception',
+  'Replaces one plan value for this customer subscription. Other customers are not affected.':
+    'Remplace une valeur de l’offre pour l’abonnement de ce client. Les autres clients ne sont pas concernés.',
+  'Applies to all organizations of this customer; storage and emails stay pooled.':
+    'S’applique à toutes les organisations de ce client ; le stockage et les e-mails restent mutualisés.',
+  'Suspension, expiry and organization restrictions still apply.':
+    'La suspension, l’expiration et les restrictions d’organisation s’appliquent toujours.',
+  'Existing usage is kept; lower limits only block new actions.':
+    'La consommation existante est conservée ; une limite inférieure bloque uniquement les nouvelles actions.',
+  'The current override ({{value}}) is revoked and kept in history.':
+    'L’exception actuelle ({{value}}) est révoquée et conservée dans l’historique.',
+  Entitlement: 'Droit',
+  'New limit (GB)': 'Nouvelle limite (Go)',
+  'New limit': 'Nouvelle limite',
+  'Enter a whole number of at least {{min}}.': 'Saisissez un nombre entier d’au moins {{min}}.',
+  'Feature enabled': 'Fonctionnalité activée',
+  Starts: 'Début',
+  'Empty or today: immediately. Days follow the customer timezone (Africa/Casablanca by default).':
+    'Vide ou aujourd’hui : immédiatement. Les jours suivent le fuseau horaire du client (Africa/Casablanca par défaut).',
+  Ends: 'Fin',
+  'Empty: until revoked. The end day itself is not included.':
+    'Vide : jusqu’à révocation. Le jour de fin n’est pas inclus.',
+  'The end must be after the start.': 'La fin doit être postérieure au début.',
+  'Revoke override': 'Révoquer l’exception',
+  'The plan value applies again from now on.':
+    'La valeur de l’offre s’applique de nouveau dès maintenant.',
+  'The record stays in the history and the audit log.':
+    'L’enregistrement reste dans l’historique et le journal d’audit.',
+  'Custom allowance until {{date}}': 'Allocation personnalisée jusqu’au {{date}}',
+  'Custom allowance': 'Allocation personnalisée',
+  'Some features of your subscription are customized.':
+    'Certaines fonctionnalités de votre abonnement sont personnalisées.',
+  Ended: 'Terminée',
+  Revoked: 'Révoquée',
+  'No override': 'Aucune exception',
+  'This customer uses the plan values.': 'Ce client utilise les valeurs de son offre.',
+  Storage: 'Stockage',
+  'Business emails per period': 'E-mails professionnels par période',
+  'Custom templates': 'Modèles personnalisés',
+  'Business emails': 'E-mails professionnels',
+  'Report exports': 'Exports de rapports',
+  'Staff roles': 'Rôles du personnel',
+  'Advanced analytics': 'Analyses avancées',
+  'Custom domains': 'Domaines personnalisés',
 }

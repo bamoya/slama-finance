@@ -50,6 +50,10 @@ paths:
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1owners~1{ownerId}~1subscription~1plan
   '/api/v1/admin/owners/{ownerId}/subscription/extension':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1owners~1{ownerId}~1subscription~1extension
+  '/api/v1/admin/owners/{ownerId}/entitlement-overrides':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1owners~1{ownerId}~1entitlement-overrides
+  '/api/v1/admin/owners/{ownerId}/entitlement-overrides/{overrideId}/revoke':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1owners~1{ownerId}~1entitlement-overrides~1{overrideId}~1revoke
   '/api/v1/admin/organizations/{organizationId}/suspend':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1organizations~1{organizationId}~1suspend
   '/api/v1/admin/organizations/{organizationId}/reactivate':
@@ -884,6 +888,18 @@ components:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminAuditPage
     AdminOverview:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOverview
+    AdminEntitlementOverride:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminEntitlementOverride
+    AdminEntitlementOverrideList:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminEntitlementOverrideList
+    AdminEntitlementOverrideCreate:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminEntitlementOverrideCreate
+    AdminOverrideRevocation:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOverrideRevocation
+    EntitlementKey:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/EntitlementKey
+    EntitlementSource:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/EntitlementSource
     OwnerSubscription:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/OwnerSubscription
     SubscriptionEntitlements:

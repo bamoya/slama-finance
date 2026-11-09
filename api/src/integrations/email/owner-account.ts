@@ -1,12 +1,8 @@
 import { createHash } from 'node:crypto'
 
+import { escapeHtml as escape } from '../../lib/html.js'
 import type { EmailProvider, OwnerAccountDelivery } from '../contracts.js'
 
-const escape = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-  )
 export function createOwnerAccountDelivery(
   provider: EmailProvider,
   from: string,

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 
 import type {
   AcceptStaffInvitationInput,
@@ -11,11 +11,11 @@ import { requireActorPermission } from '../../../../../lib/actor-permissions.js'
 import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import { createPasswordService } from '../../../../../lib/password.js'
+import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import type { SubscriptionsPublicApi } from '../../../../platform/subscriptions/index.js'
 import type { createStaffRepository } from '../../staff/repositories/staff.repository.js'
 import type { createInvitationRepository } from '../repositories/invitation.repository.js'
 
-const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 export function createInvitationService(
   repo: ReturnType<typeof createInvitationRepository>,
   staff: ReturnType<typeof createStaffRepository>,

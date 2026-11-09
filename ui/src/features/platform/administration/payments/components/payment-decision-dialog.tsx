@@ -14,6 +14,7 @@ import { Label } from '../../../../../components/ui/label'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { formatDh } from '../../../subscriptions/components/billing-format'
+import { TwoFactorCodeField } from '../../shared/components/two-factor-code-field'
 
 export type Decision = 'confirm' | 'reject'
 
@@ -28,30 +29,37 @@ export function PaymentDecisionDialog({
   payment: AdminPayment
   decision: Decision
   onClose: () => void
-  onConfirm: (receivedReference: string | undefined) => Promise<unknown>
-  onReject: (reason: string) => Promise<unknown>
+  onConfirm: (
+    receivedReference: string | undefined,
+    auditReason: string,
+    code: string,
+  ) => Promise<unknown>
+  onReject: (reason: string, auditReason: string, code: string) => Promise<unknown>
 }) {
   useUiLanguage()
   const [value, setValue] = useState('')
+  const [code, setCode] = useState('')
+  const [auditReason, setAuditReason] = useState('')
+  const [attempted, setAttempted] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const [missing, setMissing] = useState(false)
   const reject = decision === 'reject'
   const submit = async () => {
     const text = value.trim()
-    if (reject && !text) {
-      setMissing(true)
-      return
-    }
-    setMissing(false)
+    setAttempted(true)
+    setMissing(reject && !text)
+    if ((reject && !text) || !auditReason.trim() || !/^\d{6}$/.test(code)) return
     setPending(true)
     setError(null)
     try {
-      if (reject) await onReject(text)
-      else await onConfirm(text || undefined)
+      if (reject) await onReject(text, auditReason.trim(), code)
+      else await onConfirm(text || undefined, auditReason.trim(), code)
       onClose()
     } catch (failure) {
       setError(failure)
+      setCode('')
+      setAttempted(false)
     } finally {
       setPending(false)
     }
@@ -119,6 +127,34 @@ export function PaymentDecisionDialog({
               />
             </div>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="payment-audit-reason">{translate('Reason (internal)')}</Label>
+            <Textarea
+              id="payment-audit-reason"
+              value={auditReason}
+              maxLength={500}
+              aria-invalid={attempted && !auditReason.trim()}
+              aria-describedby={
+                attempted && !auditReason.trim() ? 'payment-audit-error' : 'payment-audit-hint'
+              }
+              onChange={(event) => setAuditReason(event.target.value)}
+            />
+            {attempted && !auditReason.trim() ? (
+              <p id="payment-audit-error" role="alert" className="text-sm text-[var(--error-text)]">
+                {translate('Indicate the reason for this action.')}
+              </p>
+            ) : (
+              <p id="payment-audit-hint" className="text-xs text-[var(--muted)]">
+                {translate('Kept in the audit log. Never shown to the customer.')}
+              </p>
+            )}
+          </div>
+          <TwoFactorCodeField
+            value={code}
+            onChange={setCode}
+            invalid={attempted && !/^\d{6}$/.test(code)}
+            disabled={pending}
+          />
           <FormError error={error} />
           <div className="flex flex-wrap justify-end gap-3">
             <Button type="button" variant="outline" disabled={pending} onClick={onClose}>

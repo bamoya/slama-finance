@@ -6,12 +6,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import { createPasswordService } from '../src/lib/password.js'
+import { tenantDatabase } from '../src/lib/tenant-database.js'
 import { createTenantWorkerRunner } from '../src/lib/tenant-workers.js'
 import { base32Decode, totp } from '../src/lib/totp.js'
 import { createAdminAccounts } from '../src/modules/platform/administration/index.js'
+import { createSubscriptionsModule } from '../src/modules/platform/subscriptions/index.js'
 import {
   attachTestDatabase,
   isolatedDatabase,
+  seedPaidCoverage,
   testOrganizationId,
   testOwnerId,
 } from './helpers/postgres.js'
@@ -38,7 +41,7 @@ describe('Customer lifecycle administration', () => {
   const orgB = '10000000-0000-4000-8000-0000000000b2'
 
   beforeEach(async () => {
-    fixture = await isolatedDatabase()
+    fixture = await isolatedDatabase({ owner: 'paid' })
     messages = []
     app = await buildApp({
       environment: loadEnvironment({
@@ -138,7 +141,13 @@ describe('Customer lifecycle administration', () => {
     app.inject({ method: 'GET', url, cookies: { slama_owner_session: value } })
   async function visitedByWorkers() {
     const visited: string[] = []
-    await createTenantWorkerRunner(() => fixture.db)(async (id) => {
+    // Production eligibility: the subscriptions public API decides, featureless jobs included.
+    const subscriptions = createSubscriptionsModule(() => fixture.db).publicApi
+    await createTenantWorkerRunner(
+      () => fixture.db,
+      (feature) =>
+        tenantDatabase(fixture.db).transaction((tx) => subscriptions.workerEligible(tx, feature)),
+    )(async (id) => {
       visited.push(id)
     })
     return visited.sort()
@@ -179,12 +188,22 @@ describe('Customer lifecycle administration', () => {
 
     const [payment] =
       await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'pro','monthly','renewal','cash','after-block','MAD',100,0,100) returning id`
-    expect((await admin(`/api/v1/admin/payments/${payment!.id}/confirm`)).statusCode).toBe(200)
+    expect(
+      (
+        await admin(`/api/v1/admin/payments/${payment!.id}/confirm`, {
+          code: await freshCode(),
+          auditReason: 'receipt verified',
+        })
+      ).statusCode,
+    ).toBe(200)
     expect((await detail()).restriction.blockedAt).toBeTruthy()
     expect((await ownerLogin()).statusCode).toBe(401)
 
     expect((await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {})).statusCode).toBe(400)
-    const unblocked = await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'paid' })
+    const unblocked = await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {
+      reason: 'paid',
+      code: await freshCode(),
+    })
     expect(unblocked.json().restriction.blockedAt).toBeNull()
     expect(await audits('customer.unblock')).toHaveLength(1)
     const again = await ownerCookie()
@@ -226,6 +245,7 @@ describe('Customer lifecycle administration', () => {
       (
         await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
           reason: 'ok',
+          code: await freshCode(),
         })
       ).statusCode,
     ).toBe(200)
@@ -234,13 +254,20 @@ describe('Customer lifecycle administration', () => {
       (
         await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
           reason: 'ok',
+          code: await freshCode(),
         })
       ).json().code,
     ).toBe('ORGANIZATION_NOT_SUSPENDED')
   })
 
   it('freezes coverage while the subscription is suspended and restores the exact time', async () => {
-    await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${testOwnerId},'pro','monthly','activation','cash','cov','MAD',100,0,100,'confirmed',now()-interval '15 days',now()+interval '20 days',now())`
+    await seedPaidCoverage(fixture.db, {
+      ownerId: testOwnerId,
+      planCode: 'pro',
+      start: new Date(Date.now() - 15 * DAY),
+      end: new Date(Date.now() + 20 * DAY),
+      reference: 'cov',
+    })
     const [before] =
       await fixture.client`select coverage_end from subscription_payments where reference='cov'`
     const suspended = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
@@ -260,9 +287,15 @@ describe('Customer lifecycle administration', () => {
     expect(summary.body).not.toContain(secret)
 
     // Pretend the suspension lasted ten days.
-    await fixture.client`update owner_subscriptions set suspended_at=suspended_at-interval '10 days' where owner_id=${testOwnerId}`
+    // Both suspension histories move together (test-only trigger bypass for the append-only row).
+    await fixture.client.begin(async (tx) => {
+      await tx`set local session_replication_role = replica`
+      await tx`update owner_subscriptions set suspended_at=suspended_at-interval '10 days' where owner_id=${testOwnerId}`
+      await tx`update subscription_suspensions set started_at=started_at-interval '10 days' where owner_id=${testOwnerId} and ended_at is null`
+    })
     const resumed = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/resume`, {
       reason: 'ok',
+      code: await freshCode(),
     })
     expect(resumed.statusCode).toBe(200)
     expect(resumed.json().subscription.status).toBe('active')
@@ -298,6 +331,7 @@ describe('Customer lifecycle administration', () => {
     expect(restriction.deletionReason).toBe(secret)
     const cancelled = await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
       reason: 'mistake',
+      code: await freshCode(),
     })
     expect(cancelled.json().restriction).toMatchObject({
       deletionRequestedAt: null,
@@ -309,56 +343,271 @@ describe('Customer lifecycle administration', () => {
     expect(await audits('customer.delete_cancel')).toHaveLength(1)
 
     // Without an earlier restriction, cancelling restores full access.
-    await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, { reason: 'cleared' })
+    await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {
+      reason: 'cleared',
+      code: await freshCode(),
+    })
     await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, {
       reason: 'req',
       code: await freshCode(),
     })
     expect((await ownerLogin()).statusCode).toBe(401)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(403)
-    await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, { reason: 'kept' })
+    await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
+      reason: 'kept',
+      code: await freshCode(),
+    })
     expect((await ownerLogin()).statusCode).toBe(200)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(200)
   })
 
-  it('changes the plan and extends coverage with audited zero-amount adjustments', async () => {
-    await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,status,coverage_start,coverage_end,decided_at) values (${testOwnerId},'pro','monthly','activation','cash','cov','MAD',100,0,100,'confirmed',now()-interval '5 days',now()+interval '20 days',now())`
+  it('changes the plan and extends coverage with audited zero-amount adjustments and periods', async () => {
+    await seedPaidCoverage(fixture.db, {
+      ownerId: testOwnerId,
+      planCode: 'pro',
+      start: new Date(Date.now() - 5 * DAY),
+      end: new Date(Date.now() + 20 * DAY),
+      reference: 'cov',
+    })
     const url = `/api/v1/admin/owners/${testOwnerId}/subscription`
     expect((await admin(`${url}/plan`, { planCode: 'essential' })).statusCode).toBe(400)
-    const changed = await admin(`${url}/plan`, { planCode: 'essential', reason: 'downgrade' })
+    const changed = await admin(`${url}/plan`, {
+      planCode: 'essential',
+      reason: 'downgrade',
+      code: await freshCode(),
+    })
     expect(changed.statusCode).toBe(200)
     expect(changed.json().subscription.planCode).toBe('essential')
-    expect(
-      changed.json().payments.find((p: { method: string }) => p.method === 'admin_adjustment'),
-    ).toMatchObject({
-      method: 'admin_adjustment',
-      status: 'confirmed',
-      amount: { amountTtc: 0 },
+    // S5b dual write: the legacy zero-value adjustment and its complimentary period (with the note).
+    const adjustment = changed
+      .json()
+      .payments.find((p: { method: string }) => p.method === 'admin_adjustment')
+    expect(adjustment).toMatchObject({ status: 'confirmed', amount: { amountTtc: 0 } })
+    const [granted] =
+      await fixture.client`select p.kind, p.plan_code, p.source, p.payment_id, n.reason, n.created_by from subscription_periods p join subscription_period_notes n on n.period_id=p.id where p.owner_id=${testOwnerId}`
+    expect(granted).toMatchObject({
+      kind: 'complimentary',
+      plan_code: 'essential',
+      source: 'admin_grant',
+      payment_id: adjustment.id,
+      reason: 'downgrade',
     })
-    expect((await admin(`${url}/plan`, { planCode: 'essential', reason: 'x' })).json().code).toBe(
-      'SAME_PLAN',
-    )
+    expect(granted!.created_by).not.toBeNull()
+    expect(
+      (
+        await admin(`${url}/plan`, { planCode: 'essential', reason: 'x', code: await freshCode() })
+      ).json().code,
+    ).toBe('SAME_PLAN')
     const before = new Date(changed.json().subscription.paidThroughAt).getTime()
     expect((await admin(`${url}/extension`, { days: 0, reason: 'x' })).statusCode).toBe(400)
-    const extended = await admin(`${url}/extension`, { days: 10, reason: 'goodwill' })
+    const extended = await admin(`${url}/extension`, {
+      days: 10,
+      reason: 'goodwill',
+      code: await freshCode(),
+    })
     expect(new Date(extended.json().subscription.paidThroughAt).getTime() - before).toBe(10 * DAY)
     expect(await audits('subscription.change_plan')).toHaveLength(1)
     const [audit] = await audits('subscription.extend')
     expect(audit!.after).toMatchObject({ days: 10, reason: 'goodwill' })
+    expect(audit!.after).not.toHaveProperty('code')
     const owner = await ownerCookie()
     const payments = await ownerGet('/api/v1/owner/subscription/payments', owner)
     expect(payments.body).not.toContain('goodwill')
     expect(payments.body).not.toContain('downgrade')
   })
 
+  it.each(['unblock', 'cancel-deletion', 'reactivate'] as const)(
+    'requires fresh step-up and restores %s access atomically',
+    async (operation) => {
+      const setupUrl =
+        operation === 'reactivate'
+          ? `/api/v1/admin/organizations/${testOrganizationId}/suspend`
+          : `/api/v1/admin/owners/${testOwnerId}/${operation === 'unblock' ? 'block' : 'deletion'}`
+      expect(
+        (await admin(setupUrl, { reason: 'restrict', code: await freshCode() })).statusCode,
+      ).toBe(200)
+      const url =
+        operation === 'reactivate'
+          ? `/api/v1/admin/organizations/${testOrganizationId}/reactivate`
+          : `/api/v1/admin/owners/${testOwnerId}/${operation === 'unblock' ? 'unblock' : 'deletion/cancel'}`
+      const action = {
+        unblock: 'customer.unblock',
+        'cancel-deletion': 'customer.delete_cancel',
+        reactivate: 'organization.reactivate',
+      }[operation]
+      const snapshot = async () =>
+        JSON.stringify(
+          await fixture.client.unsafe(`select row_to_json(t) from
+        (select id,blocked_at,deletion_requested_at,deletion_due_at from platform_users where id='${testOwnerId}') t`),
+        ) +
+        JSON.stringify(
+          await fixture.client`select id,suspended_at from organizations order by id`,
+        ) +
+        JSON.stringify(await audits(action))
+      const code = await freshCode()
+      const before = await snapshot()
+      expect((await admin(url, { reason: 'restore' })).statusCode).toBe(400)
+      expect((await admin(url, { code })).statusCode).toBe(400)
+      expect((await admin(url, { reason: '   ', code })).statusCode).toBe(400)
+      const validCodes = [-30_000, 0, 30_000].map((offset) => totp(key, Date.now() + offset))
+      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
+        (candidate) => !validCodes.includes(candidate),
+      )!
+      const wrong = await admin(url, { reason: 'restore', code: invalid })
+      expect(wrong.statusCode).toBe(403)
+      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toBe(before)
+      await fixture.client
+        .unsafe(`create function reject_restore_audit() returns trigger language plpgsql as $$
+        begin if NEW.action='${action}' then raise exception 'test audit failure'; end if; return NEW; end $$`)
+      await fixture.client.unsafe(
+        'create trigger reject_restore_audit before insert on platform_admin_audit for each row execute function reject_restore_audit()',
+      )
+      expect((await admin(url, { reason: 'restore', code })).statusCode).toBe(500)
+      expect(await snapshot()).toBe(before)
+      expect(
+        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
+      ).toBeNull()
+      await fixture.client.unsafe('drop trigger reject_restore_audit on platform_admin_audit')
+      expect((await admin(url, { reason: 'restore', code })).statusCode).toBe(200)
+      const [actor] = await fixture.client`select id from platform_admins where email=${adminEmail}`
+      const [audit] = await audits(action)
+      expect(audit).toMatchObject({
+        admin_id: actor!.id,
+        actor: adminEmail,
+        after: { reason: 'restore' },
+      })
+      expect(audit!.after).not.toHaveProperty('code')
+      const committed = await snapshot()
+      const replay = await admin(url, { reason: 'restore', code })
+      expect(replay.statusCode).toBe(403)
+      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toBe(committed)
+    },
+  )
+
+  it.each(['plan', 'extension', 'resume', 'paid-owner'] as const)(
+    'requires fresh step-up and commits %s coverage, actor and audit atomically',
+    async (operation) => {
+      if (operation === 'resume') {
+        const suspended = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
+          reason: 'pause',
+          code: await freshCode(),
+        })
+        expect(suspended.statusCode).toBe(200)
+      }
+      const action = {
+        plan: 'subscription.change_plan',
+        extension: 'subscription.extend',
+        resume: 'subscription.resume',
+        'paid-owner': 'customer.create',
+      }[operation]
+      const url =
+        operation === 'paid-owner'
+          ? '/api/v1/admin/owners'
+          : `/api/v1/admin/owners/${testOwnerId}/subscription/${operation}`
+      const payload = {
+        plan: { planCode: 'essential', reason: 'coverage approval' },
+        extension: { days: 10, reason: 'coverage approval' },
+        resume: { reason: 'coverage approval' },
+        'paid-owner': {
+          firstName: 'Paid',
+          lastName: 'Owner',
+          email: 'atomic@example.test',
+          locale: 'fr',
+          reason: 'coverage approval',
+          subscription: {
+            kind: 'paid',
+            planCode: 'business',
+            cycle: 'monthly',
+            coverageStart: new Date(Date.now() - DAY).toISOString(),
+            coverageEnd: new Date(Date.now() + 30 * DAY).toISOString(),
+          },
+        },
+      }[operation]
+      const code = await freshCode()
+      const wrongCode = [0, -30_000, 30_000].map((offset) => totp(key, Date.now() + offset))
+      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
+        (candidate) => !wrongCode.includes(candidate),
+      )!
+      const snapshot = async () => {
+        const tables = [
+          'platform_users',
+          'owner_subscriptions',
+          'subscription_payments',
+          'subscription_periods',
+          'subscription_period_notes',
+          'subscription_suspensions',
+          'subscription_scheduled_changes',
+          'owner_account_tokens',
+          'platform_admin_audit',
+        ]
+        return Promise.all(
+          tables.map(async (table) =>
+            JSON.stringify(
+              await fixture.client.unsafe(`select * from ${table} t order by row_to_json(t)::text`),
+            ),
+          ),
+        )
+      }
+      const before = await snapshot()
+      expect((await admin(url, payload)).statusCode).toBe(operation === 'paid-owner' ? 403 : 400)
+      const wrong = await admin(url, { ...payload, code: invalid })
+      expect(wrong.statusCode).toBe(403)
+      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toEqual(before)
+
+      // Fail after the mutation, at the audit insert, to verify the entire transaction rolls back.
+      await fixture.client
+        .unsafe(`create function reject_coverage_audit() returns trigger language plpgsql as $$
+        begin if NEW.action = '${action}' then raise exception 'test audit failure'; end if; return NEW; end $$`)
+      await fixture.client
+        .unsafe(`create trigger reject_coverage_audit before insert on platform_admin_audit
+        for each row execute function reject_coverage_audit()`)
+      const failed = await admin(url, { ...payload, code })
+      expect(failed.statusCode, failed.body).toBe(500)
+      expect(await snapshot()).toEqual(before)
+      expect(
+        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
+      ).toBeNull()
+      expect(messages).toHaveLength(0)
+      await fixture.client.unsafe('drop trigger reject_coverage_audit on platform_admin_audit')
+      const success = await admin(url, { ...payload, code })
+      expect(success.statusCode, success.body).toBe(operation === 'paid-owner' ? 201 : 200)
+      const [actor] = await fixture.client`select id from platform_admins where email=${adminEmail}`
+      const [audit] = await audits(action)
+      expect(audit).toMatchObject({
+        admin_id: actor!.id,
+        actor: adminEmail,
+        target_id: success.json().owner.id,
+        after: { reason: 'coverage approval' },
+      })
+      if (operation !== 'resume') {
+        const notes =
+          await fixture.client`select n.created_by,n.reason from subscription_period_notes n
+          join subscription_periods p on p.id=n.period_id where p.owner_id=${success.json().owner.id}`
+        expect(notes).toContainEqual({ created_by: actor!.id, reason: 'coverage approval' })
+      }
+      const committed = await snapshot()
+      const replay = await admin(url, { ...payload, code })
+      expect(replay.statusCode).toBe(403)
+      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
+      expect(await snapshot()).toEqual(committed)
+    },
+  )
+
   it('creates customers with single-use, expiring invitations and resends', async () => {
-    const create = (email: string, subscription: object = { kind: 'trial' }) =>
+    const create = async (
+      email: string,
+      subscription: { kind: string; [key: string]: unknown } = { kind: 'trial' },
+    ) =>
       admin('/api/v1/admin/owners', {
         firstName: 'Nadia',
         lastName: 'Alaoui',
         email,
         locale: 'en',
         subscription,
+        ...(subscription.kind === 'paid' ? { code: await freshCode() } : {}),
         reason: 'signed contract',
       })
     const created = await create('New@Example.Test')

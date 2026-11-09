@@ -19,7 +19,9 @@ export function assertVersion(actual: number, expected: number) {
   if (actual !== expected)
     throw new AppError(409, 'STALE_VERSION', 'This record changed. Reload before saving.')
 }
-export function companyDate(value: Date, timezone = 'Africa/Casablanca'): string {
+/** Default (and today the only supported) business timezone; per-organization settings may override it. */
+export const defaultTimezone = 'Africa/Casablanca'
+export function companyDate(value: Date, timezone = defaultTimezone): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',

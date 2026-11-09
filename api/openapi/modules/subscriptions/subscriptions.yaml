@@ -119,6 +119,10 @@ paths:
 components:
   schemas:
     SubscriptionEntitlements:
+      description: >-
+        Effective owner-subscription entitlements. Null count limits mean unlimited;
+        storage and queued-recipient allowances are finite. Normalized catalog storage
+        is an additive internal representation; active owner-subscription overrides replace plan values.
       type: object
       additionalProperties: false
       required: [organizations, staffPerOrganization, features, storageBytes, businessEmails]
@@ -143,6 +147,36 @@ components:
             }
         storageBytes: { type: integer, minimum: 0 }
         businessEmails: { type: integer, minimum: 0 }
+    EntitlementKey:
+      type: string
+      enum:
+        [
+          organizations,
+          staffPerOrganization,
+          storageBytes,
+          businessEmails,
+          custom_templates,
+          business_emails,
+          scheduled_reports,
+          report_exports,
+          staff_roles,
+          advanced_analytics,
+          custom_domains,
+        ]
+    EntitlementSource:
+      type: object
+      additionalProperties: false
+      description: Origin of one effective value. Never includes administrator notes or identities.
+      required: [entitlementKey, source, effectiveUntil]
+      properties:
+        entitlementKey: { $ref: '#/components/schemas/EntitlementKey' }
+        source: { type: string, enum: [plan, override] }
+        effectiveUntil:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'End of the applied override; null for plan values or open-ended overrides.',
+          }
     OwnerSubscription:
       type: object
       additionalProperties: false
@@ -162,6 +196,7 @@ components:
           pendingPayment,
           entitlements,
           organizationCount,
+          entitlementSources,
           usage,
         ]
       properties:
@@ -199,6 +234,10 @@ components:
           { anyOf: [{ $ref: '#/components/schemas/SubscriptionPayment' }, { type: 'null' }] }
         entitlements: { $ref: '#/components/schemas/SubscriptionEntitlements' }
         organizationCount: { type: integer, minimum: 0 }
+        entitlementSources:
+          description: Origin of each effective entitlement at response time (plan value or owner override).
+          type: array
+          items: { $ref: '#/components/schemas/EntitlementSource' }
         usage:
           type: object
           additionalProperties: false

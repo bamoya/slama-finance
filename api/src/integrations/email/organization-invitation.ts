@@ -1,10 +1,6 @@
+import { escapeHtml as escape } from '../../lib/html.js'
 import type { EmailProvider, OrganizationInvitationDelivery } from '../contracts.js'
 
-const escape = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-  )
 export function createOrganizationInvitationDelivery(
   provider: EmailProvider,
   from: string,

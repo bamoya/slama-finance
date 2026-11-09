@@ -28,8 +28,12 @@ describe('Organization staff invitations', () => {
   let mail: Parameters<OrganizationInvitationDelivery['send']>[0][],
     failDelivery: boolean,
     adminRole: string
-  beforeEach(async () => {
-    f = await isolatedDatabase()
+  // The final-seat test needs the trial owner (two staff seats); the others use paid coverage.
+  const trialOwner = new Set([
+    'atomically admits just one invitation at the final seat and rejects later token replay',
+  ])
+  beforeEach(async ({ task }) => {
+    f = await isolatedDatabase({ owner: trialOwner.has(task.name) ? 'trial' : 'paid' })
     mail = []
     failDelivery = false
     const [role] =
@@ -218,7 +222,6 @@ describe('Organization staff invitations', () => {
     expect(count[0]!.n).toBe(0)
   })
   it('atomically admits just one invitation at the final seat and rejects later token replay', async () => {
-    await f.client`update owner_subscriptions set plan_code='trial',paid_through_at=null where owner_id=${testOwnerId}`
     await create('one@example.test', [])
     await create('two@example.test', [])
     await run()

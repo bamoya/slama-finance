@@ -1,8 +1,9 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import type { createPasswordService } from '../../../../../lib/password.js'
+import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import {
   base32Decode,
   createSecretBox,
@@ -23,7 +24,6 @@ export const ADMIN_IDLE_MINUTES = 30
 const PENDING_MINUTES = 5
 const MAX_CODE_ATTEMPTS = 5
 
-const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 // Valid scrypt shape so unknown-email verification costs the same as a real one.
 const dummyHash = `${'0'.repeat(32)}:${'0'.repeat(128)}`
 export const normalizeEmail = (email: string) => email.trim().toLowerCase()

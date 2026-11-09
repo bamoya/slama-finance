@@ -1,5 +1,5 @@
 {
-  "id": "8e0f6f5f-24b0-4914-bfdb-0f82d62cf989",
+  "id": "ee3d6cb1-8dc4-4d4f-b858-63862739a607",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10078,6 +10078,1405 @@
         "staff_invitation_attempts": {
           "name": "staff_invitation_attempts",
           "value": "\"staff_invitations\".\"attempts\" between 0 and 5"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.entitlement_definitions": {
+      "name": "entitlement_definitions",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unlimited_allowed": {
+          "name": "unlimited_allowed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entitlement_definition_key_type": {
+          "name": "entitlement_definition_key_type",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key",
+            "value_type"
+          ]
+        }
+      },
+      "policies": {
+        "entitlement_definitions_migration_write": {
+          "name": "entitlement_definitions_migration_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "pg_has_role(current_user,(select relowner from pg_class where oid='entitlement_definitions'::regclass),'MEMBER')",
+          "withCheck": "pg_has_role(current_user,(select relowner from pg_class where oid='entitlement_definitions'::regclass),'MEMBER')"
+        },
+        "entitlement_definition_read": {
+          "name": "entitlement_definition_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "(current_setting('app.actor_type',true) in ('owner','worker','platform_admin') or nullif(current_setting('app.organization_id',true),'') is not null)"
+        }
+      },
+      "checkConstraints": {
+        "entitlement_definition_scope": {
+          "name": "entitlement_definition_scope",
+          "value": "\"entitlement_definitions\".\"scope\" in ('owner','organization')"
+        },
+        "entitlement_definition_shape": {
+          "name": "entitlement_definition_shape",
+          "value": "(\"entitlement_definitions\".\"value_type\"='boolean' and \"entitlement_definitions\".\"unit\"='flag' and \"entitlement_definitions\".\"kind\"='feature' and not \"entitlement_definitions\".\"unlimited_allowed\") or (\"entitlement_definitions\".\"value_type\"='integer' and ((\"entitlement_definitions\".\"unit\" in ('count','byte') and \"entitlement_definitions\".\"kind\"='capacity') or (\"entitlement_definitions\".\"unit\"='recipient' and \"entitlement_definitions\".\"kind\"='consumption')))"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.plan_entitlements": {
+      "name": "plan_entitlements",
+      "schema": "",
+      "columns": {
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entitlement_key": {
+          "name": "entitlement_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "boolean_value": {
+          "name": "boolean_value",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "integer_value": {
+          "name": "integer_value",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_unlimited": {
+          "name": "is_unlimited",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plan_entitlements_plan_version_id_plan_versions_id_fk": {
+          "name": "plan_entitlements_plan_version_id_plan_versions_id_fk",
+          "tableFrom": "plan_entitlements",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "plan_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "plan_entitlements_entitlement_key_value_type_entitlement_definitions_key_value_type_fk": {
+          "name": "plan_entitlements_entitlement_key_value_type_entitlement_definitions_key_value_type_fk",
+          "tableFrom": "plan_entitlements",
+          "tableTo": "entitlement_definitions",
+          "columnsFrom": [
+            "entitlement_key",
+            "value_type"
+          ],
+          "columnsTo": [
+            "key",
+            "value_type"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "plan_entitlements_plan_version_id_entitlement_key_pk": {
+          "name": "plan_entitlements_plan_version_id_entitlement_key_pk",
+          "columns": [
+            "plan_version_id",
+            "entitlement_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "plan_entitlements_migration_write": {
+          "name": "plan_entitlements_migration_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_entitlements'::regclass),'MEMBER')",
+          "withCheck": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_entitlements'::regclass),'MEMBER')"
+        },
+        "plan_entitlement_read": {
+          "name": "plan_entitlement_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "exists(select 1 from plan_versions v where v.id=\"plan_entitlements\".\"plan_version_id\")"
+        }
+      },
+      "checkConstraints": {
+        "plan_entitlement_value": {
+          "name": "plan_entitlement_value",
+          "value": "(\"plan_entitlements\".\"value_type\"='boolean' and \"plan_entitlements\".\"boolean_value\" is not null and \"plan_entitlements\".\"integer_value\" is null and not \"plan_entitlements\".\"is_unlimited\") or (\"plan_entitlements\".\"value_type\"='integer' and \"plan_entitlements\".\"boolean_value\" is null and ((\"plan_entitlements\".\"is_unlimited\" and \"plan_entitlements\".\"integer_value\" is null) or (not \"plan_entitlements\".\"is_unlimited\" and \"plan_entitlements\".\"integer_value\" is not null and \"plan_entitlements\".\"integer_value\" between 0 and 9007199254740991)))"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.plan_version_prices": {
+      "name": "plan_version_prices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'MAD'"
+        },
+        "amount_ht_minor": {
+          "name": "amount_ht_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plan_version_prices_plan_version_id_plan_versions_id_fk": {
+          "name": "plan_version_prices_plan_version_id_plan_versions_id_fk",
+          "tableFrom": "plan_version_prices",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "plan_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "plan_version_price_cycle": {
+          "name": "plan_version_price_cycle",
+          "nullsNotDistinct": false,
+          "columns": [
+            "plan_version_id",
+            "cycle",
+            "currency"
+          ]
+        }
+      },
+      "policies": {
+        "plan_version_prices_migration_write": {
+          "name": "plan_version_prices_migration_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_version_prices'::regclass),'MEMBER')",
+          "withCheck": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_version_prices'::regclass),'MEMBER')"
+        },
+        "plan_version_price_read": {
+          "name": "plan_version_price_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "exists(select 1 from plan_versions v where v.id=\"plan_version_prices\".\"plan_version_id\")"
+        }
+      },
+      "checkConstraints": {
+        "plan_version_price_value": {
+          "name": "plan_version_price_value",
+          "value": "\"plan_version_prices\".\"amount_ht_minor\" between 0 and 9007199254740991 and \"plan_version_prices\".\"currency\"='MAD' and \"plan_version_prices\".\"cycle\" in ('monthly','annual')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.plan_versions": {
+      "name": "plan_versions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_number": {
+          "name": "version_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "source_snapshot": {
+          "name": "source_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_hash": {
+          "name": "source_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_by": {
+          "name": "published_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plan_versions_plan_code_subscription_plans_code_fk": {
+          "name": "plan_versions_plan_code_subscription_plans_code_fk",
+          "tableFrom": "plan_versions",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "plan_version_number": {
+          "name": "plan_version_number",
+          "nullsNotDistinct": false,
+          "columns": [
+            "plan_code",
+            "version_number"
+          ]
+        },
+        "plan_version_identity": {
+          "name": "plan_version_identity",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "plan_code"
+          ]
+        }
+      },
+      "policies": {
+        "plan_versions_migration_write": {
+          "name": "plan_versions_migration_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_versions'::regclass),'MEMBER')",
+          "withCheck": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_versions'::regclass),'MEMBER')"
+        },
+        "plan_version_read": {
+          "name": "plan_version_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin' or ((current_setting('app.actor_type',true) in ('owner','worker','platform_admin') or nullif(current_setting('app.organization_id',true),'') is not null) and \"plan_versions\".\"status\"='published')"
+        }
+      },
+      "checkConstraints": {
+        "plan_version_numbers": {
+          "name": "plan_version_numbers",
+          "value": "\"plan_versions\".\"version_number\">0 and \"plan_versions\".\"revision\">0 and \"plan_versions\".\"rank\">=0"
+        },
+        "plan_version_name": {
+          "name": "plan_version_name",
+          "value": "btrim(\"plan_versions\".\"display_name\")<>''"
+        },
+        "plan_version_publication": {
+          "name": "plan_version_publication",
+          "value": "(\"plan_versions\".\"status\"='draft' and \"plan_versions\".\"published_at\" is null and \"plan_versions\".\"published_by\" is null) or (\"plan_versions\".\"status\"='published' and \"plan_versions\".\"published_at\" is not null and \"plan_versions\".\"published_by\" is not null and btrim(\"plan_versions\".\"published_by\")<>'')"
+        },
+        "plan_version_provenance": {
+          "name": "plan_version_provenance",
+          "value": "(\"plan_versions\".\"source_snapshot\" is null and \"plan_versions\".\"source_hash\" is null) or (\"plan_versions\".\"source_snapshot\" is not null and \"plan_versions\".\"source_hash\" is not null and \"plan_versions\".\"source_hash\" ~ '^[a-f0-9]{64}$')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_override_notes": {
+      "name": "subscription_override_notes",
+      "schema": "",
+      "columns": {
+        "override_id": {
+          "name": "override_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_by": {
+          "name": "revoked_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revocation_reason": {
+          "name": "revocation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subscription_override_notes_override_id_subscription_overrides_id_fk": {
+          "name": "subscription_override_notes_override_id_subscription_overrides_id_fk",
+          "tableFrom": "subscription_override_notes",
+          "tableTo": "subscription_overrides",
+          "columnsFrom": [
+            "override_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_override_notes_created_by_platform_admins_id_fk": {
+          "name": "subscription_override_notes_created_by_platform_admins_id_fk",
+          "tableFrom": "subscription_override_notes",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_override_notes_revoked_by_platform_admins_id_fk": {
+          "name": "subscription_override_notes_revoked_by_platform_admins_id_fk",
+          "tableFrom": "subscription_override_notes",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "revoked_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_override_note_admin": {
+          "name": "subscription_override_note_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "subscription_override_note_reason": {
+          "name": "subscription_override_note_reason",
+          "value": "btrim(\"subscription_override_notes\".\"reason\")<>'' and length(\"subscription_override_notes\".\"reason\")<=500"
+        },
+        "subscription_override_note_revocation": {
+          "name": "subscription_override_note_revocation",
+          "value": "(\"subscription_override_notes\".\"revoked_by\" is null and \"subscription_override_notes\".\"revocation_reason\" is null) or (\"subscription_override_notes\".\"revoked_by\" is not null and btrim(\"subscription_override_notes\".\"revocation_reason\")<>'' and length(\"subscription_override_notes\".\"revocation_reason\")<=500)"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_overrides": {
+      "name": "subscription_overrides",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entitlement_key": {
+          "name": "entitlement_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value_type": {
+          "name": "value_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "boolean_value": {
+          "name": "boolean_value",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "integer_value": {
+          "name": "integer_value",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_unlimited": {
+          "name": "is_unlimited",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "replaces_id": {
+          "name": "replaces_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "subscription_overrides_owner_key": {
+          "name": "subscription_overrides_owner_key",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entitlement_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "subscription_overrides_owner_id_platform_users_id_fk": {
+          "name": "subscription_overrides_owner_id_platform_users_id_fk",
+          "tableFrom": "subscription_overrides",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_overrides_entitlement_key_value_type_entitlement_definitions_key_value_type_fk": {
+          "name": "subscription_overrides_entitlement_key_value_type_entitlement_definitions_key_value_type_fk",
+          "tableFrom": "subscription_overrides",
+          "tableTo": "entitlement_definitions",
+          "columnsFrom": [
+            "entitlement_key",
+            "value_type"
+          ],
+          "columnsTo": [
+            "key",
+            "value_type"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subscription_overrides_replaces_id_subscription_overrides_id_fk": {
+          "name": "subscription_overrides_replaces_id_subscription_overrides_id_fk",
+          "tableFrom": "subscription_overrides",
+          "tableTo": "subscription_overrides",
+          "columnsFrom": [
+            "replaces_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_override_admin": {
+          "name": "subscription_override_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "subscription_override_read": {
+          "name": "subscription_override_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='worker' or (\"subscription_overrides\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_overrides\".\"owner_id\")"
+        }
+      },
+      "checkConstraints": {
+        "subscription_override_value": {
+          "name": "subscription_override_value",
+          "value": "(\"subscription_overrides\".\"value_type\"='boolean' and \"subscription_overrides\".\"boolean_value\" is not null and \"subscription_overrides\".\"integer_value\" is null and not \"subscription_overrides\".\"is_unlimited\") or (\"subscription_overrides\".\"value_type\"='integer' and \"subscription_overrides\".\"boolean_value\" is null and ((\"subscription_overrides\".\"is_unlimited\" and \"subscription_overrides\".\"integer_value\" is null) or (not \"subscription_overrides\".\"is_unlimited\" and \"subscription_overrides\".\"integer_value\" is not null and \"subscription_overrides\".\"integer_value\" between 0 and 9007199254740991)))"
+        },
+        "subscription_override_window": {
+          "name": "subscription_override_window",
+          "value": "\"subscription_overrides\".\"ends_at\" is null or \"subscription_overrides\".\"ends_at\">\"subscription_overrides\".\"starts_at\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_period_notes": {
+      "name": "subscription_period_notes",
+      "schema": "",
+      "columns": {
+        "period_id": {
+          "name": "period_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subscription_period_notes_period_id_subscription_periods_id_fk": {
+          "name": "subscription_period_notes_period_id_subscription_periods_id_fk",
+          "tableFrom": "subscription_period_notes",
+          "tableTo": "subscription_periods",
+          "columnsFrom": [
+            "period_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_period_notes_created_by_platform_admins_id_fk": {
+          "name": "subscription_period_notes_created_by_platform_admins_id_fk",
+          "tableFrom": "subscription_period_notes",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_period_note_admin": {
+          "name": "subscription_period_note_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "subscription_period_note_reason": {
+          "name": "subscription_period_note_reason",
+          "value": "btrim(\"subscription_period_notes\".\"reason\")<>'' and length(\"subscription_period_notes\".\"reason\")<=500"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_periods": {
+      "name": "subscription_periods",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by": {
+          "name": "superseded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "subscription_periods_payment": {
+          "name": "subscription_periods_payment",
+          "columns": [
+            {
+              "expression": "payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "subscription_periods_one_trial": {
+          "name": "subscription_periods_one_trial",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"subscription_periods\".\"kind\"='trial'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "subscription_periods_owner": {
+          "name": "subscription_periods_owner",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "subscription_periods_owner_id_platform_users_id_fk": {
+          "name": "subscription_periods_owner_id_platform_users_id_fk",
+          "tableFrom": "subscription_periods",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_periods_plan_code_subscription_plans_code_fk": {
+          "name": "subscription_periods_plan_code_subscription_plans_code_fk",
+          "tableFrom": "subscription_periods",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subscription_periods_payment_id_subscription_payments_id_fk": {
+          "name": "subscription_periods_payment_id_subscription_payments_id_fk",
+          "tableFrom": "subscription_periods",
+          "tableTo": "subscription_payments",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_periods_plan_version_id_plan_code_plan_versions_id_plan_code_fk": {
+          "name": "subscription_periods_plan_version_id_plan_code_plan_versions_id_plan_code_fk",
+          "tableFrom": "subscription_periods",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "plan_version_id",
+            "plan_code"
+          ],
+          "columnsTo": [
+            "id",
+            "plan_code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subscription_periods_superseded_by_subscription_periods_id_fk": {
+          "name": "subscription_periods_superseded_by_subscription_periods_id_fk",
+          "tableFrom": "subscription_periods",
+          "tableTo": "subscription_periods",
+          "columnsFrom": [
+            "superseded_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_period_admin": {
+          "name": "subscription_period_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "subscription_period_read": {
+          "name": "subscription_period_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='worker' or (\"subscription_periods\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_periods\".\"owner_id\")"
+        }
+      },
+      "checkConstraints": {
+        "subscription_period_window": {
+          "name": "subscription_period_window",
+          "value": "\"subscription_periods\".\"ends_at\">\"subscription_periods\".\"starts_at\""
+        },
+        "subscription_period_kind": {
+          "name": "subscription_period_kind",
+          "value": "(\"subscription_periods\".\"kind\"='trial' and \"subscription_periods\".\"plan_code\"='trial' and \"subscription_periods\".\"cycle\" is null and \"subscription_periods\".\"payment_id\" is null and \"subscription_periods\".\"source\" in ('trial','migration')) or (\"subscription_periods\".\"kind\"='paid' and \"subscription_periods\".\"plan_code\"<>'trial' and \"subscription_periods\".\"cycle\" is not null and \"subscription_periods\".\"payment_id\" is not null and \"subscription_periods\".\"source\" in ('payment','migration')) or (\"subscription_periods\".\"kind\"='complimentary' and \"subscription_periods\".\"plan_code\"<>'trial' and \"subscription_periods\".\"source\" in ('admin_grant','migration'))"
+        },
+        "subscription_period_supersession": {
+          "name": "subscription_period_supersession",
+          "value": "(\"subscription_periods\".\"superseded_at\" is null and \"subscription_periods\".\"superseded_by\" is null) or (\"subscription_periods\".\"superseded_at\" is not null and \"subscription_periods\".\"superseded_by\" is not null and \"subscription_periods\".\"superseded_at\">\"subscription_periods\".\"starts_at\" and \"subscription_periods\".\"superseded_at\"<\"subscription_periods\".\"ends_at\")"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_scheduled_changes": {
+      "name": "subscription_scheduled_changes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_at": {
+          "name": "effective_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_plan_code": {
+          "name": "target_plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_cycle": {
+          "name": "target_cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_plan_version_id": {
+          "name": "target_plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notice_sent_at": {
+          "name": "notice_sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_owner_id": {
+          "name": "actor_owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_admin_id": {
+          "name": "actor_admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "subscription_scheduled_changes_one_active": {
+          "name": "subscription_scheduled_changes_one_active",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"subscription_scheduled_changes\".\"status\"='scheduled'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "subscription_scheduled_changes_owner_id_platform_users_id_fk": {
+          "name": "subscription_scheduled_changes_owner_id_platform_users_id_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_scheduled_changes_target_plan_code_subscription_plans_code_fk": {
+          "name": "subscription_scheduled_changes_target_plan_code_subscription_plans_code_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "target_plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subscription_scheduled_changes_target_plan_version_id_plan_versions_id_fk": {
+          "name": "subscription_scheduled_changes_target_plan_version_id_plan_versions_id_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "target_plan_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subscription_scheduled_changes_actor_owner_id_platform_users_id_fk": {
+          "name": "subscription_scheduled_changes_actor_owner_id_platform_users_id_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "actor_owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_scheduled_changes_actor_admin_id_platform_admins_id_fk": {
+          "name": "subscription_scheduled_changes_actor_admin_id_platform_admins_id_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "actor_admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_scheduled_change_admin": {
+          "name": "subscription_scheduled_change_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "subscription_scheduled_change_read": {
+          "name": "subscription_scheduled_change_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='worker' or (\"subscription_scheduled_changes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_scheduled_changes\".\"owner_id\")"
+        },
+        "subscription_scheduled_change_owner_cancel": {
+          "name": "subscription_scheduled_change_owner_cancel",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "public"
+          ],
+          "withCheck": "\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"created_by\"='owner' and \"subscription_scheduled_changes\".\"actor_owner_id\"=\"subscription_scheduled_changes\".\"owner_id\" and \"subscription_scheduled_changes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "subscription_scheduled_change_owner_undo": {
+          "name": "subscription_scheduled_change_owner_undo",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": [
+            "public"
+          ],
+          "using": "\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'",
+          "withCheck": "\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        }
+      },
+      "checkConstraints": {
+        "subscription_scheduled_change_actor": {
+          "name": "subscription_scheduled_change_actor",
+          "value": "(\"subscription_scheduled_changes\".\"created_by\"='owner' and \"subscription_scheduled_changes\".\"actor_owner_id\"=\"subscription_scheduled_changes\".\"owner_id\" and \"subscription_scheduled_changes\".\"actor_admin_id\" is null) or (\"subscription_scheduled_changes\".\"created_by\"='admin' and \"subscription_scheduled_changes\".\"actor_admin_id\" is not null and \"subscription_scheduled_changes\".\"actor_owner_id\" is null) or (\"subscription_scheduled_changes\".\"created_by\"='migration' and \"subscription_scheduled_changes\".\"actor_owner_id\" is null and \"subscription_scheduled_changes\".\"actor_admin_id\" is null)"
+        },
+        "subscription_scheduled_change_target": {
+          "name": "subscription_scheduled_change_target",
+          "value": "(\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"target_plan_code\" is null and \"subscription_scheduled_changes\".\"target_cycle\" is null and \"subscription_scheduled_changes\".\"target_plan_version_id\" is null) or (\"subscription_scheduled_changes\".\"kind\"='plan_change' and \"subscription_scheduled_changes\".\"target_plan_code\" is not null and \"subscription_scheduled_changes\".\"target_plan_code\"<>'trial') or (\"subscription_scheduled_changes\".\"kind\"='version_transition' and \"subscription_scheduled_changes\".\"target_plan_version_id\" is not null and \"subscription_scheduled_changes\".\"notice_sent_at\" is not null and \"subscription_scheduled_changes\".\"effective_at\">=\"subscription_scheduled_changes\".\"notice_sent_at\"+interval '30 days')"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.subscription_suspensions": {
+      "name": "subscription_suspensions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shifted_by_ms": {
+          "name": "shifted_by_ms",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "subscription_suspensions_one_open": {
+          "name": "subscription_suspensions_one_open",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"subscription_suspensions\".\"ended_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "subscription_suspensions_owner_id_platform_users_id_fk": {
+          "name": "subscription_suspensions_owner_id_platform_users_id_fk",
+          "tableFrom": "subscription_suspensions",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "subscription_suspension_admin": {
+          "name": "subscription_suspension_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        },
+        "subscription_suspension_read": {
+          "name": "subscription_suspension_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='worker' or (\"subscription_suspensions\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id=\"subscription_suspensions\".\"owner_id\")"
+        }
+      },
+      "checkConstraints": {
+        "subscription_suspension_end": {
+          "name": "subscription_suspension_end",
+          "value": "(\"subscription_suspensions\".\"ended_at\" is null and \"subscription_suspensions\".\"shifted_by_ms\" is null) or (\"subscription_suspensions\".\"ended_at\">=\"subscription_suspensions\".\"started_at\" and \"subscription_suspensions\".\"shifted_by_ms\">=0)"
         }
       },
       "isRLSEnabled": true

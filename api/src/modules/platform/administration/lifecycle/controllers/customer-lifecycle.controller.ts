@@ -17,7 +17,7 @@ type CurrentAdmin = (request: FastifyRequest) => AuthenticatedAdmin
 const reasonOf = (request: FastifyRequest) => AdminReasonSchema.parse(request.body).reason.trim()
 const sensitive = (request: FastifyRequest) => {
   const body = AdminSensitiveActionSchema.parse(request.body)
-  return { reason: body.reason.trim(), code: body.code }
+  return { reason: AdminReasonSchema.parse({ reason: body.reason.trim() }).reason, code: body.code }
 }
 // Every owner-scoped route shares the same { ownerId } path parameter shape.
 const ownerOf = (request: FastifyRequest) =>
@@ -45,32 +45,28 @@ export function createCustomerLifecycleController(
     block: (request: FastifyRequest) =>
       lifecycle.block(currentAdmin(request), ownerOf(request), sensitive(request)),
     unblock: (request: FastifyRequest) =>
-      lifecycle.unblock(currentAdmin(request), ownerOf(request), reasonOf(request)),
+      lifecycle.unblock(currentAdmin(request), ownerOf(request), sensitive(request)),
     scheduleDeletion: (request: FastifyRequest) =>
       lifecycle.scheduleDeletion(currentAdmin(request), ownerOf(request), sensitive(request)),
     cancelDeletion: (request: FastifyRequest) =>
-      lifecycle.cancelDeletion(currentAdmin(request), ownerOf(request), reasonOf(request)),
+      lifecycle.cancelDeletion(currentAdmin(request), ownerOf(request), sensitive(request)),
     suspendSubscription: (request: FastifyRequest) =>
       lifecycle.suspendSubscription(currentAdmin(request), ownerOf(request), sensitive(request)),
     resumeSubscription: (request: FastifyRequest) =>
-      lifecycle.resumeSubscription(currentAdmin(request), ownerOf(request), reasonOf(request)),
+      lifecycle.resumeSubscription(currentAdmin(request), ownerOf(request), sensitive(request)),
     changePlan(request: FastifyRequest) {
       const body = AdminPlanChangeSchema.parse(request.body)
-      return lifecycle.changePlan(
-        currentAdmin(request),
-        ownerOf(request),
-        body.planCode,
-        body.reason.trim(),
-      )
+      return lifecycle.changePlan(currentAdmin(request), ownerOf(request), body.planCode, {
+        reason: body.reason.trim(),
+        code: body.code,
+      })
     },
     extend(request: FastifyRequest) {
       const body = AdminCoverageExtensionSchema.parse(request.body)
-      return lifecycle.extend(
-        currentAdmin(request),
-        ownerOf(request),
-        body.days,
-        body.reason.trim(),
-      )
+      return lifecycle.extend(currentAdmin(request), ownerOf(request), body.days, {
+        reason: body.reason.trim(),
+        code: body.code,
+      })
     },
     suspendOrganization: (request: FastifyRequest) =>
       lifecycle.suspendOrganization(
@@ -90,7 +86,7 @@ export function createCustomerLifecycleController(
       lifecycle.reactivateOrganization(
         currentAdmin(request),
         organizationOf(request),
-        reasonOf(request),
+        sensitive(request),
       ),
   }
 }

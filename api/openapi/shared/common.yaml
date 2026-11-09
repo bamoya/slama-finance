@@ -76,6 +76,27 @@ components:
         status:
           const: ready
           type: string
+        timezoneData:
+          description: Consistency of the application and database timezone data used for subscription
+            period and override boundaries. The service stays ready for reads; writes that compute a
+            calendar boundary fail with 503 TIMEZONE_DATA_UNCHECKED until a check succeeds and
+            TIMEZONE_DATA_MISMATCH while the sources disagree. Monitoring should alert when status is
+            not consistent.
+          type: object
+          additionalProperties: false
+          required: [zone, status, checkedAt, mismatches]
+          properties:
+            zone:
+              type: string
+            status:
+              type: string
+              enum: [consistent, mismatch, unchecked]
+            checkedAt:
+              type: [string, 'null']
+              format: date-time
+            mismatches:
+              type: integer
+              minimum: 0
       required:
         - status
       additionalProperties: false

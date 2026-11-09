@@ -83,6 +83,16 @@ const environmentSchema = z
     NOTIFICATION_TRANSPORT: z.enum(['recording', 'resend', 'smtp']).optional(),
     SMTP_HOST: z.enum(['127.0.0.1', 'localhost', '::1', 'mailpit']).default('127.0.0.1'),
     SMTP_PORT: positive(1025, 65535),
+    // S5b dual write of subscription coverage periods (legacy rows are always written). `off` is an
+    // emergency switch back to legacy-only writes; the reconciliation can append missed periods later.
+    SUBSCRIPTION_PERIOD_WRITES: z
+      .enum(['on', 'off'])
+      .default('on')
+      .transform((value) => value === 'on'),
+    // S5c coverage read authority, shared by API admissions, billing, workers and administrator counts.
+    // `periods` (default) reads subscription_periods and requires period writes; `legacy` keeps
+    // confirmed payments + markers as an explicit emergency rollback.
+    SUBSCRIPTION_COVERAGE_READS: z.enum(['legacy', 'periods']).default('periods'),
     NOTIFICATION_WORKER_ENABLED: z
       .enum(['true', 'false'])
       .default('true')
@@ -172,6 +182,12 @@ const environmentSchema = z
           message: 'Use a trusted HTTPS reset page without query or fragment',
         })
     }
+    if (env.SUBSCRIPTION_COVERAGE_READS === 'periods' && !env.SUBSCRIPTION_PERIOD_WRITES)
+      context.addIssue({
+        code: 'custom',
+        path: ['SUBSCRIPTION_COVERAGE_READS'],
+        message: 'Period reads require SUBSCRIPTION_PERIOD_WRITES=on',
+      })
     if (env.NODE_ENV === 'production' && !env.DATABASE_URL)
       context.addIssue({
         code: 'custom',

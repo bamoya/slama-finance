@@ -112,7 +112,15 @@ describe('HTTP boundaries', () => {
     expect(response.statusCode).toBe(503)
     expect(response.json().code).toBe('DATABASE_UNAVAILABLE')
     const ready = await appFor({}, async () => {})
-    expect((await ready.inject('/ready')).json()).toEqual({ status: 'ready' })
+    expect((await ready.inject('/ready')).json()).toEqual({
+      status: 'ready',
+      timezoneData: {
+        zone: 'Africa/Casablanca',
+        status: 'consistent',
+        checkedAt: null,
+        mismatches: 0,
+      },
+    })
   })
   it('returns generated IDs and ignores caller request IDs', async () => {
     const app = await appFor()

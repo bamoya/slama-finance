@@ -49,7 +49,10 @@ import {
 } from './modules/organization/index.js'
 import { createAdministrationModule } from './modules/platform/administration/index.js'
 import { createPlatformModule } from './modules/platform/index.js'
-import { createSubscriptionsModule } from './modules/platform/subscriptions/index.js'
+import {
+  createSubscriptionsModule,
+  type TimezoneReport,
+} from './modules/platform/subscriptions/index.js'
 import { createArtifactCleanup } from './support/artifacts/index.js'
 import { createJobSupport } from './support/jobs/index.js'
 import { createNotificationSupport } from './support/notifications/index.js'
@@ -72,6 +75,11 @@ export interface AppOptions {
   passwordReset?: { adapter: PasswordResetDelivery; resetUrl: string }
   mediaStorage?: ObjectStorage
   notificationProvider?: EmailProvider
+  /**
+   * Startup comparison of application and database timezone data for subscription boundaries.
+   * Defaults to the real database check outside tests; tests inject agreeing/mismatching reports.
+   */
+  timezoneCheck?: () => Promise<TimezoneReport>
   /** Test seam for host slug resolution without a database. */
   organizationBySlug?: (slug: string) => Promise<{ id: string } | undefined>
 }
@@ -147,7 +155,8 @@ export async function buildApp(options: AppOptions = {}) {
           )
         }),
       ])
-      return { status: 'ready' }
+      const { samples: _samples, ...timezoneData } = subscriptions.timezone.status()
+      return { status: 'ready', timezoneData }
     } catch {
       throw new AppError(503, 'DATABASE_UNAVAILABLE', 'The service is not ready.')
     } finally {
@@ -168,7 +177,49 @@ export async function buildApp(options: AppOptions = {}) {
             env.EMAIL_FROM,
           )
         : undefined)
-  const subscriptions = createSubscriptionsModule(() => tenantDatabase(app.database()))
+  const subscriptions = createSubscriptionsModule(() => tenantDatabase(app.database()), {
+    periodWrites: env.SUBSCRIPTION_PERIOD_WRITES,
+    coverageReads: env.SUBSCRIPTION_COVERAGE_READS,
+    check:
+      options.timezoneCheck ??
+      (env.NODE_ENV === 'test'
+        ? async () => ({
+            zone: 'Africa/Casablanca',
+            status: 'consistent' as const,
+            checkedAt: null,
+            mismatches: 0,
+            samples: [],
+          })
+        : undefined),
+    onReport: (report) => {
+      if (report.status === 'mismatch')
+        app.log.error(
+          {
+            event: 'timezone_data_mismatch',
+            zone: report.zone,
+            mismatches: report.mismatches,
+            samples: report.samples,
+          },
+          'Application and database timezone data disagree; subscription boundary writes are disabled',
+        )
+    },
+    onShadowDiff: (diff) =>
+      app.log.warn(
+        { event: 'coverage_shadow_diff', ...diff },
+        'Period-based coverage differs from the legacy resolver (shadow mode, no effect)',
+      ),
+    onError: () =>
+      app.log.warn(
+        { code: 'TIMEZONE_CHECK_UNAVAILABLE' },
+        'Timezone data check could not run; it will be retried',
+      ),
+  })
+  app.addHook('onReady', async () => {
+    // Tests without an injected check run the fixture once; otherwise retry/recheck on timers.
+    if (env.NODE_ENV === 'test' && !options.timezoneCheck) await subscriptions.timezone.run()
+    else await subscriptions.timezone.start()
+  })
+  app.addHook('onClose', async () => subscriptions.timezone.stop())
   const platform = createPlatformModule({
     provisioning: () => identity.provisioning,
     subscriptions: subscriptions.publicApi,
@@ -287,6 +338,7 @@ export async function buildApp(options: AppOptions = {}) {
     portalOrigin: sites.origins.owner,
     totpKey: env.ADMIN_TOTP_KEY ? Buffer.from(env.ADMIN_TOTP_KEY, 'base64') : undefined,
     ownerDelivery: ownerAccountDelivery,
+    timezoneWritable: subscriptions.timezone.assertWritable,
   }).registerRoutes(app)
   await identity.registerRoutes(app, permission)
   await subscriptions.registerRoutes(app, platform.publicApi.resolveOwnerSession)
@@ -410,7 +462,13 @@ export async function buildApp(options: AppOptions = {}) {
   let runningReport: Promise<unknown> | undefined
   let metricsTimer: ReturnType<typeof setInterval> | undefined
   let runningMetrics: Promise<unknown> | undefined
-  const forEachTenant = createTenantWorkerRunner(() => app.database())
+  const forEachTenant = createTenantWorkerRunner(
+    () => app.database(),
+    (feature) =>
+      tenantDatabase(app.database()).transaction((tx) =>
+        subscriptions.publicApi.workerEligible(tx, feature),
+      ),
+  )
   app.addHook('onReady', async () => {
     if (env.NODE_ENV === 'test') return
     metricsTimer = setInterval(() => {

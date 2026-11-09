@@ -24,12 +24,12 @@ export function createAdminPaymentsController(
     async confirm(request: FastifyRequest) {
       const { paymentId } = confirmAdminPaymentParamsSchema.parse(request.params)
       const body = AdminPaymentConfirmationSchema.parse(request.body ?? {})
-      return payments.confirm(currentAdmin(request), paymentId, body.receivedReference)
+      return payments.confirm(currentAdmin(request), paymentId, body)
     },
     async reject(request: FastifyRequest) {
       const { paymentId } = rejectAdminPaymentParamsSchema.parse(request.params)
       const body = AdminPaymentRejectionSchema.parse(request.body)
-      return payments.reject(currentAdmin(request), paymentId, body.reason)
+      return payments.reject(currentAdmin(request), paymentId, body)
     },
   }
 }

@@ -1,5 +1,6 @@
 import type { OwnerSubscription } from '../../../../../contracts/generated/subscriptions/subscriptions.schemas.js'
 import type { Transaction } from '../../../../../lib/db.js'
+import type { LifecycleStatusSource } from '../../shared/repositories/lifecycle-status.repository.js'
 import type { AdminPaymentRecord } from './admin-payment-view.js'
 
 export type PaymentDecision = (
@@ -15,15 +16,19 @@ export type AdminBillingPort = {
     decidedBy: string,
     receivedReference?: string,
     onDecided?: PaymentDecision,
+    transaction?: Transaction,
   ) => Promise<unknown>
   reject: (
     id: string,
     decidedBy: string,
     reason: string,
     onDecided?: PaymentDecision,
+    transaction?: Transaction,
   ) => Promise<unknown>
   summary: (ownerId: string) => Promise<OwnerSubscription>
   lifecycle: AdminLifecyclePort
+  /** Set-based lifecycle status (owner_id, trial_ends_at, status) at `at`, same authority as the API. */
+  lifecycleStatus: LifecycleStatusSource
 }
 
 export type AdminLifecycleState = {
@@ -33,6 +38,9 @@ export type AdminLifecycleState = {
   row: { trialEndsAt: Date; suspendedAt: Date | null } | null
 }
 
+/** Acting administrator; the reason is recorded as the coverage period note. */
+export type AdminLifecycleActor = { adminId: string; email: string; reason: string }
+
 /** Subscription lifecycle changes run inside the administrator's transaction. */
 export type AdminLifecyclePort = {
   state: (ownerId: string, tx: Transaction) => Promise<AdminLifecycleState>
@@ -41,14 +49,19 @@ export type AdminLifecyclePort = {
   changePlan: (
     ownerId: string,
     planCode: string,
-    decidedBy: string,
+    actor: AdminLifecycleActor,
     tx: Transaction,
   ) => Promise<void>
-  extend: (ownerId: string, days: number, decidedBy: string, tx: Transaction) => Promise<void>
+  extend: (
+    ownerId: string,
+    days: number,
+    actor: AdminLifecycleActor,
+    tx: Transaction,
+  ) => Promise<void>
   grant: (
     ownerId: string,
     grant: { planCode: string; cycle: 'monthly' | 'annual'; start: Date; end: Date },
-    decidedBy: string,
+    actor: AdminLifecycleActor,
     tx: Transaction,
   ) => Promise<void>
 }

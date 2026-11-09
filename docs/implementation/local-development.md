@@ -59,6 +59,12 @@ defaults directly. The local `127.0.0.1:5433/slama_finance` database was explici
 restricted runtime role. Run `node --env-file=api/.env api/scripts/initialize-database.mjs` from
 the repository root. Initialization is serialized and repeat-safe; it creates no accounts.
 
+## Subscription coverage periods
+
+`SUBSCRIPTION_PERIOD_WRITES` defaults to `on` (S5b dual write) and `SUBSCRIPTION_COVERAGE_READS` to `periods`
+(coverage periods decide). Set reads to `legacy`, or writes to `off` together with legacy reads, only to reproduce
+the emergency rollback; see `docs/deployment.md`.
+
 ## First owner
 
 Register on `http://app.localhost:5173` (`/register`), verify the email, then create an organization through onboarding.

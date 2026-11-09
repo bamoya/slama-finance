@@ -149,6 +149,7 @@ export function ownerDetail(over: Record<string, unknown> = {}) {
         businessEmails: 500,
       },
       organizationCount: 1,
+      entitlementSources: [],
       usage: {
         storageBytes: 1.2e9,
         businessEmails: 40,

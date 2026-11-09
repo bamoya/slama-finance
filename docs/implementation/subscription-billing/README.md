@@ -1,6 +1,11 @@
 # Subscription billing and manual payments
 
-Implementation record for task 07. All defaults below were chosen during implementation and are **pending client confirmation**. Billing is manual: a submitted payment reference never activates coverage by itself.
+Redesign work: [S1 decisions, approved rules and open gates](decisions.md).
+That record separates current implementation defaults from approved policy and the proposed normalized model.
+Implementation and verification: [redesign progress](progress.md) and [catalog model](entitlement-model.md).
+
+Implementation record for task 07. The decision record above identifies newly confirmed policies and defaults
+that still need confirmation. Billing is manual: a submitted payment reference never activates coverage by itself.
 
 ## Payment methods and instructions
 

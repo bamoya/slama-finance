@@ -2,17 +2,11 @@ import type {
   ReportAnalysis,
   ReportSchedule,
 } from '../../../../../contracts/generated/reporting/reporting.schemas.js'
+import { escapeHtml as escape } from '../../../../../lib/html.js'
 import { numberFormatter } from '../../../../../lib/number-format.js'
 import { frenchReportLabel } from './report-labels.js'
 import { reportLabel } from './visual-pdf.service.js'
 
-const escape = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 /** DD-MM-YYYY HH:mm in the report timezone, the same format as the rest of the application. */
 export function capturedAt(value: string, timeZone: string) {
   const parts = Object.fromEntries(

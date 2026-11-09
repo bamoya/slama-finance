@@ -100,6 +100,7 @@ const paidBase = {
   nextPlanCode: null,
   pendingPayment: null,
   organizationCount: 1,
+  entitlementSources: [],
   entitlements: {
     organizations: 1,
     staffPerOrganization: 2,
@@ -128,6 +129,7 @@ it('shows real pooled consumption, quota warnings and the trial-wide end date', 
     nextPlanCode: null,
     pendingPayment: null,
     organizationCount: 1,
+    entitlementSources: [],
     entitlements: {
       organizations: 1,
       staffPerOrganization: 2,
@@ -307,4 +309,32 @@ it('does not request a quote and hides the payment form when suspended', async (
   expect(screen.queryByRole('button', { name: 'Submit payment' })).not.toBeInTheDocument()
   // The API refuses cancellation unless active, so the action is not offered.
   expect(screen.queryByRole('button', { name: /cancel at period end/i })).not.toBeInTheDocument()
+})
+
+it('marks customer-specific allowances by origin and end date, never internal notes', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': {
+      ...paidBase,
+      entitlements: { ...paidBase.entitlements, staffPerOrganization: 6 },
+      entitlementSources: [
+        {
+          entitlementKey: 'staffPerOrganization',
+          source: 'override',
+          effectiveUntil: '2026-12-01T10:00:00Z',
+        },
+        { entitlementKey: 'storageBytes', source: 'plan', effectiveUntil: null },
+        { entitlementKey: 'custom_domains', source: 'override', effectiveUntil: null },
+      ],
+    },
+    '/api/v1/owner/subscription/billing': catalog,
+    '/api/v1/owner/subscription/payments': [],
+  })
+  renderPage()
+  const members = (await screen.findByText('Members per organization')).parentElement!
+  expect(members).toHaveTextContent('6')
+  expect(members).toHaveTextContent(/Custom allowance until/)
+  expect(screen.getByText('Storage allowance').parentElement).not.toHaveTextContent(
+    'Custom allowance',
+  )
+  expect(screen.getByText('Some features of your subscription are customized.')).toBeVisible()
 })

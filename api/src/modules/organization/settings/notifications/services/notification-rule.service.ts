@@ -9,6 +9,7 @@ import {
 } from '../../../../../contracts/generated/settings/notifications.schemas.js'
 import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
+import { escapeHtml as escape } from '../../../../../lib/html.js'
 import { resolveLocale } from '../../../../../lib/language.js'
 import { assertVersion } from '../../../../../lib/validation.js'
 import type { NotificationPublicApi } from '../../../../../support/notifications/index.js'
@@ -64,11 +65,6 @@ export const eventVariables: Record<string, string[]> = {
     'currency',
   ],
 }
-const escape = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-  )
 export function validateRuleTemplates(event: string, subject: string, body: string) {
   if (/[\r\n]/.test(subject))
     throw new AppError(400, 'INVALID_TEMPLATE', 'Email subjects cannot contain line breaks.')

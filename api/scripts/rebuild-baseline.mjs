@@ -43,7 +43,16 @@ try {
     ...indexes,
   )
   let sql = rest.join(separator)
-  for (const table of tables.filter((t) => t.isRLSEnabled))
+  // S5 tables keep RLS enabled but not forced: their SECURITY DEFINER owner functions must see all rows.
+  const ownerVisible = new Set([
+    'subscription_override_notes',
+    'subscription_overrides',
+    'subscription_period_notes',
+    'subscription_periods',
+    'subscription_scheduled_changes',
+    'subscription_suspensions',
+  ])
+  for (const table of tables.filter((t) => t.isRLSEnabled && !ownerVisible.has(t.name)))
     sql += separator + `ALTER TABLE "${table.name}" FORCE ROW LEVEL SECURITY;`
   const refs = [],
     keys = new Map()
@@ -70,6 +79,10 @@ try {
     'integrity/actors.sql',
     'integrity/organization-defaults.sql',
     'integrity/platform-administration.sql',
+    'integrity/subscription-catalog.sql',
+    'reference/subscription-catalog.sql',
+    'integrity/subscription-overrides.sql',
+    'integrity/subscription-periods.sql',
   ])
     sql += separator + (await readFile(path.join(root, 'db', file), 'utf8'))
   for (const table of tenant.values()) {

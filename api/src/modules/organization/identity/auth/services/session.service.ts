@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import type { Transaction } from '../../../../../lib/db.js'
+import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import type { createAuthRepository } from '../repositories/auth.repository.js'
 import type { createSessionRepository } from '../repositories/session.repository.js'
 
-const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 export function createSessionService(
   repository: ReturnType<typeof createSessionRepository>,
   users: Pick<ReturnType<typeof createAuthRepository>, 'findById'>,

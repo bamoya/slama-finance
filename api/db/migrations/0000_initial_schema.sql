@@ -1250,6 +1250,191 @@ CREATE TABLE IF NOT EXISTS "staff_invitations" (
 ALTER TABLE "staff_invitations" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "entitlement_definitions" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value_type" text NOT NULL,
+	"unit" text NOT NULL,
+	"kind" text NOT NULL,
+	"scope" text NOT NULL,
+	"unlimited_allowed" boolean NOT NULL,
+	CONSTRAINT "entitlement_definition_key_type" UNIQUE("key","value_type"),
+	CONSTRAINT "entitlement_definition_scope" CHECK ("entitlement_definitions"."scope" in ('owner','organization')),
+	CONSTRAINT "entitlement_definition_shape" CHECK (("entitlement_definitions"."value_type"='boolean' and "entitlement_definitions"."unit"='flag' and "entitlement_definitions"."kind"='feature' and not "entitlement_definitions"."unlimited_allowed") or ("entitlement_definitions"."value_type"='integer' and (("entitlement_definitions"."unit" in ('count','byte') and "entitlement_definitions"."kind"='capacity') or ("entitlement_definitions"."unit"='recipient' and "entitlement_definitions"."kind"='consumption'))))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "entitlement_definitions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "plan_entitlements" (
+	"plan_version_id" uuid NOT NULL,
+	"entitlement_key" text NOT NULL,
+	"value_type" text NOT NULL,
+	"boolean_value" boolean,
+	"integer_value" bigint,
+	"is_unlimited" boolean DEFAULT false NOT NULL,
+	CONSTRAINT "plan_entitlements_plan_version_id_entitlement_key_pk" PRIMARY KEY("plan_version_id","entitlement_key"),
+	CONSTRAINT "plan_entitlement_value" CHECK (("plan_entitlements"."value_type"='boolean' and "plan_entitlements"."boolean_value" is not null and "plan_entitlements"."integer_value" is null and not "plan_entitlements"."is_unlimited") or ("plan_entitlements"."value_type"='integer' and "plan_entitlements"."boolean_value" is null and (("plan_entitlements"."is_unlimited" and "plan_entitlements"."integer_value" is null) or (not "plan_entitlements"."is_unlimited" and "plan_entitlements"."integer_value" is not null and "plan_entitlements"."integer_value" between 0 and 9007199254740991))))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "plan_entitlements" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "plan_version_prices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"plan_version_id" uuid NOT NULL,
+	"cycle" text NOT NULL,
+	"currency" text DEFAULT 'MAD' NOT NULL,
+	"amount_ht_minor" bigint NOT NULL,
+	CONSTRAINT "plan_version_price_cycle" UNIQUE("plan_version_id","cycle","currency"),
+	CONSTRAINT "plan_version_price_value" CHECK ("plan_version_prices"."amount_ht_minor" between 0 and 9007199254740991 and "plan_version_prices"."currency"='MAD' and "plan_version_prices"."cycle" in ('monthly','annual'))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "plan_version_prices" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "plan_versions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"plan_code" text NOT NULL,
+	"version_number" integer NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"display_name" text NOT NULL,
+	"rank" integer NOT NULL,
+	"revision" integer DEFAULT 1 NOT NULL,
+	"source_snapshot" jsonb,
+	"source_hash" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"published_at" timestamp with time zone,
+	"published_by" text,
+	CONSTRAINT "plan_version_number" UNIQUE("plan_code","version_number"),
+	CONSTRAINT "plan_version_identity" UNIQUE("id","plan_code"),
+	CONSTRAINT "plan_version_numbers" CHECK ("plan_versions"."version_number">0 and "plan_versions"."revision">0 and "plan_versions"."rank">=0),
+	CONSTRAINT "plan_version_name" CHECK (btrim("plan_versions"."display_name")<>''),
+	CONSTRAINT "plan_version_publication" CHECK (("plan_versions"."status"='draft' and "plan_versions"."published_at" is null and "plan_versions"."published_by" is null) or ("plan_versions"."status"='published' and "plan_versions"."published_at" is not null and "plan_versions"."published_by" is not null and btrim("plan_versions"."published_by")<>'')),
+	CONSTRAINT "plan_version_provenance" CHECK (("plan_versions"."source_snapshot" is null and "plan_versions"."source_hash" is null) or ("plan_versions"."source_snapshot" is not null and "plan_versions"."source_hash" is not null and "plan_versions"."source_hash" ~ '^[a-f0-9]{64}$'))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "plan_versions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_override_notes" (
+	"override_id" uuid PRIMARY KEY NOT NULL,
+	"reason" text NOT NULL,
+	"created_by" uuid NOT NULL,
+	"revoked_by" uuid,
+	"revocation_reason" text,
+	CONSTRAINT "subscription_override_note_reason" CHECK (btrim("subscription_override_notes"."reason")<>'' and length("subscription_override_notes"."reason")<=500),
+	CONSTRAINT "subscription_override_note_revocation" CHECK (("subscription_override_notes"."revoked_by" is null and "subscription_override_notes"."revocation_reason" is null) or ("subscription_override_notes"."revoked_by" is not null and btrim("subscription_override_notes"."revocation_reason")<>'' and length("subscription_override_notes"."revocation_reason")<=500))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_override_notes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_overrides" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"entitlement_key" text NOT NULL,
+	"value_type" text NOT NULL,
+	"boolean_value" boolean,
+	"integer_value" bigint,
+	"is_unlimited" boolean DEFAULT false NOT NULL,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"revoked_at" timestamp with time zone,
+	"replaces_id" uuid,
+	CONSTRAINT "subscription_override_value" CHECK (("subscription_overrides"."value_type"='boolean' and "subscription_overrides"."boolean_value" is not null and "subscription_overrides"."integer_value" is null and not "subscription_overrides"."is_unlimited") or ("subscription_overrides"."value_type"='integer' and "subscription_overrides"."boolean_value" is null and (("subscription_overrides"."is_unlimited" and "subscription_overrides"."integer_value" is null) or (not "subscription_overrides"."is_unlimited" and "subscription_overrides"."integer_value" is not null and "subscription_overrides"."integer_value" between 0 and 9007199254740991)))),
+	CONSTRAINT "subscription_override_window" CHECK ("subscription_overrides"."ends_at" is null or "subscription_overrides"."ends_at">"subscription_overrides"."starts_at")
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_overrides" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_period_notes" (
+	"period_id" uuid PRIMARY KEY NOT NULL,
+	"reason" text NOT NULL,
+	"created_by" uuid,
+	CONSTRAINT "subscription_period_note_reason" CHECK (btrim("subscription_period_notes"."reason")<>'' and length("subscription_period_notes"."reason")<=500)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_period_notes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_periods" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"plan_code" text NOT NULL,
+	"plan_version_id" uuid,
+	"cycle" text,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"source" text NOT NULL,
+	"payment_id" uuid,
+	"superseded_at" timestamp with time zone,
+	"superseded_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_period_window" CHECK ("subscription_periods"."ends_at">"subscription_periods"."starts_at"),
+	CONSTRAINT "subscription_period_kind" CHECK (("subscription_periods"."kind"='trial' and "subscription_periods"."plan_code"='trial' and "subscription_periods"."cycle" is null and "subscription_periods"."payment_id" is null and "subscription_periods"."source" in ('trial','migration')) or ("subscription_periods"."kind"='paid' and "subscription_periods"."plan_code"<>'trial' and "subscription_periods"."cycle" is not null and "subscription_periods"."payment_id" is not null and "subscription_periods"."source" in ('payment','migration')) or ("subscription_periods"."kind"='complimentary' and "subscription_periods"."plan_code"<>'trial' and "subscription_periods"."source" in ('admin_grant','migration'))),
+	CONSTRAINT "subscription_period_supersession" CHECK (("subscription_periods"."superseded_at" is null and "subscription_periods"."superseded_by" is null) or ("subscription_periods"."superseded_at" is not null and "subscription_periods"."superseded_by" is not null and "subscription_periods"."superseded_at">"subscription_periods"."starts_at" and "subscription_periods"."superseded_at"<"subscription_periods"."ends_at"))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_periods" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_scheduled_changes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"effective_at" timestamp with time zone NOT NULL,
+	"target_plan_code" text,
+	"target_cycle" text,
+	"target_plan_version_id" uuid,
+	"notice_sent_at" timestamp with time zone,
+	"status" text DEFAULT 'scheduled' NOT NULL,
+	"created_by" text NOT NULL,
+	"actor_owner_id" uuid,
+	"actor_admin_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_scheduled_change_actor" CHECK (("subscription_scheduled_changes"."created_by"='owner' and "subscription_scheduled_changes"."actor_owner_id"="subscription_scheduled_changes"."owner_id" and "subscription_scheduled_changes"."actor_admin_id" is null) or ("subscription_scheduled_changes"."created_by"='admin' and "subscription_scheduled_changes"."actor_admin_id" is not null and "subscription_scheduled_changes"."actor_owner_id" is null) or ("subscription_scheduled_changes"."created_by"='migration' and "subscription_scheduled_changes"."actor_owner_id" is null and "subscription_scheduled_changes"."actor_admin_id" is null)),
+	CONSTRAINT "subscription_scheduled_change_target" CHECK (("subscription_scheduled_changes"."kind"='cancel' and "subscription_scheduled_changes"."target_plan_code" is null and "subscription_scheduled_changes"."target_cycle" is null and "subscription_scheduled_changes"."target_plan_version_id" is null) or ("subscription_scheduled_changes"."kind"='plan_change' and "subscription_scheduled_changes"."target_plan_code" is not null and "subscription_scheduled_changes"."target_plan_code"<>'trial') or ("subscription_scheduled_changes"."kind"='version_transition' and "subscription_scheduled_changes"."target_plan_version_id" is not null and "subscription_scheduled_changes"."notice_sent_at" is not null and "subscription_scheduled_changes"."effective_at">="subscription_scheduled_changes"."notice_sent_at"+interval '30 days'))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_scheduled_changes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "subscription_suspensions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"started_at" timestamp with time zone NOT NULL,
+	"ended_at" timestamp with time zone,
+	"shifted_by_ms" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_suspension_end" CHECK (("subscription_suspensions"."ended_at" is null and "subscription_suspensions"."shifted_by_ms" is null) or ("subscription_suspensions"."ended_at">="subscription_suspensions"."started_at" and "subscription_suspensions"."shifted_by_ms">=0))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "subscription_suspensions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "billing_settings" (
 	"id" integer PRIMARY KEY DEFAULT 1 NOT NULL,
 	"currency" text DEFAULT 'MAD' NOT NULL,
@@ -1595,6 +1780,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_pending_email" ON "staff_inv
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "staff_invitation_token_hash" ON "staff_invitations" USING btree ("organization_id","token_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "subscription_overrides_owner_key" ON "subscription_overrides" USING btree ("owner_id","entitlement_key","starts_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_periods_payment" ON "subscription_periods" USING btree ("payment_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_periods_one_trial" ON "subscription_periods" USING btree ("owner_id") WHERE "subscription_periods"."kind"='trial';
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "subscription_periods_owner" ON "subscription_periods" USING btree ("owner_id","starts_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_scheduled_changes_one_active" ON "subscription_scheduled_changes" USING btree ("owner_id","kind") WHERE "subscription_scheduled_changes"."status"='scheduled';
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_suspensions_one_open" ON "subscription_suspensions" USING btree ("owner_id") WHERE "subscription_suspensions"."ended_at" is null;
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "subscription_emails_owner_period" ON "subscription_emails" USING btree ("owner_id","queued_at");
@@ -2770,6 +2973,190 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
+ ALTER TABLE "plan_entitlements" ADD CONSTRAINT "plan_entitlements_plan_version_id_plan_versions_id_fk" FOREIGN KEY ("plan_version_id") REFERENCES "public"."plan_versions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "plan_entitlements" ADD CONSTRAINT "plan_entitlements_entitlement_key_value_type_entitlement_definitions_key_value_type_fk" FOREIGN KEY ("entitlement_key","value_type") REFERENCES "public"."entitlement_definitions"("key","value_type") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "plan_version_prices" ADD CONSTRAINT "plan_version_prices_plan_version_id_plan_versions_id_fk" FOREIGN KEY ("plan_version_id") REFERENCES "public"."plan_versions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "plan_versions" ADD CONSTRAINT "plan_versions_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_override_notes" ADD CONSTRAINT "subscription_override_notes_override_id_subscription_overrides_id_fk" FOREIGN KEY ("override_id") REFERENCES "public"."subscription_overrides"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_override_notes" ADD CONSTRAINT "subscription_override_notes_created_by_platform_admins_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."platform_admins"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_override_notes" ADD CONSTRAINT "subscription_override_notes_revoked_by_platform_admins_id_fk" FOREIGN KEY ("revoked_by") REFERENCES "public"."platform_admins"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_overrides" ADD CONSTRAINT "subscription_overrides_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_overrides" ADD CONSTRAINT "subscription_overrides_entitlement_key_value_type_entitlement_definitions_key_value_type_fk" FOREIGN KEY ("entitlement_key","value_type") REFERENCES "public"."entitlement_definitions"("key","value_type") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_overrides" ADD CONSTRAINT "subscription_overrides_replaces_id_subscription_overrides_id_fk" FOREIGN KEY ("replaces_id") REFERENCES "public"."subscription_overrides"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_period_notes" ADD CONSTRAINT "subscription_period_notes_period_id_subscription_periods_id_fk" FOREIGN KEY ("period_id") REFERENCES "public"."subscription_periods"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_period_notes" ADD CONSTRAINT "subscription_period_notes_created_by_platform_admins_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."platform_admins"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_periods" ADD CONSTRAINT "subscription_periods_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_periods" ADD CONSTRAINT "subscription_periods_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_periods" ADD CONSTRAINT "subscription_periods_payment_id_subscription_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."subscription_payments"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_periods" ADD CONSTRAINT "subscription_periods_plan_version_id_plan_code_plan_versions_id_plan_code_fk" FOREIGN KEY ("plan_version_id","plan_code") REFERENCES "public"."plan_versions"("id","plan_code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_periods" ADD CONSTRAINT "subscription_periods_superseded_by_subscription_periods_id_fk" FOREIGN KEY ("superseded_by") REFERENCES "public"."subscription_periods"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_scheduled_changes" ADD CONSTRAINT "subscription_scheduled_changes_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_scheduled_changes" ADD CONSTRAINT "subscription_scheduled_changes_target_plan_code_subscription_plans_code_fk" FOREIGN KEY ("target_plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_scheduled_changes" ADD CONSTRAINT "subscription_scheduled_changes_target_plan_version_id_plan_versions_id_fk" FOREIGN KEY ("target_plan_version_id") REFERENCES "public"."plan_versions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_scheduled_changes" ADD CONSTRAINT "subscription_scheduled_changes_actor_owner_id_platform_users_id_fk" FOREIGN KEY ("actor_owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_scheduled_changes" ADD CONSTRAINT "subscription_scheduled_changes_actor_admin_id_platform_admins_id_fk" FOREIGN KEY ("actor_admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "subscription_suspensions" ADD CONSTRAINT "subscription_suspensions_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
  ALTER TABLE "owner_subscriptions" ADD CONSTRAINT "owner_subscriptions_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -2988,6 +3375,66 @@ CREATE POLICY "tenant_isolation" ON "staff_invitation_roles" AS PERMISSIVE FOR A
 CREATE POLICY "tenant_isolation" ON "staff_invitations" AS PERMISSIVE FOR ALL TO public USING ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("staff_invitations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "entitlement_definitions_migration_write" ON "entitlement_definitions" AS PERMISSIVE FOR ALL TO public USING (pg_has_role(current_user,(select relowner from pg_class where oid='entitlement_definitions'::regclass),'MEMBER')) WITH CHECK (pg_has_role(current_user,(select relowner from pg_class where oid='entitlement_definitions'::regclass),'MEMBER'));
+--> statement-breakpoint
+
+CREATE POLICY "entitlement_definition_read" ON "entitlement_definitions" AS PERMISSIVE FOR SELECT TO public USING ((current_setting('app.actor_type',true) in ('owner','worker','platform_admin') or nullif(current_setting('app.organization_id',true),'') is not null));
+--> statement-breakpoint
+
+CREATE POLICY "plan_entitlements_migration_write" ON "plan_entitlements" AS PERMISSIVE FOR ALL TO public USING (pg_has_role(current_user,(select relowner from pg_class where oid='plan_entitlements'::regclass),'MEMBER')) WITH CHECK (pg_has_role(current_user,(select relowner from pg_class where oid='plan_entitlements'::regclass),'MEMBER'));
+--> statement-breakpoint
+
+CREATE POLICY "plan_entitlement_read" ON "plan_entitlements" AS PERMISSIVE FOR SELECT TO public USING (exists(select 1 from plan_versions v where v.id="plan_entitlements"."plan_version_id"));
+--> statement-breakpoint
+
+CREATE POLICY "plan_version_prices_migration_write" ON "plan_version_prices" AS PERMISSIVE FOR ALL TO public USING (pg_has_role(current_user,(select relowner from pg_class where oid='plan_version_prices'::regclass),'MEMBER')) WITH CHECK (pg_has_role(current_user,(select relowner from pg_class where oid='plan_version_prices'::regclass),'MEMBER'));
+--> statement-breakpoint
+
+CREATE POLICY "plan_version_price_read" ON "plan_version_prices" AS PERMISSIVE FOR SELECT TO public USING (exists(select 1 from plan_versions v where v.id="plan_version_prices"."plan_version_id"));
+--> statement-breakpoint
+
+CREATE POLICY "plan_versions_migration_write" ON "plan_versions" AS PERMISSIVE FOR ALL TO public USING (pg_has_role(current_user,(select relowner from pg_class where oid='plan_versions'::regclass),'MEMBER')) WITH CHECK (pg_has_role(current_user,(select relowner from pg_class where oid='plan_versions'::regclass),'MEMBER'));
+--> statement-breakpoint
+
+CREATE POLICY "plan_version_read" ON "plan_versions" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='platform_admin' or ((current_setting('app.actor_type',true) in ('owner','worker','platform_admin') or nullif(current_setting('app.organization_id',true),'') is not null) and "plan_versions"."status"='published'));
+--> statement-breakpoint
+
+CREATE POLICY "subscription_override_note_admin" ON "subscription_override_notes" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_override_admin" ON "subscription_overrides" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_override_read" ON "subscription_overrides" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker' or ("subscription_overrides"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_overrides"."owner_id"));
+--> statement-breakpoint
+
+CREATE POLICY "subscription_period_note_admin" ON "subscription_period_notes" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_period_admin" ON "subscription_periods" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_period_read" ON "subscription_periods" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker' or ("subscription_periods"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_periods"."owner_id"));
+--> statement-breakpoint
+
+CREATE POLICY "subscription_scheduled_change_admin" ON "subscription_scheduled_changes" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_scheduled_change_read" ON "subscription_scheduled_changes" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker' or ("subscription_scheduled_changes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_scheduled_changes"."owner_id"));
+--> statement-breakpoint
+
+CREATE POLICY "subscription_scheduled_change_owner_cancel" ON "subscription_scheduled_changes" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("subscription_scheduled_changes"."kind"='cancel' and "subscription_scheduled_changes"."created_by"='owner' and "subscription_scheduled_changes"."actor_owner_id"="subscription_scheduled_changes"."owner_id" and "subscription_scheduled_changes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_scheduled_change_owner_undo" ON "subscription_scheduled_changes" AS PERMISSIVE FOR UPDATE TO public USING ("subscription_scheduled_changes"."kind"='cancel' and "subscription_scheduled_changes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("subscription_scheduled_changes"."kind"='cancel' and "subscription_scheduled_changes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_suspension_admin" ON "subscription_suspensions" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "subscription_suspension_read" ON "subscription_suspensions" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker' or ("subscription_suspensions"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') or exists(select 1 from organizations o where o.id=nullif(current_setting('app.organization_id',true),'')::uuid and o.owner_id="subscription_suspensions"."owner_id"));
+--> statement-breakpoint
+
 CREATE POLICY "subscription_worker_read" ON "owner_subscriptions" AS PERMISSIVE FOR SELECT TO public USING (current_setting('app.actor_type',true)='worker');
 --> statement-breakpoint
 
@@ -3102,6 +3549,14 @@ ALTER TABLE "document_templates" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "staff_invitation_roles" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "staff_invitations" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "entitlement_definitions" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "plan_entitlements" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "plan_version_prices" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "plan_versions" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "owner_subscriptions" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -3803,6 +4258,740 @@ BEGIN
 END $$;
 --> statement-breakpoint
 CREATE TRIGGER organizations_slug_admin_only BEFORE UPDATE OF slug ON organizations FOR EACH ROW EXECUTE FUNCTION require_platform_admin_slug_change();
+
+--> statement-breakpoint
+-- Stable provenance projection: unrelated legacy columns must not change imported hashes.
+-- Pure argument-only function, shared by import and diagnostics; no privileged table access.
+CREATE FUNCTION subscription_catalog_snapshot(subscription_plans,text) RETURNS jsonb
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+ SELECT jsonb_build_object('code',($1).code,'name',($1).name,'rank',($1).rank,
+   'monthly_ht',($1).monthly_ht,'annual_ht',($1).annual_ht,
+   'entitlements',($1).entitlements,'currency',$2)
+$$;
+--> statement-breakpoint
+-- Lock before row acquisition, preventing publication/edit lock-order inversion.
+CREATE FUNCTION lock_subscription_catalog() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ PERFORM pg_advisory_xact_lock(173027,32);
+ IF TG_OP='TRUNCATE' OR NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  RAISE EXCEPTION 'Catalog write requires migration role; truncation is forbidden' USING ERRCODE='42501';
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER catalog_definition_lock BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON entitlement_definitions FOR EACH STATEMENT EXECUTE FUNCTION lock_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_version_lock BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON plan_versions FOR EACH STATEMENT EXECUTE FUNCTION lock_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_entitlement_lock BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON plan_entitlements FOR EACH STATEMENT EXECUTE FUNCTION lock_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_price_lock BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON plan_version_prices FOR EACH STATEMENT EXECUTE FUNCTION lock_subscription_catalog();
+--> statement-breakpoint
+-- Inactive normalized catalog. Writes are restricted to the migration/table-owner role.
+-- A small global transaction lock serializes publication, draft edits and definition changes.
+CREATE FUNCTION guard_subscription_catalog() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+ version_id uuid;
+ version_state text;
+ version_plan text;
+ allowed boolean;
+BEGIN
+ PERFORM pg_advisory_xact_lock(173027, 32);
+ IF NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  RAISE EXCEPTION 'Catalog writes require the migration role' USING ERRCODE='42501';
+ END IF;
+ IF TG_OP='TRUNCATE' THEN
+  RAISE EXCEPTION 'Catalog truncation is forbidden' USING ERRCODE='42501';
+ END IF;
+ IF TG_TABLE_NAME='entitlement_definitions' THEN
+  IF TG_OP<>'INSERT' AND EXISTS (
+   SELECT 1 FROM plan_entitlements e JOIN plan_versions v ON v.id=e.plan_version_id
+   WHERE e.entitlement_key=OLD.key AND v.status='published'
+  ) THEN
+   RAISE EXCEPTION 'Published entitlement definition is immutable' USING ERRCODE='23514';
+  END IF;
+ ELSIF TG_TABLE_NAME='plan_versions' THEN
+  IF TG_OP<>'INSERT' AND OLD.status='published' THEN
+   RAISE EXCEPTION 'Published plan version is immutable' USING ERRCODE='23514';
+  END IF;
+  IF TG_OP='INSERT' AND NEW.status<>'draft' THEN
+   RAISE EXCEPTION 'Create a draft before publishing' USING ERRCODE='23514';
+  END IF;
+  IF TG_OP='UPDATE' THEN
+   IF (NEW.id,NEW.plan_code,NEW.version_number,NEW.created_at) IS DISTINCT FROM
+      (OLD.id,OLD.plan_code,OLD.version_number,OLD.created_at) THEN
+    RAISE EXCEPTION 'Version identity is immutable' USING ERRCODE='23514';
+   END IF;
+   NEW.revision=OLD.revision+1;
+   IF NEW.status='published' THEN
+    NEW.published_at=clock_timestamp();
+    IF (SELECT count(*) FROM plan_entitlements WHERE plan_version_id=NEW.id)<>11 OR
+       EXISTS(SELECT 1 FROM unnest(ARRAY['organizations','staffPerOrganization','storageBytes','businessEmails',
+         'custom_templates','business_emails','scheduled_reports','report_exports','staff_roles',
+         'advanced_analytics','custom_domains']) k
+         WHERE NOT EXISTS(SELECT 1 FROM plan_entitlements e WHERE e.plan_version_id=NEW.id AND e.entitlement_key=k)) THEN
+     RAISE EXCEPTION 'Published version requires all eleven supported entitlements' USING ERRCODE='23514';
+    END IF;
+    IF (SELECT count(*) FROM plan_version_prices WHERE plan_version_id=NEW.id)<>
+       (CASE WHEN NEW.plan_code='trial' THEN 0 ELSE 2 END) THEN
+     RAISE EXCEPTION 'Published paid version requires monthly and annual MAD prices; trial has no prices' USING ERRCODE='23514';
+    END IF;
+   END IF;
+  END IF;
+  IF TG_OP<>'DELETE' AND NEW.source_snapshot IS NOT NULL AND
+     NEW.source_hash IS DISTINCT FROM encode(sha256(convert_to(NEW.source_snapshot::text,'UTF8')),'hex') THEN
+   RAISE EXCEPTION 'Catalog provenance hash mismatch' USING ERRCODE='23514';
+  END IF;
+ ELSE
+  -- Moving a child cannot evade the old version's immutability.
+  IF TG_OP<>'INSERT' THEN
+   SELECT status INTO version_state FROM plan_versions WHERE id=OLD.plan_version_id FOR UPDATE;
+   IF version_state='published' THEN
+    RAISE EXCEPTION 'Published version values and prices are immutable' USING ERRCODE='23514';
+   END IF;
+  END IF;
+  IF TG_OP<>'DELETE' THEN
+   version_id=NEW.plan_version_id;
+   SELECT status,plan_code INTO version_state,version_plan FROM plan_versions WHERE id=version_id FOR UPDATE;
+   IF version_state='published' THEN
+    RAISE EXCEPTION 'Published version values and prices are immutable' USING ERRCODE='23514';
+   END IF;
+   IF TG_TABLE_NAME='plan_entitlements' THEN
+    SELECT unlimited_allowed INTO allowed FROM entitlement_definitions
+      WHERE key=NEW.entitlement_key AND value_type=NEW.value_type;
+    IF NEW.is_unlimited AND allowed IS DISTINCT FROM true THEN
+     RAISE EXCEPTION 'Unlimited is forbidden for this entitlement' USING ERRCODE='23514';
+    END IF;
+    IF NEW.entitlement_key='organizations' AND NOT NEW.is_unlimited AND NEW.integer_value<1 THEN
+     RAISE EXCEPTION 'Organization capacity must be positive' USING ERRCODE='23514';
+    END IF;
+   ELSIF version_plan='trial' THEN
+    RAISE EXCEPTION 'Trial cannot have selling prices' USING ERRCODE='23514';
+   END IF;
+   UPDATE plan_versions SET revision=revision+1 WHERE id=version_id;
+  END IF;
+  IF TG_OP<>'INSERT' THEN
+   IF TG_OP='DELETE' OR OLD.plan_version_id IS DISTINCT FROM NEW.plan_version_id THEN
+    UPDATE plan_versions SET revision=revision+1 WHERE id=OLD.plan_version_id;
+   END IF;
+  END IF;
+ END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE FUNCTION audit_catalog_publication() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE previous_actor text;
+BEGIN
+ IF NEW.status='published' AND OLD.status='draft' THEN
+  -- Only the migration-role guard can reach publication; restore caller context afterward.
+  previous_actor=current_setting('app.actor_type',true);
+  PERFORM set_config('app.actor_type','platform_admin',true);
+  INSERT INTO platform_admin_audit(actor,action,target_type,target_id,before,after)
+  VALUES(NEW.published_by,'subscription_catalog.publish','plan_version',NEW.id::text,to_jsonb(OLD),to_jsonb(NEW)||jsonb_build_object(
+    'publication_identity',jsonb_build_object('current_user',current_user::text,'session_user',session_user::text,
+      'server_timestamp',NEW.published_at,'transaction_id',txid_current()::text,'declared_actor',NEW.published_by)));
+  PERFORM set_config('app.actor_type',coalesce(previous_actor,''),true);
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER catalog_definition_guard BEFORE INSERT OR UPDATE OR DELETE ON entitlement_definitions FOR EACH ROW EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_version_guard BEFORE INSERT OR UPDATE OR DELETE ON plan_versions FOR EACH ROW EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_entitlement_guard BEFORE INSERT OR UPDATE OR DELETE ON plan_entitlements FOR EACH ROW EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_price_guard BEFORE INSERT OR UPDATE OR DELETE ON plan_version_prices FOR EACH ROW EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_publication_audit AFTER UPDATE ON plan_versions FOR EACH ROW EXECUTE FUNCTION audit_catalog_publication();
+--> statement-breakpoint
+CREATE TRIGGER catalog_definition_no_truncate BEFORE TRUNCATE ON entitlement_definitions FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_version_no_truncate BEFORE TRUNCATE ON plan_versions FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_entitlement_no_truncate BEFORE TRUNCATE ON plan_entitlements FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+CREATE TRIGGER catalog_price_no_truncate BEFORE TRUNCATE ON plan_version_prices FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_catalog();
+--> statement-breakpoint
+ALTER TABLE entitlement_definitions FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE plan_versions FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE plan_entitlements FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE plan_version_prices FORCE ROW LEVEL SECURITY;
+
+--> statement-breakpoint
+-- Import the actual legacy catalog, not commercial defaults. This runs in the migration transaction.
+LOCK TABLE subscription_plans IN SHARE MODE;
+--> statement-breakpoint
+LOCK TABLE billing_settings IN SHARE MODE;
+--> statement-breakpoint
+DO $$
+DECLARE p record; k text; v jsonb;
+BEGIN
+ IF (SELECT count(*) FROM subscription_plans)<>4 OR EXISTS(
+   SELECT 1 FROM subscription_plans WHERE code NOT IN ('trial','essential','business','pro')) THEN
+  RAISE EXCEPTION 'Unsupported legacy plan codes: expected trial, essential, business and pro';
+ END IF;
+ IF (SELECT count(*) FROM billing_settings WHERE id=1 AND currency='MAD')<>1 THEN
+  RAISE EXCEPTION 'Catalog import supports MAD only; review configured billing currency before rollout';
+ END IF;
+ FOR p IN SELECT * FROM subscription_plans LOOP
+  IF btrim(p.name)='' OR p.rank<0 OR p.monthly_ht<0 OR p.annual_ht<0 OR
+     jsonb_typeof(p.entitlements) IS DISTINCT FROM 'object' THEN
+   RAISE EXCEPTION 'Malformed legacy catalog metadata for plan %',p.code;
+  END IF;
+  IF (SELECT count(*) FROM jsonb_object_keys(p.entitlements))<>5 OR
+     NOT p.entitlements ?& ARRAY['organizations','staffPerOrganization','storageBytes','businessEmails','features'] THEN
+   RAISE EXCEPTION 'Unknown or missing legacy entitlement keys for plan %',p.code;
+  END IF;
+  FOREACH k IN ARRAY ARRAY['organizations','staffPerOrganization','storageBytes','businessEmails'] LOOP
+   v=p.entitlements->k;
+   IF v='null'::jsonb AND k IN ('organizations','staffPerOrganization') THEN CONTINUE; END IF;
+   IF jsonb_typeof(v) IS DISTINCT FROM 'number' THEN
+    RAISE EXCEPTION 'Invalid legacy limit % for plan %',k,p.code;
+   END IF;
+   IF v::numeric<(CASE WHEN k='organizations' THEN 1 ELSE 0 END) OR v::numeric>9007199254740991 OR trunc(v::numeric)<>v::numeric THEN
+    RAISE EXCEPTION 'Invalid legacy integer % for plan %',k,p.code;
+   END IF;
+  END LOOP;
+  IF jsonb_typeof(p.entitlements->'features') IS DISTINCT FROM 'array' THEN
+   RAISE EXCEPTION 'Malformed legacy feature array for plan %',p.code;
+  END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(p.entitlements->'features') f WHERE jsonb_typeof(f)<>'string' OR
+    f#>>'{}' NOT IN ('custom_templates','business_emails','scheduled_reports','report_exports','staff_roles','advanced_analytics','custom_domains')) OR
+    (SELECT count(*)<>count(DISTINCT f) FROM jsonb_array_elements(p.entitlements->'features') f) THEN
+   RAISE EXCEPTION 'Unknown or duplicate legacy feature for plan %',p.code;
+  END IF;
+ END LOOP;
+END $$;
+--> statement-breakpoint
+INSERT INTO entitlement_definitions(key,value_type,unit,kind,scope,unlimited_allowed) VALUES
+ ('organizations','integer','count','capacity','owner',true),
+ ('staffPerOrganization','integer','count','capacity','organization',true),
+ ('storageBytes','integer','byte','capacity','owner',false),
+ ('businessEmails','integer','recipient','consumption','owner',false),
+ ('custom_templates','boolean','flag','feature','organization',false),
+ ('business_emails','boolean','flag','feature','organization',false),
+ ('scheduled_reports','boolean','flag','feature','organization',false),
+ ('report_exports','boolean','flag','feature','organization',false),
+ ('staff_roles','boolean','flag','feature','organization',false),
+ ('advanced_analytics','boolean','flag','feature','owner',false),
+ ('custom_domains','boolean','flag','feature','organization',false);
+--> statement-breakpoint
+INSERT INTO plan_versions(plan_code,version_number,display_name,rank,source_snapshot,source_hash)
+SELECT code,1,name,rank,snapshot,encode(sha256(convert_to(snapshot::text,'UTF8')),'hex')
+FROM (SELECT p.*,subscription_catalog_snapshot(p,b.currency) snapshot
+      FROM subscription_plans p CROSS JOIN billing_settings b WHERE b.id=1) source;
+--> statement-breakpoint
+INSERT INTO plan_entitlements(plan_version_id,entitlement_key,value_type,boolean_value,integer_value,is_unlimited)
+SELECT v.id,d.key,d.value_type,
+ CASE WHEN d.value_type='boolean' THEN p.entitlements->'features' ? d.key END,
+ CASE WHEN d.value_type='integer' AND p.entitlements->d.key<>'null'::jsonb THEN (p.entitlements->>d.key)::numeric::bigint END,
+ d.value_type='integer' AND p.entitlements->d.key='null'::jsonb
+FROM plan_versions v JOIN subscription_plans p ON p.code=v.plan_code CROSS JOIN entitlement_definitions d;
+--> statement-breakpoint
+INSERT INTO plan_version_prices(plan_version_id,cycle,currency,amount_ht_minor)
+SELECT v.id,c.cycle,'MAD',CASE WHEN c.cycle='monthly' THEN p.monthly_ht ELSE p.annual_ht END
+FROM plan_versions v JOIN subscription_plans p ON p.code=v.plan_code
+CROSS JOIN (VALUES ('monthly'),('annual')) c(cycle) WHERE p.code<>'trial';
+--> statement-breakpoint
+UPDATE plan_versions SET status='published',published_at=now(),published_by='migration:subscription-catalog-v1';
+
+--> statement-breakpoint
+-- Owner-subscription overrides: append-only history, typed values, non-overlapping windows.
+-- Effective window is [starts_at, least(ends_at, revoked_at)); revocation never erases history.
+-- Times are database-authored: starts_at cannot precede the writing transaction, and revoked_at
+-- must be the revoking transaction's time (one-minute tolerance), never before creation.
+-- Functions qualify every table and pin search_path, so callers cannot redirect lookups.
+CREATE FUNCTION guard_subscription_override() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+ definition "public".entitlement_definitions%ROWTYPE;
+BEGIN
+ IF TG_OP IN ('DELETE','TRUNCATE') THEN
+  RAISE EXCEPTION 'Subscription overrides are append-only' USING ERRCODE='42501';
+ END IF;
+ IF TG_OP='UPDATE' THEN
+  IF OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL
+   OR (to_jsonb(NEW)-'revoked_at') IS DISTINCT FROM (to_jsonb(OLD)-'revoked_at') THEN
+   RAISE EXCEPTION 'Only a single revocation may change an override' USING ERRCODE='23514';
+  END IF;
+  IF NEW.revoked_at<OLD.created_at OR NEW.revoked_at NOT BETWEEN now()-interval '1 minute' AND now()+interval '1 minute' THEN
+   RAISE EXCEPTION 'Revocation time must be the current time' USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+ END IF;
+ -- The overlap check below relies on a fresh snapshot after the lock (READ COMMITTED only).
+ IF current_setting('transaction_isolation')<>'read committed' THEN
+  RAISE EXCEPTION 'Override writes require READ COMMITTED isolation' USING ERRCODE='25001';
+ END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(NEW.owner_id::text||':'||NEW.entitlement_key,44033));
+ IF NEW.revoked_at IS NOT NULL OR NEW.created_at<>now() OR NEW.starts_at<now()-interval '1 minute' THEN
+  RAISE EXCEPTION 'Overrides start now or later and are created unrevoked' USING ERRCODE='23514';
+ END IF;
+ IF NEW.replaces_id IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM "public".subscription_overrides r
+  WHERE r.id=NEW.replaces_id AND r.owner_id=NEW.owner_id AND r.entitlement_key=NEW.entitlement_key
+   AND r.revoked_at IS NOT NULL
+ ) THEN
+  RAISE EXCEPTION 'An amendment replaces a revoked override of the same owner and entitlement' USING ERRCODE='23514';
+ END IF;
+ SELECT * INTO definition FROM "public".entitlement_definitions WHERE key=NEW.entitlement_key;
+ IF NEW.is_unlimited AND NOT definition.unlimited_allowed THEN
+  RAISE EXCEPTION 'Entitlement % cannot be unlimited', NEW.entitlement_key USING ERRCODE='23514';
+ END IF;
+ IF NEW.entitlement_key='organizations' AND NEW.integer_value IS NOT NULL AND NEW.integer_value<1 THEN
+  RAISE EXCEPTION 'Organization limit must be at least one' USING ERRCODE='23514';
+ END IF;
+ IF EXISTS (
+  SELECT 1 FROM "public".subscription_overrides o
+  WHERE o.owner_id=NEW.owner_id AND o.entitlement_key=NEW.entitlement_key AND o.id<>NEW.id
+   AND o.starts_at<coalesce(NEW.ends_at,'infinity')
+   AND least(coalesce(o.ends_at,'infinity'),coalesce(o.revoked_at,'infinity'))>NEW.starts_at
+   AND least(coalesce(o.ends_at,'infinity'),coalesce(o.revoked_at,'infinity'))>o.starts_at
+ ) THEN
+  RAISE EXCEPTION 'Override window overlaps an existing override' USING ERRCODE='23P01';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_override_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_overrides FOR EACH ROW EXECUTE FUNCTION guard_subscription_override();
+--> statement-breakpoint
+CREATE TRIGGER subscription_override_truncate BEFORE TRUNCATE ON subscription_overrides FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_override();
+--> statement-breakpoint
+-- Notes are append-only too: only the revocation fields may be filled, once, after the override
+-- itself is revoked (so a note can never block a later revocation).
+CREATE FUNCTION guard_subscription_override_note() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP IN ('DELETE','TRUNCATE') THEN
+  RAISE EXCEPTION 'Override notes are append-only' USING ERRCODE='42501';
+ END IF;
+ IF TG_OP='INSERT' AND (NEW.revoked_by IS NOT NULL OR NEW.revocation_reason IS NOT NULL) THEN
+  RAISE EXCEPTION 'Create notes before revoking' USING ERRCODE='23514';
+ END IF;
+ IF TG_OP='UPDATE' THEN
+  IF OLD.revoked_by IS NOT NULL OR NEW.revoked_by IS NULL
+   OR (to_jsonb(NEW)-'{revoked_by,revocation_reason}'::text[]) IS DISTINCT FROM (to_jsonb(OLD)-'{revoked_by,revocation_reason}'::text[]) THEN
+   RAISE EXCEPTION 'Only a single revocation may change override notes' USING ERRCODE='23514';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM "public".subscription_overrides o WHERE o.id=NEW.override_id AND o.revoked_at IS NOT NULL) THEN
+   RAISE EXCEPTION 'Revoke the override before recording its revocation note' USING ERRCODE='23514';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_override_note_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_override_notes FOR EACH ROW EXECUTE FUNCTION guard_subscription_override_note();
+--> statement-breakpoint
+CREATE TRIGGER subscription_override_note_truncate BEFORE TRUNCATE ON subscription_override_notes FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_override_note();
+--> statement-breakpoint
+-- At commit, every override has its administrator note, and every revoked override records who
+-- revoked it and why.
+CREATE FUNCTION require_subscription_override_note() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF NOT EXISTS (
+  SELECT 1 FROM "public".subscription_override_notes n
+  WHERE n.override_id=NEW.id AND (NEW.revoked_at IS NULL OR n.revoked_by IS NOT NULL)
+ ) THEN
+  RAISE EXCEPTION 'An override requires an administrator note, including for its revocation' USING ERRCODE='23514';
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER subscription_override_note_required AFTER INSERT OR UPDATE ON subscription_overrides DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION require_subscription_override_note();
+
+--> statement-breakpoint
+-- S5 coverage periods: append-only, database-authored creation time, per-owner serialized checks.
+-- Effective window: [starts_at, coalesce(superseded_at, ends_at)). Functions qualify every table and
+-- pin search_path; the test fixture rewrites the "public". prefix to its own schema.
+CREATE FUNCTION guard_subscription_period() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP IN ('DELETE','TRUNCATE') THEN
+  RAISE EXCEPTION 'Subscription periods are append-only' USING ERRCODE='42501';
+ END IF;
+ -- Coverage checks run deferred under this lock with fresh READ COMMITTED snapshots. Trial periods
+ -- never take part in overlap checks (they mirror the legacy trial window in any isolation level).
+ IF NEW.kind<>'trial' AND current_setting('transaction_isolation')<>'read committed' THEN
+  RAISE EXCEPTION 'Period writes require READ COMMITTED isolation' USING ERRCODE='25001';
+ END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(NEW.owner_id::text||':periods',44034));
+ IF TG_OP='UPDATE' THEN
+  -- Window changes only through the controlled SECURITY DEFINER functions (table owner): the trial
+  -- mirror and the suspension shift. Everyone else may only record a single supersession.
+  IF pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER')
+   AND (to_jsonb(NEW)-'{starts_at,ends_at,superseded_at}'::text[]) IS NOT DISTINCT FROM (to_jsonb(OLD)-'{starts_at,ends_at,superseded_at}'::text[])
+   AND (OLD.superseded_at IS NULL) IS NOT DISTINCT FROM (NEW.superseded_at IS NULL) THEN
+   RETURN NEW;
+  END IF;
+  IF OLD.superseded_at IS NOT NULL OR NEW.superseded_at IS NULL
+   OR (to_jsonb(NEW)-'{superseded_at,superseded_by}'::text[]) IS DISTINCT FROM (to_jsonb(OLD)-'{superseded_at,superseded_by}'::text[]) THEN
+   RAISE EXCEPTION 'Only a single supersession may change a period' USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+ END IF;
+ IF NEW.created_at<>now() THEN
+  RAISE EXCEPTION 'Period creation time is set by the database' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_period_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_periods FOR EACH ROW EXECUTE FUNCTION guard_subscription_period();
+--> statement-breakpoint
+CREATE TRIGGER subscription_period_truncate BEFORE TRUNCATE ON subscription_periods FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_period();
+--> statement-breakpoint
+-- At commit (current row state): superseding period is a later non-trial period of the same owner
+-- starting exactly at the supersession; non-trial effective windows never overlap; complimentary
+-- periods carry an administrator note.
+CREATE FUNCTION check_subscription_period() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+ cur "public".subscription_periods%ROWTYPE;
+BEGIN
+ SELECT * INTO cur FROM "public".subscription_periods WHERE id=NEW.id;
+ IF cur.superseded_by IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM "public".subscription_periods p
+  WHERE p.id=cur.superseded_by AND p.owner_id=cur.owner_id AND p.kind<>'trial' AND p.starts_at=cur.superseded_at
+ ) THEN
+  RAISE EXCEPTION 'A period is superseded by a later period of the same owner starting at the supersession' USING ERRCODE='23514';
+ END IF;
+ IF cur.kind<>'trial' AND EXISTS (
+  SELECT 1 FROM "public".subscription_periods o
+  WHERE o.owner_id=cur.owner_id AND o.id<>cur.id AND o.kind<>'trial'
+   AND o.starts_at<coalesce(cur.superseded_at,cur.ends_at)
+   AND coalesce(o.superseded_at,o.ends_at)>cur.starts_at
+ ) THEN
+  RAISE EXCEPTION 'Coverage periods overlap' USING ERRCODE='23P01';
+ END IF;
+ IF cur.kind='complimentary' AND NOT EXISTS (SELECT 1 FROM "public".subscription_period_notes n WHERE n.period_id=cur.id) THEN
+  RAISE EXCEPTION 'A complimentary period requires an administrator note' USING ERRCODE='23514';
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER subscription_period_check AFTER INSERT OR UPDATE ON subscription_periods DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_subscription_period();
+--> statement-breakpoint
+-- Notes, suspensions and scheduled changes: no deletion; only their single allowed transition.
+CREATE FUNCTION guard_subscription_period_history() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP IN ('DELETE','TRUNCATE') THEN
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME USING ERRCODE='42501';
+ END IF;
+ IF TG_TABLE_NAME='subscription_period_notes' THEN
+  IF TG_OP='UPDATE' THEN
+   RAISE EXCEPTION 'Period notes are immutable' USING ERRCODE='23514';
+  END IF;
+ ELSIF TG_TABLE_NAME='subscription_suspensions' THEN
+  IF TG_OP='INSERT' AND (NEW.created_at<>now() OR NEW.started_at>now()+interval '1 minute' OR NEW.ended_at IS NOT NULL) THEN
+   RAISE EXCEPTION 'A suspension starts now or earlier and is created open' USING ERRCODE='23514';
+  END IF;
+  IF TG_OP='UPDATE' AND (OLD.ended_at IS NOT NULL OR NEW.ended_at IS NULL
+   OR NEW.ended_at NOT BETWEEN now()-interval '1 minute' AND now()+interval '1 minute'
+   OR (to_jsonb(NEW)-'{ended_at,shifted_by_ms}'::text[]) IS DISTINCT FROM (to_jsonb(OLD)-'{ended_at,shifted_by_ms}'::text[])) THEN
+   RAISE EXCEPTION 'Only a single resume at the current time may change a suspension' USING ERRCODE='23514';
+  END IF;
+ ELSIF TG_TABLE_NAME='subscription_scheduled_changes' THEN
+  IF TG_OP='INSERT' AND (NEW.created_at<>now() OR NEW.status<>'scheduled') THEN
+   RAISE EXCEPTION 'Scheduled changes are created now, in scheduled status' USING ERRCODE='23514';
+  END IF;
+  IF TG_OP='UPDATE' THEN
+   -- The suspension shift (table owner, SECURITY DEFINER) moves pending boundaries only.
+   IF pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER')
+    AND OLD.status='scheduled' AND NEW.status='scheduled'
+    AND (to_jsonb(NEW)-'effective_at') IS NOT DISTINCT FROM (to_jsonb(OLD)-'effective_at') THEN
+    RETURN NEW;
+   END IF;
+   IF OLD.status<>'scheduled' OR NEW.status='scheduled'
+    OR (to_jsonb(NEW)-'status') IS DISTINCT FROM (to_jsonb(OLD)-'status') THEN
+    RAISE EXCEPTION 'Only a single status transition may change a scheduled change' USING ERRCODE='23514';
+   END IF;
+  END IF;
+ END IF;
+ RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_period_note_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_period_notes FOR EACH ROW EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+CREATE TRIGGER subscription_period_note_truncate BEFORE TRUNCATE ON subscription_period_notes FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+CREATE TRIGGER subscription_suspension_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_suspensions FOR EACH ROW EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+CREATE TRIGGER subscription_suspension_truncate BEFORE TRUNCATE ON subscription_suspensions FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+CREATE TRIGGER subscription_scheduled_change_guard BEFORE INSERT OR UPDATE OR DELETE ON subscription_scheduled_changes FOR EACH ROW EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+CREATE TRIGGER subscription_scheduled_change_truncate BEFORE TRUNCATE ON subscription_scheduled_changes FOR EACH STATEMENT EXECUTE FUNCTION guard_subscription_period_history();
+--> statement-breakpoint
+-- Trial periods mirror the legacy trial window (creation, administrator extension, resume shift),
+-- whatever path creates the subscription (organization provisioning, owner start, administrator).
+CREATE FUNCTION mirror_subscription_trial() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND NEW.trial_started_at=OLD.trial_started_at AND NEW.trial_ends_at=OLD.trial_ends_at THEN
+  RETURN NULL;
+ END IF;
+ UPDATE "public".subscription_periods SET starts_at=NEW.trial_started_at, ends_at=NEW.trial_ends_at
+ WHERE owner_id=NEW.owner_id AND kind='trial';
+ IF NOT FOUND THEN
+  INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source)
+  VALUES (NEW.owner_id,'trial','trial',NEW.trial_started_at,NEW.trial_ends_at,'trial');
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER owner_subscription_trial_period AFTER INSERT OR UPDATE OF trial_started_at, trial_ends_at ON owner_subscriptions FOR EACH ROW EXECUTE FUNCTION mirror_subscription_trial();
+--> statement-breakpoint
+REVOKE ALL ON FUNCTION mirror_subscription_trial() FROM PUBLIC;
+--> statement-breakpoint
+-- Resume: the only path that moves coverage periods. Same rule as the legacy shift of payments:
+-- a coverage period still running at p_since ends p_shift_ms later and starts later only if it had not
+-- started; supersessions at or after p_since and pending scheduled changes after p_since move too.
+-- The trial is shifted by the legacy row and mirrored. The suspension closes at p_since + shift (the
+-- application clock), so the recorded window always equals the applied shift. An ended paid period
+-- still in grace at p_since also moves, so the paid grace resolver keeps exactly the remaining time.
+CREATE FUNCTION subscription_periods_shift(p_owner uuid, p_since timestamptz, p_shift_ms bigint) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+ delta interval := p_shift_ms * interval '1 millisecond';
+ grace_period uuid;
+BEGIN
+ IF current_setting('app.actor_type',true) IS DISTINCT FROM 'platform_admin' THEN
+  RAISE EXCEPTION 'Platform administrator context required' USING ERRCODE='42501';
+ END IF;
+ IF p_shift_ms IS NULL OR p_shift_ms<0 THEN
+  RAISE EXCEPTION 'The shift must be a non-negative duration' USING ERRCODE='23514';
+ END IF;
+ -- Freeze only remaining paid grace, never expired complimentary/cancelled coverage. Choose
+ -- the same latest effective period as the resolver (including its later-start tie break).
+ SELECT p.id INTO grace_period
+ FROM "public".subscription_periods p
+ WHERE p.owner_id=p_owner AND p.kind<>'trial'
+   AND NOT EXISTS (SELECT 1 FROM "public".subscription_scheduled_changes c
+                   WHERE c.owner_id=p_owner AND c.kind='cancel' AND c.status='scheduled')
+ ORDER BY coalesce(p.superseded_at,p.ends_at) DESC, p.starts_at DESC LIMIT 1;
+ IF NOT EXISTS (SELECT 1 FROM "public".subscription_periods p
+                WHERE p.id=grace_period AND p.kind='paid' AND p.superseded_at IS NULL
+                  AND p.ends_at<=p_since AND p.ends_at + interval '168 hours'>p_since) THEN
+  grace_period := NULL;
+ END IF;
+ -- p_since is the legacy suspension start (authoritative while both models are written); it must
+ -- equal the open suspension's start, otherwise the two histories disagree and nothing is shifted.
+ UPDATE "public".subscription_suspensions SET ended_at=p_since+delta, shifted_by_ms=p_shift_ms
+ WHERE owner_id=p_owner AND ended_at IS NULL AND started_at=p_since;
+ IF NOT FOUND THEN
+  RAISE EXCEPTION 'No open suspension started at % (owner %): legacy and period suspension histories disagree', p_since, p_owner USING ERRCODE='23514';
+ END IF;
+ UPDATE "public".subscription_periods SET
+  starts_at=CASE WHEN starts_at>=p_since THEN starts_at+delta ELSE starts_at END,
+  ends_at=ends_at+delta,
+  superseded_at=CASE WHEN superseded_at>=p_since THEN superseded_at+delta ELSE superseded_at END
+ WHERE owner_id=p_owner AND kind<>'trial' AND (ends_at>p_since OR id=grace_period);
+ UPDATE "public".subscription_scheduled_changes SET effective_at=effective_at+delta
+ WHERE owner_id=p_owner AND status='scheduled' AND effective_at>p_since;
+END $$;
+--> statement-breakpoint
+REVOKE ALL ON FUNCTION subscription_periods_shift(uuid,timestamptz,bigint) FROM PUBLIC;
+--> statement-breakpoint
+-- Forward-only reconciliation from the legacy model (operator catch-up after legacy-only writes,
+-- SUBSCRIPTION_PERIOD_WRITES=off); fresh installations need no backfill. New owners get a full build; existing owners get appended payments, suspensions
+-- and cancellation changes. It aborts with the owner id on any shape it cannot map without guessing,
+-- never modifies legacy rows, and is idempotent. Legacy tables use FORCE ROW LEVEL SECURITY: it reads
+-- them as platform administrator, whose policies are unconditional (verified below, no DDL), takes the
+-- legacy writers' per-owner lock and re-reads each owner, and checks at the end that every subscription
+-- and confirmed payment it processed is represented.
+CREATE FUNCTION subscription_periods_reconcile(actor text DEFAULT 'platform_admin') RETURNS integer LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+ s "public".owner_subscriptions%ROWTYPE;
+ p "public".subscription_payments%ROWTYPE;
+ existing "public".subscription_periods%ROWTYPE;
+ period_kind text;
+ new_id uuid;
+ last_id uuid;
+ last_start timestamptz;
+ last_end timestamptz;
+ payments integer;
+ changed integer := 0;
+ touched boolean;
+ processed uuid[] := '{}';
+ previous_actor text := current_setting('app.actor_type',true);
+ open_suspension "public".subscription_suspensions%ROWTYPE;
+ cancel "public".subscription_scheduled_changes%ROWTYPE;
+BEGIN
+ PERFORM set_config('app.actor_type',coalesce(actor,''),true);
+ IF current_setting('app.actor_type',true) IS DISTINCT FROM 'platform_admin' THEN
+  RAISE EXCEPTION 'S5 reconcile: legacy rows must be read as platform administrator (FORCE ROW LEVEL SECURITY)' USING ERRCODE='42501';
+ END IF;
+ -- Full visibility relies on the unconditional administrator policies and no restrictive policy.
+ IF (SELECT count(*) FROM pg_policy WHERE polrelid='"public".owner_subscriptions'::regclass AND polname='subscription_admin'
+      AND polcmd='*' AND polpermissive
+      AND pg_get_expr(polqual,polrelid)='(current_setting(''app.actor_type''::text, true) = ''platform_admin''::text)')<>1
+  OR (SELECT count(*) FROM pg_policy WHERE polrelid='"public".subscription_payments'::regclass AND polname='subscription_payment_admin'
+      AND polcmd='*' AND polpermissive
+      AND pg_get_expr(polqual,polrelid)='(current_setting(''app.actor_type''::text, true) = ''platform_admin''::text)')<>1
+  OR EXISTS (SELECT 1 FROM pg_policy WHERE NOT polpermissive
+      AND polrelid IN ('"public".owner_subscriptions'::regclass,'"public".subscription_payments'::regclass)) THEN
+  RAISE EXCEPTION 'S5 reconcile: administrator read policies on legacy subscription tables are missing or changed' USING ERRCODE='42501';
+ END IF;
+ IF EXISTS (
+  SELECT 1 FROM "public".subscription_payments x
+  WHERE x.status='confirmed' AND NOT EXISTS (SELECT 1 FROM "public".owner_subscriptions o WHERE o.owner_id=x.owner_id)
+ ) THEN
+  RAISE EXCEPTION 'S5 reconcile: confirmed payment without a subscription (owner %)', (
+   SELECT x.owner_id FROM "public".subscription_payments x
+   WHERE x.status='confirmed' AND NOT EXISTS (SELECT 1 FROM "public".owner_subscriptions o WHERE o.owner_id=x.owner_id)
+   ORDER BY x.owner_id LIMIT 1);
+ END IF;
+ FOR s IN SELECT * FROM "public".owner_subscriptions ORDER BY owner_id LOOP
+  -- Same per-owner lock as the legacy writers (subscription.repository lock), then a fresh read, so
+  -- every period, suspension and cancellation comes from one consistent legacy state.
+  PERFORM pg_advisory_xact_lock(hashtextextended(s.owner_id::text,44032));
+  SELECT * INTO s FROM "public".owner_subscriptions WHERE owner_id=s.owner_id;
+  CONTINUE WHEN NOT FOUND;
+  processed := processed || s.owner_id;
+  touched := false;
+  -- Trial: created once; a changed legacy trial window (extension/resume) cannot be appended.
+  SELECT * INTO existing FROM "public".subscription_periods WHERE owner_id=s.owner_id AND kind='trial';
+  IF NOT FOUND THEN
+   IF EXISTS (SELECT 1 FROM "public".subscription_periods x WHERE x.owner_id=s.owner_id) THEN
+    RAISE EXCEPTION 'S5 reconcile: periods without a trial period (owner %)', s.owner_id;
+   END IF;
+   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source)
+   VALUES (s.owner_id,'trial','trial',s.trial_started_at,s.trial_ends_at,'migration');
+   touched := true;
+  ELSIF existing.starts_at<>s.trial_started_at OR existing.ends_at<>s.trial_ends_at THEN
+   RAISE EXCEPTION 'S5 reconcile: trial window changed since the backfill (owner %)', s.owner_id;
+  END IF;
+  -- Latest coverage period so far (appending continues from it).
+  SELECT * INTO existing FROM "public".subscription_periods
+  WHERE owner_id=s.owner_id AND kind<>'trial' ORDER BY starts_at DESC, created_at DESC LIMIT 1;
+  IF FOUND THEN
+   last_id := existing.id; last_start := existing.starts_at; last_end := existing.ends_at;
+  ELSE
+   last_id := NULL; last_start := NULL; last_end := NULL;
+  END IF;
+  payments := 0;
+  FOR p IN SELECT * FROM "public".subscription_payments
+   WHERE owner_id=s.owner_id AND status='confirmed' ORDER BY coverage_start, coverage_end, id LOOP
+   payments := payments+1;
+   SELECT * INTO existing FROM "public".subscription_periods WHERE payment_id=p.id;
+   IF FOUND THEN
+    IF existing.starts_at<>p.coverage_start OR existing.ends_at<>p.coverage_end THEN
+     RAISE EXCEPTION 'S5 reconcile: coverage of payment % changed since the backfill (owner %)', p.id, s.owner_id;
+    END IF;
+    CONTINUE;
+   END IF;
+   IF EXISTS (SELECT 1 FROM "public".subscription_periods x WHERE x.owner_id=s.owner_id AND x.kind='complimentary' AND x.payment_id IS NULL AND x.source='migration') THEN
+    RAISE EXCEPTION 'S5 reconcile: payment % after a converted paid-through marker (owner %)', p.id, s.owner_id;
+   END IF;
+   IF p.method='admin_adjustment' THEN period_kind := 'complimentary';
+   ELSIF p.amount_ttc>0 THEN period_kind := 'paid';
+   ELSE RAISE EXCEPTION 'S5 reconcile: zero-amount payment % is not an administrator adjustment (owner %)', p.id, s.owner_id;
+   END IF;
+   IF last_start IS NOT NULL AND (p.coverage_start<last_start
+    OR (p.coverage_start<last_end AND (p.coverage_start=last_start OR p.coverage_end<last_end))) THEN
+    RAISE EXCEPTION 'S5 reconcile: ambiguous overlapping coverage % (owner %)', p.id, s.owner_id;
+   END IF;
+   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,cycle,starts_at,ends_at,source,payment_id)
+   VALUES (s.owner_id,period_kind,p.plan_code,p.cycle,p.coverage_start,p.coverage_end,'migration',p.id)
+   RETURNING id INTO new_id;
+   IF period_kind='complimentary' THEN
+    INSERT INTO "public".subscription_period_notes(period_id,reason)
+    VALUES (new_id,'Converted from administrator adjustment payment '||p.id);
+   END IF;
+   -- Later-starting coverage wins on overlap (legacy upgrade rule): supersede the rest.
+   IF last_end IS NOT NULL AND p.coverage_start<last_end THEN
+    UPDATE "public".subscription_periods SET superseded_at=p.coverage_start, superseded_by=new_id WHERE id=last_id;
+   END IF;
+   last_id := new_id; last_start := p.coverage_start; last_end := p.coverage_end;
+   touched := true;
+  END LOOP;
+  -- Legacy marker: only without any coverage (payments or S5b administrator grants), as the legacy
+  -- resolver's fallback.
+  IF payments=0 AND s.plan_code<>'trial' AND s.paid_through_at IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM "public".subscription_periods g WHERE g.owner_id=s.owner_id AND g.source='admin_grant') THEN
+   SELECT * INTO existing FROM "public".subscription_periods
+   WHERE owner_id=s.owner_id AND kind='complimentary' AND payment_id IS NULL AND source='migration';
+   IF FOUND THEN
+    IF existing.ends_at<>s.paid_through_at OR existing.plan_code<>s.plan_code THEN
+     RAISE EXCEPTION 'S5 reconcile: legacy paid-through marker changed since the backfill (owner %)', s.owner_id;
+    END IF;
+   ELSE
+    IF s.paid_through_at<=s.trial_started_at THEN
+     RAISE EXCEPTION 'S5 reconcile: legacy paid-through before the trial start (owner %)', s.owner_id;
+    END IF;
+    INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source)
+    VALUES (s.owner_id,'complimentary',s.plan_code,s.trial_started_at,s.paid_through_at,'migration')
+    RETURNING id INTO new_id;
+    INSERT INTO "public".subscription_period_notes(period_id,reason)
+    VALUES (new_id,'Converted from legacy paid-through marker');
+    touched := true;
+   END IF;
+   last_end := s.paid_through_at;
+  END IF;
+  -- Suspension: append a new one; a legacy resume shifted coverage and cannot be replayed here.
+  SELECT * INTO open_suspension FROM "public".subscription_suspensions WHERE owner_id=s.owner_id AND ended_at IS NULL;
+  IF s.suspended_at IS NOT NULL THEN
+   IF s.suspended_at>now() THEN
+    RAISE EXCEPTION 'S5 reconcile: suspension starts in the future (owner %)', s.owner_id;
+   END IF;
+   IF NOT FOUND THEN
+    INSERT INTO "public".subscription_suspensions(owner_id,started_at) VALUES (s.owner_id,s.suspended_at);
+    touched := true;
+   ELSIF open_suspension.started_at<>s.suspended_at THEN
+    RAISE EXCEPTION 'S5 reconcile: suspension changed since the backfill (owner %)', s.owner_id;
+   END IF;
+  ELSIF FOUND THEN
+   RAISE EXCEPTION 'S5 reconcile: subscription resumed since the backfill (owner %)', s.owner_id;
+  END IF;
+  -- Paid-through: the latest end of all coverage (payments, grants, markers).
+  SELECT max(coalesce(superseded_at,ends_at)) INTO last_end FROM "public".subscription_periods
+  WHERE owner_id=s.owner_id AND kind<>'trial';
+  -- Cancellation at period end (no effect without coverage, as in the legacy resolver).
+  SELECT * INTO cancel FROM "public".subscription_scheduled_changes
+  WHERE owner_id=s.owner_id AND kind='cancel' AND status='scheduled';
+  IF s.cancel_at_period_end AND last_end IS NOT NULL THEN
+   IF NOT FOUND THEN
+    INSERT INTO "public".subscription_scheduled_changes(owner_id,kind,effective_at,created_by)
+    VALUES (s.owner_id,'cancel',last_end,'migration');
+    touched := true;
+   ELSIF cancel.effective_at<>last_end THEN
+    RAISE EXCEPTION 'S5 reconcile: scheduled cancellation no longer matches coverage (owner %)', s.owner_id;
+   END IF;
+  ELSIF FOUND AND NOT s.cancel_at_period_end THEN
+   UPDATE "public".subscription_scheduled_changes SET status='cancelled' WHERE id=cancel.id;
+   touched := true;
+  END IF;
+  IF touched THEN changed := changed+1; END IF;
+ END LOOP;
+ IF EXISTS (SELECT 1 FROM unnest(processed) o(id)
+  WHERE NOT EXISTS (SELECT 1 FROM "public".subscription_periods t WHERE t.owner_id=o.id AND t.kind='trial')) THEN
+  RAISE EXCEPTION 'S5 reconcile: not every subscription has a trial period';
+ END IF;
+ -- Every confirmed payment of a processed owner maps to exactly one period (paid, or complimentary
+ -- for administrator adjustments; supersession keeps the row). payment_id is unique.
+ IF EXISTS (SELECT 1 FROM "public".subscription_payments x
+  WHERE x.status='confirmed' AND x.owner_id=ANY(processed)
+   AND NOT EXISTS (SELECT 1 FROM "public".subscription_periods m WHERE m.payment_id=x.id)) THEN
+  RAISE EXCEPTION 'S5 reconcile: confirmed payment without a period (owner %)', (
+   SELECT x.owner_id FROM "public".subscription_payments x
+   WHERE x.status='confirmed' AND x.owner_id=ANY(processed)
+    AND NOT EXISTS (SELECT 1 FROM "public".subscription_periods m WHERE m.payment_id=x.id)
+   ORDER BY x.owner_id LIMIT 1);
+ END IF;
+ PERFORM set_config('app.actor_type',coalesce(previous_actor,''),true);
+ RETURN changed;
+END $$;
+--> statement-breakpoint
+-- Operator-only (migration role); never callable by the runtime.
+REVOKE ALL ON FUNCTION subscription_periods_reconcile(text) FROM PUBLIC;
 
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "document_artifacts" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id');

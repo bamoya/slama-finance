@@ -104,6 +104,25 @@ transport is rejected in production. Configure sender policies before enabling a
 of the five notification rules; all are disabled initially. A rule test addresses
 only the authenticated operator, not a customer.
 
+`SUBSCRIPTION_PERIOD_WRITES=on|off` (default `on`) controls the S5b dual write of subscription coverage periods.
+Legacy subscription rows (payments, adjustments, paid-through, cancellation flag) are always written and still
+support the explicit legacy rollback mode. To use legacy-only writes in an emergency, set both
+`SUBSCRIPTION_COVERAGE_READS=legacy` and `SUBSCRIPTION_PERIOD_WRITES=off`; writes-off alone is incompatible with
+the default periods read mode and prevents startup. Before restoring periods reads, enable period writes and run
+`subscription_periods_reconcile()` (migration role) to append missed periods, then verify coverage consistency.
+Trial periods are mirrored by a database trigger in both write modes.
+
+`SUBSCRIPTION_COVERAGE_READS=legacy|periods` (default `periods`) selects the S5c coverage read authority. One value
+drives owner summaries and API/auth admissions, billing quotes/confirmations/lifecycle actions, worker eligibility
+(feature and featureless jobs, rechecked per organization at execution) and the administrator overview counts and
+customer status filters. `periods` requires `SUBSCRIPTION_PERIOD_WRITES=on` (startup refuses otherwise) and applies
+the approved no-grace rule to complimentary coverage, existing free grants included. A started subscription without
+its trial period fails closed (`SUBSCRIPTION_PERIODS_INCONSISTENT`, 503); there is no per-owner fallback. Fresh
+installations (single baseline, replaced volume) use `periods` from the start; no preflight, reconciliation or
+shadow rollout is required. Dual writes continue, so switching back to `legacy` is an explicit emergency rollback
+that restores the former complimentary grace; it never lifts other restrictions. The baseline shift function closes
+a suspension at its applied shift (application clock) and freezes remaining paid grace.
+
 `NOTIFICATION_WORKER_ENABLED=false` pauses notification preparation/delivery.
 `NOTIFICATION_POLL_MS` and `REPORT_POLL_MS` set polling intervals. Report scheduling
 and estimate expiry continue independently. `NOTIFICATION_PAYLOAD_RETENTION_DAYS=0`

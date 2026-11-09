@@ -173,18 +173,22 @@ export function AdminPaymentsPage() {
       </section>
       {active && (
         <PaymentDecisionDialog
+          key={`${active.payment.id}-${active.decision}`}
           payment={active.payment}
           decision={active.decision}
           onClose={() => setActive(null)}
-          onConfirm={async (receivedReference) => {
+          onConfirm={async (receivedReference, auditReason, code) => {
             await confirm.mutateAsync({
               paymentId: active.payment.id,
-              data: receivedReference ? { receivedReference } : {},
+              data: { code, auditReason, ...(receivedReference ? { receivedReference } : {}) },
             })
             await refresh()
           }}
-          onReject={async (reason) => {
-            await reject.mutateAsync({ paymentId: active.payment.id, data: { reason } })
+          onReject={async (reason, auditReason, code) => {
+            await reject.mutateAsync({
+              paymentId: active.payment.id,
+              data: { reason, auditReason, code },
+            })
             await refresh()
           }}
         />

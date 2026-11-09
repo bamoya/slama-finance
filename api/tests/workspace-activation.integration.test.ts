@@ -10,7 +10,12 @@ import type { OrganizationAdminDelivery } from '../src/integrations/contracts.js
 import type { Database, Transaction } from '../src/lib/db.js'
 import { tenantDatabase } from '../src/lib/tenant-database.js'
 import { createIdentityModule } from '../src/modules/organization/identity/index.js'
-import { fixtureSlugs, isolatedDatabase, routeToSites } from './helpers/postgres.js'
+import {
+  fixtureSlugs,
+  isolatedDatabase,
+  routeToSites,
+  seedPaidCoverage,
+} from './helpers/postgres.js'
 const origin = 'http://localhost:5173'
 describe('Owner activation, workspace access and admission limits', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>,
@@ -308,7 +313,14 @@ describe('Owner activation, workspace access and admission limits', () => {
     )
     expect(results.map((r) => r.statusCode).sort()).toEqual([201, 409])
     expect(results.find((r) => r.statusCode === 409)!.json().code).toBe('STAFF_LIMIT')
-    await fixture.client`update owner_subscriptions set plan_code='essential',paid_through_at=now()+interval '30 days' where owner_id=${ownerId}`
+    await seedPaidCoverage(fixture.db, {
+      ownerId,
+      planCode: 'essential',
+      start: new Date(),
+      end: new Date(Date.now() + 30 * 86_400_000),
+      reference: 'essential-upgrade',
+      kind: 'upgrade',
+    })
     expect(
       (
         await staff('POST', '/api/v1/staff', id, admin.token, {

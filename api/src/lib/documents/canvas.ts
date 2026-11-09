@@ -4,14 +4,11 @@ import { createRequire } from 'node:module'
 import fontkit from '@pdf-lib/fontkit'
 import { PDFDocument, type PDFFont, rgb, StandardFonts } from 'pdf-lib'
 
+import { escapeHtml as escape } from '../html.js'
+
 export const W = 595.28
 export const H = 841.89
 const require = createRequire(import.meta.url)
-const escape = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
-  )
 const clean = (value: string) =>
   [...value].filter((char) => char.charCodeAt(0) >= 32 || '\n\r\t'.includes(char)).join('')
 type Face = 'regular' | 'bold' | 'serif'

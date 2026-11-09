@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import type {
   AdminOwnerCreate,
@@ -8,6 +8,7 @@ import type { OwnerAccountDelivery } from '../../../../../integrations/contracts
 import type { Transaction } from '../../../../../lib/db.js'
 import { AppError, databaseCode } from '../../../../../lib/errors.js'
 import { normalizeSlug, slugProblem } from '../../../../../lib/platform-sites.js'
+import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import type { AdminAuditService } from '../../audit/services/admin-audit.service.js'
 import type { AdminLifecyclePort } from '../../payments/services/admin-billing.port.js'
 import type { AdminTransaction } from '../../shared/repositories/admin-transaction.repository.js'
@@ -18,7 +19,6 @@ const DAY_MS = 86_400_000
 export const DELETION_GRACE_DAYS = 30
 export const INVITATION_HOURS = 72
 const iso = (value: Date | null | undefined) => value?.toISOString() ?? null
-const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const notFound = () => new AppError(404, 'NOT_FOUND', 'Owner not found.')
 const conflict = (code: string, message: string) => new AppError(409, code, message)
 
@@ -172,8 +172,8 @@ export function createCustomerLifecycleService(options: {
           tx,
         )
       }),
-    unblock: (admin: AuthenticatedAdmin, ownerId: string, reason: string) =>
-      onOwner(admin, ownerId, null, async (owner, tx) => {
+    unblock: (admin: AuthenticatedAdmin, ownerId: string, input: Sensitive) =>
+      onOwner(admin, ownerId, input.code, async (owner, tx) => {
         if (!owner.blockedAt) throw conflict('NOT_BLOCKED', 'This customer is not blocked.')
         await repo.updateOwner(ownerId, { blockedAt: null }, tx)
         await record(
@@ -184,7 +184,7 @@ export function createCustomerLifecycleService(options: {
           restriction(owner),
           {
             ...restriction({ ...owner, blockedAt: null }),
-            reason,
+            reason: input.reason,
           },
           tx,
         )
@@ -212,8 +212,8 @@ export function createCustomerLifecycleService(options: {
         )
       }),
     /** Restores the previous state: other restrictions are separate markers and stay in place. */
-    cancelDeletion: (admin: AuthenticatedAdmin, ownerId: string, reason: string) =>
-      onOwner(admin, ownerId, null, async (owner, tx) => {
+    cancelDeletion: (admin: AuthenticatedAdmin, ownerId: string, input: Sensitive) =>
+      onOwner(admin, ownerId, input.code, async (owner, tx) => {
         if (!owner.deletionRequestedAt || !owner.deletionDueAt)
           throw conflict('DELETION_NOT_SCHEDULED', 'No deletion is scheduled.')
         if (owner.deletionDueAt.getTime() <= clock().getTime())
@@ -227,7 +227,7 @@ export function createCustomerLifecycleService(options: {
           restriction(owner),
           {
             ...restriction({ ...owner, deletionRequestedAt: null, deletionDueAt: null }),
-            reason,
+            reason: input.reason,
           },
           tx,
         )
@@ -246,17 +246,39 @@ export function createCustomerLifecycleService(options: {
             await repo.revokeOrganizationSessions(id, now, tx)
         },
       ),
-    resumeSubscription: (admin: AuthenticatedAdmin, ownerId: string, reason: string) =>
-      onSubscription(admin, ownerId, null, 'subscription.resume', { reason }, (tx) =>
-        billing.resume(ownerId, tx),
+    // Coverage-changing actions: fresh step-up, change, period note and audit in one transaction
+    // (the accepted TOTP step is consumed only if the transaction commits).
+    resumeSubscription: (admin: AuthenticatedAdmin, ownerId: string, input: Sensitive) =>
+      onSubscription(
+        admin,
+        ownerId,
+        input.code,
+        'subscription.resume',
+        { reason: input.reason },
+        (tx) => billing.resume(ownerId, tx),
       ),
-    changePlan: (admin: AuthenticatedAdmin, ownerId: string, planCode: string, reason: string) =>
-      onSubscription(admin, ownerId, null, 'subscription.change_plan', { reason }, (tx) =>
-        billing.changePlan(ownerId, planCode, admin.email, tx),
+    changePlan: (
+      admin: AuthenticatedAdmin,
+      ownerId: string,
+      planCode: string,
+      { reason, code }: Sensitive,
+    ) =>
+      onSubscription(admin, ownerId, code, 'subscription.change_plan', { reason }, (tx) =>
+        billing.changePlan(
+          ownerId,
+          planCode,
+          { adminId: admin.id, email: admin.email, reason },
+          tx,
+        ),
       ),
-    extend: (admin: AuthenticatedAdmin, ownerId: string, days: number, reason: string) =>
-      onSubscription(admin, ownerId, null, 'subscription.extend', { days, reason }, (tx) =>
-        billing.extend(ownerId, days, admin.email, tx),
+    extend: (
+      admin: AuthenticatedAdmin,
+      ownerId: string,
+      days: number,
+      { reason, code }: Sensitive,
+    ) =>
+      onSubscription(admin, ownerId, code, 'subscription.extend', { days, reason }, (tx) =>
+        billing.extend(ownerId, days, { adminId: admin.id, email: admin.email, reason }, tx),
       ),
     async suspendOrganization(admin: AuthenticatedAdmin, organizationId: string, input: Sensitive) {
       const ownerId = await withAdmin(async (tx) => {
@@ -333,9 +355,10 @@ export function createCustomerLifecycleService(options: {
     async reactivateOrganization(
       admin: AuthenticatedAdmin,
       organizationId: string,
-      reason: string,
+      input: Sensitive,
     ) {
       const ownerId = await withAdmin(async (tx) => {
+        await stepUp(admin, input.code, tx)
         const org = await repo.organization(organizationId, tx)
         if (!org) throw new AppError(404, 'NOT_FOUND', 'Organization not found.')
         if (!org.suspendedAt)
@@ -347,7 +370,7 @@ export function createCustomerLifecycleService(options: {
           'organization',
           organizationId,
           { suspendedAt: org.suspendedAt.toISOString(), source: org.suspensionSource },
-          { suspendedAt: null, ownerId: org.ownerId, reason },
+          { suspendedAt: null, ownerId: org.ownerId, reason: input.reason },
           tx,
         )
         return org.ownerId
@@ -376,7 +399,15 @@ export function createCustomerLifecycleService(options: {
           : null
       const link = invitationLink()
       const email = input.email.trim().toLowerCase()
+      // A paid grant changes coverage: it needs a fresh step-up in the same transaction.
+      if (grant && !input.code)
+        throw new AppError(
+          403,
+          'TWO_FACTOR_INVALID',
+          'Enter a new code from your authenticator app to confirm this action.',
+        )
       const owner = await withAdmin(async (tx) => {
+        if (grant) await stepUp(admin, input.code!, tx)
         const now = clock()
         const created = await repo.createOwner(
           {
@@ -392,7 +423,13 @@ export function createCustomerLifecycleService(options: {
         )
         if (!created)
           throw conflict('EMAIL_TAKEN', 'An account already exists with this email address.')
-        if (grant) await billing.grant(created.id, grant, admin.email, tx)
+        if (grant)
+          await billing.grant(
+            created.id,
+            grant,
+            { adminId: admin.id, email: admin.email, reason: input.reason },
+            tx,
+          )
         await repo.replaceInvitation(created.id, link.tokenHash, link.expiresAt, tx)
         await record(
           admin,

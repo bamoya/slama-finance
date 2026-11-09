@@ -2,11 +2,12 @@ import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
 
 import { organizations, platformUsers } from '../../../../../../db/schema/organizations.js'
 import type { Transaction } from '../../../../../lib/db.js'
-import { subscriptionLifecycle } from '../../shared/repositories/subscription-lifecycle.repository.js'
+import type { LifecycleStatusSource } from '../../shared/repositories/lifecycle-status.repository.js'
 
 const like = (value: string) => `%${value.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
 
-export function createAdminCustomerRepository() {
+/** `lifecycle` is the subscriptions module's set-based status source for the selected read authority. */
+export function createAdminCustomerRepository(lifecycle: LifecycleStatusSource) {
   return {
     async owners(
       search: string | undefined,
@@ -33,7 +34,7 @@ export function createAdminCustomerRepository() {
         status === 'not_started'
           ? sql`${platformUsers.id} not in (select owner_id from owner_subscriptions)`
           : status
-            ? sql`${platformUsers.id} in (select owner_id from (${subscriptionLifecycle(sql`${now.toISOString()}::timestamptz`)}) l where l.status=${status})`
+            ? sql`${platformUsers.id} in (select owner_id from (${lifecycle(sql`${now.toISOString()}::timestamptz`)}) l where l.status=${status})`
             : undefined,
       )
       const organizationCount = sql<number>`(select count(*)::int from organizations o where o.owner_id=platform_users.id)`

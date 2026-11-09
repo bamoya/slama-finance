@@ -1,12 +1,8 @@
 import { createHash } from 'node:crypto'
 
+import { escapeHtml as escape } from '../../lib/html.js'
 import type { EmailProvider, PasswordResetDelivery } from '../contracts.js'
 
-const escape = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-  )
 /** Provider-neutral reset message; used with the local-only Mailpit provider during development. */
 export function createProviderResetDelivery(
   provider: EmailProvider,

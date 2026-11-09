@@ -24,6 +24,7 @@ import type { CustomerAction } from '../components/customer-action'
 import { CustomerActionDialogs } from '../components/customer-action-dialogs'
 import { CustomerActionsMenu } from '../components/customer-actions-menu'
 import { CustomerOrganizationsCard } from '../components/customer-organizations-card'
+import { CustomerOverridesCard } from '../components/customer-overrides-card'
 import { CustomerPaymentsCard } from '../components/customer-payments-card'
 import { CustomerRestrictionBanner } from '../components/customer-restriction-banner'
 import { CustomerSubscriptionCard } from '../components/customer-subscription-card'
@@ -126,6 +127,7 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
             detail={detail}
             onDecide={(payment, next) => setDecision({ payment, decision: next })}
           />
+          <CustomerOverridesCard detail={detail} />
           <CustomerOrganizationsCard organizations={detail.organizations} onSelect={setAction} />
           <CustomerPaymentsCard payments={detail.payments} />
           {action && (
@@ -137,18 +139,22 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
           )}
           {decision && (
             <PaymentDecisionDialog
+              key={`${decision.payment.id}-${decision.decision}`}
               payment={decision.payment}
               decision={decision.decision}
               onClose={() => setDecision(null)}
-              onConfirm={async (receivedReference) => {
+              onConfirm={async (receivedReference, auditReason, code) => {
                 await confirm.mutateAsync({
                   paymentId: decision.payment.id,
-                  data: receivedReference ? { receivedReference } : {},
+                  data: { code, auditReason, ...(receivedReference ? { receivedReference } : {}) },
                 })
                 await refresh()
               }}
-              onReject={async (reason) => {
-                await reject.mutateAsync({ paymentId: decision.payment.id, data: { reason } })
+              onReject={async (reason, auditReason, code) => {
+                await reject.mutateAsync({
+                  paymentId: decision.payment.id,
+                  data: { reason, auditReason, code },
+                })
                 await refresh()
               }}
             />
