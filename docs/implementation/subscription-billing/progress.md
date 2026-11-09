@@ -1,5 +1,11 @@
 # Subscription redesign progress
 
+CI portability correction: fixed calendar assertions use historical November 2025 instants, avoiding an assumed
+UTC+1 offset in November 2026 that differs between Node timezone-data releases. The original CI failure was
+reproduced under Node 22.23.4/tzdata 2026e; patched override tests pass 9/9 under both tested Node versions with
+UTC and Casablanca host timezones. The 2026 day-boundary checks remain intact. Full integration: 400 passed,
+1 skipped; `pnpm check` passed. Product timezone behavior remains driven by `Africa/Casablanca` zone data.
+
 Later repository cleanup: aggregate `pnpm check` now passes after excluding separate nested Git worktrees
 from formatting. Current full integration remains 400 passed / 1 skipped. Earlier mentions of the 161-file
 formatting blocker below are historical; see [cleanup audit](../cleanup-audit.md) for current verification.

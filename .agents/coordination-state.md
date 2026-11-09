@@ -19,6 +19,12 @@ docs/implementation/cleanup-audit.md. Prior billing/baseline history follows unc
 
 # Live coordination handoff
 
+Latest CI fix: subscription-overrides calendar assertions now use settled November2025 instants instead of
+assuming UTC+1 in November2026. Original failure reproduced with CI Node22.23.4/tzdata2026e; patched focused9/9
+under both Node22.22.3/2026a and22.23.4/2026e, with UTC and Casablanca host TZ. Product timezone unchanged.
+Full isolated integration400 passed/1 skipped and pnpm check pass. Coordinator reviewed the narrow diff.
+User explicitly requested commit/push of this fix. Evidence: /tmp/slama-subscription-resume/ci-timezone-fix/REPORT.md.
+
 Latest task: all-package cleanup audit and bounded implementation COMPLETE locally, uncommitted.
 Opus LOW audited API/UI/marketing/infra/root; Sol LOW consolidated seven HTML escaping callers and six
 token-hash callers into two semantic lib modules. Only .claude/worktrees/ was added to .prettierignore,

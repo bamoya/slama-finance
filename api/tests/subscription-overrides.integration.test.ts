@@ -574,9 +574,11 @@ describe('Owner-subscription overrides', () => {
       ).json().code,
     ).toBe('OVERRIDE_START_IN_PAST')
 
-    // 23:30Z on 8 November is already 9 November in Casablanca (UTC+1).
-    expect(companyDate(new Date('2026-11-08T23:30:00Z'))).toBe('2026-11-09')
-    expect(midnight('2026-11-09').toISOString()).toBe('2026-11-08T23:00:00.000Z')
+    // 23:30Z on 8 November 2025 was already 9 November in Casablanca (UTC+1). Pinned to settled
+    // history: tzdata 2026e moved Morocco to UTC+0 from 20 September 2026, so later dates follow
+    // whatever zone data the runtime ships.
+    expect(companyDate(new Date('2025-11-08T23:30:00Z'))).toBe('2025-11-09')
+    expect(midnight('2025-11-09').toISOString()).toBe('2025-11-08T23:00:00.000Z')
     // DST-adjacent days: around every 2026 offset change, the returned instant is the first one
     // of that local day (the previous millisecond belongs to the previous local day).
     const offsets = new Set<number>()
