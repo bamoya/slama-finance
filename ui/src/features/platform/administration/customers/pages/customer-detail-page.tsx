@@ -23,6 +23,7 @@ import { AdministrationPageHeader } from '../../shared/components/administration
 import type { CustomerAction } from '../components/customer-action'
 import { CustomerActionDialogs } from '../components/customer-action-dialogs'
 import { CustomerActionsMenu } from '../components/customer-actions-menu'
+import { CustomerInvoicesCard } from '../components/customer-invoices-card'
 import { CustomerOrganizationsCard } from '../components/customer-organizations-card'
 import { CustomerOverridesCard } from '../components/customer-overrides-card'
 import { CustomerPaymentsCard } from '../components/customer-payments-card'
@@ -133,6 +134,7 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
           <CustomerOverridesCard detail={detail} />
           <CustomerOrganizationsCard organizations={detail.organizations} onSelect={setAction} />
           <CustomerPaymentsCard payments={detail.payments} />
+          <CustomerInvoicesCard ownerId={detail.owner.id} />
           {action && (
             <CustomerActionDialogs
               detail={detail}
@@ -146,10 +148,10 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
               payment={decision.payment}
               decision={decision.decision}
               onClose={() => setDecision(null)}
-              onConfirm={async (receivedReference, auditReason) => {
+              onConfirm={async (receipt, auditReason) => {
                 await confirm.mutateAsync({
                   paymentId: decision.payment.id,
-                  data: { auditReason, ...(receivedReference ? { receivedReference } : {}) },
+                  data: { auditReason, ...receipt },
                 })
                 await refresh()
               }}

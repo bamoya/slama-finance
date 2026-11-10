@@ -13,9 +13,19 @@ import {
   subscriptionPayments,
 } from '../../../../../db/schema/subscriptions.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
+import {
+  createBillingDocumentsRepository,
+  type PaymentDocuments,
+} from './billing-documents.repository.js'
 
-/** A payment with the number of the catalog version it pinned at submission (never re-resolved). */
-export type PaymentRow = typeof subscriptionPayments.$inferSelect & { planVersionNumber: number }
+/**
+ * A payment with the number of the catalog version it pinned at submission (never re-resolved) and
+ * its billing documents (quote expiry, allocated receipts, invoice number).
+ */
+export type PaymentRow = typeof subscriptionPayments.$inferSelect & {
+  planVersionNumber: number
+} & PaymentDocuments
+const documents = createBillingDocumentsRepository()
 
 /** Plain join on the immutable pin: no catalog validation, so payment history stays readable. */
 async function withVersions(rows: (typeof subscriptionPayments.$inferSelect)[], tx: Transaction) {
@@ -30,11 +40,12 @@ async function withVersions(rows: (typeof subscriptionPayments.$inferSelect)[], 
         ).map((v) => [v.id, v.n])
       : [],
   )
+  const docs = await documents.forPayments(rows, tx)
   return rows.map((r) => {
     const planVersionNumber = numbers.get(r.planVersionId)
     if (planVersionNumber === undefined)
       throw new Error(`Payment ${r.id} pins an unreadable catalog version`)
-    return { ...r, planVersionNumber }
+    return { ...r, planVersionNumber, ...docs.get(r.id)! }
   })
 }
 const one = async (row: typeof subscriptionPayments.$inferSelect | undefined, tx: Transaction) =>

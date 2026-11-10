@@ -23,6 +23,39 @@ const statusLabel = {
   submitted: 'Awaiting verification',
 } as const
 
+/** Receipts already verified, quote validity and the invoice number of a submission. */
+export function PaymentDocuments({
+  payment: p,
+}: {
+  payment: Pick<
+    ListOwnerSubscriptionPayments200DataItem,
+    'status' | 'receivedTtc' | 'amount' | 'quoteExpiresAt' | 'invoiceNumber'
+  >
+}) {
+  return (
+    <>
+      {p.status === 'submitted' && p.receivedTtc > 0 && (
+        <p className="mt-1 whitespace-nowrap text-xs text-[var(--muted)]">
+          {translate('Received {{received}} of {{total}}', {
+            received: formatDh(p.receivedTtc),
+            total: formatDh(p.amount.amountTtc),
+          })}
+        </p>
+      )}
+      {p.status === 'submitted' && p.quoteExpiresAt && (
+        <p className="mt-1 whitespace-nowrap text-xs text-[var(--muted)]">
+          {translate('Quote valid until {{date}}', { date: displayDateTime(p.quoteExpiresAt) })}
+        </p>
+      )}
+      {p.invoiceNumber && (
+        <p className="mt-1 whitespace-nowrap text-xs text-[var(--muted)]">
+          {translate('Invoice {{number}}', { number: p.invoiceNumber })}
+        </p>
+      )}
+    </>
+  )
+}
+
 const columns: DataColumn<ListOwnerSubscriptionPayments200DataItem>[] = [
   {
     title: 'Submitted',
@@ -62,6 +95,7 @@ const columns: DataColumn<ListOwnerSubscriptionPayments200DataItem>[] = [
             {translate('Reason:')} {p.rejectionReason}
           </p>
         )}
+        <PaymentDocuments payment={p} />
       </>
     ),
   },

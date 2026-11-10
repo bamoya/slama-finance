@@ -1,3 +1,4 @@
+import type { AdminInvoice } from '../../../../../contracts/generated/administration/administration.schemas.js'
 import type { OwnerSubscription } from '../../../../../contracts/generated/subscriptions/subscriptions.schemas.js'
 import type { Transaction } from '../../../../../lib/db.js'
 import type { LifecycleStatusSource } from '../../shared/repositories/lifecycle-status.repository.js'
@@ -7,6 +8,10 @@ export type PaymentDecision = (
   tx: Transaction,
   before: AdminPaymentRecord,
   after: AdminPaymentRecord,
+  /** Set for a partial receipt (the payment stays submitted). */
+  receipt?: { amountTtc: number; reference: string; receivedAt: string },
+  /** Set when a rejection credited an invoice holding received funds. */
+  creditNote?: { number: string; amountTtc: number; refundDueTtc: number },
 ) => Promise<void>
 
 /** Billing operations owned by the subscriptions module, injected by composition. */
@@ -14,7 +19,7 @@ export type AdminBillingPort = {
   confirm: (
     id: string,
     decidedBy: string,
-    receivedReference?: string,
+    received?: { reference?: string; amountTtc?: number; receivedAt?: Date },
     onDecided?: PaymentDecision,
     transaction?: Transaction,
   ) => Promise<unknown>
@@ -25,6 +30,18 @@ export type AdminBillingPort = {
     onDecided?: PaymentDecision,
     transaction?: Transaction,
   ) => Promise<unknown>
+  invoices: (
+    filter: { ownerId?: string; page: number; pageSize: number },
+    transaction?: Transaction,
+  ) => Promise<{ rows: AdminInvoice[]; total: number }>
+  /** Explicit correction; `onIssued` runs in the same transaction (audit). */
+  creditNote: (
+    invoiceId: string,
+    input: { amountHt: number; reason: string },
+    issuedBy: string,
+    onIssued?: (tx: Transaction, note: AdminInvoice) => Promise<void>,
+    transaction?: Transaction,
+  ) => Promise<AdminInvoice>
   summary: (ownerId: string) => Promise<OwnerSubscription>
   lifecycle: AdminLifecyclePort
   /** Set-based lifecycle status (owner_id, trial_ends_at, status) at `at`, same authority as the API. */

@@ -94,6 +94,54 @@ describe('admin payments', () => {
     expect(calls.find((call) => call.url?.endsWith('/confirm'))?.data).not.toHaveProperty('code')
   })
 
+  it('records a partial receipt with its amount and date, within the remaining balance', async () => {
+    setup()
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
+      target: { value: 'First transfer' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Amount received (optional)'), {
+      target: { value: '120,01' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm payment' }))
+    expect(calls.some((call) => call.url?.endsWith('/confirm'))).toBe(false)
+    fireEvent.change(within(dialog).getByLabelText('Amount received (optional)'), {
+      target: { value: '50,5' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Received reference (optional)'), {
+      target: { value: 'VIR-1' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Received on (optional)'), {
+      target: { value: '2026-10-02T10:00' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm payment' }))
+    await waitFor(() =>
+      expect(calls.find((call) => call.url?.endsWith('/confirm'))?.data).toEqual({
+        auditReason: 'First transfer',
+        receivedReference: 'VIR-1',
+        receivedAmountTtc: 5050,
+        receivedAt: new Date('2026-10-02T10:00').toISOString(),
+      }),
+    )
+  })
+
+  it('warns that rejecting a partially paid payment credits the invoice', async () => {
+    mockApi((key) => {
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/payments')
+        return {
+          body: { items: [payment({ receivedTtc: 5000 })], page: 1, pageSize: 20, total: 1 },
+        }
+    })
+    renderAt('/payments', <AdminPaymentsPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('note')).toHaveTextContent(
+      '50,00 DH were already received. Rejecting issues a credit note for the whole invoice',
+    )
+  })
+
   it('takes the status filter from the address', async () => {
     mockApi((key) => {
       if (key === 'GET /api/v1/admin/auth/me') return { body: session }

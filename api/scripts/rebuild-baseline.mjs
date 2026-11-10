@@ -83,6 +83,7 @@ try {
     'reference/subscription-catalog.sql',
     'integrity/subscription-overrides.sql',
     'integrity/subscription-periods.sql',
+    'integrity/billing-documents.sql',
   ])
     sql += separator + (await readFile(path.join(root, 'db', file), 'utf8'))
   for (const table of tenant.values()) {

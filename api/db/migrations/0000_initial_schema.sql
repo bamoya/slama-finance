@@ -274,6 +274,130 @@ CREATE TABLE IF NOT EXISTS "users" (
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "billing_allocations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"receipt_id" uuid NOT NULL,
+	"invoice_id" uuid NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	"allocated_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "billing_allocation_amount" CHECK ("billing_allocations"."amount_ttc">0)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_allocations" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_invoice_counters" (
+	"series" text NOT NULL,
+	"year" integer NOT NULL,
+	"last" integer NOT NULL,
+	CONSTRAINT "billing_invoice_counters_series_year_pk" PRIMARY KEY("series","year"),
+	CONSTRAINT "billing_invoice_counter_last" CHECK ("billing_invoice_counters"."last">0)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_invoice_counters" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_invoice_lines" (
+	"invoice_id" uuid NOT NULL,
+	"position" integer NOT NULL,
+	"plan_code" text NOT NULL,
+	"plan_version_id" uuid NOT NULL,
+	"cycle" text NOT NULL,
+	"kind" text NOT NULL,
+	"currency" text NOT NULL,
+	"amount_ht" integer NOT NULL,
+	"tax_rate_basis_points" integer,
+	"tax_amount" integer NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	CONSTRAINT "billing_invoice_lines_invoice_id_position_pk" PRIMARY KEY("invoice_id","position"),
+	CONSTRAINT "billing_invoice_line_amounts" CHECK ("billing_invoice_lines"."amount_ht">=0 and "billing_invoice_lines"."tax_amount">=0 and "billing_invoice_lines"."amount_ttc"="billing_invoice_lines"."amount_ht"+"billing_invoice_lines"."tax_amount" and ("billing_invoice_lines"."tax_rate_basis_points" is null or "billing_invoice_lines"."tax_rate_basis_points" between 0 and 10000)),
+	CONSTRAINT "billing_invoice_line_position" CHECK ("billing_invoice_lines"."position">=1)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_invoice_lines" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_invoices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"series" text NOT NULL,
+	"year" integer NOT NULL,
+	"sequence" integer NOT NULL,
+	"number" text NOT NULL,
+	"payment_id" uuid,
+	"corrects_invoice_id" uuid,
+	"reason" text,
+	"currency" text NOT NULL,
+	"amount_ht" integer NOT NULL,
+	"tax_rate_basis_points" integer,
+	"tax_amount" integer NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"issued_by" text NOT NULL,
+	CONSTRAINT "billing_invoice_amounts" CHECK ("billing_invoices"."amount_ht">=0 and "billing_invoices"."tax_amount">=0 and "billing_invoices"."amount_ttc"="billing_invoices"."amount_ht"+"billing_invoices"."tax_amount" and ("billing_invoices"."tax_rate_basis_points" is null or "billing_invoices"."tax_rate_basis_points" between 0 and 10000)),
+	CONSTRAINT "billing_invoice_positive" CHECK ("billing_invoices"."amount_ttc">0),
+	CONSTRAINT "billing_invoice_kind" CHECK (("billing_invoices"."kind"='invoice' and "billing_invoices"."series"='F' and "billing_invoices"."payment_id" is not null and "billing_invoices"."corrects_invoice_id" is null and "billing_invoices"."reason" is null) or ("billing_invoices"."kind"='credit_note' and "billing_invoices"."series"='A' and "billing_invoices"."payment_id" is null and "billing_invoices"."corrects_invoice_id" is not null and btrim(coalesce("billing_invoices"."reason",''))<>'')),
+	CONSTRAINT "billing_invoice_number" CHECK ("billing_invoices"."number"="billing_invoices"."series"||'-'||"billing_invoices"."year"::text||'-'||lpad("billing_invoices"."sequence"::text,6,'0')),
+	CONSTRAINT "billing_invoice_issued_by" CHECK (btrim("billing_invoices"."issued_by")<>'')
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_invoices" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_quotes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"plan_code" text NOT NULL,
+	"plan_version_id" uuid NOT NULL,
+	"cycle" text NOT NULL,
+	"kind" text NOT NULL,
+	"currency" text NOT NULL,
+	"amount_ht" integer NOT NULL,
+	"tax_rate_basis_points" integer,
+	"tax_amount" integer NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	"issued_at" timestamp with time zone NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "billing_quote_amounts" CHECK ("billing_quotes"."amount_ht">=0 and "billing_quotes"."tax_amount">=0 and "billing_quotes"."amount_ttc"="billing_quotes"."amount_ht"+"billing_quotes"."tax_amount" and ("billing_quotes"."tax_rate_basis_points" is null or "billing_quotes"."tax_rate_basis_points" between 0 and 10000)),
+	CONSTRAINT "billing_quote_validity" CHECK ("billing_quotes"."expires_at">"billing_quotes"."issued_at")
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_quotes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "billing_receipts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"owner_id" uuid NOT NULL,
+	"payment_id" uuid NOT NULL,
+	"method" text NOT NULL,
+	"reference" text NOT NULL,
+	"currency" text NOT NULL,
+	"amount_ttc" integer NOT NULL,
+	"received_at" timestamp with time zone NOT NULL,
+	"recorded_at" timestamp with time zone NOT NULL,
+	"recorded_by" text NOT NULL,
+	CONSTRAINT "billing_receipt_amount" CHECK ("billing_receipts"."amount_ttc">0),
+	CONSTRAINT "billing_receipt_reference" CHECK (btrim("billing_receipts"."reference")<>''),
+	CONSTRAINT "billing_receipt_recorded_by" CHECK (btrim("billing_receipts"."recorded_by")<>''),
+	CONSTRAINT "billing_receipt_received" CHECK ("billing_receipts"."received_at"<="billing_receipts"."recorded_at")
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_receipts" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "product_categories" (
 	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -1555,6 +1679,7 @@ CREATE TABLE IF NOT EXISTS "subscription_payments" (
 	"owner_id" uuid NOT NULL,
 	"plan_code" text NOT NULL,
 	"plan_version_id" uuid NOT NULL,
+	"quote_id" uuid,
 	"cycle" text NOT NULL,
 	"kind" text NOT NULL,
 	"status" text DEFAULT 'submitted' NOT NULL,
@@ -1577,6 +1702,7 @@ CREATE TABLE IF NOT EXISTS "subscription_payments" (
 	CONSTRAINT "subscription_payment_coverage" CHECK (("subscription_payments"."status"='confirmed')=("subscription_payments"."coverage_start" is not null and "subscription_payments"."coverage_end">"subscription_payments"."coverage_start")),
 	CONSTRAINT "subscription_payment_graceless" CHECK (not "subscription_payments"."graceless" or ("subscription_payments"."method"='admin_adjustment' and "subscription_payments"."amount_ttc"=0)),
 	CONSTRAINT "subscription_payment_reference" CHECK (btrim("subscription_payments"."reference")<>''),
+	CONSTRAINT "subscription_payment_quote" CHECK (("subscription_payments"."method"='admin_adjustment')=("subscription_payments"."quote_id" is null)),
 	CONSTRAINT "subscription_payment_rejection_reason" CHECK (("subscription_payments"."status"='rejected')=("subscription_payments"."rejection_reason" is not null and btrim("subscription_payments"."rejection_reason")<>''))
 );
 
@@ -1677,6 +1803,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS "users_organization_email_unique" ON "users" U
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "users_organization_id_unique" ON "users" USING btree ("organization_id","id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "billing_allocations_pair" ON "billing_allocations" USING btree ("receipt_id","invoice_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "billing_allocations_invoice" ON "billing_allocations" USING btree ("invoice_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "billing_invoices_number" ON "billing_invoices" USING btree ("number");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "billing_invoices_sequence" ON "billing_invoices" USING btree ("series","year","sequence");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "billing_invoices_payment" ON "billing_invoices" USING btree ("payment_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "billing_invoices_owner" ON "billing_invoices" USING btree ("owner_id","issued_at");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "billing_invoices_corrects" ON "billing_invoices" USING btree ("corrects_invoice_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "billing_quotes_owner" ON "billing_quotes" USING btree ("owner_id","issued_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "billing_receipts_reference" ON "billing_receipts" USING btree ("payment_id","reference");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "billing_receipts_owner" ON "billing_receipts" USING btree ("owner_id");
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "product_categories_normalized_name_unique" ON "product_categories" USING btree ("organization_id",lower(trim("name")));
@@ -1890,6 +2046,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "subscription_suspensions_one_open" ON "subscr
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "subscription_emails_owner_period" ON "subscription_emails" USING btree ("owner_id","queued_at");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "subscription_payments_quote" ON "subscription_payments" USING btree ("quote_id");
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "subscription_payments_one_open" ON "subscription_payments" USING btree ("owner_id") WHERE "subscription_payments"."status"='submitted';
@@ -2111,6 +2270,86 @@ END $$;
 
 DO $$ BEGIN
  ALTER TABLE "users" ADD CONSTRAINT "users_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_allocations" ADD CONSTRAINT "billing_allocations_receipt_id_billing_receipts_id_fk" FOREIGN KEY ("receipt_id") REFERENCES "public"."billing_receipts"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_allocations" ADD CONSTRAINT "billing_allocations_invoice_id_billing_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."billing_invoices"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_invoice_lines" ADD CONSTRAINT "billing_invoice_lines_invoice_id_billing_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."billing_invoices"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_invoice_lines" ADD CONSTRAINT "billing_invoice_lines_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_invoices" ADD CONSTRAINT "billing_invoices_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_invoices" ADD CONSTRAINT "billing_invoices_payment_id_subscription_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."subscription_payments"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_quotes" ADD CONSTRAINT "billing_quotes_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_quotes" ADD CONSTRAINT "billing_quotes_plan_code_subscription_plans_code_fk" FOREIGN KEY ("plan_code") REFERENCES "public"."subscription_plans"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_receipts" ADD CONSTRAINT "billing_receipts_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_receipts" ADD CONSTRAINT "billing_receipts_payment_id_subscription_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."subscription_payments"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -3389,6 +3628,42 @@ CREATE POLICY "tenant_isolation" ON "user_settings" AS PERMISSIVE FOR ALL TO pub
 CREATE POLICY "tenant_isolation" ON "users" AS PERMISSIVE FOR ALL TO public USING ("users"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("users"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "billing_allocation_owner" ON "billing_allocations" AS PERMISSIVE FOR SELECT TO public USING (exists(select 1 from billing_invoices i where i.id="billing_allocations"."invoice_id" and i.owner_id=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'));
+--> statement-breakpoint
+
+CREATE POLICY "billing_allocation_admin" ON "billing_allocations" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "billing_invoice_counter_admin" ON "billing_invoice_counters" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "billing_invoice_line_owner" ON "billing_invoice_lines" AS PERMISSIVE FOR SELECT TO public USING (exists(select 1 from billing_invoices i where i.id="billing_invoice_lines"."invoice_id" and i.owner_id=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'));
+--> statement-breakpoint
+
+CREATE POLICY "billing_invoice_line_admin" ON "billing_invoice_lines" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "billing_invoice_owner" ON "billing_invoices" AS PERMISSIVE FOR SELECT TO public USING ("billing_invoices"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "billing_invoice_admin" ON "billing_invoices" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "billing_quote_owner" ON "billing_quotes" AS PERMISSIVE FOR SELECT TO public USING ("billing_quotes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "billing_quote_owner_insert" ON "billing_quotes" AS PERMISSIVE FOR INSERT TO public WITH CHECK ("billing_quotes"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "billing_quote_admin" ON "billing_quotes" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "billing_receipt_owner" ON "billing_receipts" AS PERMISSIVE FOR SELECT TO public USING ("billing_receipts"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "billing_receipt_admin" ON "billing_receipts" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "tenant_isolation" ON "product_categories" AS PERMISSIVE FOR ALL TO public USING ("product_categories"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("product_categories"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
@@ -3639,6 +3914,18 @@ ALTER TABLE "user_roles" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "user_settings" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "users" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_allocations" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_invoice_counters" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_invoice_lines" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_invoices" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_quotes" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_receipts" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "product_categories" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -5261,6 +5548,140 @@ END $$;
 --> statement-breakpoint
 -- Operator-only (migration role); never callable by the runtime.
 REVOKE ALL ON FUNCTION subscription_periods_reconcile(text) FROM PUBLIC;
+
+--> statement-breakpoint
+-- S6 billing documents: quotes, receipts, invoices/lines, allocations and credit notes are immutable.
+-- Functions qualify every table and pin search_path; the test fixture rewrites the "public". prefix.
+ALTER TABLE billing_quotes ADD CONSTRAINT billing_quotes_version_fk
+ FOREIGN KEY (plan_version_id,plan_code) REFERENCES plan_versions(id,plan_code);
+--> statement-breakpoint
+ALTER TABLE billing_invoice_lines ADD CONSTRAINT billing_invoice_lines_version_fk
+ FOREIGN KEY (plan_version_id,plan_code) REFERENCES plan_versions(id,plan_code);
+--> statement-breakpoint
+ALTER TABLE billing_invoices ADD CONSTRAINT billing_invoices_corrects_fk
+ FOREIGN KEY (corrects_invoice_id) REFERENCES billing_invoices(id);
+--> statement-breakpoint
+ALTER TABLE subscription_payments ADD CONSTRAINT subscription_payments_quote_fk
+ FOREIGN KEY (quote_id) REFERENCES billing_quotes(id);
+--> statement-breakpoint
+CREATE FUNCTION reject_billing_document_change() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ RAISE EXCEPTION 'Issued billing records are immutable; record a correction instead' USING ERRCODE='42501';
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER billing_quotes_immutable BEFORE UPDATE OR DELETE ON billing_quotes FOR EACH ROW EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_receipts_immutable BEFORE UPDATE OR DELETE ON billing_receipts FOR EACH ROW EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_invoices_immutable BEFORE UPDATE OR DELETE ON billing_invoices FOR EACH ROW EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_invoice_lines_immutable BEFORE UPDATE OR DELETE ON billing_invoice_lines FOR EACH ROW EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_allocations_immutable BEFORE UPDATE OR DELETE ON billing_allocations FOR EACH ROW EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_quotes_truncate BEFORE TRUNCATE ON billing_quotes FOR EACH STATEMENT EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_receipts_truncate BEFORE TRUNCATE ON billing_receipts FOR EACH STATEMENT EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_invoices_truncate BEFORE TRUNCATE ON billing_invoices FOR EACH STATEMENT EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_invoice_lines_truncate BEFORE TRUNCATE ON billing_invoice_lines FOR EACH STATEMENT EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+CREATE TRIGGER billing_allocations_truncate BEFORE TRUNCATE ON billing_allocations FOR EACH STATEMENT EXECUTE FUNCTION reject_billing_document_change();
+--> statement-breakpoint
+-- A submission repeats its quote's snapshot exactly (same owner, plan, version, cycle, kind, money).
+-- quote_id and the snapshot columns are never updatable by the runtime (column grants).
+CREATE FUNCTION check_payment_quote() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE q "public".billing_quotes%ROWTYPE;
+BEGIN
+ IF NEW.quote_id IS NULL THEN RETURN NEW; END IF;
+ SELECT * INTO q FROM "public".billing_quotes WHERE id=NEW.quote_id;
+ IF NOT FOUND OR q.owner_id<>NEW.owner_id OR q.plan_code<>NEW.plan_code OR q.plan_version_id<>NEW.plan_version_id
+  OR q.cycle<>NEW.cycle OR q.kind<>NEW.kind OR q.currency<>NEW.currency OR q.amount_ht<>NEW.amount_ht
+  OR q.tax_rate_basis_points IS DISTINCT FROM NEW.tax_rate_basis_points OR q.tax_amount<>NEW.tax_amount
+  OR q.amount_ttc<>NEW.amount_ttc THEN
+  RAISE EXCEPTION 'A payment repeats the snapshot of its quote' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_payment_quote_snapshot BEFORE INSERT ON subscription_payments FOR EACH ROW EXECUTE FUNCTION check_payment_quote();
+--> statement-breakpoint
+-- A receipt belongs to its payment's owner and currency.
+CREATE FUNCTION check_billing_receipt() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM "public".subscription_payments p WHERE p.id=NEW.payment_id AND p.owner_id=NEW.owner_id AND p.currency=NEW.currency AND p.quote_id IS NOT NULL) THEN
+  RAISE EXCEPTION 'A receipt matches the owner and currency of a quoted payment' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER billing_receipt_payment BEFORE INSERT ON billing_receipts FOR EACH ROW EXECUTE FUNCTION check_billing_receipt();
+--> statement-breakpoint
+-- At commit: an invoice equals the sum of its lines (at least one); an invoice belongs to its payment's
+-- owner; a credit note corrects an invoice of the same owner, currency and tax rate, and the credited
+-- total never exceeds that invoice.
+CREATE FUNCTION check_billing_invoice() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE
+ inv "public".billing_invoices%ROWTYPE;
+ orig "public".billing_invoices%ROWTYPE;
+ sums record;
+BEGIN
+ SELECT * INTO inv FROM "public".billing_invoices
+  WHERE id=(to_jsonb(NEW)->>CASE WHEN TG_TABLE_NAME='billing_invoice_lines' THEN 'invoice_id' ELSE 'id' END)::uuid;
+ SELECT count(*) AS n, coalesce(sum(amount_ht),0) AS ht, coalesce(sum(tax_amount),0) AS tax,
+  bool_and(currency=inv.currency AND tax_rate_basis_points IS NOT DISTINCT FROM inv.tax_rate_basis_points) AS same
+  INTO sums FROM "public".billing_invoice_lines WHERE invoice_id=inv.id;
+ IF sums.n=0 OR sums.ht<>inv.amount_ht OR sums.tax<>inv.tax_amount OR NOT sums.same THEN
+  RAISE EXCEPTION 'An invoice equals the sum of its lines' USING ERRCODE='23514';
+ END IF;
+ IF inv.kind='invoice' AND NOT EXISTS (SELECT 1 FROM "public".subscription_payments p WHERE p.id=inv.payment_id AND p.owner_id=inv.owner_id AND p.currency=inv.currency) THEN
+  RAISE EXCEPTION 'An invoice belongs to its payment''s owner' USING ERRCODE='23514';
+ END IF;
+ IF inv.kind='credit_note' THEN
+  SELECT * INTO orig FROM "public".billing_invoices WHERE id=inv.corrects_invoice_id;
+  IF orig.kind<>'invoice' OR orig.owner_id<>inv.owner_id OR orig.currency<>inv.currency
+   OR orig.tax_rate_basis_points IS DISTINCT FROM inv.tax_rate_basis_points THEN
+   RAISE EXCEPTION 'A credit note corrects an invoice of the same owner, currency and tax rate' USING ERRCODE='23514';
+  END IF;
+  IF (SELECT sum(amount_ttc)>orig.amount_ttc OR sum(amount_ht)>orig.amount_ht OR sum(tax_amount)>orig.tax_amount
+      FROM "public".billing_invoices WHERE corrects_invoice_id=orig.id) THEN
+   RAISE EXCEPTION 'Credit notes exceed the invoice' USING ERRCODE='23514';
+  END IF;
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER billing_invoice_totals AFTER INSERT ON billing_invoices DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_billing_invoice();
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER billing_invoice_line_totals AFTER INSERT ON billing_invoice_lines DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_billing_invoice();
+--> statement-breakpoint
+-- At commit: an allocation joins a receipt and an invoice of the same owner/currency; per receipt the
+-- allocations never exceed it, per invoice never exceed its TTC minus credit notes.
+CREATE FUNCTION check_billing_allocation() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE r "public".billing_receipts%ROWTYPE; inv "public".billing_invoices%ROWTYPE;
+BEGIN
+ SELECT * INTO r FROM "public".billing_receipts WHERE id=NEW.receipt_id;
+ SELECT * INTO inv FROM "public".billing_invoices WHERE id=NEW.invoice_id;
+ IF inv.kind<>'invoice' OR inv.owner_id<>r.owner_id OR inv.currency<>r.currency THEN
+  RAISE EXCEPTION 'An allocation joins a receipt and an invoice of the same owner and currency' USING ERRCODE='23514';
+ END IF;
+ IF (SELECT sum(amount_ttc) FROM "public".billing_allocations WHERE receipt_id=r.id)>r.amount_ttc THEN
+  RAISE EXCEPTION 'Allocations exceed the receipt' USING ERRCODE='23514';
+ END IF;
+ IF (SELECT sum(amount_ttc) FROM "public".billing_allocations WHERE invoice_id=inv.id)
+  >inv.amount_ttc-coalesce((SELECT sum(amount_ttc) FROM "public".billing_invoices WHERE corrects_invoice_id=inv.id),0) THEN
+  RAISE EXCEPTION 'Allocations exceed the invoice balance' USING ERRCODE='23514';
+ END IF;
+ RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER billing_allocation_bounds AFTER INSERT ON billing_allocations DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_billing_allocation();
 
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "document_artifacts" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id');

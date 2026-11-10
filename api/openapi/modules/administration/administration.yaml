@@ -110,10 +110,55 @@ paths:
             schema: { $ref: '#/components/schemas/AdminPaymentConfirmation' }
       responses:
         '200':
-          description: Confirmed payment and its coverage. Idempotent; 409 PAYMENT_REJECTED for a rejected payment.
+          description: 'Records one verified receipt (default: the remaining balance) and allocates it to the payment''s invoice, issued at the first receipt. Coverage is granted once, in the same transaction, when the allocations reach the amount due; a partial receipt leaves the payment submitted. Idempotent: a confirmed payment, or an explicit receipt reference already recorded with the same amount, returns unchanged; a defaulted reference already recorded is 409 RECEIPT_REFERENCE_REQUIRED (never a silent no-op). Lifecycle checks (409 UPGRADE_STALE) run before any receipt; an upgrade is received in full only (400 UPGRADE_REQUIRES_FULL_AMOUNT). 409 PAYMENT_REJECTED; 409 QUOTE_EXPIRED when the first receipt''s receivedAt is after the quote validity (later instalments complete an accepted quote); 409 RECEIPT_REFERENCE_USED; 400 AMOUNT_EXCEEDS_BALANCE; 400 RECEIVED_AT_INVALID (future or before submission).'
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayment' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/invoices:
+    get:
+      operationId: listAdminInvoices
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: ownerId, in: query, schema: { type: string, format: uuid } }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
+      responses:
+        '200':
+          description: Issued invoices and credit notes, newest first. 20 per page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminInvoicePage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/invoices/{invoiceId}/credit-notes:
+    post:
+      operationId: createAdminCreditNote
+      description: 'Explicit correction: issues a linked credit note at the invoice''s tax rate. Only for an invoice whose payment is decided (confirmed or rejected); credited HT and tax each never exceed the invoice, and the note crediting the remaining HT takes the remaining tax. Coverage is not changed (use lifecycle actions); refunds happen outside the platform. Requires an audit reason and UI confirmation. 409 PAYMENT_PENDING; 400 CREDIT_EXCEEDS_INVOICE.'
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCreditNoteRequest' }
+      responses:
+        '201':
+          description: The issued credit note.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminInvoice' }
         default:
           description: Request failed
           content:
@@ -134,7 +179,7 @@ paths:
             schema: { $ref: '#/components/schemas/AdminPaymentRejection' }
       responses:
         '200':
-          description: Rejected payment; the reason is shown to the owner. Idempotent; 409 PAYMENT_CONFIRMED for a confirmed payment.
+          description: Rejected payment; the reason is shown to the owner. Idempotent; 409 PAYMENT_CONFIRMED for a confirmed payment; When funds were already received (partial instalments), the same transaction issues a credit note for the whole invoice remainder, so the invoice ends refund_due by the received amount (refund outside the platform); coverage is unchanged, the credit note is audited with the rejection, and the owner can submit a new payment.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayment' }
@@ -960,8 +1005,14 @@ components:
           decidedBy,
           receivedReference,
           rejectionReason,
+          quoteExpiresAt,
+          receivedTtc,
+          invoiceNumber,
         ]
       properties:
+        quoteExpiresAt: { type: [string, 'null'], format: date-time }
+        receivedTtc: { type: integer, minimum: 0 }
+        invoiceNumber: { type: [string, 'null'] }
         id: { type: string, format: uuid }
         ownerId: { type: string, format: uuid }
         ownerEmail: { type: string }
@@ -1008,8 +1059,47 @@ components:
             type: string,
             minLength: 1,
             maxLength: 120,
-            description: Bank or cash receipt reference actually observed.,
+            description: 'Bank or cash receipt reference actually observed; defaults to the owner''s reference. Unique per payment (idempotency key of the receipt).',
           }
+        receivedAmountTtc:
+          {
+            type: integer,
+            minimum: 1,
+            description: 'Centimes actually received; defaults to the remaining balance. Must not exceed it.',
+          }
+        receivedAt:
+          {
+            type: string,
+            format: date-time,
+            description: 'When the funds were received; defaults to now. Decides whether the quote was still valid.',
+          }
+    AdminInvoice:
+      type: object
+      additionalProperties: false
+      required: [ownerId, ownerEmail, invoice]
+      properties:
+        ownerId: { type: string, format: uuid }
+        ownerEmail: { type: string }
+        invoice: { $ref: ../../openapi.yaml#/components/schemas/BillingInvoice }
+    AdminInvoicePage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminInvoice' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
+    AdminCreditNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [amountHt, reason, auditReason]
+      properties:
+        amountHt: { type: integer, minimum: 1, description: 'Centimes excluding tax; tax uses the invoice rate, rounded half-up.' }
+        reason: { type: string, minLength: 1, maxLength: 500, description: Printed on the credit note and shown to the owner. }
+        auditReason: { type: string, minLength: 1, maxLength: 500 }
     AdminPaymentRejection:
       type: object
       additionalProperties: false

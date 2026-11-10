@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 
 import type { ObjectStorage } from '../../../integrations/contracts.js'
-import type { Database } from '../../../lib/db.js'
+import type { Database, Transaction } from '../../../lib/db.js'
 import { createSubscriptionController } from './controllers/subscription.controller.js'
 import { createBillingRepository } from './repositories/billing.repository.js'
+import type { InvoiceRecord } from './repositories/billing-documents.repository.js'
 import {
   coverageLifecycleSql,
   type CoverageReads,
@@ -11,7 +12,7 @@ import {
 import { createSubscriptionRepository } from './repositories/subscription.repository.js'
 import { createTimezoneRepository } from './repositories/timezone.repository.js'
 import { registerSubscriptionRoutes } from './routes/subscription.routes.js'
-import { createBillingService } from './services/billing.service.js'
+import { createBillingService, toInvoice } from './services/billing.service.js'
 import { createMeteredStorage } from './services/metered-storage.service.js'
 import type { ShadowDiff } from './services/period-resolver.service.js'
 import { createSubscriptionService } from './services/subscription.service.js'
@@ -25,6 +26,11 @@ export { billingDay, billingTimezone, zonedDayStart } from './services/billing-c
 export type { ShadowDiff } from './services/period-resolver.service.js'
 export type { TimezoneReport } from './services/timezone-consistency.service.js'
 export type SubscriptionsPublicApi = ReturnType<typeof createSubscriptionService>
+const adminInvoice = (row: InvoiceRecord) => ({
+  ownerId: row.ownerId,
+  ownerEmail: row.ownerEmail,
+  invoice: toInvoice(row),
+})
 /**
  * `timezone.check` compares application and database zone data; it defaults to the real database
  * comparison. Tests inject agreeing, mismatching or failing checks.
@@ -78,6 +84,29 @@ export function createSubscriptionsModule(
     administration: {
       confirm: billing.confirm,
       reject: billing.reject,
+      invoices: async (
+        filter: { ownerId?: string; page: number; pageSize: number },
+        tx?: Transaction,
+      ) => {
+        const { rows, total } = await billing.adminInvoices(filter, tx)
+        return { rows: rows.map(adminInvoice), total }
+      },
+      creditNote: async (
+        invoiceId: string,
+        input: { amountHt: number; reason: string },
+        issuedBy: string,
+        onIssued?: (tx: Transaction, note: ReturnType<typeof adminInvoice>) => Promise<void>,
+        tx?: Transaction,
+      ) =>
+        adminInvoice(
+          await billing.creditNote(
+            invoiceId,
+            input,
+            issuedBy,
+            onIssued && ((t, note) => onIssued(t, adminInvoice(note))),
+            tx,
+          ),
+        ),
       lifecycle: billing.administration,
       /** Set-based lifecycle status for bounded administrator counts and filters (same authority). */
       lifecycleStatus: coverageLifecycleSql(reads),

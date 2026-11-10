@@ -113,6 +113,28 @@ export async function isolatedDatabase({
 const DAY = 86_400_000
 
 /**
+ * S6: every money payment accepts an immutable quote with the same snapshot. Inserts that quote
+ * (no tax, 15 days of validity) for tests that write payments directly; returns its id.
+ */
+export async function seedQuote(
+  client: postgres.Sql,
+  values: {
+    ownerId: string
+    planCode: string
+    cycle?: 'monthly' | 'annual'
+    kind?: 'activation' | 'renewal' | 'upgrade'
+    amount: number
+    planVersionId?: string
+  },
+) {
+  const [row] = await client<
+    { id: string }[]
+  >`insert into billing_quotes(owner_id,plan_code,plan_version_id,cycle,kind,currency,amount_ht,tax_amount,amount_ttc,issued_at,expires_at)
+    values (${values.ownerId},${values.planCode},coalesce(${values.planVersionId ?? null}::uuid,(select plan_version_id from plan_selling where plan_code=${values.planCode})),${values.cycle ?? 'monthly'},${values.kind ?? 'activation'},'MAD',${values.amount},0,${values.amount},now()-interval '1 day',now()+interval '14 days') returning id`
+  return row!.id
+}
+
+/**
  * Confirmed paid coverage written like a payment confirmation (S5b dual write): the confirmed payment,
  * its paid period superseding the rest of the running coverage (later start wins) and the legacy
  * paid-through/plan.
@@ -132,9 +154,28 @@ export async function seedPaidCoverage(
 ) {
   const billing = createBillingRepository(() => db)
   return billing.admin(async (tx) => {
+    const [quote] = await tx
+      .insert(tables.billingQuotes)
+      .values({
+        ownerId: values.ownerId,
+        planCode: values.planCode,
+        planVersionId:
+          values.planVersionId ??
+          sql`(select plan_version_id from plan_selling where plan_code=${values.planCode})`,
+        cycle: 'monthly',
+        kind: values.kind ?? 'activation',
+        currency: 'MAD',
+        amountHt: 100,
+        taxAmount: 0,
+        amountTtc: 100,
+        issuedAt: values.start,
+        expiresAt: new Date(values.start.getTime() + 15 * DAY),
+      })
+      .returning()
     const [payment] = await tx
       .insert(tables.subscriptionPayments)
       .values({
+        quoteId: quote!.id,
         ownerId: values.ownerId,
         planCode: values.planCode,
         // Fixture pin: the plan's current selling version (writers choose it explicitly).

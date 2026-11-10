@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 const refreshed = [
   '/api/v1/admin/owners',
   '/api/v1/admin/payments',
+  '/api/v1/admin/invoices',
   '/api/v1/admin/overview',
   '/api/v1/admin/audit',
 ]

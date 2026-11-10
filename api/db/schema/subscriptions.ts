@@ -152,6 +152,9 @@ export const subscriptionPayments = pgTable(
       .references(() => subscriptionPlans.code),
     // Version whose terms and price were quoted; set by the writer, immutable (integrity SQL FK).
     planVersionId: uuid('plan_version_id').notNull(),
+    // S6: the immutable quote this submission accepted (snapshot equality and FK in integrity SQL).
+    // Only administrator adjustments (no money) have none.
+    quoteId: uuid('quote_id'),
     cycle: text('cycle', { enum: ['monthly', 'annual'] }).notNull(),
     kind: text('kind', { enum: ['activation', 'renewal', 'upgrade'] }).notNull(),
     status: text('status', { enum: ['submitted', 'confirmed', 'rejected'] })
@@ -189,6 +192,11 @@ export const subscriptionPayments = pgTable(
       sql`not ${t.graceless} or (${t.method}='admin_adjustment' and ${t.amountTtc}=0)`,
     ),
     check('subscription_payment_reference', sql`btrim(${t.reference})<>''`),
+    check(
+      'subscription_payment_quote',
+      sql`(${t.method}='admin_adjustment')=(${t.quoteId} is null)`,
+    ),
+    uniqueIndex('subscription_payments_quote').on(t.quoteId),
     check(
       'subscription_payment_rejection_reason',
       sql`(${t.status}='rejected')=(${t.rejectionReason} is not null and btrim(${t.rejectionReason})<>'')`,

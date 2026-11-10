@@ -43,6 +43,9 @@ export const payment = (over: Record<string, unknown> = {}) => ({
   decidedBy: null,
   receivedReference: null,
   rejectionReason: null,
+  quoteExpiresAt: '2026-10-16T09:00:00Z',
+  receivedTtc: 0,
+  invoiceNumber: null,
   ...over,
 })
 export const apiError = (status: number, code: string) => ({

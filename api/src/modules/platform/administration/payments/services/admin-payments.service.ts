@@ -1,4 +1,6 @@
 import type {
+  AdminCreditNoteRequest,
+  AdminInvoicePage,
   AdminPayment,
   AdminPaymentConfirmation,
   AdminPaymentPage,
@@ -27,16 +29,21 @@ export function createAdminPaymentsService(
   }
   const audited =
     (admin: AuthenticatedAdmin, action: string, auditReason: string): PaymentDecision =>
-    (tx, before, after) =>
+    (tx, before, after, receipt, creditNote) =>
       audit.record(
         {
           adminId: admin.id,
           actor: admin.email,
-          action,
+          action: receipt ? 'payment.receipt' : action,
           targetType: 'subscription_payment',
           targetId: after.id,
           before: paymentDecisionSnapshot(before),
-          after: { ...paymentDecisionSnapshot(after), auditReason },
+          after: {
+            ...paymentDecisionSnapshot(after),
+            ...(receipt ? { receipt } : {}),
+            ...(creditNote ? { creditNote } : {}),
+            auditReason,
+          },
         },
         tx,
       )
@@ -58,12 +65,54 @@ export function createAdminPaymentsService(
         await billing.confirm(
           id,
           admin.email,
-          input.receivedReference?.trim() || undefined,
+          {
+            reference: input.receivedReference?.trim() || undefined,
+            amountTtc: input.receivedAmountTtc,
+            receivedAt: input.receivedAt ? new Date(input.receivedAt) : undefined,
+          },
           audited(admin, 'payment.confirm', auditReason),
           tx,
         )
       })
       return payment(id)
+    },
+    async invoices(ownerId: string | undefined, page: number): Promise<AdminInvoicePage> {
+      const { rows, total } = await withAdmin((tx) =>
+        billing.invoices({ ownerId, page, pageSize: PAGE_SIZE }, tx),
+      )
+      return { items: rows, page, pageSize: PAGE_SIZE, total }
+    },
+    /** Explicit correction, audited in the same transaction. */
+    async creditNote(admin: AuthenticatedAdmin, invoiceId: string, input: AdminCreditNoteRequest) {
+      const auditReason = input.auditReason.trim()
+      if (!auditReason)
+        throw new AppError(400, 'AUDIT_REASON_REQUIRED', 'Give an internal audit reason.')
+      return withAdmin((tx) =>
+        billing.creditNote(
+          invoiceId,
+          { amountHt: input.amountHt, reason: input.reason },
+          admin.email,
+          (t, note) =>
+            audit.record(
+              {
+                adminId: admin.id,
+                actor: admin.email,
+                action: 'invoice.credit_note',
+                targetType: 'billing_invoice',
+                targetId: invoiceId,
+                before: null,
+                after: {
+                  creditNote: note.invoice.number,
+                  amountTtc: note.invoice.totals.amountTtc,
+                  reason: note.invoice.reason,
+                  auditReason,
+                },
+              },
+              t,
+            ),
+          tx,
+        ),
+      )
     },
     async reject(admin: AuthenticatedAdmin, id: string, input: AdminPaymentRejection) {
       const auditReason = input.auditReason.trim()

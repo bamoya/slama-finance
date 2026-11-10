@@ -12,6 +12,7 @@ import {
   attachTestDatabase,
   isolatedDatabase,
   seedPaidCoverage,
+  seedQuote,
   testOwnerId,
 } from './helpers/postgres.js'
 
@@ -100,7 +101,7 @@ describe('SaaS administration portal', () => {
     fixture.client`select * from platform_admin_audit where action=${action} order by created_at`
   async function submittedPayment(reference: string) {
     const [row] =
-      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'business',(select plan_version_id from plan_selling where plan_code='business'),'monthly','renewal','cash',${reference},'MAD',29900,0,29900) returning id`
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,quote_id) values (${testOwnerId},'business',(select plan_version_id from plan_selling where plan_code='business'),'monthly','renewal','cash',${reference},'MAD',29900,0,29900,${await seedQuote(fixture.client, { ownerId: testOwnerId, planCode: 'business', kind: 'renewal', amount: 29900 })}) returning id`
     return row!.id as string
   }
 
@@ -151,7 +152,7 @@ describe('SaaS administration portal', () => {
     await owner('cancelled', -60, [-40, -1], true)
     await owner('lapsed', -60, [-50, -20])
     await owner('noPayment', -30, null)
-    await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${trial},'pro',(select plan_version_id from plan_selling where plan_code='pro'),'monthly','activation','cash','overview-trial','MAD',100,0,100)`
+    await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,quote_id) values (${trial},'pro',(select plan_version_id from plan_selling where plan_code='pro'),'monthly','activation','cash','overview-trial','MAD',100,0,100,${await seedQuote(fixture.client, { ownerId: trial, planCode: 'pro', amount: 100 })})`
 
     const anonymous = await app.inject({ method: 'GET', url: '/api/v1/admin/overview' })
     expect(anonymous.statusCode).toBe(401)
@@ -330,6 +331,53 @@ describe('SaaS administration portal', () => {
         })
       ).json().code,
     ).toBe('PAYMENT_CONFIRMED')
+  })
+
+  it('records partial receipts, lists invoices and issues audited credit notes', async () => {
+    const { cookie } = await signIn()
+    const id = await submittedPayment('bank-partial')
+    const partial = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
+      receivedReference: 'VIR-1',
+      receivedAmountTtc: 9900,
+      auditReason: 'first transfer',
+    })
+    expect(partial.statusCode).toBe(200)
+    expect(partial.json()).toMatchObject({ status: 'submitted', receivedTtc: 9900 })
+    expect((await auditRows('payment.receipt'))[0]!.after.receipt).toMatchObject({
+      amountTtc: 9900,
+      reference: 'VIR-1',
+    })
+    const invoices = await as(cookie).get(`/api/v1/admin/invoices?ownerId=${testOwnerId}`)
+    expect(invoices.statusCode).toBe(200)
+    const [entry] = invoices.json().items
+    expect(entry).toMatchObject({
+      ownerEmail: 'fixture-owner@example.test',
+      invoice: { kind: 'invoice', allocatedTtc: 9900, balanceTtc: 20000, status: 'open' },
+    })
+    const url = `/api/v1/admin/invoices/${entry.invoice.id}/credit-notes`
+    const pending = await as(cookie).post(url, {
+      amountHt: 100,
+      reason: 'Remise',
+      auditReason: 'support',
+    })
+    expect(pending.json().code).toBe('PAYMENT_PENDING')
+    const final = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
+      receivedReference: 'VIR-2',
+      auditReason: 'second transfer',
+    })
+    expect(final.json()).toMatchObject({ status: 'confirmed', receivedTtc: 29900 })
+    const note = await as(cookie).post(url, {
+      amountHt: 100,
+      reason: 'Remise',
+      auditReason: 'support',
+    })
+    expect(note.statusCode).toBe(201)
+    expect(note.json().invoice).toMatchObject({
+      kind: 'credit_note',
+      correctsInvoiceNumber: entry.invoice.number,
+      reason: 'Remise',
+    })
+    expect(await auditRows('invoice.credit_note')).toHaveLength(1)
   })
 
   it.each(['confirm', 'reject'] as const)(
@@ -617,7 +665,8 @@ describe('SaaS administration portal', () => {
     expect(
       detail.json().payments.every((p: { planVersionNumber: number }) => p.planVersionNumber === 1),
     ).toBe(true)
-    expect(detail.body).not.toMatch(/password|invoice|client/i)
+    // The platform's own SaaS invoice number on payments is not tenant finance data.
+    expect(detail.body.replace(/"invoiceNumber"/g, '')).not.toMatch(/password|invoice|client/i)
     expect((await as(cookie).get(`/api/v1/admin/owners/${randomBytesUuid()}`)).statusCode).toBe(404)
   })
 

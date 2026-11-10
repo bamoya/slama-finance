@@ -81,7 +81,7 @@ paths:
     post:
       operationId: submitOwnerSubscriptionPayment
       tags: [subscriptions]
-      description: 'Pins the quoted plan version and price; the same rules and errors as the quote apply.'
+      description: 'Records an immutable quote (pinned plan version, price and tax snapshot, valid 15 days) and the owner''s payment declaration against it; the same rules and errors as the quote apply.'
       security: [{ ownerSessionCookie: [] }]
       requestBody:
         required: true
@@ -94,6 +94,30 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SubscriptionPayment' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/owner/subscription/invoices:
+    get:
+      operationId: listOwnerSubscriptionInvoices
+      tags: [subscriptions]
+      description: 'Issued invoices and credit notes of the owner, newest first. Amounts are immutable snapshots; balances derive from verified receipts and credit notes.'
+      security: [{ ownerSessionCookie: [] }]
+      responses:
+        '200':
+          description: Issued billing documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/BillingInvoice' }
         default:
           description: Request failed
           content:
@@ -377,8 +401,28 @@ components:
           submittedAt,
           decidedAt,
           rejectionReason,
+          quoteExpiresAt,
+          receivedTtc,
+          invoiceNumber,
         ]
       properties:
+        quoteExpiresAt:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'End of the quote validity. Funds received after it are not accepted for this quote (409 QUOTE_EXPIRED). Null only for administrator adjustments.',
+          }
+        receivedTtc:
+          {
+            type: integer,
+            minimum: 0,
+            description: 'Verified receipts allocated to this payment, in centimes. Coverage starts only when it reaches the amount due.',
+          }
+        invoiceNumber:
+          {
+            type: [string, 'null'],
+            description: 'Invoice issued at the first verified receipt; null before.',
+          }
         id: { type: string, format: uuid }
         planCode: { $ref: '#/components/schemas/PaidPlanCode' }
         planVersionNumber:
@@ -408,3 +452,59 @@ components:
       required: [cancelAtPeriodEnd]
       properties:
         cancelAtPeriodEnd: { type: boolean }
+    BillingInvoiceLine:
+      type: object
+      additionalProperties: false
+      required: [position, planCode, planVersionNumber, cycle, kind, amount]
+      properties:
+        position: { type: integer, minimum: 1 }
+        planCode: { $ref: '#/components/schemas/PaidPlanCode' }
+        planVersionNumber: { type: integer, minimum: 1 }
+        cycle: { $ref: '#/components/schemas/BillingCycle' }
+        kind: { type: string, enum: [activation, renewal, upgrade] }
+        amount: { $ref: '#/components/schemas/MoneyBreakdown' }
+    BillingInvoice:
+      type: object
+      additionalProperties: false
+      description: 'Issued document. Totals and lines never change; corrections are separate credit notes.'
+      required:
+        [
+          id,
+          number,
+          kind,
+          correctsInvoiceNumber,
+          reason,
+          paymentId,
+          totals,
+          lines,
+          issuedAt,
+          allocatedTtc,
+          creditedTtc,
+          balanceTtc,
+          status,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, description: 'F-YYYY-NNNNNN (invoice) or A-YYYY-NNNNNN (credit note), gap-free per series and Casablanca year.' }
+        kind: { type: string, enum: [invoice, credit_note] }
+        correctsInvoiceNumber: { type: [string, 'null'] }
+        reason: { type: [string, 'null'], description: 'Correction reason, credit notes only.' }
+        paymentId: { type: [string, 'null'], format: uuid }
+        totals: { $ref: '#/components/schemas/MoneyBreakdown' }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/BillingInvoiceLine' }
+        issuedAt: { type: string, format: date-time }
+        allocatedTtc: { type: integer, minimum: 0, description: 'Verified receipts allocated (invoices only).' }
+        creditedTtc: { type: integer, minimum: 0, description: 'Credit notes issued against it (invoices only).' }
+        balanceTtc:
+          {
+            type: integer,
+            description: 'totals.amountTtc - allocated - credited for invoices (negative: refund due outside the platform); 0 for credit notes.',
+          }
+        status:
+          {
+            type: string,
+            enum: [open, settled, refund_due],
+            description: 'From balanceTtc: positive open, zero settled, negative refund_due.',
+          }

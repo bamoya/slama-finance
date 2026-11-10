@@ -1,4 +1,4 @@
-import { asc, count, desc, eq } from 'drizzle-orm'
+import { asc, count, desc, eq, sql } from 'drizzle-orm'
 
 import { platformUsers } from '../../../../../../db/schema/organizations.js'
 import { planVersions } from '../../../../../../db/schema/subscription-catalog.js'
@@ -11,6 +11,18 @@ const paymentColumns = {
   payment: subscriptionPayments,
   ownerEmail: platformUsers.email,
   planVersionNumber: planVersions.versionNumber,
+  // S6 billing documents of the submission (quote validity, allocated receipts, invoice).
+  quoteExpiresAt:
+    sql<Date | null>`(select q.expires_at from billing_quotes q where q.id=${subscriptionPayments.quoteId})`.mapWith(
+      (v: string | Date | null) => (v === null ? null : new Date(v)),
+    ),
+  receivedTtc:
+    sql<number>`coalesce((select sum(a.amount_ttc) from billing_allocations a join billing_invoices i on i.id=a.invoice_id where i.payment_id=${subscriptionPayments.id}),0)::int`.mapWith(
+      Number,
+    ),
+  invoiceNumber: sql<
+    string | null
+  >`(select i.number from billing_invoices i where i.payment_id=${subscriptionPayments.id})`,
 }
 
 export function createAdminPaymentRepository() {

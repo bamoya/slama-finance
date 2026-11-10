@@ -336,3 +336,65 @@ describe('customer lifecycle actions', () => {
     expect(await screen.findByText('Admin adjustment')).toBeInTheDocument()
   })
 })
+
+describe('customer invoices', () => {
+  it('issues a credit note with an amount and both reasons', async () => {
+    const invoice = {
+      id: '55555555-5555-4555-8555-555555555555',
+      number: 'F-2026-000001',
+      kind: 'invoice',
+      correctsInvoiceNumber: null,
+      reason: null,
+      paymentId: '33333333-3333-4333-8333-333333333333',
+      totals: {
+        currency: 'MAD',
+        amountHt: 10000,
+        taxRateBasisPoints: 2000,
+        taxAmount: 2000,
+        amountTtc: 12000,
+      },
+      lines: [],
+      issuedAt: '2026-10-02T10:00:00Z',
+      allocatedTtc: 12000,
+      creditedTtc: 0,
+      balanceTtc: 0,
+      status: 'settled',
+    }
+    mockApi((key) => {
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === `GET /api/v1/admin/owners/${ownerId}`) return { body: ownerDetail() }
+      if (key === 'GET /api/v1/admin/invoices')
+        return {
+          body: {
+            items: [{ ownerId, ownerEmail: 'owner@example.test', invoice }],
+            page: 1,
+            pageSize: 20,
+            total: 1,
+          },
+        }
+      if (key.startsWith('POST '))
+        return {
+          status: 201,
+          body: { ownerId, ownerEmail: 'owner@example.test', invoice },
+        }
+    })
+    renderAt(`/customers/${ownerId}`, <AdminCustomerDetailPage customerId={ownerId} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Credit note' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(screen.getByRole('button', { name: 'Issue credit note' }))
+    expect(await screen.findByText('Enter a valid amount and both reasons.')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Amount excluding tax'), { target: { value: '25' } })
+    fireEvent.change(screen.getByLabelText('Reason shown to the customer'), {
+      target: { value: 'Geste commercial' },
+    })
+    fireEvent.change(reasonField(), { target: { value: 'Support ticket' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Issue credit note' }))
+    await waitFor(() =>
+      expect(posts().at(-1)).toMatchObject({
+        url: `/api/v1/admin/invoices/${invoice.id}/credit-notes`,
+        data: { amountHt: 2500, reason: 'Geste commercial', auditReason: 'Support ticket' },
+      }),
+    )
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+  })
+})

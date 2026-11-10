@@ -46,6 +46,19 @@ export function errorMessage(error: unknown): string {
         'L’administration est temporairement indisponible : la configuration du serveur est incomplète.',
       PAYMENT_REJECTED: 'Ce paiement a déjà été rejeté et ne peut plus être modifié.',
       PAYMENT_CONFIRMED: 'Ce paiement a déjà été confirmé et ne peut plus être modifié.',
+      QUOTE_EXPIRED:
+        'Les fonds ont été reçus après l’expiration du devis. Rejetez le paiement pour que le client soumette aux conditions actuelles.',
+      AMOUNT_EXCEEDS_BALANCE:
+        'Le montant reçu doit être positif et ne pas dépasser le solde restant.',
+      RECEIVED_AT_INVALID:
+        'La date de réception ne peut pas être dans le futur ni antérieure à la soumission.',
+      RECEIPT_REFERENCE_USED:
+        'Cette référence a déjà été enregistrée avec un autre montant. Utilisez la référence du nouvel encaissement.',
+      CREDIT_EXCEEDS_INVOICE: 'Le total des avoirs ne peut pas dépasser la facture.',
+      RECEIPT_REFERENCE_REQUIRED:
+        'Un encaissement est déjà enregistré pour ce paiement. Saisissez la référence de ce nouvel encaissement.',
+      UPGRADE_REQUIRES_FULL_AMOUNT:
+        'Un changement d’offre se confirme uniquement à réception du montant total.',
       REJECTION_REASON_REQUIRED: 'Indiquez le motif du rejet.',
       NOT_FOUND: 'Cet élément est introuvable ou n’est plus disponible.',
       UNAUTHENTICATED: 'Session administrateur expirée. Reconnectez-vous.',

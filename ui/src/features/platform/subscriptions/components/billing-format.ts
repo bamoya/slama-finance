@@ -47,6 +47,26 @@ export function planLabel(code: string) {
   return code === 'trial' ? translate('Free trial') : code.charAt(0).toUpperCase() + code.slice(1)
 }
 
+/** Parses a typed DH amount ("1 234,50" or "1234.5") into integer centimes; null when invalid. */
+export function parseDh(text: string) {
+  const normalized = text.replace(/[\s\u202f\u00a0]/g, '').replace(',', '.')
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null
+  const centimes = Math.round(Number(normalized) * 100)
+  return Number.isSafeInteger(centimes) ? centimes : null
+}
+
+/** Issued document balance: open (due), settled, or refund due after a credit note. */
+export function invoiceStatus(status: 'open' | 'settled' | 'refund_due') {
+  return status === 'settled'
+    ? { label: translate('Settled'), tone: 'active' as const }
+    : status === 'open'
+      ? { label: translate('Balance due'), tone: 'draft' as const }
+      : { label: translate('Refund due'), tone: 'overdue' as const }
+}
+
+export const documentKindLabel = (kind: 'invoice' | 'credit_note') =>
+  translate(kind === 'invoice' ? 'Invoice' : 'Credit note')
+
 export function paymentStatusTone(status: string) {
   return status === 'confirmed' ? 'active' : status === 'submitted' ? 'draft' : 'overdue'
 }

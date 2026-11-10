@@ -40,7 +40,11 @@ try {
   ) {
     const result =
       action === 'confirm'
-        ? await admin.confirm(id, values.by, values.received)
+        ? await admin.confirm(
+            id,
+            values.by,
+            values.received ? { reference: values.received } : undefined,
+          )
         : await admin.reject(id, values.by, values.reason!)
     console.log(JSON.stringify(result, null, 2))
   } else {

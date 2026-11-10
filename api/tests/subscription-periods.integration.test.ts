@@ -11,7 +11,7 @@ import {
   compareCoverage,
   resolvePeriods,
 } from '../src/modules/platform/subscriptions/services/period-resolver.service.js'
-import { isolatedDatabase } from './helpers/postgres.js'
+import { isolatedDatabase, seedQuote } from './helpers/postgres.js'
 
 const DAY = 86_400_000
 
@@ -54,8 +54,8 @@ describe('S5a coverage periods', () => {
   ) {
     const amount = over.amount ?? 9900
     const [row] =
-      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at,decided_by)
-      values (${ownerId},${over.plan ?? 'essential'},(select plan_version_id from plan_selling where plan_code=${over.plan ?? 'essential'}),'monthly','activation','confirmed',${over.method ?? 'cash'},'R','MAD',${amount},0,${amount},${iso(from)},${iso(to)},now(),'ops') returning id`
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at,decided_by,quote_id)
+      values (${ownerId},${over.plan ?? 'essential'},(select plan_version_id from plan_selling where plan_code=${over.plan ?? 'essential'}),'monthly','activation','confirmed',${over.method ?? 'cash'},'R','MAD',${amount},0,${amount},${iso(from)},${iso(to)},now(),'ops',${over.method === 'admin_adjustment' ? null : await seedQuote(fixture.client, { ownerId, planCode: over.plan ?? 'essential', amount })}) returning id`
     return String(row!.id)
   }
   const backfill = () => fixture.client`select subscription_periods_reconcile() as n`

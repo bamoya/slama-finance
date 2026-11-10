@@ -20,6 +20,7 @@ export function createSubscriptionController(
     quote: async (request: FastifyRequest) =>
       billing.quote(await id(request), SubscriptionQuoteRequestSchema.parse(request.body)),
     payments: async (request: FastifyRequest) => billing.payments(await id(request)),
+    invoices: async (request: FastifyRequest) => billing.invoices(await id(request)),
     submit: async (request: FastifyRequest, reply: FastifyReply) =>
       reply
         .code(201)

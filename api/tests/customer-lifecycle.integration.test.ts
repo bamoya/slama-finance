@@ -15,6 +15,7 @@ import {
   attachTestDatabase,
   isolatedDatabase,
   seedPaidCoverage,
+  seedQuote,
   testOrganizationId,
   testOwnerId,
 } from './helpers/postgres.js'
@@ -180,7 +181,7 @@ describe('Customer lifecycle administration', () => {
     expect(await visitedByWorkers()).toEqual([])
 
     const [payment] =
-      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'pro',(select plan_version_id from plan_selling where plan_code='pro'),'monthly','renewal','cash','after-block','MAD',100,0,100) returning id`
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,quote_id) values (${testOwnerId},'pro',(select plan_version_id from plan_selling where plan_code='pro'),'monthly','renewal','cash','after-block','MAD',100,0,100,${await seedQuote(fixture.client, { ownerId: testOwnerId, planCode: 'pro', kind: 'renewal', amount: 100 })}) returning id`
     expect(
       (
         await admin(`/api/v1/admin/payments/${payment!.id}/confirm`, {

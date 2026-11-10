@@ -14,5 +14,6 @@ export function registerSubscriptionRoutes(
     { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     controller.submit,
   )
+  app.get('/api/v1/owner/subscription/invoices', controller.invoices)
   app.put('/api/v1/owner/subscription/cancellation', controller.cancellation)
 }

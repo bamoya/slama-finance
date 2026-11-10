@@ -2677,4 +2677,37 @@ export const french: Record<string, string> = {
   'Effective limits are unavailable while the plan terms cannot be resolved.':
     'Les limites effectives sont indisponibles tant que les conditions de l’offre ne peuvent pas être résolues.',
   Unavailable: 'Indisponible',
+  Settled: 'Soldée',
+  'Balance due': 'Solde dû',
+  'Refund due': 'Remboursement dû',
+  'Credit note': 'Avoir',
+  Balance: 'Solde',
+  'Corrects {{number}}': 'Corrige {{number}}',
+  'No invoices yet.': 'Aucune facture pour le moment.',
+  'An invoice is issued when your payment is received.':
+    'Une facture est émise à la réception de votre paiement.',
+  'An invoice is issued at the first verified receipt.':
+    'Une facture est émise au premier encaissement vérifié.',
+  'Received {{received}} of {{total}}': '{{received}} reçus sur {{total}}',
+  'Quote valid until {{date}}': 'Devis valable jusqu’au {{date}}',
+  'Invoice {{number}}': 'Facture {{number}}',
+  'Records the funds received. The subscription is activated or extended once the full amount is received. This cannot be undone.':
+    'Enregistre les fonds reçus. L’abonnement est activé ou prolongé lorsque le montant total est reçu. Cette action est irréversible.',
+  'Already received': 'Déjà reçu',
+  'Quote valid until': 'Devis valable jusqu’au',
+  'Each receipt needs its own reference.': 'Chaque encaissement doit avoir sa propre référence.',
+  'Amount received (optional)': 'Montant reçu (facultatif)',
+  'At most the remaining balance: {{amount}}': 'Au plus le solde restant : {{amount}}',
+  'Received on (optional)': 'Reçu le (facultatif)',
+  'Issue a credit note': 'Émettre un avoir',
+  'The credit note is linked to {{number}} and shown to the customer. It does not change the subscription; refunds happen outside the platform. This cannot be undone.':
+    'L’avoir est rattaché à {{number}} et visible par le client. Il ne modifie pas l’abonnement ; les remboursements se font hors de la plateforme. Cette action est irréversible.',
+  'Already credited': 'Déjà crédité',
+  'Amount excluding tax': 'Montant HT',
+  'Tax is added at the invoice rate.': 'La TVA est ajoutée au taux de la facture.',
+  'Reason shown to the customer': 'Motif visible par le client',
+  'Enter a valid amount and both reasons.': 'Saisissez un montant valide et les deux motifs.',
+  'Issue credit note': 'Émettre l’avoir',
+  '{{amount}} were already received. Rejecting issues a credit note for the whole invoice; the received amount must be refunded outside the platform.':
+    '{{amount}} ont déjà été reçus. Le rejet émet un avoir sur toute la facture ; le montant reçu doit être remboursé hors de la plateforme.',
 }

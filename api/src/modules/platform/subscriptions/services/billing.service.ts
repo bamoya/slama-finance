@@ -1,5 +1,6 @@
 import type {
   BillingCatalog,
+  BillingInvoice,
   SubscriptionPayment,
   SubscriptionPaymentSubmission,
   SubscriptionQuote,
@@ -8,10 +9,13 @@ import type {
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import type { createBillingRepository, PaymentRow } from '../repositories/billing.repository.js'
+import type { InvoiceRecord } from '../repositories/billing-documents.repository.js'
+import { createBillingDocumentsRepository } from '../repositories/billing-documents.repository.js'
 import { createCatalogRepository } from '../repositories/catalog.repository.js'
 import type { CoverageReads } from '../repositories/coverage-lifecycle.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
 import { addCycle, billingDay, zonedDayStart } from './billing-calendar.service.js'
+import { createBillingDocuments, toInvoice } from './billing-documents.service.js'
 import { createCatalogReader, type VersionTerms } from './catalog-values.service.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
 import { resolvePeriods } from './period-resolver.service.js'
@@ -67,11 +71,29 @@ export function toPayment(row: PaymentRow): SubscriptionPayment {
     submittedAt: row.submittedAt.toISOString(),
     decidedAt: row.decidedAt?.toISOString() ?? null,
     rejectionReason: row.rejectionReason,
+    quoteExpiresAt: row.quoteExpiresAt?.toISOString() ?? null,
+    receivedTtc: row.receivedTtc,
+    invoiceNumber: row.invoiceNumber,
   }
 }
 
-/** Runs inside the decision transaction only when the payment actually changed state. */
-export type DecisionHook = (tx: Transaction, before: PaymentRow, after: PaymentRow) => Promise<void>
+/**
+ * Runs inside the decision transaction only when something was recorded: a state change, or a
+ * partial receipt (`receipt` set, status still submitted).
+ */
+export type DecisionHook = (
+  tx: Transaction,
+  before: PaymentRow,
+  after: PaymentRow,
+  receipt?: { amountTtc: number; reference: string; receivedAt: string },
+  /** Set when a rejection credited an invoice holding received funds. */
+  creditNote?: { number: string; amountTtc: number; refundDueTtc: number },
+) => Promise<void>
+
+/** Verified receipt details supplied by the administrator; every field has a default. */
+export type ReceivedFunds = { reference?: string; amountTtc?: number; receivedAt?: Date }
+
+export { toInvoice }
 
 export function createBillingService(
   repo: ReturnType<typeof createBillingRepository>,
@@ -99,6 +121,8 @@ export function createBillingService(
   reads: CoverageReads = 'legacy',
   /** Published version terms (pins and the selling pointer); never the plan JSON or price columns. */
   catalog = createCatalogReader(createCatalogRepository()),
+  /** S6 quotes, receipts, invoices, allocations and credit notes. */
+  documents = createBillingDocuments(createBillingDocumentsRepository()),
 ) {
   /** One authoritative instant per transaction, shared with the access resolver. */
   const clock = (tx: Transaction) =>
@@ -497,19 +521,37 @@ export function createBillingService(
       }
       if (!settings.paymentMethods.includes(settlement.method))
         throw new AppError(400, 'INVALID_PAYMENT_METHOD', 'This payment method is not accepted.')
-      const price = priceOf(plan, input.cycle)
-      const payment = await repo.submit(
+      const amount = money(
+        priceOf(plan, input.cycle),
+        settings.taxRateBasisPoints,
+        settings.currency,
+      )
+      // Same document chain as an owner payment: quote, confirmed submission, receipt and invoice.
+      const quote = await documents.quote(
         {
           ownerId,
           planCode: plan.planCode,
           planVersionId: plan.versionId,
           cycle: input.cycle,
           kind: 'activation',
+          amount,
+        },
+        now,
+        tx,
+      )
+      const payment = await repo.submit(
+        {
+          ownerId,
+          planCode: plan.planCode,
+          planVersionId: plan.versionId,
+          quoteId: quote.id,
+          cycle: input.cycle,
+          kind: 'activation',
           status: 'confirmed',
           method: settlement.method,
           reference: settlement.reference,
           receivedReference: settlement.reference,
-          ...money(price, settings.taxRateBasisPoints, settings.currency),
+          ...amount,
           coverageStart: start,
           coverageEnd: end,
           submittedAt: now,
@@ -518,6 +560,13 @@ export function createBillingService(
         },
         tx,
       )
+      if (amount.amountTtc > 0)
+        await documents.receive(
+          payment,
+          { reference: settlement.reference, referenceGiven: true, recordedBy: actor.email },
+          now,
+          tx,
+        )
       await repo.applyCoverage(
         ownerId,
         { paidThroughAt: end, ...(start <= now ? { planCode: plan.planCode } : {}) },
@@ -609,7 +658,21 @@ export function createBillingService(
           throw new AppError(400, 'INVALID_PAYMENT_METHOD', 'This payment method is not accepted.')
         if ((await repo.payments(ownerId, tx)).some((p) => p.status === 'submitted'))
           throw new AppError(409, 'PAYMENT_PENDING', 'A payment is already awaiting verification.')
-        const q = await quote(ownerId, input, tx)
+        const now = await clock(tx)
+        const q = await quote(ownerId, input, tx, now)
+        // The immutable offer this declaration accepts (S6); the payment repeats its snapshot.
+        const offer = await documents.quote(
+          {
+            ownerId,
+            planCode: q.planCode,
+            planVersionId: q.planVersionId,
+            cycle: q.cycle,
+            kind: q.kind,
+            amount: q.amount,
+          },
+          now,
+          tx,
+        )
         return toPayment(
           await repo.submit(
             {
@@ -617,6 +680,8 @@ export function createBillingService(
               planCode: q.planCode,
               // The quoted version; confirmation keeps it even if the selling version moves meanwhile.
               planVersionId: q.planVersionId,
+              quoteId: offer.id,
+              submittedAt: now,
               cycle: q.cycle,
               kind: q.kind,
               method: input.method,
@@ -646,13 +711,16 @@ export function createBillingService(
         if (!cancel && scheduled) await repo.endScheduledChange(scheduled.id, 'cancelled', tx)
       }),
     /**
-     * Administrator confirmation of actual receipt. Idempotent: confirming twice returns the
-     * existing coverage. Coverage dates are fixed now, not at submission.
+     * Administrator verification of actual receipt (S6). Records one receipt and allocates it to the
+     * payment's invoice (issued at the first receipt); coverage is granted, once, when the
+     * allocations reach the amount due. Funds received after the quote expired are refused.
+     * Idempotent: a confirmed payment or an already-recorded receipt reference returns unchanged.
+     * Coverage dates are fixed at full settlement, not at submission.
      */
     confirm: (
       id: string,
       decidedBy: string,
-      receivedReference?: string,
+      received?: ReceivedFunds,
       onDecided?: DecisionHook,
       transaction?: Transaction,
     ) =>
@@ -665,14 +733,43 @@ export function createBillingService(
         if (payment.status === 'confirmed') return toPayment(payment)
         if (payment.status === 'rejected')
           throw new AppError(409, 'PAYMENT_REJECTED', 'This payment was rejected.')
-        const now = await clock(tx),
-          s = await state(payment.ownerId, tx, now)
+        const now = await clock(tx)
+        // Lifecycle preconditions come before any receipt, so no instalment is recorded for a
+        // payment that could no longer be settled.
+        const s = await state(payment.ownerId, tx, now)
+        if (payment.kind === 'upgrade' && !s.current)
+          throw new AppError(409, 'UPGRADE_STALE', 'The upgraded period is no longer active.')
+        // A zero amount (fully prorated upgrade) has nothing to receive or invoice.
+        if (payment.amountTtc > 0) {
+          const reference = received?.reference ?? payment.reference
+          const receivedAt = received?.receivedAt ?? now
+          const outcome = await documents.receive(
+            payment,
+            {
+              reference,
+              referenceGiven: received?.reference !== undefined,
+              amountTtc: received?.amountTtc,
+              receivedAt,
+              recordedBy: decidedBy,
+            },
+            now,
+            tx,
+          )
+          if (outcome === 'duplicate') return toPayment(payment)
+          if (outcome === 'partial') {
+            const after = (await repo.payment(id, tx))!
+            await onDecided?.(tx, payment, after, {
+              amountTtc: after.receivedTtc - payment.receivedTtc,
+              reference,
+              receivedAt: receivedAt.toISOString(),
+            })
+            return toPayment(after)
+          }
+        }
         let start = now,
           end: Date
         if (payment.kind === 'upgrade') {
-          if (!s.current)
-            throw new AppError(409, 'UPGRADE_STALE', 'The upgraded period is no longer active.')
-          end = s.current.end
+          end = s.current!.end
         } else {
           // Continuation within the paid grace only; none after a cancellation or (period reads)
           // complimentary coverage, so a lapsed free grant never backdates a payment.
@@ -690,7 +787,7 @@ export function createBillingService(
             coverageEnd: end,
             decidedAt: now,
             decidedBy,
-            receivedReference: receivedReference ?? null,
+            receivedReference: received?.reference ?? null,
           },
           tx,
         )
@@ -746,15 +843,79 @@ export function createBillingService(
         await subscriptions.lock(found.ownerId, tx)
         const payment = (await repo.payment(id, tx))!
         if (payment.status === 'rejected') return toPayment(payment)
+        const now = await clock(tx)
         const row = await repo.decide(
           id,
-          { status: 'rejected', decidedAt: await clock(tx), decidedBy, rejectionReason },
+          { status: 'rejected', decidedAt: now, decidedBy, rejectionReason },
           tx,
         )
         if (!row)
           throw new AppError(409, 'PAYMENT_CONFIRMED', 'A confirmed payment cannot be rejected.')
-        await onDecided?.(tx, payment, row)
+        // Funds already received (partial instalments): the invoice is fully credited in the same
+        // transaction, so it ends refund_due by exactly the received amount. Coverage is unchanged
+        // and the owner can submit again.
+        let credit: { number: string; amountTtc: number; refundDueTtc: number } | undefined
+        if (payment.receivedTtc > 0) {
+          const note = await documents.creditRemainder(
+            payment.id,
+            rejectionReason,
+            decidedBy,
+            now,
+            tx,
+          )
+          credit = {
+            number: note.number,
+            amountTtc: note.amountTtc,
+            refundDueTtc: payment.receivedTtc,
+          }
+        }
+        await onDecided?.(tx, payment, row, undefined, credit)
         return toPayment(row)
+      }),
+    /** Owner's issued invoices and credit notes, newest first. */
+    invoices: (ownerId: string) =>
+      subscriptions.owner(ownerId, async (tx): Promise<{ data: BillingInvoice[] }> => ({
+        data: (await documents.invoices({ ownerId, page: 1, pageSize: 500 }, tx)).rows.map(
+          toInvoice,
+        ),
+      })),
+    /** Administrator listing (optionally one owner), newest first. */
+    adminInvoices: (
+      filter: { ownerId?: string; page: number; pageSize: number },
+      transaction?: Transaction,
+    ) => inAdminTransaction(transaction, (tx) => documents.invoices(filter, tx)),
+    /**
+     * Explicit correction (S6): a credit note linked to an invoice whose payment is decided. Never
+     * changes coverage. Serialized with confirmations by the owner lock.
+     */
+    creditNote: (
+      invoiceId: string,
+      input: { amountHt: number; reason: string },
+      issuedBy: string,
+      onIssued?: (tx: Transaction, note: InvoiceRecord) => Promise<void>,
+      transaction?: Transaction,
+    ) =>
+      inAdminTransaction(transaction, async (tx) => {
+        const invoice = await documents.invoice(invoiceId, tx)
+        if (!invoice || invoice.kind !== 'invoice')
+          throw new AppError(404, 'NOT_FOUND', 'Invoice not found.')
+        await subscriptions.lock(invoice.ownerId, tx)
+        const payment = (await repo.payment(invoice.paymentId!, tx))!
+        if (payment.status === 'submitted')
+          throw new AppError(
+            409,
+            'PAYMENT_PENDING',
+            'Confirm or reject the payment before correcting its invoice.',
+          )
+        const note = await documents.creditNote(
+          invoiceId,
+          { ...input, by: issuedBy },
+          await clock(tx),
+          tx,
+        )
+        const record = (await documents.invoice(note.id, tx))!
+        await onIssued?.(tx, record)
+        return record
       }),
   }
 }

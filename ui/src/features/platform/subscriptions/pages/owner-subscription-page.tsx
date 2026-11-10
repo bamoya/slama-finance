@@ -15,6 +15,7 @@ import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { useAccessDeadline } from '../../../../lib/use-access-deadline'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
 import { CancellationCard } from '../components/cancellation-card'
+import { InvoiceHistory } from '../components/invoice-history'
 import { PaymentHistory } from '../components/payment-history'
 import { PlanCheckout } from '../components/plan-checkout'
 import { SubscriptionStatusCard } from '../components/subscription-status-card'
@@ -159,6 +160,9 @@ export function OwnerSubscriptionPage() {
           </div>
           <div className="lg:col-span-2">
             <PaymentHistory />
+          </div>
+          <div className="lg:col-span-2">
+            <InvoiceHistory />
           </div>
         </div>
       )}

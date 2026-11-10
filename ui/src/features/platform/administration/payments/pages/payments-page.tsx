@@ -26,6 +26,7 @@ import {
   planLabel,
   versionLabel,
 } from '../../../subscriptions/components/billing-format'
+import { PaymentDocuments } from '../../../subscriptions/components/payment-history'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
 import { useUrlFilters } from '../../shared/hooks/use-url-filters'
@@ -55,6 +56,7 @@ export function AdminPaymentsPage() {
       predicate: ({ queryKey }) =>
         typeof queryKey[0] === 'string' &&
         (queryKey[0].startsWith('/api/v1/admin/payments') ||
+          queryKey[0].startsWith('/api/v1/admin/invoices') ||
           queryKey[0].startsWith('/api/v1/admin/owners') ||
           queryKey[0].startsWith('/api/v1/admin/overview')),
     })
@@ -100,6 +102,7 @@ export function AdminPaymentsPage() {
           {p.rejectionReason && (
             <p className="mt-1 text-xs text-[var(--muted)]">{p.rejectionReason}</p>
           )}
+          <PaymentDocuments payment={p} />
         </>
       ),
     },
@@ -178,10 +181,10 @@ export function AdminPaymentsPage() {
           payment={active.payment}
           decision={active.decision}
           onClose={() => setActive(null)}
-          onConfirm={async (receivedReference, auditReason) => {
+          onConfirm={async (receipt, auditReason) => {
             await confirm.mutateAsync({
               paymentId: active.payment.id,
-              data: { auditReason, ...(receivedReference ? { receivedReference } : {}) },
+              data: { auditReason, ...receipt },
             })
             await refresh()
           }}

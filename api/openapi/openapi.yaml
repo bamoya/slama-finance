@@ -86,6 +86,10 @@ paths:
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1organizations~1{organizationId}~1reactivate
   '/api/v1/admin/billing-settings':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1billing-settings
+  '/api/v1/admin/invoices':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1invoices
+  '/api/v1/admin/invoices/{invoiceId}/credit-notes':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1invoices~1{invoiceId}~1credit-notes
   '/api/v1/admin/audit':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1audit
   /api/v1/owner/analytics/financial-summary:
@@ -420,6 +424,8 @@ paths:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1quote
   /api/v1/owner/subscription/payments:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1payments
+  /api/v1/owner/subscription/invoices:
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1invoices
   /api/v1/owner/subscription/cancellation:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1cancellation
   /api/v1/workspace/session:
@@ -886,6 +892,12 @@ components:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPaymentConfirmation
     AdminPaymentRejection:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPaymentRejection
+    AdminInvoice:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminInvoice
+    AdminInvoicePage:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminInvoicePage
+    AdminCreditNoteRequest:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminCreditNoteRequest
     AdminOwnerSummary:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOwnerSummary
     AdminOwnerPage:
@@ -968,5 +980,9 @@ components:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionPayment
     SubscriptionCancellation:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/SubscriptionCancellation
+    BillingInvoice:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingInvoice
+    BillingInvoiceLine:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingInvoiceLine
     WorkspaceSession:
       $ref: ./modules/identity/workspace.yaml#/components/schemas/WorkspaceSession

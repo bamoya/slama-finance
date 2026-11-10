@@ -11,6 +11,9 @@ export function toAdminPayment(row: {
   payment: AdminPaymentRecord
   ownerEmail: string
   planVersionNumber: number
+  quoteExpiresAt: Date | null
+  receivedTtc: number
+  invoiceNumber: string | null
 }): AdminPayment {
   const p = row.payment
   return {
@@ -38,6 +41,9 @@ export function toAdminPayment(row: {
     decidedBy: p.decidedBy,
     receivedReference: p.receivedReference,
     rejectionReason: p.rejectionReason,
+    quoteExpiresAt: iso(row.quoteExpiresAt),
+    receivedTtc: row.receivedTtc,
+    invoiceNumber: row.invoiceNumber,
   }
 }
 

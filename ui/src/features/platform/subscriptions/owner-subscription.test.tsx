@@ -72,6 +72,9 @@ const payment = (status: string, reference = 'REF-1') => ({
   submittedAt: '2026-10-01T09:00:00Z',
   decidedAt: status === 'submitted' ? null : '2026-10-01T10:00:00Z',
   rejectionReason: status === 'rejected' ? 'Transfer not received' : null,
+  quoteExpiresAt: '2026-10-16T09:00:00Z',
+  receivedTtc: status === 'confirmed' ? quoteBody(2000).amount.amountTtc : 0,
+  invoiceNumber: status === 'confirmed' ? 'F-2026-000001' : null,
 })
 const calls: { url?: string; method?: string; data?: unknown }[] = []
 function mockApi(routes: Record<string, unknown>) {
@@ -79,7 +82,8 @@ function mockApi(routes: Record<string, unknown>) {
   vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
     calls.push({ url: config.url, method: config.method, data: config.data })
     const body = routes[`${config.method ?? 'GET'} ${config.url}`] ??
-      routes[config.url ?? ''] ?? {
+      routes[config.url ?? ''] ??
+      (config.url === '/api/v1/owner/subscription/invoices' ? { data: [] } : undefined) ?? {
         owner: {
           id: '22222222-2222-4222-8222-222222222222',
           email: 'owner@example.test',

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { createCatalogRepository } from '../src/modules/platform/subscriptions/repositories/catalog.repository.js'
 import { createCatalogReader } from '../src/modules/platform/subscriptions/services/catalog-values.service.js'
-import { isolatedDatabase, testOwnerId } from './helpers/postgres.js'
+import { isolatedDatabase, seedQuote, testOwnerId } from './helpers/postgres.js'
 
 describe('Selling versions and coverage version pins', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
@@ -40,9 +40,14 @@ describe('Selling versions and coverage version pins', () => {
       await tx`select set_config('app.actor_type','platform_admin',true)`
       return work(tx as unknown as typeof fixture.client)
     }) as Promise<T>
-  const payment = (tx: typeof fixture.client, plan: string, versionId: string, reference: string) =>
-    tx`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at)
-       values (${testOwnerId},${plan},${versionId},'monthly','activation','confirmed','cash',${reference},'MAD',100,0,100,now()+interval '40 days',now()+interval '70 days',now()) returning id`
+  const payment = async (
+    tx: typeof fixture.client,
+    plan: string,
+    versionId: string,
+    reference: string,
+  ) =>
+    tx`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at,quote_id)
+       values (${testOwnerId},${plan},${versionId},'monthly','activation','confirmed','cash',${reference},'MAD',100,0,100,now()+interval '40 days',now()+interval '70 days',now(),${await seedQuote(tx, { ownerId: testOwnerId, planCode: plan, planVersionId: versionId, amount: 100 })}) returning id`
 
   it('seeds one audited selling version per plan and pins trial starts to the selling trial', async () => {
     const rows =

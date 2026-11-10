@@ -1,5 +1,5 @@
 {
-  "id": "bcfc5256-4dcc-45f8-b476-199fa030ede4",
+  "id": "ee3f5a30-aab6-4e34-b7f8-9b769003e48c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2117,6 +2117,969 @@
         }
       },
       "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.billing_allocations": {
+      "name": "billing_allocations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ttc": {
+          "name": "amount_ttc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allocated_at": {
+          "name": "allocated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "billing_allocations_pair": {
+          "name": "billing_allocations_pair",
+          "columns": [
+            {
+              "expression": "receipt_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_allocations_invoice": {
+          "name": "billing_allocations_invoice",
+          "columns": [
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "billing_allocations_receipt_id_billing_receipts_id_fk": {
+          "name": "billing_allocations_receipt_id_billing_receipts_id_fk",
+          "tableFrom": "billing_allocations",
+          "tableTo": "billing_receipts",
+          "columnsFrom": [
+            "receipt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "billing_allocations_invoice_id_billing_invoices_id_fk": {
+          "name": "billing_allocations_invoice_id_billing_invoices_id_fk",
+          "tableFrom": "billing_allocations",
+          "tableTo": "billing_invoices",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_allocation_owner": {
+          "name": "billing_allocation_owner",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "exists(select 1 from billing_invoices i where i.id=\"billing_allocations\".\"invoice_id\" and i.owner_id=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner')"
+        },
+        "billing_allocation_admin": {
+          "name": "billing_allocation_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_allocation_amount": {
+          "name": "billing_allocation_amount",
+          "value": "\"billing_allocations\".\"amount_ttc\">0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.billing_invoice_counters": {
+      "name": "billing_invoice_counters",
+      "schema": "",
+      "columns": {
+        "series": {
+          "name": "series",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last": {
+          "name": "last",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "billing_invoice_counters_series_year_pk": {
+          "name": "billing_invoice_counters_series_year_pk",
+          "columns": [
+            "series",
+            "year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_invoice_counter_admin": {
+          "name": "billing_invoice_counter_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_invoice_counter_last": {
+          "name": "billing_invoice_counter_last",
+          "value": "\"billing_invoice_counters\".\"last\">0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.billing_invoice_lines": {
+      "name": "billing_invoice_lines",
+      "schema": "",
+      "columns": {
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ht": {
+          "name": "amount_ht",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_rate_basis_points": {
+          "name": "tax_rate_basis_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_amount": {
+          "name": "tax_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ttc": {
+          "name": "amount_ttc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "billing_invoice_lines_invoice_id_billing_invoices_id_fk": {
+          "name": "billing_invoice_lines_invoice_id_billing_invoices_id_fk",
+          "tableFrom": "billing_invoice_lines",
+          "tableTo": "billing_invoices",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "billing_invoice_lines_plan_code_subscription_plans_code_fk": {
+          "name": "billing_invoice_lines_plan_code_subscription_plans_code_fk",
+          "tableFrom": "billing_invoice_lines",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "billing_invoice_lines_invoice_id_position_pk": {
+          "name": "billing_invoice_lines_invoice_id_position_pk",
+          "columns": [
+            "invoice_id",
+            "position"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_invoice_line_owner": {
+          "name": "billing_invoice_line_owner",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "exists(select 1 from billing_invoices i where i.id=\"billing_invoice_lines\".\"invoice_id\" and i.owner_id=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner')"
+        },
+        "billing_invoice_line_admin": {
+          "name": "billing_invoice_line_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_invoice_line_amounts": {
+          "name": "billing_invoice_line_amounts",
+          "value": "\"billing_invoice_lines\".\"amount_ht\">=0 and \"billing_invoice_lines\".\"tax_amount\">=0 and \"billing_invoice_lines\".\"amount_ttc\"=\"billing_invoice_lines\".\"amount_ht\"+\"billing_invoice_lines\".\"tax_amount\" and (\"billing_invoice_lines\".\"tax_rate_basis_points\" is null or \"billing_invoice_lines\".\"tax_rate_basis_points\" between 0 and 10000)"
+        },
+        "billing_invoice_line_position": {
+          "name": "billing_invoice_line_position",
+          "value": "\"billing_invoice_lines\".\"position\">=1"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.billing_invoices": {
+      "name": "billing_invoices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series": {
+          "name": "series",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "corrects_invoice_id": {
+          "name": "corrects_invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ht": {
+          "name": "amount_ht",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_rate_basis_points": {
+          "name": "tax_rate_basis_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_amount": {
+          "name": "tax_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ttc": {
+          "name": "amount_ttc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_by": {
+          "name": "issued_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "billing_invoices_number": {
+          "name": "billing_invoices_number",
+          "columns": [
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_invoices_sequence": {
+          "name": "billing_invoices_sequence",
+          "columns": [
+            {
+              "expression": "series",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "year",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_invoices_payment": {
+          "name": "billing_invoices_payment",
+          "columns": [
+            {
+              "expression": "payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_invoices_owner": {
+          "name": "billing_invoices_owner",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "issued_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_invoices_corrects": {
+          "name": "billing_invoices_corrects",
+          "columns": [
+            {
+              "expression": "corrects_invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "billing_invoices_owner_id_platform_users_id_fk": {
+          "name": "billing_invoices_owner_id_platform_users_id_fk",
+          "tableFrom": "billing_invoices",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "billing_invoices_payment_id_subscription_payments_id_fk": {
+          "name": "billing_invoices_payment_id_subscription_payments_id_fk",
+          "tableFrom": "billing_invoices",
+          "tableTo": "subscription_payments",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_invoice_owner": {
+          "name": "billing_invoice_owner",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "\"billing_invoices\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "billing_invoice_admin": {
+          "name": "billing_invoice_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_invoice_amounts": {
+          "name": "billing_invoice_amounts",
+          "value": "\"billing_invoices\".\"amount_ht\">=0 and \"billing_invoices\".\"tax_amount\">=0 and \"billing_invoices\".\"amount_ttc\"=\"billing_invoices\".\"amount_ht\"+\"billing_invoices\".\"tax_amount\" and (\"billing_invoices\".\"tax_rate_basis_points\" is null or \"billing_invoices\".\"tax_rate_basis_points\" between 0 and 10000)"
+        },
+        "billing_invoice_positive": {
+          "name": "billing_invoice_positive",
+          "value": "\"billing_invoices\".\"amount_ttc\">0"
+        },
+        "billing_invoice_kind": {
+          "name": "billing_invoice_kind",
+          "value": "(\"billing_invoices\".\"kind\"='invoice' and \"billing_invoices\".\"series\"='F' and \"billing_invoices\".\"payment_id\" is not null and \"billing_invoices\".\"corrects_invoice_id\" is null and \"billing_invoices\".\"reason\" is null) or (\"billing_invoices\".\"kind\"='credit_note' and \"billing_invoices\".\"series\"='A' and \"billing_invoices\".\"payment_id\" is null and \"billing_invoices\".\"corrects_invoice_id\" is not null and btrim(coalesce(\"billing_invoices\".\"reason\",''))<>'')"
+        },
+        "billing_invoice_number": {
+          "name": "billing_invoice_number",
+          "value": "\"billing_invoices\".\"number\"=\"billing_invoices\".\"series\"||'-'||\"billing_invoices\".\"year\"::text||'-'||lpad(\"billing_invoices\".\"sequence\"::text,6,'0')"
+        },
+        "billing_invoice_issued_by": {
+          "name": "billing_invoice_issued_by",
+          "value": "btrim(\"billing_invoices\".\"issued_by\")<>''"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.billing_quotes": {
+      "name": "billing_quotes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ht": {
+          "name": "amount_ht",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_rate_basis_points": {
+          "name": "tax_rate_basis_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_amount": {
+          "name": "tax_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ttc": {
+          "name": "amount_ttc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "billing_quotes_owner": {
+          "name": "billing_quotes_owner",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "issued_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "billing_quotes_owner_id_platform_users_id_fk": {
+          "name": "billing_quotes_owner_id_platform_users_id_fk",
+          "tableFrom": "billing_quotes",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "billing_quotes_plan_code_subscription_plans_code_fk": {
+          "name": "billing_quotes_plan_code_subscription_plans_code_fk",
+          "tableFrom": "billing_quotes",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_quote_owner": {
+          "name": "billing_quote_owner",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "\"billing_quotes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "billing_quote_owner_insert": {
+          "name": "billing_quote_owner_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "public"
+          ],
+          "withCheck": "\"billing_quotes\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "billing_quote_admin": {
+          "name": "billing_quote_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_quote_amounts": {
+          "name": "billing_quote_amounts",
+          "value": "\"billing_quotes\".\"amount_ht\">=0 and \"billing_quotes\".\"tax_amount\">=0 and \"billing_quotes\".\"amount_ttc\"=\"billing_quotes\".\"amount_ht\"+\"billing_quotes\".\"tax_amount\" and (\"billing_quotes\".\"tax_rate_basis_points\" is null or \"billing_quotes\".\"tax_rate_basis_points\" between 0 and 10000)"
+        },
+        "billing_quote_validity": {
+          "name": "billing_quote_validity",
+          "value": "\"billing_quotes\".\"expires_at\">\"billing_quotes\".\"issued_at\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.billing_receipts": {
+      "name": "billing_receipts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "method": {
+          "name": "method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_ttc": {
+          "name": "amount_ttc",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_by": {
+          "name": "recorded_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "billing_receipts_reference": {
+          "name": "billing_receipts_reference",
+          "columns": [
+            {
+              "expression": "payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "reference",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "billing_receipts_owner": {
+          "name": "billing_receipts_owner",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "billing_receipts_owner_id_platform_users_id_fk": {
+          "name": "billing_receipts_owner_id_platform_users_id_fk",
+          "tableFrom": "billing_receipts",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "billing_receipts_payment_id_subscription_payments_id_fk": {
+          "name": "billing_receipts_payment_id_subscription_payments_id_fk",
+          "tableFrom": "billing_receipts",
+          "tableTo": "subscription_payments",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_receipt_owner": {
+          "name": "billing_receipt_owner",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "\"billing_receipts\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "billing_receipt_admin": {
+          "name": "billing_receipt_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_receipt_amount": {
+          "name": "billing_receipt_amount",
+          "value": "\"billing_receipts\".\"amount_ttc\">0"
+        },
+        "billing_receipt_reference": {
+          "name": "billing_receipt_reference",
+          "value": "btrim(\"billing_receipts\".\"reference\")<>''"
+        },
+        "billing_receipt_recorded_by": {
+          "name": "billing_receipt_recorded_by",
+          "value": "btrim(\"billing_receipts\".\"recorded_by\")<>''"
+        },
+        "billing_receipt_received": {
+          "name": "billing_receipt_received",
+          "value": "\"billing_receipts\".\"received_at\"<=\"billing_receipts\".\"recorded_at\""
+        }
+      },
       "isRLSEnabled": true
     },
     "public.product_categories": {
@@ -12302,6 +13265,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "quote_id": {
+          "name": "quote_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "cycle": {
           "name": "cycle",
           "type": "text",
@@ -12415,6 +13384,21 @@
         }
       },
       "indexes": {
+        "subscription_payments_quote": {
+          "name": "subscription_payments_quote",
+          "columns": [
+            {
+              "expression": "quote_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "subscription_payments_one_open": {
           "name": "subscription_payments_one_open",
           "columns": [
@@ -12529,6 +13513,10 @@
         "subscription_payment_reference": {
           "name": "subscription_payment_reference",
           "value": "btrim(\"subscription_payments\".\"reference\")<>''"
+        },
+        "subscription_payment_quote": {
+          "name": "subscription_payment_quote",
+          "value": "(\"subscription_payments\".\"method\"='admin_adjustment')=(\"subscription_payments\".\"quote_id\" is null)"
         },
         "subscription_payment_rejection_reason": {
           "name": "subscription_payment_rejection_reason",
