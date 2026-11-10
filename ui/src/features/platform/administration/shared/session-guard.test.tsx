@@ -33,6 +33,13 @@ describe('admin session guard', () => {
     const hrefs = within(nav)
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'))
-    expect(hrefs).toEqual(['/', '/payments', '/customers', '/billing-settings', '/audit'])
+    expect(hrefs).toEqual([
+      '/',
+      '/payments',
+      '/customers',
+      '/billing-settings',
+      '/audit',
+      '/security',
+    ])
   })
 })

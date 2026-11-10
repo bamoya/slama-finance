@@ -204,10 +204,6 @@ describe('timezone data mismatch at startup', () => {
         cookies: { slama_admin_session: cookie },
         payload,
       })
-    const code = async () => {
-      await fixture.client`update platform_admins set totp_last_step=null`
-      return totp(key, Date.now())
-    }
     const overrideUrl = `/api/v1/admin/owners/${testOwnerId}/entitlement-overrides`
     const body = {
       entitlementKey: 'custom_domains',
@@ -217,23 +213,21 @@ describe('timezone data mismatch at startup', () => {
       reason: 'x',
     }
     // Calendar days need the zone data: refused.
-    const dated = await admin(overrideUrl, { ...body, endsOn: '2099-01-01', code: await code() })
+    const dated = await admin(overrideUrl, { ...body, endsOn: '2099-01-01' })
     expect(dated.statusCode).toBe(503)
     expect(dated.json().code).toBe('TIMEZONE_DATA_MISMATCH')
     expect(await fixture.client`select 1 from subscription_overrides`).toHaveLength(0)
     // No calendar boundary computed: immediate open-ended override, its revocation and a
     // fixed-duration extension still work.
-    const immediate = await admin(overrideUrl, { ...body, code: await code() })
+    const immediate = await admin(overrideUrl, { ...body })
     expect(immediate.statusCode).toBe(201)
     const revoked = await admin(`${overrideUrl}/${immediate.json().id}/revoke`, {
       reason: 'x',
-      code: await code(),
     })
     expect(revoked.statusCode).toBe(200)
     const extension = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/extension`, {
       days: 3,
       reason: 'x',
-      code: await code(),
     })
     expect(extension.statusCode).toBe(200)
 

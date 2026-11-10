@@ -10,7 +10,7 @@ import { AppError } from '../../../../lib/errors.js'
 import type { createBillingRepository, PaymentRow } from '../repositories/billing.repository.js'
 import type { CoverageReads } from '../repositories/coverage-lifecycle.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
-import { addCycle } from './billing-calendar.service.js'
+import { addCycle, billingDay, zonedDayStart } from './billing-calendar.service.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
 import { resolvePeriods } from './period-resolver.service.js'
 
@@ -27,6 +27,17 @@ export type AdminGrant = {
   start: Date
   end: Date
 }
+
+/** Trial conversion over explicit calendar days of the billing timezone (endsOn exclusive). */
+export type AdminActivation = {
+  planCode: string
+  cycle: 'monthly' | 'annual'
+  startsOn: string
+  endsOn: string
+  settlement: { kind: 'complimentary' } | { kind: 'payment'; method: string; reference: string }
+}
+
+const MAX_ACTIVATION_DAYS = 3 * 366
 
 export function toPayment(row: PaymentRow): SubscriptionPayment {
   return {
@@ -133,6 +144,7 @@ export function createBillingService(
         cycle: p.cycle,
         start: p.coverageStart!,
         end: p.coverageEnd!,
+        graceless: p.graceless,
       }))
       .sort((a, b) => a.start.getTime() - b.start.getTime())
     if (!coverage.length && row && row.planCode !== 'trial' && row.paidThroughAt)
@@ -143,11 +155,15 @@ export function createBillingService(
         end: row.paidThroughAt,
       })
     const cancelAtPeriodEnd = row?.cancelAtPeriodEnd ?? false
+    const last = coverage.reduce<Coverage | null>(
+      (a, b) => (!a || b.end.getTime() >= a.end.getTime() ? b : a),
+      null,
+    )
     return {
       row,
       coverage,
       cancelAtPeriodEnd,
-      graceless: cancelAtPeriodEnd,
+      graceless: cancelAtPeriodEnd || Boolean(last?.graceless),
       lastKind: null,
       ...resolveCoverage(row, coverage, now),
     }
@@ -231,6 +247,7 @@ export function createBillingService(
       kind: 'activation' | 'renewal' | 'upgrade'
       start: Date
       end: Date
+      graceless?: boolean
     },
     actor: AdminActor,
     now: Date,
@@ -334,6 +351,107 @@ export function createBillingService(
         tx,
       )
       await repo.extendPaidThrough(ownerId, end, start <= now ? last.planCode : null, tx)
+    },
+    /**
+     * Converts a trial (running, or ended without any coverage) into a paid plan. A confirmed payment
+     * snapshots the plan/cycle price and current tax and creates a paid period; complimentary access
+     * reuses the administrator adjustment (no grace after it). The trial end is never moved, so a
+     * start after the trial leaves the gap without access.
+     */
+    async activate(ownerId: string, input: AdminActivation, actor: AdminActor, tx: Transaction) {
+      writable()
+      await subscriptions.lock(ownerId, tx)
+      const now = clock()
+      const [s, plan, settings] = await Promise.all([
+        state(ownerId, tx, now),
+        repo.plan(input.planCode, tx),
+        repo.settings(tx),
+      ])
+      if (!plan || plan.code === 'trial')
+        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
+      if (s.status === 'suspended') throw suspended()
+      if (s.coverage.length || (s.status !== 'trial' && s.status !== 'expired'))
+        throw new AppError(
+          409,
+          'SUBSCRIPTION_NOT_TRIAL',
+          'Only a trial subscription can be activated; use Change plan for paid subscriptions.',
+        )
+      const today = billingDay(now)
+      const invalid = () =>
+        new AppError(
+          400,
+          'COVERAGE_INVALID',
+          'Coverage must start today or later and end after its start, within three years.',
+        )
+      if (input.startsOn < today || input.endsOn <= input.startsOn) throw invalid()
+      const start = input.startsOn === today ? now : zonedDayStart(input.startsOn)
+      const end = zonedDayStart(input.endsOn)
+      if (
+        end.getTime() <= start.getTime() ||
+        end.getTime() - start.getTime() > MAX_ACTIVATION_DAYS * DAY_MS
+      )
+        throw invalid()
+      const settlement = input.settlement
+      if (settlement.kind === 'complimentary') {
+        await complimentary(
+          ownerId,
+          {
+            planCode: plan.code,
+            cycle: input.cycle,
+            kind: 'activation',
+            start,
+            end,
+            graceless: true,
+          },
+          actor,
+          now,
+          tx,
+        )
+        await repo.extendPaidThrough(ownerId, end, start <= now ? plan.code : null, tx)
+        return
+      }
+      if (!settings.paymentMethods.includes(settlement.method))
+        throw new AppError(400, 'INVALID_PAYMENT_METHOD', 'This payment method is not accepted.')
+      const price = input.cycle === 'annual' ? plan.annualHt : plan.monthlyHt
+      const payment = await repo.submit(
+        {
+          ownerId,
+          planCode: plan.code,
+          cycle: input.cycle,
+          kind: 'activation',
+          status: 'confirmed',
+          method: settlement.method,
+          reference: settlement.reference,
+          receivedReference: settlement.reference,
+          ...money(price, settings.taxRateBasisPoints, settings.currency),
+          coverageStart: start,
+          coverageEnd: end,
+          submittedAt: now,
+          decidedAt: now,
+          decidedBy: actor.email,
+        },
+        tx,
+      )
+      await repo.applyCoverage(
+        ownerId,
+        { paidThroughAt: end, ...(start <= now ? { planCode: plan.code } : {}) },
+        tx,
+      )
+      if (!periodWrites) return
+      const period = await repo.insertPeriod(
+        {
+          ownerId,
+          kind: 'paid',
+          planCode: plan.code,
+          cycle: input.cycle,
+          start,
+          end,
+          paymentId: payment.id,
+        },
+        tx,
+      )
+      if (period) await repo.supersedeAt(ownerId, start, period, tx)
     },
     /** Paid subscription granted when an administrator creates the account. */
     async grant(ownerId: string, grant: AdminGrant, actor: AdminActor, tx: Transaction) {

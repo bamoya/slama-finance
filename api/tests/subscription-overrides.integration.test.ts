@@ -89,24 +89,19 @@ describe('Owner-subscription overrides', () => {
     await fixture?.cleanup()
   })
 
-  async function freshCode() {
-    await fixture.client`update platform_admins set totp_last_step=null`
-    return totp(key, Date.now())
-  }
   const admin = (url: string, payload: object = {}, method: 'POST' | 'GET' = 'POST') =>
     app.inject({ method, url, headers, cookies: { slama_admin_session: cookie }, payload })
   const base = (owner = testOwnerId) => `/api/v1/admin/owners/${owner}/entitlement-overrides`
-  const create = async (body: object, owner = testOwnerId, code?: string) =>
+  const create = async (body: object, owner = testOwnerId) =>
     admin(base(owner), {
       booleanValue: null,
       integerValue: null,
       unlimited: false,
       reason: secret,
-      code: code ?? (await freshCode()),
       ...body,
     })
   const revoke = async (id: string, owner = testOwnerId) =>
-    admin(`${base(owner)}/${id}/revoke`, { reason: 'Ended early', code: await freshCode() })
+    admin(`${base(owner)}/${id}/revoke`, { reason: 'Ended early' })
   async function ownerCookie() {
     const response = await app.inject({
       method: 'POST',
@@ -124,14 +119,26 @@ describe('Owner-subscription overrides', () => {
       subscriptions.hasFeature(tx, 'business_emails'),
     )
 
-  it('requires a fresh second factor and a reason, and audits atomically', async () => {
-    const bad = await create(
-      { entitlementKey: 'business_emails', booleanValue: true },
-      testOwnerId,
-      '000000',
-    )
-    expect(bad.statusCode).toBe(403)
-    expect(bad.json().code).toBe('TWO_FACTOR_INVALID')
+  it('requires the admin session and a reason, takes no second factor, and audits atomically', async () => {
+    const bad = await create({
+      entitlementKey: 'business_emails',
+      booleanValue: true,
+      code: '000000',
+    })
+    expect(bad.statusCode).toBe(400)
+    const anonymous = await app.inject({
+      method: 'POST',
+      url: base(),
+      headers,
+      payload: {
+        entitlementKey: 'business_emails',
+        booleanValue: true,
+        integerValue: null,
+        unlimited: false,
+        reason: secret,
+      },
+    })
+    expect(anonymous.statusCode).toBe(401)
     const noReason = await create({
       entitlementKey: 'business_emails',
       booleanValue: true,
@@ -147,24 +154,13 @@ describe('Owner-subscription overrides', () => {
     expect(blank.json().code).toBe('VALIDATION_ERROR')
     expect(await fixture.client`select 1 from subscription_overrides`).toHaveLength(0)
 
-    const code = await freshCode()
-    const ok = await create(
-      { entitlementKey: 'business_emails', booleanValue: true },
-      testOwnerId,
-      code,
-    )
+    const ok = await create({ entitlementKey: 'business_emails', booleanValue: true })
     expect(ok.statusCode).toBe(201)
     expect(ok.json()).toMatchObject({
       state: 'active',
       createdBy: 'ops@example.test',
       reason: secret,
     })
-    const replay = await create(
-      { entitlementKey: 'custom_domains', booleanValue: true },
-      testOwnerId,
-      code,
-    )
-    expect(replay.statusCode).toBe(403)
     const audits =
       await fixture.client`select * from platform_admin_audit where action='subscription_override.create'`
     expect(audits).toHaveLength(1)
@@ -378,7 +374,6 @@ describe('Owner-subscription overrides', () => {
     expect((await revoke(amended.json().id)).json().code).toBe('OVERRIDE_NOT_REVOCABLE')
     const blankRevoke = await admin(`${base()}/${created.json().id}/revoke`, {
       reason: ' \t ',
-      code: await freshCode(),
     })
     expect(blankRevoke.statusCode).toBe(400)
     expect((await subscriptions.summary(testOwnerId)).entitlements.staffPerOrganization).toBe(1)

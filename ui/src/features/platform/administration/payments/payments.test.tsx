@@ -46,15 +46,11 @@ describe('admin payments', () => {
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
       target: { value: 'Bank verified' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '123456' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm payment' }))
     await waitFor(() =>
       expect(calls.find((call) => call.url?.endsWith('/confirm'))?.data).toEqual({
         receivedReference: 'BANK-9',
         auditReason: 'Bank verified',
-        code: '123456',
       }),
     )
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -75,40 +71,27 @@ describe('admin payments', () => {
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
       target: { value: 'Verified with bank' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '654321' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Reject payment' }))
     await waitFor(() =>
       expect(calls.find((call) => call.url?.endsWith('/reject'))?.data).toEqual({
         reason: 'Amount mismatch',
         auditReason: 'Verified with bank',
-        code: '654321',
       }),
     )
   })
 
-  it('clears the code after a refused decision and reopening', async () => {
+  it('keeps the dialog and reason open after a refused decision, without any code field', async () => {
     setup(true)
     fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }))
     const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByLabelText('Authenticator code')).toBeNull()
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
       target: { value: 'Verified' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '123456' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm payment' }))
     await within(dialog).findByText('server TWO_FACTOR_INVALID')
-    expect(within(dialog).getByLabelText('Authenticator code')).toHaveValue('')
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '654321' },
-    })
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Reject' }))
-    expect(
-      within(await screen.findByRole('dialog')).getByLabelText('Authenticator code'),
-    ).toHaveValue('')
+    expect(within(dialog).getByLabelText('Reason (internal)')).toHaveValue('Verified')
+    expect(calls.find((call) => call.url?.endsWith('/confirm'))?.data).not.toHaveProperty('code')
   })
 
   it('takes the status filter from the address', async () => {

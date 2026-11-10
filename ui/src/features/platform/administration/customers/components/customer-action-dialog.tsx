@@ -12,20 +12,17 @@ import { Input } from '../../../../../components/ui/input'
 import { Label } from '../../../../../components/ui/label'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
-import { TwoFactorCodeField } from '../../shared/components/two-factor-code-field'
 
-export type ActionInput = { reason: string; code: string }
+export type ActionInput = { reason: string }
 
 /**
  * Shared shell of every customer lifecycle action: states the impact, collects the internal
- * reason, asks for a fresh authenticator code when the action is sensitive and, for deletion,
- * the customer email typed back.
+ * reason and, for deletion, the customer email typed back.
  */
 export function CustomerActionDialog({
   title,
   description,
   impacts,
-  sensitive = false,
   destructive = false,
   submitLabel,
   confirmEmail,
@@ -37,7 +34,6 @@ export function CustomerActionDialog({
   title: string
   description: string
   impacts: string[]
-  sensitive?: boolean
   destructive?: boolean
   submitLabel: string
   /** When set, the action stays disabled until this exact email is typed. */
@@ -49,27 +45,23 @@ export function CustomerActionDialog({
 }) {
   useUiLanguage()
   const [reason, setReason] = useState('')
-  const [code, setCode] = useState('')
   const [typedEmail, setTypedEmail] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const [attempted, setAttempted] = useState(false)
   const reasonMissing = attempted && !reason.trim()
-  const codeInvalid = attempted && sensitive && !/^\d{6}$/.test(code)
   const emailMatches = confirmEmail === undefined || typedEmail.trim() === confirmEmail
   const submit = async () => {
     setAttempted(true)
-    if (!reason.trim() || (sensitive && !/^\d{6}$/.test(code)) || !emailMatches || !fieldsReady)
-      return
+    if (!reason.trim() || !emailMatches || !fieldsReady) return
     setPending(true)
     setError(null)
     try {
-      await onSubmit({ reason: reason.trim(), code })
+      await onSubmit({ reason: reason.trim() })
       onClose()
     } catch (failure) {
       setError(failure)
       setAttempted(false)
-      if (sensitive) setCode('')
     } finally {
       setPending(false)
     }
@@ -135,14 +127,6 @@ export function CustomerActionDialog({
                 onChange={(event) => setTypedEmail(event.target.value)}
               />
             </div>
-          )}
-          {sensitive && (
-            <TwoFactorCodeField
-              value={code}
-              onChange={setCode}
-              invalid={codeInvalid}
-              disabled={pending}
-            />
           )}
           <FormError error={error} />
           <div className="flex flex-wrap justify-end gap-3">

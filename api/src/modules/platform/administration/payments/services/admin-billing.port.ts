@@ -58,6 +58,18 @@ export type AdminLifecyclePort = {
     actor: AdminLifecycleActor,
     tx: Transaction,
   ) => Promise<void>
+  activate: (
+    ownerId: string,
+    input: {
+      planCode: string
+      cycle: 'monthly' | 'annual'
+      startsOn: string
+      endsOn: string
+      settlement: { kind: 'complimentary' } | { kind: 'payment'; method: string; reference: string }
+    },
+    actor: AdminLifecycleActor,
+    tx: Transaction,
+  ) => Promise<void>
   grant: (
     ownerId: string,
     grant: { planCode: string; cycle: 'monthly' | 'annual'; start: Date; end: Date },

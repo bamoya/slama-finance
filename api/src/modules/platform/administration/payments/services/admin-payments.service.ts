@@ -4,7 +4,6 @@ import type {
   AdminPaymentPage,
   AdminPaymentRejection,
 } from '../../../../../contracts/generated/administration/administration.schemas.js'
-import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import type { AdminAuditService } from '../../audit/services/admin-audit.service.js'
 import type { AdminTransaction } from '../../shared/repositories/admin-transaction.repository.js'
@@ -20,7 +19,6 @@ export function createAdminPaymentsService(
   audit: AdminAuditService,
   withAdmin: AdminTransaction,
   billing: AdminBillingPort,
-  stepUp: (admin: AuthenticatedAdmin, code: string, tx: Transaction) => Promise<void>,
 ) {
   async function payment(id: string) {
     const row = await withAdmin((tx) => repo.payment(id, tx))
@@ -57,7 +55,6 @@ export function createAdminPaymentsService(
       if (!auditReason)
         throw new AppError(400, 'AUDIT_REASON_REQUIRED', 'Give an internal audit reason.')
       await withAdmin(async (tx) => {
-        await stepUp(admin, input.code, tx)
         await billing.confirm(
           id,
           admin.email,
@@ -73,7 +70,6 @@ export function createAdminPaymentsService(
       if (!auditReason)
         throw new AppError(400, 'AUDIT_REASON_REQUIRED', 'Give an internal audit reason.')
       await withAdmin(async (tx) => {
-        await stepUp(admin, input.code, tx)
         await billing.reject(
           id,
           admin.email,

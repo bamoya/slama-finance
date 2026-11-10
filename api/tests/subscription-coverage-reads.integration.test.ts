@@ -166,6 +166,86 @@ describe('S5c coverage read authority', () => {
     })
   })
 
+  it('ends a complimentary trial activation without grace under both read authorities', async () => {
+    const day = (offset: number) =>
+      new Date(at + offset * DAY).toLocaleDateString('en-CA', { timeZone: 'Africa/Casablanca' })
+    const activate = async (
+      reads: CoverageReads,
+      ownerId: string,
+      settlement: Parameters<
+        ReturnType<typeof services>['billing']['administration']['activate']
+      >[1]['settlement'],
+    ) => {
+      const { billing } = services(reads)
+      await asAdmin((tx) =>
+        billing.administration.activate(
+          ownerId,
+          {
+            planCode: 'essential',
+            cycle: 'monthly',
+            startsOn: day(0),
+            endsOn: day(10),
+            settlement,
+          },
+          actor,
+          tx,
+        ),
+      )
+      const [row] =
+        await fixture.client`select coverage_end from subscription_payments where owner_id=${ownerId}`
+      return new Date(row!.coverage_end).getTime()
+    }
+    const free = await owner(),
+      paid = await owner()
+    const start = at
+    // Activated while legacy reads are authoritative (the supported rollback configuration).
+    const freeEnd = await activate('legacy', free.id, { kind: 'complimentary' })
+    const paidEnd = await activate('legacy', paid.id, {
+      kind: 'payment',
+      method: 'cash',
+      reference: 'R-1',
+    })
+    expect(
+      (
+        await fixture.client`select graceless from subscription_payments where owner_id in ${fixture.client([free.id, paid.id])} order by owner_id=${free.id}`
+      ).map((r) => r.graceless),
+    ).toEqual([false, true])
+    for (const reads of ['legacy', 'periods'] as const) {
+      at = freeEnd - 3_600_000
+      expect(await decisions(reads, free)).toEqual({
+        status: 'active',
+        graceEndsAt: null,
+        access: 'allowed',
+        worker: true,
+        admin: 'active',
+      })
+      at = freeEnd + 2 * DAY
+      expect(await decisions(reads, free)).toEqual({
+        status: 'expired',
+        graceEndsAt: null,
+        access: 'SUBSCRIPTION_EXPIRED',
+        worker: false,
+        admin: 'expired',
+      })
+      // A confirmed-payment activation keeps the seven-day paid grace.
+      at = paidEnd + 2 * DAY
+      expect(await decisions(reads, paid)).toEqual({
+        status: 'past_due',
+        graceEndsAt: new Date(paidEnd + 7 * DAY).toISOString(),
+        access: 'allowed',
+        worker: true,
+        admin: 'past_due',
+      })
+      at = start
+    }
+    // A later complimentary extension keeps the legacy grace it always had (no global flip).
+    at = freeEnd - 3_600_000
+    await asAdmin((tx) => services('legacy').billing.administration.extend(free.id, 3, actor, tx))
+    at = freeEnd + 3 * DAY + 2 * DAY
+    expect((await decisions('legacy', free)).status).toBe('past_due')
+    expect((await decisions('periods', free)).status).toBe('expired')
+  })
+
   it('never backdates a payment confirmed after a complimentary grant lapsed', async () => {
     const o = await owner()
     const { billing } = services('periods')

@@ -6,4 +6,5 @@ export const adminPaths = {
   customers: '/customers',
   billing: '/billing-settings',
   audit: '/audit',
+  security: '/security',
 } as const

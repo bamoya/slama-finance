@@ -45,6 +45,8 @@ services:
       PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?Set the platform domain, for example bfinance.ma}
       # 32 random bytes, base64; encrypts admin 2FA secrets. Keep it stable. Admin sign-in returns 503 without it.
       ADMIN_TOTP_KEY: ${ADMIN_TOTP_KEY:-}
+      ADMIN_WEBAUTHN_RP_ID: ${ADMIN_WEBAUTHN_RP_ID:-}
+      ADMIN_WEBAUTHN_ORIGIN: ${ADMIN_WEBAUTHN_ORIGIN:-}
       PLATFORM_SCHEME: ${PLATFORM_SCHEME:-https}
       # Empty is fail-safe: forwarded addresses are ignored until proxy IPs are verified.
       TRUST_PROXY_IPS: ${TRUST_PROXY_IPS:-}

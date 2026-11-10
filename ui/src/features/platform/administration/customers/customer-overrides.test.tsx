@@ -83,7 +83,7 @@ describe('customer plan exceptions', () => {
     expect(screen.getAllByRole('button', { name: 'Revoke' })).toHaveLength(1)
   })
 
-  it('creates an override only with a valid value, reason and fresh code', async () => {
+  it('creates an override only with a valid value and reason, without a code', async () => {
     setup([])
     fireEvent.click(await screen.findByRole('button', { name: 'Add override' }))
     const dialog = await screen.findByRole('dialog')
@@ -100,11 +100,10 @@ describe('customer plan exceptions', () => {
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
       target: { value: 'Pilot' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '123456' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add override' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(within(dialog).queryByLabelText('Authenticator code')).toBeNull()
+    expect(posts()[0]!.data).not.toHaveProperty('code')
     expect(posts()[0]).toMatchObject({
       url: overridesUrl,
       data: {
@@ -116,7 +115,6 @@ describe('customer plan exceptions', () => {
         endsOn: null,
         replacesId: null,
         reason: 'Pilot',
-        code: '123456',
       },
     })
   })
@@ -127,29 +125,23 @@ describe('customer plan exceptions', () => {
     const dialog = await screen.findByRole('dialog')
     fireEvent.change(within(dialog).getByLabelText('New limit'), { target: { value: '3' } })
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), { target: { value: 'x' } })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '123456' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add override' }))
     expect(await within(dialog).findByText(/OVERRIDE_OVERLAP|server/)).toBeInTheDocument()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  it('revokes with a reason and code on the owner-scoped route', async () => {
+  it('revokes with a reason only on the owner-scoped route', async () => {
     setup()
     fireEvent.click(await screen.findByRole('button', { name: 'Revoke' }))
     const dialog = await screen.findByRole('dialog')
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
       target: { value: 'Ended' },
     })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '654321' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Revoke override' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]).toMatchObject({
       url: `${overridesUrl}/55555555-5555-4555-8555-555555555555/revoke`,
-      data: { reason: 'Ended', code: '654321' },
+      data: { reason: 'Ended' },
     })
   })
 
@@ -161,12 +153,10 @@ describe('customer plan exceptions', () => {
     fireEvent.change(within(dialog).getByLabelText('Ends'), { target: { value: '2026-12-01' } })
     fireEvent.change(within(dialog).getByLabelText('New limit'), { target: { value: '4' } })
     fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), { target: { value: 'x' } })
-    fireEvent.change(within(dialog).getByLabelText('Authenticator code'), {
-      target: { value: '123456' },
-    })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add override' }))
     await waitFor(() => expect(posts()).toHaveLength(1))
     expect(posts()[0]!.data).toMatchObject({ startsOn: '2026-11-09', endsOn: '2026-12-01' })
     expect(posts()[0]!.data).not.toHaveProperty('startsAt')
+    expect(posts()[0]!.data).not.toHaveProperty('code')
   })
 })

@@ -96,10 +96,6 @@ describe('SaaS administration portal', () => {
     expect(done.statusCode).toBe(200)
     return { cookie: cookieOf(done)!, key }
   }
-  async function freshCode(key: Buffer) {
-    await fixture.client`update platform_admins set totp_last_step=null`
-    return totp(key, Date.now())
-  }
   const auditRows = (action: string) =>
     fixture.client`select * from platform_admin_audit where action=${action} order by created_at`
   async function submittedPayment(reference: string) {
@@ -301,14 +297,13 @@ describe('SaaS administration portal', () => {
   })
 
   it('confirms payments idempotently with exactly one audit row', async () => {
-    const { cookie, key } = await signIn()
+    const { cookie } = await signIn()
     const id = await submittedPayment('bank-1')
     const list = await as(cookie).get('/api/v1/admin/payments?status=submitted')
     expect(list.statusCode).toBe(200)
     expect(list.json().items[0]).toMatchObject({ id, ownerEmail: 'fixture-owner@example.test' })
     const first = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
       receivedReference: 'VIR-42',
-      code: await freshCode(key),
       auditReason: 'receipt checked internally',
     })
     expect(first.statusCode).toBe(200)
@@ -318,7 +313,6 @@ describe('SaaS administration portal', () => {
       receivedReference: 'VIR-42',
     })
     const second = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
-      code: await freshCode(key),
       auditReason: 'retry receipt',
     })
     expect(second.statusCode).toBe(200)
@@ -332,7 +326,6 @@ describe('SaaS administration portal', () => {
       (
         await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
           reason: 'x',
-          code: await freshCode(key),
           auditReason: 'internal decision',
         })
       ).json().code,
@@ -340,9 +333,9 @@ describe('SaaS administration portal', () => {
   })
 
   it.each(['confirm', 'reject'] as const)(
-    'requires fresh step-up for payment %s and rolls back all decision state on failure',
+    'decides payment %s under the admin session and rolls back all decision state on failure',
     async (operation) => {
-      const { cookie, key } = await signIn()
+      const { cookie } = await signIn()
       const id = await submittedPayment('secure-decision')
       const url = `/api/v1/admin/payments/${id}/${operation}`
       const action = `payment.${operation}`
@@ -368,21 +361,13 @@ describe('SaaS administration portal', () => {
           ),
         )
       const before = await snapshot()
-      const code = await freshCode(key)
-      expect((await as(cookie).post(url, payload)).statusCode).toBe(400)
-      expect(
-        (await as(cookie).post(url, { ...payload, auditReason: undefined, code })).statusCode,
-      ).toBe(400)
-      expect(
-        (await as(cookie).post(url, { ...payload, auditReason: '   ', code })).statusCode,
-      ).toBe(400)
-      const validCodes = [-30_000, 0, 30_000].map((offset) => totp(key, Date.now() + offset))
-      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
-        (candidate) => !validCodes.includes(candidate),
-      )!
-      const wrong = await as(cookie).post(url, { ...payload, code: invalid })
-      expect(wrong.statusCode).toBe(403)
-      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect((await as(cookie).post(url, { ...payload, code: '123456' })).statusCode).toBe(400)
+      expect((await as(cookie).post(url, { ...payload, auditReason: undefined })).statusCode).toBe(
+        400,
+      )
+      expect((await as(cookie).post(url, { ...payload, auditReason: '   ' })).statusCode).toBe(400)
+      const anonymous = await app.inject({ method: 'POST', url, headers, payload })
+      expect(anonymous.statusCode).toBe(401)
       expect(await snapshot()).toEqual(before)
       await fixture.client
         .unsafe(`create function reject_decision_audit() returns trigger language plpgsql as $$
@@ -390,13 +375,10 @@ describe('SaaS administration portal', () => {
       await fixture.client.unsafe(
         'create trigger reject_decision_audit before insert on platform_admin_audit for each row execute function reject_decision_audit()',
       )
-      expect((await as(cookie).post(url, { ...payload, code })).statusCode).toBe(500)
+      expect((await as(cookie).post(url, payload)).statusCode).toBe(500)
       expect(await snapshot()).toEqual(before)
-      expect(
-        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
-      ).toBeNull()
       await fixture.client.unsafe('drop trigger reject_decision_audit on platform_admin_audit')
-      const success = await as(cookie).post(url, { ...payload, code })
+      const success = await as(cookie).post(url, payload)
       expect(success.statusCode, success.body).toBe(200)
       expect(success.body).not.toContain('private internal investigation')
       expect(success.json()).not.toHaveProperty('code')
@@ -410,19 +392,14 @@ describe('SaaS administration portal', () => {
       })
       expect(audit!.after).not.toHaveProperty('code')
       const committed = await snapshot()
-      const replay = await as(cookie).post(url, { ...payload, code })
-      expect(replay.statusCode).toBe(403)
-      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
-      expect(await snapshot()).toEqual(committed)
-      const retry = await as(cookie).post(url, { ...payload, code: await freshCode(key) })
+      // Idempotent replay: same decision, no new state or audit row.
+      const retry = await as(cookie).post(url, payload)
       expect(retry.statusCode).toBe(200)
       expect(retry.json()).toEqual(success.json())
       expect(await snapshot()).toEqual(committed)
       expect(await auditRows(action)).toHaveLength(1)
-      const conflictCode = await freshCode(key)
       const opposite = operation === 'confirm' ? 'reject' : 'confirm'
       const conflict = await as(cookie).post(`/api/v1/admin/payments/${id}/${opposite}`, {
-        code: conflictCode,
         auditReason: 'conflicting decision',
         ...(opposite === 'reject' ? { reason: 'Not received' } : {}),
       })
@@ -430,36 +407,28 @@ describe('SaaS administration portal', () => {
       expect(conflict.json().code).toBe(
         operation === 'confirm' ? 'PAYMENT_CONFIRMED' : 'PAYMENT_REJECTED',
       )
-      expect(
-        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
-      ).toBeNull()
-      expect((await as(cookie).post(url, { ...payload, code: conflictCode })).statusCode).toBe(200)
       expect(await snapshot()).toEqual(committed)
-      const concurrentCode = await freshCode(key)
-      const concurrent = await Promise.all(
-        [1, 2].map(() => as(cookie).post(url, { ...payload, code: concurrentCode })),
-      )
-      expect(concurrent.map((response) => response.statusCode).sort()).toEqual([200, 403])
+      // Concurrent retries serialize on the owner lock and stay idempotent.
+      const concurrent = await Promise.all([1, 2].map(() => as(cookie).post(url, payload)))
+      expect(concurrent.map((response) => response.statusCode)).toEqual([200, 200])
       expect(await snapshot()).toEqual(committed)
     },
   )
 
   it('requires a rejection reason and shows it to the owner', async () => {
-    const { cookie, key } = await signIn()
+    const { cookie } = await signIn()
     const id = await submittedPayment('bank-2')
     expect((await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {})).statusCode).toBe(400)
     expect(
       (
         await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
           reason: '   ',
-          code: await freshCode(key),
           auditReason: 'internal decision',
         })
       ).statusCode,
     ).toBe(400)
     const rejected = await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
       reason: 'Transfer not received',
-      code: await freshCode(key),
       auditReason: 'private investigation detail',
     })
     expect(rejected.statusCode).toBe(200)
@@ -471,7 +440,6 @@ describe('SaaS administration portal', () => {
       (
         await as(cookie).post(`/api/v1/admin/payments/${id}/reject`, {
           reason: 'again',
-          code: await freshCode(key),
           auditReason: 'internal decision',
         })
       ).json().rejectionReason,

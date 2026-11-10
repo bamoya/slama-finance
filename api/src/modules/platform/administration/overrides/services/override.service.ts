@@ -13,7 +13,6 @@ import type {
   OverrideRecord,
 } from '../repositories/override.repository.js'
 
-type StepUp = (admin: AuthenticatedAdmin, code: string, tx: Transaction) => Promise<void>
 /**
  * Owner subscriptions span organizations and have no timezone setting of their own, so calendar
  * days are interpreted in the platform default zone (organization settings use the same default).
@@ -70,16 +69,15 @@ const auditValue = (o: OverrideRecord) => ({
   revokedAt: o.revokedAt?.toISOString() ?? null,
 })
 
-/** Owner-subscription overrides. Administrator only, step-up and same-transaction audit. */
+/** Owner-subscription overrides. Administrator session, reason and same-transaction audit. */
 export function createOverrideService(options: {
   repo: ReturnType<typeof createOverrideRepository>
   audit: AdminAuditService
   withAdmin: AdminTransaction
-  stepUp: StepUp
   /** Throws 503 while application and database zone data disagree or are unverified. */
   writable?: () => void
 }) {
-  const { repo, audit, withAdmin, stepUp } = options
+  const { repo, audit, withAdmin } = options
   const writable = options.writable ?? (() => {})
 
   async function validate(input: AdminEntitlementOverrideCreate, tx: Transaction) {
@@ -150,7 +148,6 @@ export function createOverrideService(options: {
         const reason = reasonOf(input.reason)
         // Calendar days need the zone data; an immediate open-ended override does not.
         if (input.startsOn || input.endsOn) writable()
-        await stepUp(admin, input.code, tx)
         if (!(await repo.ownerExists(ownerId, tx)))
           throw new AppError(404, 'NOT_FOUND', 'Customer not found.')
         const now = await repo.now(tx)
@@ -232,15 +229,9 @@ export function createOverrideService(options: {
         return view(created, now)
       }),
 
-    revoke: (
-      admin: AuthenticatedAdmin,
-      ownerId: string,
-      id: string,
-      input: { reason: string; code: string },
-    ) =>
+    revoke: (admin: AuthenticatedAdmin, ownerId: string, id: string, input: { reason: string }) =>
       withAdmin(async (tx) => {
         const reason = reasonOf(input.reason)
-        await stepUp(admin, input.code, tx)
         const now = await repo.now(tx)
         const revoked = await revokeLocked(
           admin,

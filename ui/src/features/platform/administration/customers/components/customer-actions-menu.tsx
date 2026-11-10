@@ -3,6 +3,7 @@ import {
   Ban,
   CalendarPlus,
   ChevronDown,
+  CirclePlay,
   LockOpen,
   MailPlus,
   Pause,
@@ -37,6 +38,12 @@ export function CustomerActionsMenu({
 }) {
   const { subscription, restriction } = detail
   const suspended = subscription.status === 'suspended'
+  // A trial, running or ended, that never received coverage.
+  const activatable =
+    subscription.planCode === 'trial' &&
+    (subscription.status === 'trial' ||
+      subscription.status === 'past_due' ||
+      subscription.status === 'expired')
   const blocked = restriction.blockedAt !== null
   const deletionScheduled = restriction.deletionRequestedAt !== null
   return (
@@ -50,6 +57,12 @@ export function CustomerActionsMenu({
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel className={groupLabel}>{translate('Subscription')}</DropdownMenuLabel>
+          {activatable && (
+            <DropdownMenuItem onSelect={() => onSelect({ kind: 'activate-plan' })}>
+              <CirclePlay aria-hidden="true" />
+              {translate('Activate a plan')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             disabled={suspended || subscription.planCode === 'trial'}
             onSelect={() => onSelect({ kind: 'change-plan' })}

@@ -80,7 +80,10 @@ function running(state: PeriodState, now: Date): CoverageState {
       retentionEndsAt: null,
       nextPlanCode: next && next.planCode !== current.planCode ? next.planCode : null,
     }
-  if (!paidThroughAt) {
+  // Coverage that has not started yet (an administrator activation from a later day) never bridges
+  // the gap after the trial: once the trial has ended the owner is expired until coverage starts.
+  const started = coverage.some((p) => p.startsAt.getTime() <= t)
+  if (!paidThroughAt || (!started && t >= trial.endsAt.getTime())) {
     const blocked = trial && t >= trial.endsAt.getTime() ? trial.endsAt : null
     return {
       ...empty,

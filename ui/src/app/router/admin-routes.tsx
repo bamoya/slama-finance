@@ -8,6 +8,7 @@ import {
   AdminNewCustomerPage,
   AdminOverviewPage,
   AdminPaymentsPage,
+  AdminSecurityPage,
   AdminSignInPage,
 } from '../../features/platform/administration'
 
@@ -23,6 +24,7 @@ export const adminRoutes = (
     <Route path="/customers" component={AdminCustomersPage} />
     <Route path="/billing-settings" component={AdminBillingSettingsPage} />
     <Route path="/audit" component={AdminAuditLogPage} />
+    <Route path="/security" component={AdminSecurityPage} />
     <Route path="/" component={AdminOverviewPage} />
   </>
 )

@@ -20,7 +20,6 @@ import { cycleLabel, planLabel } from '../../../subscriptions/components/billing
 import { adminPaths } from '../../shared/admin-paths'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
-import { TwoFactorCodeField } from '../../shared/components/two-factor-code-field'
 import { coverageEnd, type Cycle, localMidnight, todayIso } from '../components/coverage-period'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
 
@@ -53,7 +52,6 @@ export function AdminNewCustomerPage() {
   const [end, setEnd] = useState(coverageEnd(todayIso(), 'monthly'))
   const [endEdited, setEndEdited] = useState(false)
   const [reason, setReason] = useState('')
-  const [code, setCode] = useState('')
   const [errors, setErrors] = useState<Errors>({})
   const [error, setError] = useState<unknown>(null)
   const [pending, setPending] = useState(false)
@@ -70,7 +68,6 @@ export function AdminNewCustomerPage() {
       email: email.trim(),
       locale,
       reason: reason.trim(),
-      ...(paid ? { code } : {}),
       subscription: paid
         ? {
             kind,
@@ -92,7 +89,6 @@ export function AdminNewCustomerPage() {
         const empty = key in body && !String(body[key as keyof typeof body]).trim()
         found[key] ??= empty ? translate('Required') : validationMessage(issue.message)
       }
-    if (paid && !/^\d{6}$/.test(code)) found.code = 'invalid'
     if (!body.reason) found.reason = translate('Indicate the reason for this action.')
     if (paid && !found.coverageStart && !found.coverageEnd) {
       if (new Date(localMidnight(start)).getTime() > Date.now())
@@ -109,7 +105,6 @@ export function AdminNewCustomerPage() {
       navigate(`${adminPaths.customers}/${created.owner.id}`)
     } catch (failure) {
       setError(failure)
-      if (paid) setCode('')
     } finally {
       setPending(false)
     }
@@ -227,8 +222,6 @@ export function AdminNewCustomerPage() {
                     checked={kind === option}
                     onChange={() => {
                       setKind(option)
-                      setCode('')
-                      setErrors((current) => ({ ...current, code: '' }))
                     }}
                   />
                   <span>
@@ -352,14 +345,6 @@ export function AdminNewCustomerPage() {
             )}
           </CardContent>
         </Card>
-        {paid && (
-          <TwoFactorCodeField
-            value={code}
-            onChange={setCode}
-            invalid={invalid('code')}
-            disabled={pending}
-          />
-        )}
         <FormError error={error} />
         <FormActionBar>
           <Button type="submit" form="new-customer-form" disabled={pending}>

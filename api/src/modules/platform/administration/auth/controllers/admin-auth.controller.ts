@@ -2,6 +2,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify'
 
 import {
   AdminLoginSchema,
+  AdminPasskeyAssertionSchema,
+  AdminRecoveryCodeSubmissionSchema,
   AdminTwoFactorSchema,
 } from '../../../../../contracts/generated/administration/administration.schemas.js'
 import type { AuthenticatedAdmin } from '../../shared/types/authenticated-admin.js'
@@ -43,6 +45,19 @@ export function createAdminAuthController(
     async verify(request: FastifyRequest, reply: FastifyReply) {
       const body = AdminTwoFactorSchema.parse(request.body)
       const result = await auth.verify(request.cookies[ADMIN_COOKIE], body.code)
+      cookie(reply, result.token, result.maxAge)
+      return session(result.admin)
+    },
+    async recover(request: FastifyRequest, reply: FastifyReply) {
+      const body = AdminRecoveryCodeSubmissionSchema.parse(request.body)
+      const result = await auth.recover(request.cookies[ADMIN_COOKIE], body.recoveryCode)
+      cookie(reply, result.token, result.maxAge)
+      return session(result.admin)
+    },
+    passkeyOptions: () => auth.passkeyOptions(),
+    async passkeyLogin(request: FastifyRequest, reply: FastifyReply) {
+      const body = AdminPasskeyAssertionSchema.parse(request.body)
+      const result = await auth.passkeyLogin(body.challengeId, body.credential)
       cookie(reply, result.token, result.maxAge)
       return session(result.admin)
     },

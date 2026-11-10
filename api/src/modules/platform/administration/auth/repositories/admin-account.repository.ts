@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 
 import {
   platformAdmins,
@@ -70,6 +70,19 @@ export function createAdminAccountRepository() {
       const [row] = await tx.insert(platformAdminSessions).values(values).returning()
       return row!
     },
+    /** Unlocked lookup so callers can lock the admin row before the session (one lock order). */
+    async sessionAdmin(tokenHash: string, tx: Transaction) {
+      const [row] = await tx
+        .select({ adminId: platformAdminSessions.adminId })
+        .from(platformAdminSessions)
+        .where(
+          and(
+            eq(platformAdminSessions.tokenHash, tokenHash),
+            isNull(platformAdminSessions.revokedAt),
+          ),
+        )
+      return row?.adminId
+    },
     async session(tokenHash: string, tx: Transaction) {
       const [row] = await tx
         .select({ session: platformAdminSessions, admin: platformAdmins })
@@ -91,6 +104,26 @@ export function createAdminAccountRepository() {
     ) {
       await tx.update(platformAdminSessions).set(values).where(eq(platformAdminSessions.id, id))
     },
+    async sessionById(id: string, tx: Transaction) {
+      const [row] = await tx
+        .select()
+        .from(platformAdminSessions)
+        .where(and(eq(platformAdminSessions.id, id), isNull(platformAdminSessions.revokedAt)))
+        .for('update')
+      return row
+    },
+    /** Signs out every other session of the administrator after a credential change. */
+    revokeOthers: (adminId: string, keepId: string, now: Date, tx: Transaction) =>
+      tx
+        .update(platformAdminSessions)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(platformAdminSessions.adminId, adminId),
+            ne(platformAdminSessions.id, keepId),
+            isNull(platformAdminSessions.revokedAt),
+          ),
+        ),
     revokeAll: (adminId: string, now: Date, tx: Transaction) =>
       tx
         .update(platformAdminSessions)

@@ -163,6 +163,7 @@ export function createBillingRepository(database: () => Database) {
         kind: 'activation' | 'renewal' | 'upgrade'
         start: Date
         end: Date
+        graceless?: boolean
         decidedBy: string
         currency: string
         now: Date
@@ -189,6 +190,7 @@ export function createBillingRepository(database: () => Database) {
           submittedAt: values.now,
           decidedAt: values.now,
           decidedBy: values.decidedBy,
+          graceless: values.graceless ?? false,
         })
         .returning()
       return row!

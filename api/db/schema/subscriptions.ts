@@ -163,6 +163,8 @@ export const subscriptionPayments = pgTable(
     receivedReference: text('received_reference'),
     // Shown to the owner; required whenever an administrator rejects a payment.
     rejectionReason: text('rejection_reason'),
+    // Complimentary trial activation: legacy reads end access at its coverage end, without grace.
+    graceless: boolean('graceless').notNull().default(false),
   },
   (t) => [
     check(
@@ -172,6 +174,10 @@ export const subscriptionPayments = pgTable(
     check(
       'subscription_payment_coverage',
       sql`(${t.status}='confirmed')=(${t.coverageStart} is not null and ${t.coverageEnd}>${t.coverageStart})`,
+    ),
+    check(
+      'subscription_payment_graceless',
+      sql`not ${t.graceless} or (${t.method}='admin_adjustment' and ${t.amountTtc}=0)`,
     ),
     check('subscription_payment_reference', sql`btrim(${t.reference})<>''`),
     check(

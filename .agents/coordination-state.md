@@ -1,4 +1,23 @@
-# Current cleanup result — 2026-11-09
+# Current approved work — 2026-11-10
+
+Implement approved SaaS admin trial activation and authentication changes from .agents/admin-security.md.
+Routine per-action TOTP requirements are superseded: retain sessions/authorization/audit/reasons/confirmations.
+Passkey login requires UV and no extra TOTP; password+TOTP fallback, multiple passkeys, recovery codes and
+security-only reauthentication. Session30minidle/8hmax unchanged. Contract first, single pre-client baseline,
+French UI, meaningful tests/full gates and independent review. Previous cleanup/CI fixes committed and pushed
+through9be78ee; repository was clean when this task started. Historical pending/uncommitted notes below are stale.
+
+Status 2026-11-10: backend + UI implemented; independent review found 4 P2s, all fixed (Opus LOW,
+/tmp/slama-admin-security/fixes-result.md). Gates on the combined tree: pnpm check PASS (API 269, UI 574), full
+isolated integration PASS 412 / 1 skipped (S3 opt-in), 43 files. Independent final Sol LOW review/recheck complete:
+all four findings resolved, no remaining actionable findings in the approved scope. Physical-authenticator browser
+ceremony unrun (API tests real ES256; UI browser library mocked). User now authorized commit/push and related
+GitHub issue resolution: #123 tracks admin security/privacy; broader parent #17 retains unfinished scope.
+Final reports: /tmp/slama-admin-security/fixes-result.md and final-review.md; preserved gates in final-gates/.
+Usage before final recheck: Codex81%5h/32%weekly remaining; Claude23%weekly used, session percent not visible.
+Recheck usage before new work. Finished executor/reviewer panes closed; coordinator remains. No later task started.
+
+# Historical cleanup result — 2026-11-09
 
 Bounded cleanup implemented locally (Sol LOW), uncommitted; independent Opus review pending.
 Seven HTML escaping callers import `lib/html.ts`; six identity/admin token hash callers import

@@ -2583,4 +2583,81 @@ export const french: Record<string, string> = {
   'Staff roles': 'Rôles du personnel',
   'Advanced analytics': 'Analyses avancées',
   'Custom domains': 'Domaines personnalisés',
+  'Sign in with a passkey': 'Se connecter avec une clé d’accès',
+  'Recovery code': 'Code de récupération',
+  'Enter one of your recovery codes.': 'Saisissez l’un de vos codes de récupération.',
+  'Sign in with this code': 'Se connecter avec ce code',
+  'Use the authenticator app instead': 'Utiliser l’application d’authentification',
+  'Use a recovery code': 'Utiliser un code de récupération',
+  'Activate a plan': 'Activer une offre',
+  'Convert this trial customer to a paid plan over chosen dates.':
+    'Convertissez ce client en essai vers une offre payante sur les dates choisies.',
+  'The plan applies from the start date; the trial end date is not changed.':
+    'L’offre s’applique dès la date de début ; la fin de l’essai n’est pas modifiée.',
+  'A confirmed payment at the current plan price is added to the history.':
+    'Un paiement confirmé au prix actuel de l’offre est ajouté à l’historique.',
+  'Complimentary access: a 0 DH adjustment is added to the history.':
+    'Accès offert : un ajustement de 0 DH est ajouté à l’historique.',
+  'Activate plan': 'Activer l’offre',
+  'Coverage starts': 'Début de la couverture',
+  Duration: 'Durée',
+  'One month': 'Un mois',
+  'One year': 'Un an',
+  'Custom end date': 'Date de fin personnalisée',
+  'Coverage ends': 'Fin de la couverture',
+  'The end day itself is not included.': 'Le jour de fin n’est pas inclus.',
+  'The start cannot be in the past and the end must be after the start.':
+    'Le début ne peut pas être dans le passé et la fin doit suivre le début.',
+  Settlement: 'Règlement',
+  'Payment received': 'Paiement reçu',
+  Complimentary: 'Offert',
+  'Received reference': 'Référence reçue',
+  'No passkey registered yet.': 'Aucune clé d’accès enregistrée pour le moment.',
+  Passkeys: 'Clés d’accès',
+  'Added on {{date}}': 'Ajoutée le {{date}}',
+  'Last used on {{date}}': 'Dernière utilisation le {{date}}',
+  'Never used': 'Jamais utilisée',
+  'Remove {{name}}': 'Supprimer {{name}}',
+  'Remove this passkey?': 'Supprimer cette clé d’accès ?',
+  '{{name}} will no longer sign you in. Your password and authenticator app still work.':
+    '{{name}} ne vous connectera plus. Votre mot de passe et votre application d’authentification restent valides.',
+  'Confirm it is you': 'Confirmez votre identité',
+  'This change protects your account. Confirm your identity to continue.':
+    'Cette modification protège votre compte. Confirmez votre identité pour continuer.',
+  'Confirm with a passkey': 'Confirmer avec une clé d’accès',
+  'Or use your password and authenticator code':
+    'Ou utilisez votre mot de passe et votre code d’authentification',
+  'Enter your password and the 6-digit code from your authenticator app.':
+    'Saisissez votre mot de passe et le code à 6 chiffres de votre application d’authentification.',
+  'Your recovery codes': 'Vos codes de récupération',
+  'Keep these codes somewhere safe. Each one works once and they will not be shown again. Earlier codes no longer work.':
+    'Conservez ces codes en lieu sûr. Chacun ne sert qu’une fois et ils ne seront plus affichés. Les anciens codes ne fonctionnent plus.',
+  'Recovery codes': 'Codes de récupération',
+  'I have saved these codes': 'J’ai conservé ces codes',
+  'Replace authenticator app': 'Remplacer l’application d’authentification',
+  'Sign in with your fingerprint, face or device code, without a password.':
+    'Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil, sans mot de passe.',
+  'Passkeys are not supported by this browser.':
+    'Ce navigateur ne prend pas en charge les clés d’accès.',
+  'You reached the maximum of 10 passkeys. Remove one to add another.':
+    'Vous avez atteint le maximum de 10 clés d’accès. Supprimez-en une pour en ajouter une autre.',
+  'Passkey name': 'Nom de la clé d’accès',
+  'Add a passkey': 'Ajouter une clé d’accès',
+  'Give this passkey a name, for example “Work laptop”.':
+    'Donnez un nom à cette clé d’accès, par exemple « Ordinateur du bureau ».',
+  'Single-use codes to sign in if you lose your authenticator app. Remaining: {{count}}.':
+    'Codes à usage unique pour vous connecter si vous perdez votre application d’authentification. Restants : {{count}}.',
+  'Generate new codes': 'Générer de nouveaux codes',
+  'Generate recovery codes': 'Générer des codes de récupération',
+  'Authenticator app': 'Application d’authentification',
+  Security: 'Sécurité',
+  'Passkeys, recovery codes and authenticator app of your administrator account.':
+    'Clés d’accès, codes de récupération et application d’authentification de votre compte administrateur.',
+  'Passkey added.': 'Clé d’accès ajoutée.',
+  'Passkey removed.': 'Clé d’accès supprimée.',
+  'Authenticator app replaced. Other sessions were closed.':
+    'Application d’authentification remplacée. Les autres sessions ont été fermées.',
+  'Passkey request cancelled.': 'Demande annulée. Aucune modification n’a été effectuée.',
+  'This passkey was not accepted. Use another passkey or your password.':
+    'Cette clé d’accès n’a pas été acceptée. Utilisez une autre clé ou votre mot de passe.',
 }

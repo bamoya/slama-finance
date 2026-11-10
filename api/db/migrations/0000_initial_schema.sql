@@ -29,12 +29,48 @@ CREATE TABLE IF NOT EXISTS "platform_admin_audit" (
 ALTER TABLE "platform_admin_audit" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "platform_admin_passkeys" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"admin_id" uuid NOT NULL,
+	"credential_id" text NOT NULL,
+	"public_key" "bytea" NOT NULL,
+	"counter" bigint DEFAULT 0 NOT NULL,
+	"transports" text[] DEFAULT '{}'::text[] NOT NULL,
+	"device_type" text NOT NULL,
+	"backed_up" boolean NOT NULL,
+	"name" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"last_used_at" timestamp with time zone,
+	CONSTRAINT "platform_admin_passkeys_name_present" CHECK (btrim("platform_admin_passkeys"."name") <> ''),
+	CONSTRAINT "platform_admin_passkeys_counter" CHECK ("platform_admin_passkeys"."counter" >= 0)
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admin_passkeys" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "platform_admin_recovery_codes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"admin_id" uuid NOT NULL,
+	"code_hash" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"used_at" timestamp with time zone
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admin_recovery_codes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "platform_admin_sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"admin_id" uuid NOT NULL,
 	"token_hash" text NOT NULL,
 	"verified_at" timestamp with time zone,
 	"failed_attempts" integer DEFAULT 0 NOT NULL,
+	"reauthenticated_at" timestamp with time zone,
+	"reauth_failures" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"last_seen_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -47,6 +83,23 @@ CREATE TABLE IF NOT EXISTS "platform_admin_sessions" (
 ALTER TABLE "platform_admin_sessions" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "platform_admin_webauthn_challenges" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"purpose" text NOT NULL,
+	"admin_id" uuid,
+	"session_id" uuid,
+	"challenge" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"consumed_at" timestamp with time zone,
+	CONSTRAINT "platform_admin_webauthn_challenges_binding" CHECK (("platform_admin_webauthn_challenges"."purpose" = 'login' and "platform_admin_webauthn_challenges"."admin_id" is null and "platform_admin_webauthn_challenges"."session_id" is null) or ("platform_admin_webauthn_challenges"."purpose" <> 'login' and "platform_admin_webauthn_challenges"."admin_id" is not null and "platform_admin_webauthn_challenges"."session_id" is not null))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "platform_admin_webauthn_challenges" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "platform_admins" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" text NOT NULL,
@@ -55,6 +108,7 @@ CREATE TABLE IF NOT EXISTS "platform_admins" (
 	"totp_secret" text,
 	"totp_enrolled_at" timestamp with time zone,
 	"totp_last_step" bigint,
+	"pending_totp_secret" text,
 	"disabled_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -1500,8 +1554,10 @@ CREATE TABLE IF NOT EXISTS "subscription_payments" (
 	"decided_by" text,
 	"received_reference" text,
 	"rejection_reason" text,
+	"graceless" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "subscription_payment_amounts" CHECK ("subscription_payments"."amount_ht">=0 and "subscription_payments"."tax_amount">=0 and "subscription_payments"."amount_ttc"="subscription_payments"."amount_ht"+"subscription_payments"."tax_amount"),
 	CONSTRAINT "subscription_payment_coverage" CHECK (("subscription_payments"."status"='confirmed')=("subscription_payments"."coverage_start" is not null and "subscription_payments"."coverage_end">"subscription_payments"."coverage_start")),
+	CONSTRAINT "subscription_payment_graceless" CHECK (not "subscription_payments"."graceless" or ("subscription_payments"."method"='admin_adjustment' and "subscription_payments"."amount_ttc"=0)),
 	CONSTRAINT "subscription_payment_reference" CHECK (btrim("subscription_payments"."reference")<>''),
 	CONSTRAINT "subscription_payment_rejection_reason" CHECK (("subscription_payments"."status"='rejected')=("subscription_payments"."rejection_reason" is not null and btrim("subscription_payments"."rejection_reason")<>''))
 );
@@ -1542,10 +1598,25 @@ ALTER TABLE "subscription_storage" ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS "platform_admin_audit_created_idx" ON "platform_admin_audit" USING btree ("created_at");
 --> statement-breakpoint
 
+CREATE UNIQUE INDEX IF NOT EXISTS "platform_admin_passkeys_credential_unique" ON "platform_admin_passkeys" USING btree ("credential_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "platform_admin_passkeys_admin_idx" ON "platform_admin_passkeys" USING btree ("admin_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "platform_admin_recovery_codes_hash_unique" ON "platform_admin_recovery_codes" USING btree ("code_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "platform_admin_recovery_codes_admin_idx" ON "platform_admin_recovery_codes" USING btree ("admin_id");
+--> statement-breakpoint
+
 CREATE UNIQUE INDEX IF NOT EXISTS "platform_admin_sessions_token_unique" ON "platform_admin_sessions" USING btree ("token_hash");
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "platform_admin_sessions_admin_idx" ON "platform_admin_sessions" USING btree ("admin_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "platform_admin_webauthn_challenges_expiry_idx" ON "platform_admin_webauthn_challenges" USING btree ("expires_at");
 --> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "platform_admins_email_unique" ON "platform_admins" USING btree ("email");
@@ -1837,7 +1908,39 @@ END $$;
 --> statement-breakpoint
 
 DO $$ BEGIN
+ ALTER TABLE "platform_admin_passkeys" ADD CONSTRAINT "platform_admin_passkeys_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "platform_admin_recovery_codes" ADD CONSTRAINT "platform_admin_recovery_codes_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
  ALTER TABLE "platform_admin_sessions" ADD CONSTRAINT "platform_admin_sessions_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "platform_admin_webauthn_challenges" ADD CONSTRAINT "platform_admin_webauthn_challenges_admin_id_platform_admins_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."platform_admins"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "platform_admin_webauthn_challenges" ADD CONSTRAINT "platform_admin_webauthn_challenges_session_id_platform_admin_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."platform_admin_sessions"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -3213,7 +3316,16 @@ CREATE POLICY "platform_admin_audit_read" ON "platform_admin_audit" AS PERMISSIV
 CREATE POLICY "platform_admin_audit_insert" ON "platform_admin_audit" AS PERMISSIVE FOR INSERT TO public WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
+CREATE POLICY "platform_admin_passkeys_admin_only" ON "platform_admin_passkeys" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "platform_admin_recovery_codes_admin_only" ON "platform_admin_recovery_codes" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "platform_admin_sessions_admin_only" ON "platform_admin_sessions" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
+CREATE POLICY "platform_admin_webauthn_challenges_admin_only" ON "platform_admin_webauthn_challenges" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
 CREATE POLICY "platform_admins_admin_only" ON "platform_admins" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
@@ -3462,7 +3574,13 @@ ALTER TABLE "actors" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "platform_admin_audit" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
+ALTER TABLE "platform_admin_passkeys" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "platform_admin_recovery_codes" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
 ALTER TABLE "platform_admin_sessions" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "platform_admin_webauthn_challenges" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "platform_admins" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint

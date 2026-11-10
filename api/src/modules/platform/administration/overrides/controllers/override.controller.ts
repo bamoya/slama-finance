@@ -33,7 +33,6 @@ export function createOverrideController(
       const body = AdminOverrideRevocationSchema.parse(request.body)
       return overrides.revoke(currentAdmin(request), params.ownerId, params.overrideId, {
         reason: body.reason,
-        code: body.code,
       })
     },
   }

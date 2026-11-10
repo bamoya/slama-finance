@@ -1,6 +1,7 @@
 import type { AdminOwnerDetailOrganizationsItem } from '../../../../../api/generated/models'
 
 export type CustomerAction =
+  | { kind: 'activate-plan' }
   | { kind: 'change-plan' }
   | { kind: 'extend' }
   | { kind: 'suspend-subscription' }

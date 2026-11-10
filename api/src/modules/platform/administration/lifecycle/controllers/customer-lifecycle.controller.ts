@@ -4,6 +4,7 @@ import {
   AdminCoverageExtensionSchema,
   AdminOrganizationSlugChangeSchema,
   AdminOwnerCreateSchema,
+  AdminPlanActivationSchema,
   AdminPlanChangeSchema,
   AdminReasonSchema,
   AdminSensitiveActionSchema,
@@ -17,7 +18,7 @@ type CurrentAdmin = (request: FastifyRequest) => AuthenticatedAdmin
 const reasonOf = (request: FastifyRequest) => AdminReasonSchema.parse(request.body).reason.trim()
 const sensitive = (request: FastifyRequest) => {
   const body = AdminSensitiveActionSchema.parse(request.body)
-  return { reason: AdminReasonSchema.parse({ reason: body.reason.trim() }).reason, code: body.code }
+  return { reason: AdminReasonSchema.parse({ reason: body.reason.trim() }).reason }
 }
 // Every owner-scoped route shares the same { ownerId } path parameter shape.
 const ownerOf = (request: FastifyRequest) =>
@@ -58,14 +59,19 @@ export function createCustomerLifecycleController(
       const body = AdminPlanChangeSchema.parse(request.body)
       return lifecycle.changePlan(currentAdmin(request), ownerOf(request), body.planCode, {
         reason: body.reason.trim(),
-        code: body.code,
+      })
+    },
+    activate(request: FastifyRequest) {
+      const body = AdminPlanActivationSchema.parse(request.body)
+      return lifecycle.activate(currentAdmin(request), ownerOf(request), {
+        ...body,
+        reason: AdminReasonSchema.parse({ reason: body.reason.trim() }).reason,
       })
     },
     extend(request: FastifyRequest) {
       const body = AdminCoverageExtensionSchema.parse(request.body)
       return lifecycle.extend(currentAdmin(request), ownerOf(request), body.days, {
         reason: body.reason.trim(),
-        code: body.code,
       })
     },
     suspendOrganization: (request: FastifyRequest) =>
@@ -79,7 +85,6 @@ export function createCustomerLifecycleController(
       return lifecycle.renameOrganizationSlug(currentAdmin(request), organizationOf(request), {
         slug: body.slug,
         reason: body.reason.trim(),
-        code: body.code,
       })
     },
     reactivateOrganization: (request: FastifyRequest) =>

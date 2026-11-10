@@ -1,5 +1,5 @@
 {
-  "id": "ee3d6cb1-8dc4-4d4f-b858-63862739a607",
+  "id": "85322ee6-b795-4f6a-b02a-50b680aac517",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -202,6 +202,255 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
+    "public.platform_admin_passkeys": {
+      "name": "platform_admin_passkeys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_key": {
+          "name": "public_key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "counter": {
+          "name": "counter",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "transports": {
+          "name": "transports",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "device_type": {
+          "name": "device_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backed_up": {
+          "name": "backed_up",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_passkeys_credential_unique": {
+          "name": "platform_admin_passkeys_credential_unique",
+          "columns": [
+            {
+              "expression": "credential_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_passkeys_admin_idx": {
+          "name": "platform_admin_passkeys_admin_idx",
+          "columns": [
+            {
+              "expression": "admin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_passkeys_admin_id_platform_admins_id_fk": {
+          "name": "platform_admin_passkeys_admin_id_platform_admins_id_fk",
+          "tableFrom": "platform_admin_passkeys",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admin_passkeys_admin_only": {
+          "name": "platform_admin_passkeys_admin_only",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "platform_admin_passkeys_name_present": {
+          "name": "platform_admin_passkeys_name_present",
+          "value": "btrim(\"platform_admin_passkeys\".\"name\") <> ''"
+        },
+        "platform_admin_passkeys_counter": {
+          "name": "platform_admin_passkeys_counter",
+          "value": "\"platform_admin_passkeys\".\"counter\" >= 0"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.platform_admin_recovery_codes": {
+      "name": "platform_admin_recovery_codes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_hash": {
+          "name": "code_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_recovery_codes_hash_unique": {
+          "name": "platform_admin_recovery_codes_hash_unique",
+          "columns": [
+            {
+              "expression": "code_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "platform_admin_recovery_codes_admin_idx": {
+          "name": "platform_admin_recovery_codes_admin_idx",
+          "columns": [
+            {
+              "expression": "admin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_recovery_codes_admin_id_platform_admins_id_fk": {
+          "name": "platform_admin_recovery_codes_admin_id_platform_admins_id_fk",
+          "tableFrom": "platform_admin_recovery_codes",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admin_recovery_codes_admin_only": {
+          "name": "platform_admin_recovery_codes_admin_only",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
     "public.platform_admin_sessions": {
       "name": "platform_admin_sessions",
       "schema": "",
@@ -233,6 +482,19 @@
         },
         "failed_attempts": {
           "name": "failed_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "reauthenticated_at": {
+          "name": "reauthenticated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reauth_failures": {
+          "name": "reauth_failures",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -334,6 +596,128 @@
       },
       "isRLSEnabled": true
     },
+    "public.platform_admin_webauthn_challenges": {
+      "name": "platform_admin_webauthn_challenges",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "challenge": {
+          "name": "challenge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "platform_admin_webauthn_challenges_expiry_idx": {
+          "name": "platform_admin_webauthn_challenges_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "platform_admin_webauthn_challenges_admin_id_platform_admins_id_fk": {
+          "name": "platform_admin_webauthn_challenges_admin_id_platform_admins_id_fk",
+          "tableFrom": "platform_admin_webauthn_challenges",
+          "tableTo": "platform_admins",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "platform_admin_webauthn_challenges_session_id_platform_admin_sessions_id_fk": {
+          "name": "platform_admin_webauthn_challenges_session_id_platform_admin_sessions_id_fk",
+          "tableFrom": "platform_admin_webauthn_challenges",
+          "tableTo": "platform_admin_sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "platform_admin_webauthn_challenges_admin_only": {
+          "name": "platform_admin_webauthn_challenges_admin_only",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "platform_admin_webauthn_challenges_binding": {
+          "name": "platform_admin_webauthn_challenges_binding",
+          "value": "(\"platform_admin_webauthn_challenges\".\"purpose\" = 'login' and \"platform_admin_webauthn_challenges\".\"admin_id\" is null and \"platform_admin_webauthn_challenges\".\"session_id\" is null) or (\"platform_admin_webauthn_challenges\".\"purpose\" <> 'login' and \"platform_admin_webauthn_challenges\".\"admin_id\" is not null and \"platform_admin_webauthn_challenges\".\"session_id\" is not null)"
+        }
+      },
+      "isRLSEnabled": true
+    },
     "public.platform_admins": {
       "name": "platform_admins",
       "schema": "",
@@ -378,6 +762,12 @@
         "totp_last_step": {
           "name": "totp_last_step",
           "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_totp_secret": {
+          "name": "pending_totp_secret",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -11892,6 +12282,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "graceless": {
+          "name": "graceless",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {
@@ -12001,6 +12398,10 @@
         "subscription_payment_coverage": {
           "name": "subscription_payment_coverage",
           "value": "(\"subscription_payments\".\"status\"='confirmed')=(\"subscription_payments\".\"coverage_start\" is not null and \"subscription_payments\".\"coverage_end\">\"subscription_payments\".\"coverage_start\")"
+        },
+        "subscription_payment_graceless": {
+          "name": "subscription_payment_graceless",
+          "value": "not \"subscription_payments\".\"graceless\" or (\"subscription_payments\".\"method\"='admin_adjustment' and \"subscription_payments\".\"amount_ttc\"=0)"
         },
         "subscription_payment_reference": {
           "name": "subscription_payment_reference",

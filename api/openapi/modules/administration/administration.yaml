@@ -98,7 +98,7 @@ paths:
   /api/v1/admin/payments/{paymentId}/confirm:
     post:
       operationId: confirmAdminPayment
-      description: Requires a fresh administrator TOTP code and an internal audit reason.
+      description: Requires an internal audit reason and UI confirmation; no fresh second factor.
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
       parameters:
@@ -122,7 +122,7 @@ paths:
   /api/v1/admin/payments/{paymentId}/reject:
     post:
       operationId: rejectAdminPayment
-      description: Requires a fresh administrator TOTP code and an internal audit reason.
+      description: Requires an internal audit reason and UI confirmation; no fresh second factor.
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
       parameters:
@@ -175,7 +175,7 @@ paths:
       operationId: createAdminOwner
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Creates an owner account without organization and emails a one-time set-password invitation valid 72 hours. A paid subscription grant requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). 409 EMAIL_TAKEN when the email exists; 503 EMAIL_UNAVAILABLE when owner email is not configured.'
+      description: 'Creates an owner account without organization and emails a one-time set-password invitation valid 72 hours. 409 EMAIL_TAKEN when the email exists; 503 EMAIL_UNAVAILABLE when owner email is not configured.'
       requestBody:
         required: true
         content:
@@ -236,7 +236,7 @@ paths:
       operationId: blockAdminOwner
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Blocks the owner portal and every organization of the owner, revoking all their sessions. Payment never lifts it. 409 ALREADY_BLOCKED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Blocks the owner portal and every organization of the owner, revoking all their sessions. Payment never lifts it. 409 ALREADY_BLOCKED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -260,7 +260,7 @@ paths:
       operationId: unblockAdminOwner
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Lifts the block. Other restrictions (scheduled deletion, organization or subscription suspension) remain. 409 NOT_BLOCKED.'
+      description: 'Requires an internal audit reason and UI confirmation; no fresh second factor. Lifts the block. Other restrictions (scheduled deletion, organization or subscription suspension) remain. 409 NOT_BLOCKED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -284,7 +284,7 @@ paths:
       operationId: scheduleAdminOwnerDeletion
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Immediately blocks the owner and all organizations and schedules permanent deletion 30 days later. The purge itself is not automatic yet. 409 DELETION_SCHEDULED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Immediately blocks the owner and all organizations and schedules permanent deletion 30 days later. The purge itself is not automatic yet. 409 DELETION_SCHEDULED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -308,7 +308,7 @@ paths:
       operationId: cancelAdminOwnerDeletion
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Cancels a scheduled deletion before its due date, restoring the previous state including any outstanding restriction. 409 DELETION_NOT_SCHEDULED or DELETION_DUE.'
+      description: 'Requires an internal audit reason and UI confirmation; no fresh second factor. Cancels a scheduled deletion before its due date, restoring the previous state including any outstanding restriction. 409 DELETION_NOT_SCHEDULED or DELETION_DUE.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -332,7 +332,7 @@ paths:
       operationId: suspendAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Blocks access and freezes the coverage clock. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Blocks access and freezes the coverage clock. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -356,7 +356,7 @@ paths:
       operationId: resumeAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Restores access and shifts remaining paid or trial time by the suspended duration. 409 SUBSCRIPTION_NOT_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Restores access and shifts remaining paid or trial time by the suspended duration. 409 SUBSCRIPTION_NOT_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -380,7 +380,7 @@ paths:
       operationId: changeAdminSubscriptionPlan
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Switches the current paid period to another plan immediately without payment (recorded as a confirmed 0-amount admin_adjustment payment and a complimentary coverage period). Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Paid subscriptions only: switches the current paid period to another plan immediately without payment, preserving the existing coverage start and end (recorded as a confirmed 0-amount admin_adjustment payment and a complimentary coverage period). Trial customers use subscription/activation. Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -404,7 +404,7 @@ paths:
       operationId: extendAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Adds days to paid coverage (an admin_adjustment payment and complimentary period continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Adds days to paid coverage (an admin_adjustment payment and complimentary period continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -446,7 +446,7 @@ paths:
       operationId: createAdminEntitlementOverride
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Replaces one plan value for this owner subscription over a half-open window. startsOn/endsOn are calendar days in the customer timezone (Africa/Casablanca by default, returned as timezone); an absent start or today starts now, a later day at its midnight, a past day is 400 OVERRIDE_START_IN_PAST; endsOn is exclusive (ends at the midnight of that day) and must be after the start (400 OVERRIDE_VALUE_INVALID). Stored and returned as UTC instants. replacesId revokes that record in the same transaction (amendment). 400 OVERRIDE_VALUE_INVALID, 409 OVERRIDE_OVERLAP, 409 OVERRIDE_NOT_REPLACEABLE, 404 NOT_FOUND.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Replaces one plan value for this owner subscription over a half-open window. startsOn/endsOn are calendar days in the customer timezone (Africa/Casablanca by default, returned as timezone); an absent start or today starts now, a later day at its midnight, a past day is 400 OVERRIDE_START_IN_PAST; endsOn is exclusive (ends at the midnight of that day) and must be after the start (400 OVERRIDE_VALUE_INVALID). Stored and returned as UTC instants. replacesId revokes that record in the same transaction (amendment). 400 OVERRIDE_VALUE_INVALID, 409 OVERRIDE_OVERLAP, 409 OVERRIDE_NOT_REPLACEABLE, 404 NOT_FOUND.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -470,7 +470,7 @@ paths:
       operationId: revokeAdminEntitlementOverride
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code. Ends the override now (or cancels it before its start); the record is kept for review. 409 OVERRIDE_NOT_REVOCABLE when already revoked or ended, 404 NOT_FOUND.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Ends the override now (or cancels it before its start); the record is kept for review. 409 OVERRIDE_NOT_REVOCABLE when already revoked or ended, 404 NOT_FOUND.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
         - { name: overrideId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -495,7 +495,7 @@ paths:
       operationId: suspendAdminOrganization
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Suspends one organization: sessions are revoked, logins and workers stop. Only an administrator can reactivate. Returns the owning customer. 409 ORGANIZATION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Suspends one organization: sessions are revoked, logins and workers stop. Only an administrator can reactivate. Returns the owning customer. 409 ORGANIZATION_SUSPENDED.'
       parameters:
         - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -519,7 +519,7 @@ paths:
       operationId: renameAdminOrganizationSlug
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh TOTP code (403 TWO_FACTOR_INVALID otherwise). Changes the organization address; the former slug is kept so the old host redirects, all organization sessions are revoked, and the change is audited (organization.rename_slug). 400 SLUG_INVALID, 400 SLUG_RESERVED, 409 SLUG_TAKEN, 409 SLUG_UNCHANGED, 404 NOT_FOUND.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Changes the organization address; the former slug is kept so the old host redirects, all organization sessions are revoked, and the change is audited (organization.rename_slug). 400 SLUG_INVALID, 400 SLUG_RESERVED, 409 SLUG_TAKEN, 409 SLUG_UNCHANGED, 404 NOT_FOUND.'
       parameters:
         - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -543,7 +543,7 @@ paths:
       operationId: reactivateAdminOrganization
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a fresh administrator TOTP code and an internal audit reason. Lifts an administrator suspension; users sign in again. Returns the owning customer. 409 ORGANIZATION_NOT_SUSPENDED.'
+      description: 'Requires an internal audit reason and UI confirmation; no fresh second factor. Lifts an administrator suspension; users sign in again. Returns the owning customer. 409 ORGANIZATION_NOT_SUSPENDED.'
       parameters:
         - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -631,6 +631,255 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOverview' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/auth/passkey/options:
+    post:
+      operationId: startAdminPasskeyLogin
+      tags: [administration]
+      security: []
+      description: 'Issues WebAuthn authentication options for a discoverable passkey (userVerification required, single-use challenge valid 5 minutes, bound to challengeId). Creates no session.'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPasskeyChallenge' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/auth/passkey:
+    post:
+      operationId: verifyAdminPasskeyLogin
+      tags: [administration]
+      security: []
+      description: 'Verifies the assertion (challenge, origin, RP ID, user verification, signature counter) and the active administrator; issues a full 8-hour session (30-minute idle) without TOTP. Any failure returns 401 INVALID_CREDENTIALS and consumes the challenge.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPasskeyAssertion' }
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSession' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/auth/recovery:
+    post:
+      operationId: recoverAdminSignIn
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Completes a pending password sign-in with a single-use recovery code instead of TOTP. Consumes the code, revokes every other session of the administrator and issues a fresh session that counts as reauthenticated for 5 minutes so the administrator can reset TOTP, remove lost passkeys or regenerate codes. Failures return 401 INVALID_CODE and share the five-failure limit of the pending session.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminRecoveryCodeSubmission' }
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSession' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/auth/reauthentication/options:
+    post:
+      operationId: startAdminReauthentication
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Issues WebAuthn authentication options restricted to the signed-in administrator passkeys (userVerification required, single-use, 5 minutes).'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPasskeyChallenge' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/auth/reauthentication:
+    post:
+      operationId: reauthenticateAdmin
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Proves presence for credential changes: method passkey (challengeId + credential) or password_totp (password + code). Marks the current session reauthenticated for 5 minutes. 401 REAUTHENTICATION_FAILED; five failures revoke the session.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReauthentication' }
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReauthenticationResult' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security:
+    get:
+      operationId: getAdminSecurity
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Security settings of the signed-in administrator: TOTP, passkeys, remaining recovery codes and reauthentication window.'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSecurity' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/passkeys/options:
+    post:
+      operationId: startAdminPasskeyRegistration
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication (403 REAUTHENTICATION_REQUIRED). Issues WebAuthn registration options (resident key required, userVerification required, excludes existing credentials, single-use, 5 minutes).'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPasskeyChallenge' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/passkeys:
+    post:
+      operationId: registerAdminPasskey
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication. Verifies the attestation response (challenge, origin, RP ID, user verification) and stores the named passkey. 400 PASSKEY_INVALID, 409 PASSKEY_EXISTS, 409 PASSKEY_LIMIT (10). Audited admin.passkey_add.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPasskeyRegistration' }
+      responses:
+        '201':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminPasskey' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/passkeys/{passkeyId}:
+    delete:
+      operationId: removeAdminPasskey
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication. Removes one passkey of the signed-in administrator; password and TOTP always remain. 404 NOT_FOUND. Audited admin.passkey_remove.'
+      parameters:
+        - { name: passkeyId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204':
+          description: Done.
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/recovery-codes:
+    post:
+      operationId: regenerateAdminRecoveryCodes
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication. Invalidates every earlier recovery code and returns 10 new single-use codes, shown once and stored only as hashes. Audited admin.recovery_codes_regenerate.'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminRecoveryCodes' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/totp:
+    post:
+      operationId: resetAdminTotp
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication. Starts TOTP re-enrollment: returns a new secret shown once; the previous secret stays valid until confirmTotp succeeds.'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminTotpEnrollment' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/security/totp/confirm:
+    post:
+      operationId: confirmAdminTotp
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Requires reauthentication. Confirms the pending TOTP secret with a current code, replaces the old secret and revokes every other session. 401 INVALID_CODE, 409 TOTP_NOT_PENDING. Audited admin.totp_reset.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminTwoFactor' }
+      responses:
+        '204':
+          description: Done.
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/owners/{ownerId}/subscription/activation:
+    post:
+      operationId: activateAdminSubscriptionPlan
+      tags: [administration]
+      security: [{ adminSessionCookie: [] }]
+      description: 'Trial customers only (trial running, or ended without any paid or complimentary coverage): activates a paid plan over explicit coverage days (startsOn inclusive, endsOn exclusive, in the customer timezone, today means now) settled by a confirmed payment (price snapshot of the plan and cycle, current tax) or as complimentary access (no grace after it ends). The trial is never extended to bridge a gap before startsOn. Requires a reason and UI confirmation; no fresh second factor. 400 COVERAGE_INVALID, 400 PAYMENT_DETAILS_REQUIRED, 400 PAYMENT_DETAILS_UNEXPECTED, 400 INVALID_PAYMENT_METHOD, 400 INVALID_PLAN, 409 SUBSCRIPTION_NOT_STARTED, 409 SUBSCRIPTION_NOT_TRIAL, 409 SUBSCRIPTION_SUSPENDED. Audited subscription.activate.'
+      parameters:
+        - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminPlanActivation' }
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOwnerDetail' }
         default:
           description: Request failed
           content:
@@ -743,14 +992,8 @@ components:
     AdminPaymentConfirmation:
       type: object
       additionalProperties: false
-      required: [auditReason, code]
+      required: [auditReason]
       properties:
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
         auditReason:
           {
             type: string,
@@ -768,14 +1011,8 @@ components:
     AdminPaymentRejection:
       type: object
       additionalProperties: false
-      required: [reason, auditReason, code]
+      required: [reason, auditReason]
       properties:
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
         auditReason:
           {
             type: string,
@@ -891,28 +1128,16 @@ components:
     AdminOrganizationSlugChange:
       type: object
       additionalProperties: false
-      required: [slug, reason, code]
+      required: [slug, reason]
       properties:
         slug: { type: string, minLength: 1, maxLength: 100 }
         reason: { type: string, minLength: 1, maxLength: 500 }
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
     AdminSensitiveAction:
       type: object
       additionalProperties: false
-      required: [reason, code]
+      required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
     AdminEntitlementOverride:
       type: object
       additionalProperties: false
@@ -966,7 +1191,7 @@ components:
     AdminEntitlementOverrideCreate:
       type: object
       additionalProperties: false
-      required: [entitlementKey, booleanValue, integerValue, unlimited, reason, code]
+      required: [entitlementKey, booleanValue, integerValue, unlimited, reason]
       properties:
         entitlementKey: { $ref: ../../openapi.yaml#/components/schemas/EntitlementKey }
         booleanValue: { type: [boolean, 'null'] }
@@ -986,52 +1211,32 @@ components:
           }
         replacesId: { type: [string, 'null'], format: uuid }
         reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
-        code: { type: string, pattern: '^[0-9]{6}$' }
     AdminOverrideRevocation:
       type: object
       additionalProperties: false
-      required: [reason, code]
+      required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
-        code: { type: string, pattern: '^[0-9]{6}$' }
     AdminPlanChange:
       type: object
       additionalProperties: false
-      required: [planCode, reason, code]
+      required: [planCode, reason]
       properties:
         planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
         reason: { type: string, minLength: 1, maxLength: 500 }
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
     AdminCoverageExtension:
       type: object
       additionalProperties: false
-      required: [days, reason, code]
+      required: [days, reason]
       properties:
         days: { type: integer, minimum: 1, maximum: 366 }
         reason: { type: string, minLength: 1, maxLength: 500 }
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code of the acting administrator; each code is accepted once.',
-          }
     AdminOwnerCreate:
       type: object
       additionalProperties: false
       required: [firstName, lastName, email, locale, subscription, reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
-        code:
-          {
-            type: string,
-            pattern: '^[0-9]{6}$',
-            description: 'Fresh TOTP code; required when subscription.kind is paid (a coverage grant), otherwise ignored.',
-          }
         firstName: { type: string, minLength: 1, maxLength: 100 }
         lastName: { type: string, minLength: 1, maxLength: 100 }
         email: { type: string, format: email, maxLength: 254 }
@@ -1103,7 +1308,7 @@ components:
         action:
           {
             type: string,
-            description: 'For example payment.confirm, payment.reject, billing_settings.update, customer.create, customer.invite, customer.block, customer.unblock, customer.delete, customer.delete_cancel, subscription.suspend, subscription.resume, subscription.change_plan, subscription.extend, organization.suspend, organization.reactivate, organization.rename_slug, auth.login, auth.login_failed, admin.create, admin.disable, admin.reset_2fa.',
+            description: 'For example payment.confirm, payment.reject, billing_settings.update, customer.create, customer.invite, customer.block, customer.unblock, customer.delete, customer.delete_cancel, subscription.suspend, subscription.resume, subscription.activate, subscription.change_plan, subscription.extend, organization.suspend, organization.reactivate, organization.rename_slug, auth.login, auth.login_failed, admin.create, admin.disable, admin.reset_2fa, auth.passkey_login, auth.recovery_login, auth.reauthenticate, admin.passkey_add, admin.passkey_remove, admin.recovery_codes_regenerate, admin.totp_reset.',
           }
         targetType: { type: string }
         targetId: { type: [string, 'null'] }
@@ -1151,3 +1356,101 @@ components:
           description: 'Subscriptions suspended by an administrator (status suspended); not counted in the other lifecycle counts.'
           type: integer
           minimum: 0
+    AdminPasskeyChallenge:
+      type: object
+      additionalProperties: false
+      required: [challengeId, optionsJSON]
+      properties:
+        challengeId: { type: string, format: uuid }
+        optionsJSON:
+          type: object
+          additionalProperties: true
+          description: 'WebAuthn options JSON produced by @simplewebauthn/server for @simplewebauthn/browser.'
+    AdminPasskeyAssertion:
+      type: object
+      additionalProperties: false
+      required: [challengeId, credential]
+      properties:
+        challengeId: { type: string, format: uuid }
+        credential:
+          type: object
+          additionalProperties: true
+          description: 'AuthenticationResponseJSON from @simplewebauthn/browser; verified server-side by the library.'
+    AdminRecoveryCodeSubmission:
+      type: object
+      additionalProperties: false
+      required: [recoveryCode]
+      properties:
+        recoveryCode: { type: string, minLength: 8, maxLength: 32, pattern: '^[A-Za-z0-9-]+$' }
+    AdminReauthentication:
+      type: object
+      additionalProperties: false
+      required: [method]
+      description: 'passkey requires challengeId and credential; password_totp requires password and code (400 VALIDATION_ERROR otherwise).'
+      properties:
+        method: { type: string, enum: [passkey, password_totp] }
+        challengeId: { type: string, format: uuid }
+        credential: { type: object, additionalProperties: true }
+        password: { type: string, minLength: 1, maxLength: 256 }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    AdminReauthenticationResult:
+      type: object
+      additionalProperties: false
+      required: [reauthenticatedUntil]
+      properties:
+        reauthenticatedUntil: { type: string, format: date-time }
+    AdminPasskey:
+      type: object
+      additionalProperties: false
+      required: [id, name, createdAt, lastUsedAt, backedUp]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: [string, 'null'], format: date-time }
+        backedUp: { type: boolean, description: 'Synced (multi-device) credential.' }
+    AdminPasskeyRegistration:
+      type: object
+      additionalProperties: false
+      required: [challengeId, name, credential]
+      properties:
+        challengeId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 60, pattern: '\S' }
+        credential:
+          type: object
+          additionalProperties: true
+          description: 'RegistrationResponseJSON from @simplewebauthn/browser.'
+    AdminSecurity:
+      type: object
+      additionalProperties: false
+      required: [totpEnrolled, passkeys, recoveryCodesRemaining, reauthenticatedUntil]
+      properties:
+        totpEnrolled: { type: boolean }
+        passkeys: { type: array, items: { $ref: '#/components/schemas/AdminPasskey' } }
+        recoveryCodesRemaining: { type: integer, minimum: 0 }
+        reauthenticatedUntil: { type: [string, 'null'], format: date-time }
+    AdminRecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { type: string }
+          description: 'Shown once; never retrievable again.'
+    AdminPlanActivation:
+      type: object
+      additionalProperties: false
+      required: [planCode, cycle, startsOn, endsOn, settlement, reason]
+      description: 'confirmed_payment requires paymentMethod and receivedReference; complimentary forbids them.'
+      properties:
+        planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
+        cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
+        startsOn: { type: string, format: date, description: 'Inclusive; today or later, not before the trial start.' }
+        endsOn: { type: string, format: date, description: 'Exclusive; after startsOn, at most 3 years later.' }
+        settlement: { type: string, enum: [confirmed_payment, complimentary] }
+        paymentMethod: { type: string, minLength: 1, maxLength: 40, pattern: '^[a-z0-9_]+$' }
+        receivedReference: { type: string, minLength: 1, maxLength: 120 }
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }

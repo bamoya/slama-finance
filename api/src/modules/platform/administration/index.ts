@@ -9,12 +9,17 @@ import { createAuditRepository } from './audit/repositories/audit.repository.js'
 import { registerAdminAuditRoutes } from './audit/routes/admin-audit.routes.js'
 import { createAdminAuditService } from './audit/services/admin-audit.service.js'
 import { createAdminAuthController } from './auth/controllers/admin-auth.controller.js'
+import { createAdminSecurityController } from './auth/controllers/admin-security.controller.js'
 import { createAdminAccountRepository } from './auth/repositories/admin-account.repository.js'
+import { createAdminCredentialRepository } from './auth/repositories/admin-credential.repository.js'
 import {
+  registerAdminSecurityRoutes,
   registerAdminSessionRoutes,
   registerAdminSignInRoutes,
 } from './auth/routes/admin-auth.routes.js'
 import { createAdminAuthService } from './auth/services/admin-auth.service.js'
+import { createAdminSecurityService } from './auth/services/admin-security.service.js'
+import { createAdminWebAuthn } from './auth/services/admin-webauthn.service.js'
 import { createBillingSettingsController } from './billing/controllers/billing-settings.controller.js'
 import { createBillingSettingsRepository } from './billing/repositories/billing-settings.repository.js'
 import { registerBillingSettingsRoutes } from './billing/routes/billing-settings.routes.js'
@@ -58,6 +63,8 @@ export function createAdministrationModule(options: {
   secure: boolean
   portalOrigin?: string
   totpKey?: Buffer
+  /** Passkey relying party (server configuration, never request headers). */
+  webauthn: { rpId: string; origin: string }
   clock?: () => Date
   /** Owner account emails (customer invitations); links point at portalOrigin. */
   ownerDelivery?: OwnerAccountDelivery
@@ -65,14 +72,32 @@ export function createAdministrationModule(options: {
   timezoneWritable?: () => void
 }) {
   const { withAdmin, accounts, audit } = createAdministrationServices(options.database)
-  const authService = createAdminAuthService(accounts, audit, withAdmin, createPasswordService(), {
+  const credentials = createAdminCredentialRepository()
+  const webauthn = createAdminWebAuthn({ ...options.webauthn, rpName: 'B-Finance Administration' })
+  const passwords = createPasswordService()
+  const authService = createAdminAuthService(accounts, audit, withAdmin, passwords, {
     totpKey: options.totpKey,
     clock: options.clock,
+    credentials,
+    webauthn,
   })
   const auth = createAdminAuthController(authService, options.secure)
+  const securityController = createAdminSecurityController(
+    createAdminSecurityService({
+      repo: accounts,
+      credentials,
+      audit,
+      withAdmin,
+      passwords,
+      webauthn,
+      totpKey: options.totpKey,
+      clock: options.clock,
+    }),
+    auth.currentAdmin,
+  )
   const payments = createAdminPaymentRepository()
   const paymentsController = createAdminPaymentsController(
-    createAdminPaymentsService(payments, audit, withAdmin, options.billing, authService.stepUp),
+    createAdminPaymentsService(payments, audit, withAdmin, options.billing),
     auth.currentAdmin,
   )
   const customers = createAdminCustomersService(
@@ -90,7 +115,6 @@ export function createAdministrationModule(options: {
       audit,
       withAdmin,
       billing: options.billing.lifecycle,
-      stepUp: authService.stepUp,
       detail: customers.detail,
       delivery: options.ownerDelivery,
       portalOrigin: options.portalOrigin,
@@ -107,7 +131,6 @@ export function createAdministrationModule(options: {
       repo: createOverrideRepository(),
       audit,
       withAdmin,
-      stepUp: authService.stepUp,
       writable: options.timezoneWritable,
     }),
     auth.currentAdmin,
@@ -127,6 +150,7 @@ export function createAdministrationModule(options: {
     await app.register(async (scope) => {
       scope.addHook('preHandler', auth.requireAdmin)
       registerAdminSessionRoutes(scope, auth)
+      registerAdminSecurityRoutes(scope, securityController)
       registerAdminOverviewRoutes(scope, overviewController)
       registerAdminPaymentsRoutes(scope, paymentsController)
       registerAdminCustomersRoutes(scope, customersController)

@@ -15,6 +15,7 @@ export function registerCustomerLifecycleRoutes(
   app.post('/owners/:ownerId/subscription/suspend', controller.suspendSubscription)
   app.post('/owners/:ownerId/subscription/resume', controller.resumeSubscription)
   app.post('/owners/:ownerId/subscription/plan', controller.changePlan)
+  app.post('/owners/:ownerId/subscription/activation', controller.activate)
   app.post('/owners/:ownerId/subscription/extension', controller.extend)
   app.post('/organizations/:organizationId/suspend', controller.suspendOrganization)
   app.post('/organizations/:organizationId/reactivate', controller.reactivateOrganization)

@@ -85,15 +85,11 @@ describe('new customer', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Paid plan/ }))
     fillIdentity()
     fill('Reason (internal)', 'Annual deal')
-    fireEvent.click(screen.getByRole('button', { name: 'Create customer' }))
-    expect(created()).toHaveLength(0)
-    expect(screen.getByLabelText('Authenticator code')).toHaveAttribute('aria-invalid', 'true')
-    fill('Authenticator code', '123456')
+    expect(screen.queryByLabelText('Authenticator code')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Create customer' }))
     await waitFor(() => expect(created()).toHaveLength(1))
     const start = todayIso()
     expect(created()[0]?.data).toMatchObject({
-      code: '123456',
       subscription: {
         kind: 'paid',
         planCode: 'essential',
@@ -102,23 +98,19 @@ describe('new customer', () => {
         coverageEnd: localMidnight(coverageEnd(start, 'monthly')),
       },
     })
+    expect(created()[0]?.data).not.toHaveProperty('code')
   })
 
-  it('clears the paid code after a failure and when switching to trial', async () => {
-    setup(apiError(403, 'TWO_FACTOR_INVALID'))
+  it('keeps the paid form filled after a refused creation', async () => {
+    setup(apiError(409, 'EMAIL_TAKEN'))
     await screen.findByRole('button', { name: 'Create customer' })
     fireEvent.click(screen.getByRole('radio', { name: /Paid plan/ }))
     fillIdentity()
     fill('Reason (internal)', 'Sales call')
-    fill('Authenticator code', '123456')
     fireEvent.click(screen.getByRole('button', { name: 'Create customer' }))
-    await screen.findByText('server TWO_FACTOR_INVALID')
-    expect(screen.getByLabelText('Authenticator code')).toHaveValue('')
-    fill('Authenticator code', '654321')
-    fireEvent.click(screen.getByRole('radio', { name: /Free trial/ }))
+    await screen.findByText('server EMAIL_TAKEN')
+    expect(screen.getByLabelText('Reason (internal)')).toHaveValue('Sales call')
     expect(screen.queryByLabelText('Authenticator code')).toBeNull()
-    fireEvent.click(screen.getByRole('radio', { name: /Paid plan/ }))
-    expect(screen.getByLabelText('Authenticator code')).toHaveValue('')
   })
 
   it('shows the server error when the email is already used', async () => {

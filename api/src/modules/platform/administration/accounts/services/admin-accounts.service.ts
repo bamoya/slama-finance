@@ -91,7 +91,7 @@ export function createAdminAccountsService(
         const now = new Date()
         const after = (await repo.updateAdmin(
           admin.id,
-          { totpSecret: null, totpEnrolledAt: null, totpLastStep: null },
+          { totpSecret: null, pendingTotpSecret: null, totpEnrolledAt: null, totpLastStep: null },
           tx,
         ))!
         await repo.revokeAll(admin.id, now, tx)

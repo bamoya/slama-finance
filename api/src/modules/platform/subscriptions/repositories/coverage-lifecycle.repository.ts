@@ -9,8 +9,9 @@ export type CoverageReads = 'legacy' | 'periods'
  *
  * legacy mirrors resolveCoverage (services/coverage.ts): an administrator suspension wins; coverage
  * = confirmed payments; active = a period contains `at`; without coverage the owner is in trial until
- * trial_ends_at, then expired; with coverage but none current the grace is 7 days after the latest
- * period end (none when cancelling), then expired.
+ * trial_ends_at, then expired (also when coverage exists but has not started yet); with coverage but none current the grace is 7 days after the latest
+ * period end (none when cancelling or when the latest payment is a graceless complimentary
+ * activation), then expired.
  *
  * periods mirrors resolvePeriods (services/period-resolver.service.ts): an open suspension wins;
  * coverage = non-trial periods ending at their supersession; the trial window is the trial period;
@@ -28,8 +29,9 @@ function legacyLifecycle(at: SQL) {
              when s.suspended_at is not null then 'suspended'
              when c.owner_id is null then
                case when ${at} >= s.trial_ends_at then 'expired' else 'trial' end
+             when not c.started and ${at} >= s.trial_ends_at then 'expired'
              when c.is_current then 'active'
-             when ${at} >= (case when s.cancel_at_period_end then c.paid_through
+             when ${at} >= (case when s.cancel_at_period_end or c.last_graceless then c.paid_through
                                  else c.paid_through + interval '7 days' end) then 'expired'
              else 'past_due'
            end as status
@@ -37,7 +39,10 @@ function legacyLifecycle(at: SQL) {
     left join (
       select owner_id,
              bool_or(coverage_start <= ${at} and ${at} < coverage_end) as is_current,
-             max(coverage_end) as paid_through
+             bool_or(coverage_start <= ${at}) as started,
+             max(coverage_end) as paid_through,
+             (array_agg(graceless order by coverage_end desc, coverage_start desc, decided_at desc))[1]
+               as last_graceless
       from subscription_payments
       where status = 'confirmed'
       group by owner_id
@@ -53,6 +58,7 @@ function periodsLifecycle(at: SQL) {
              when t.owner_id is null then 'expired'
              when c.owner_id is null then
                case when ${at} >= t.ends_at then 'expired' else 'trial' end
+             when not c.started and ${at} >= t.ends_at then 'expired'
              when c.is_current then 'active'
              when ${at} >= (case when c.last_kind = 'complimentary' or exists (
                                    select 1 from subscription_scheduled_changes x
@@ -67,6 +73,7 @@ function periodsLifecycle(at: SQL) {
     left join (
       select owner_id,
              bool_or(starts_at <= ${at} and ${at} < coalesce(superseded_at, ends_at)) as is_current,
+             bool_or(starts_at <= ${at}) as started,
              max(coalesce(superseded_at, ends_at)) as paid_through,
              (array_agg(kind order by coalesce(superseded_at, ends_at) desc, starts_at desc))[1] as last_kind
       from subscription_periods

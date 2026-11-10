@@ -16,6 +16,32 @@ paths:
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1login
   '/api/v1/admin/auth/2fa':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~12fa
+  '/api/v1/admin/auth/passkey/options':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1passkey~1options
+  '/api/v1/admin/auth/passkey':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1passkey
+  '/api/v1/admin/auth/recovery':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1recovery
+  '/api/v1/admin/auth/reauthentication/options':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1reauthentication~1options
+  '/api/v1/admin/auth/reauthentication':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1reauthentication
+  '/api/v1/admin/security':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security
+  '/api/v1/admin/security/passkeys/options':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1passkeys~1options
+  '/api/v1/admin/security/passkeys':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1passkeys
+  '/api/v1/admin/security/passkeys/{passkeyId}':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1passkeys~1{passkeyId}
+  '/api/v1/admin/security/recovery-codes':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1recovery-codes
+  '/api/v1/admin/security/totp':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1totp
+  '/api/v1/admin/security/totp/confirm':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1security~1totp~1confirm
+  '/api/v1/admin/owners/{ownerId}/subscription/activation':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1owners~1{ownerId}~1subscription~1activation
   '/api/v1/admin/auth/logout':
     $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1auth~1logout
   '/api/v1/admin/auth/me':
@@ -896,6 +922,26 @@ components:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminEntitlementOverrideCreate
     AdminOverrideRevocation:
       $ref: ./modules/administration/administration.yaml#/components/schemas/AdminOverrideRevocation
+    AdminPasskeyChallenge:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPasskeyChallenge
+    AdminPasskeyAssertion:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPasskeyAssertion
+    AdminRecoveryCodeSubmission:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminRecoveryCodeSubmission
+    AdminReauthentication:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminReauthentication
+    AdminReauthenticationResult:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminReauthenticationResult
+    AdminPasskey:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPasskey
+    AdminPasskeyRegistration:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPasskeyRegistration
+    AdminSecurity:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminSecurity
+    AdminRecoveryCodes:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminRecoveryCodes
+    AdminPlanActivation:
+      $ref: ./modules/administration/administration.yaml#/components/schemas/AdminPlanActivation
     EntitlementKey:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/EntitlementKey
     EntitlementSource:

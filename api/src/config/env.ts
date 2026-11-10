@@ -62,6 +62,19 @@ const environmentSchema = z
         )
         .optional(),
     ),
+    // Administrator passkeys. Defaults derive from PLATFORM_DOMAIN/SCHEME (admin.<domain>); never
+    // from request headers. Override only when the admin site is served elsewhere.
+    ADMIN_WEBAUTHN_RP_ID: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .regex(/^[a-z0-9.-]+$/, 'Use a bare lowercase host name without port')
+        .optional(),
+    ),
+    ADMIN_WEBAUTHN_ORIGIN: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().url().optional(),
+    ),
     MEDIA_ASSET_DIR: z.string().default('.local/media'),
     S3_ENDPOINT: z.string().url().optional().or(z.literal('')),
     S3_REGION: z.string().default('us-ashburn-1'),
@@ -194,6 +207,26 @@ const environmentSchema = z
         path: ['DATABASE_URL'],
         message: 'Required in production',
       })
+    // An invalid PLATFORM_DOMAIN is reported by its own rule.
+    const parsed = adminWebAuthn(env)
+    const webauthn = URL.canParse(parsed.origin) ? parsed : null
+    const adminHost = webauthn && new URL(webauthn.origin).hostname
+    if (webauthn && adminHost !== webauthn.rpId && !adminHost!.endsWith(`.${webauthn.rpId}`))
+      context.addIssue({
+        code: 'custom',
+        path: ['ADMIN_WEBAUTHN_RP_ID'],
+        message: 'The RP ID must be the admin origin host or one of its parent domains',
+      })
+    if (
+      webauthn &&
+      env.NODE_ENV === 'production' &&
+      (!webauthn.origin.startsWith('https://') || /(^|\.)localhost$/.test(webauthn.rpId))
+    )
+      context.addIssue({
+        code: 'custom',
+        path: ['ADMIN_WEBAUTHN_ORIGIN'],
+        message: 'HTTPS and a public RP ID are required in production',
+      })
     if (env.NODE_ENV === 'production' && env.PLATFORM_SCHEME !== 'https')
       context.addIssue({
         code: 'custom',
@@ -203,6 +236,24 @@ const environmentSchema = z
   })
 
 export type Environment = z.infer<typeof environmentSchema>
+
+/** Effective administrator WebAuthn relying party: explicit settings or the admin. site. */
+export function adminWebAuthn(env: {
+  PLATFORM_DOMAIN: string
+  PLATFORM_SCHEME: 'http' | 'https'
+  ADMIN_WEBAUTHN_RP_ID?: string
+  ADMIN_WEBAUTHN_ORIGIN?: string
+}) {
+  const origin = (
+    env.ADMIN_WEBAUTHN_ORIGIN ?? `${env.PLATFORM_SCHEME}://admin.${env.PLATFORM_DOMAIN}`
+  )
+    .toLowerCase()
+    .replace(/\/$/, '')
+  return {
+    origin,
+    rpId: env.ADMIN_WEBAUTHN_RP_ID ?? (URL.canParse(origin) ? new URL(origin).hostname : ''),
+  }
+}
 export function loadEnvironment(input: NodeJS.ProcessEnv = process.env): Environment {
   const result = environmentSchema.safeParse(input)
   if (!result.success) {

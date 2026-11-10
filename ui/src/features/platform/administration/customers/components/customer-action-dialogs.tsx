@@ -23,6 +23,7 @@ import { formatSlug } from '../../../../../lib/organization-slug'
 import { organizationAddress, organizationOrigin } from '../../../../../lib/platform-sites'
 import { planLabel } from '../../../subscriptions/components/billing-format'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
+import { ActivatePlanDialog } from './activate-plan-dialog'
 import type { CustomerAction } from './customer-action'
 import { type ActionInput, CustomerActionDialog } from './customer-action-dialog'
 
@@ -145,9 +146,10 @@ export function CustomerActionDialogs({
     await call(input)
     await refresh()
   }
-  const sensitive = ({ reason, code }: ActionInput) => ({ reason, code })
   const reasonOnly = ({ reason }: ActionInput) => ({ reason })
   switch (action.kind) {
+    case 'activate-plan':
+      return <ActivatePlanDialog detail={detail} onClose={onClose} />
     case 'change-plan':
       return (
         <CustomerActionDialog
@@ -158,12 +160,11 @@ export function CustomerActionDialogs({
             translate('No payment is requested. A 0 DH adjustment is added to the history.'),
             translate('Downgrading never deletes data.'),
           ]}
-          sensitive
           submitLabel={translate('Change plan')}
           fields={<PlanChangeFields current={currentPlan} value={plan} onChange={setPlan} />}
           onClose={onClose}
           onSubmit={run((input) =>
-            changeAdminSubscriptionPlan(ownerId, { planCode: plan, ...sensitive(input) }),
+            changeAdminSubscriptionPlan(ownerId, { planCode: plan, ...reasonOnly(input) }),
           )}
         />
       )
@@ -179,13 +180,12 @@ export function CustomerActionDialogs({
             translate('The coverage end date moves forward by the number of days entered.'),
             translate('A 0 DH adjustment is added to the payment history.'),
           ]}
-          sensitive
           submitLabel={translate('Extend coverage')}
           fields={<ExtensionFields days={days} onChange={setDays} />}
           fieldsReady={valid}
           onClose={onClose}
           onSubmit={run((input) =>
-            extendAdminSubscription(ownerId, { days: Number(days), ...sensitive(input) }),
+            extendAdminSubscription(ownerId, { days: Number(days), ...reasonOnly(input) }),
           )}
         />
       )
@@ -200,11 +200,10 @@ export function CustomerActionDialogs({
             translate('The coverage clock is frozen until the subscription is resumed.'),
             translate('The customer is not told the reason.'),
           ]}
-          sensitive
           destructive
           submitLabel={translate('Suspend subscription')}
           onClose={onClose}
-          onSubmit={run((input) => suspendAdminSubscription(ownerId, sensitive(input)))}
+          onSubmit={run((input) => suspendAdminSubscription(ownerId, reasonOnly(input)))}
         />
       )
     case 'resume-subscription':
@@ -216,10 +215,9 @@ export function CustomerActionDialogs({
             translate('Access is restored.'),
             translate('Remaining paid or trial time is shifted by the suspended duration.'),
           ]}
-          sensitive
           submitLabel={translate('Resume subscription')}
           onClose={onClose}
-          onSubmit={run((input) => resumeAdminSubscription(ownerId, sensitive(input)))}
+          onSubmit={run((input) => resumeAdminSubscription(ownerId, reasonOnly(input)))}
         />
       )
     case 'block':
@@ -234,11 +232,10 @@ export function CustomerActionDialogs({
             translate('All sessions of the customer and their staff are closed.'),
             translate('A payment never lifts the block: only unblocking does.'),
           ]}
-          sensitive
           destructive
           submitLabel={translate('Block customer')}
           onClose={onClose}
-          onSubmit={run((input) => blockAdminOwner(ownerId, sensitive(input)))}
+          onSubmit={run((input) => blockAdminOwner(ownerId, reasonOnly(input)))}
         />
       )
     case 'unblock':
@@ -250,10 +247,9 @@ export function CustomerActionDialogs({
             translate('The customer and their staff can sign in again.'),
             translate('Other restrictions (scheduled deletion, suspensions) remain.'),
           ]}
-          sensitive
           submitLabel={translate('Unblock customer')}
           onClose={onClose}
-          onSubmit={run((input) => unblockAdminOwner(ownerId, sensitive(input)))}
+          onSubmit={run((input) => unblockAdminOwner(ownerId, reasonOnly(input)))}
         />
       )
     case 'resend-invitation':
@@ -283,12 +279,11 @@ export function CustomerActionDialogs({
             translate('Deletion is scheduled 30 days from now and can be cancelled until then.'),
             translate('Permanent removal of data is not automatic yet.'),
           ]}
-          sensitive
           destructive
           confirmEmail={email}
           submitLabel={translate('Delete customer')}
           onClose={onClose}
-          onSubmit={run((input) => scheduleAdminOwnerDeletion(ownerId, sensitive(input)))}
+          onSubmit={run((input) => scheduleAdminOwnerDeletion(ownerId, reasonOnly(input)))}
         />
       )
     case 'cancel-deletion':
@@ -299,10 +294,9 @@ export function CustomerActionDialogs({
           impacts={[
             translate('The previous state is restored, including any outstanding restriction.'),
           ]}
-          sensitive
           submitLabel={translate('Cancel deletion')}
           onClose={onClose}
-          onSubmit={run((input) => cancelAdminOwnerDeletion(ownerId, sensitive(input)))}
+          onSubmit={run((input) => cancelAdminOwnerDeletion(ownerId, reasonOnly(input)))}
         />
       )
     case 'change-address':
@@ -315,7 +309,6 @@ export function CustomerActionDialogs({
             translate('The former address keeps redirecting to the new one.'),
             translate('All sessions of this organization are closed: staff sign in again.'),
           ]}
-          sensitive
           submitLabel={translate('Change address')}
           fields={
             <AddressChangeFields
@@ -330,7 +323,6 @@ export function CustomerActionDialogs({
             renameAdminOrganizationSlug(action.organization.id, {
               slug: address,
               reason: input.reason,
-              code: input.code,
             }),
           )}
         />
@@ -345,12 +337,11 @@ export function CustomerActionDialogs({
             translate('Background workers of this organization stop.'),
             translate('Only an administrator can reactivate it.'),
           ]}
-          sensitive
           destructive
           submitLabel={translate('Suspend organization')}
           onClose={onClose}
           onSubmit={run((input) =>
-            suspendAdminOrganization(action.organization.id, sensitive(input)),
+            suspendAdminOrganization(action.organization.id, reasonOnly(input)),
           )}
         />
       )
@@ -360,11 +351,10 @@ export function CustomerActionDialogs({
           title={translate('Reactivate organization')}
           description={action.organization.name}
           impacts={[translate('Users of this organization can sign in again.')]}
-          sensitive
           submitLabel={translate('Reactivate organization')}
           onClose={onClose}
           onSubmit={run((input) =>
-            reactivateAdminOrganization(action.organization.id, sensitive(input)),
+            reactivateAdminOrganization(action.organization.id, reasonOnly(input)),
           )}
         />
       )

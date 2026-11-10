@@ -73,7 +73,6 @@ export function CreateOverrideDialog({
             ]
           : []),
       ]}
-      sensitive
       submitLabel={translate(replaces ? 'Amend override' : 'Add override')}
       fieldsReady={valueValid && windowValid}
       fields={
@@ -165,7 +164,7 @@ export function CreateOverrideDialog({
         </div>
       }
       onClose={onClose}
-      onSubmit={async ({ reason, code }) => {
+      onSubmit={async ({ reason }) => {
         await create.mutateAsync({
           ownerId,
           data: {
@@ -178,7 +177,6 @@ export function CreateOverrideDialog({
             endsOn: end || null,
             replacesId: replaces?.id ?? null,
             reason,
-            code,
           },
         })
         await refresh()
@@ -207,7 +205,6 @@ export function RevokeOverrideDialog({
         translate('The plan value applies again from now on.'),
         translate('The record stays in the history and the audit log.'),
       ]}
-      sensitive
       destructive
       submitLabel={translate('Revoke override')}
       onClose={onClose}

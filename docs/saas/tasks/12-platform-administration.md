@@ -35,15 +35,19 @@ Status: in progress.
 
 **Implemented** (commits `2ab9ff1`, `93d14c0`, `172db8b`, `c46f5a2`, `f575084`, `a055019`, `fd0f6bd`):
 
-- Administrator realm separate from owner and staff identities; mandatory TOTP 2FA (`api/src/lib/totp.ts`,
-  `ADMIN_TOTP_KEY`); sessions last 8 hours with a 30-minute idle timeout.
+- Administrator realm separate from owner and staff identities; verified passkey login with device user
+  verification and password + TOTP fallback. Sessions last 8 hours with a 30-minute idle timeout.
 - Admin API: `api/src/modules/platform/administration/` (routes, controllers, services, repositories),
   with domain splits for auth, customers, payments, billing settings, audit and overview counts.
 - Payments: confirm and reject with a reason. Billing settings and overview counts are exposed.
 - Customers: list with status filter, detail view, customer lifecycle actions (block owner, suspend
   organization, subscription suspend/resume, scheduled deletion with a 30-day grace and cancellation that
   restores the previous state), and create customer with a set-password invitation.
-- Step-up: sensitive actions require a fresh TOTP code and a reason; reasons are internal-only.
+- Routine actions use session authorization, internal audit reasons and confirmations without fresh TOTP.
+  Reauthentication protects security changes. Multiple named passkeys and single-use recovery codes are
+  implemented; see the [approved security flows and verification](../../implementation/admin-security.md).
+- Trial customers can activate a plan with explicit coverage and confirmed payment or complimentary access;
+  paid customers retain Change plan within their existing coverage dates.
 - Audit: append-only administrative audit log with actor and before/after context.
 - UI: `/admin` portal with sign-in and 2FA enrollment, overview, customers, payments and billing settings,
   built on shared portal shell and table/dialog components.
@@ -56,7 +60,9 @@ Status: in progress.
 - `api/tests/platform-administration.integration.test.ts`
 - `api/tests/customer-lifecycle.integration.test.ts`
 - `api/tests/totp.test.ts`
-- Results are not recorded in the repository; run `pnpm check` and `pnpm test:integration` to confirm.
+- New security coverage: `api/tests/admin-security.integration.test.ts` and admin UI security/activation tests.
+- Final 2026-11-10 gates: `pnpm check` passed; isolated integration 412 passed / 1 opt-in skip. Physical
+  authenticator/browser testing remains unrun. See the linked implementation record for evidence and limits.
 
 **Open items:**
 

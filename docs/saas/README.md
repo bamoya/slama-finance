@@ -13,6 +13,14 @@ The existing application remains a single-company system. Read this alongside
 [the current architecture](../architecture.md) and [the existing database design](../database-schema-design.md).
 Where those describe single-company behavior, this document defines the agreed SaaS target.
 
+Approved admin amendment, 2026-11-10: trial customers can activate a plan with explicit coverage and confirmed
+payment or complimentary access; paid Change plan preserves coverage dates. Routine admin actions keep
+authorization, internal audit reasons and confirmations without fresh TOTP. Admin login supports device-verified
+passkeys without additional TOTP, with password + TOTP as the initial fallback. Multiple named passkeys and
+single-use recovery codes are supported; credential changes, passkey additions/removals and recovery require
+reauthentication. Session limits remain 30-minute idle and 8-hour absolute. This supersedes older admin step-up
+rules; see [the approved implementation and verification](../implementation/admin-security.md).
+
 ## 1. Product and repository scope
 
 Evolve the current application into a SaaS while retaining its finance features and existing data.

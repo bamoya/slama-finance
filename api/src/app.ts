@@ -5,7 +5,7 @@ import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import Fastify, { type FastifyServerOptions, LogController } from 'fastify'
 
-import { type Environment, loadEnvironment } from './config/env.js'
+import { adminWebAuthn, type Environment, loadEnvironment } from './config/env.js'
 import type {
   EmailProvider,
   ObjectStorage,
@@ -337,6 +337,7 @@ export async function buildApp(options: AppOptions = {}) {
     secure: sites.secureCookies,
     portalOrigin: sites.origins.owner,
     totpKey: env.ADMIN_TOTP_KEY ? Buffer.from(env.ADMIN_TOTP_KEY, 'base64') : undefined,
+    webauthn: adminWebAuthn(env),
     ownerDelivery: ownerAccountDelivery,
     timezoneWritable: subscriptions.timezone.assertWritable,
   }).registerRoutes(app)

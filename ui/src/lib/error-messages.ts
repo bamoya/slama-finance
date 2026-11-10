@@ -78,6 +78,20 @@ export function errorMessage(error: unknown): string {
       INVALID_COVERAGE:
         'Dates de couverture invalides : le début ne doit pas être dans le futur et la fin doit être dans le futur.',
       INVALID_PLAN: 'Cette offre n’est pas disponible.',
+      REAUTHENTICATION_REQUIRED:
+        'Confirmez à nouveau votre identité pour effectuer cette modification.',
+      REAUTHENTICATION_FAILED:
+        'Confirmation refusée. Vérifiez votre mot de passe, votre code ou votre clé d’accès.',
+      PASSKEY_INVALID: 'Cette clé d’accès n’a pas pu être vérifiée. Réessayez.',
+      PASSKEY_EXISTS: 'Cette clé d’accès est déjà enregistrée.',
+      PASSKEY_LIMIT: 'Le nombre maximal de clés d’accès est atteint. Supprimez-en une.',
+      TOTP_NOT_PENDING: 'Aucun remplacement en cours. Recommencez depuis la page Sécurité.',
+      COVERAGE_INVALID:
+        'Dates de couverture invalides : le début ne doit pas être passé et la fin doit le suivre (3 ans maximum).',
+      PAYMENT_DETAILS_REQUIRED: 'Indiquez le moyen de paiement et la référence reçue.',
+      PAYMENT_DETAILS_UNEXPECTED: 'Un accès offert ne comporte pas de détails de paiement.',
+      SUBSCRIPTION_NOT_TRIAL:
+        'Seul un client en essai sans couverture peut activer une offre. Utilisez « Changer d’offre ».',
       INVITATION_DELIVERY_FAILED:
         'Le client a été créé mais l’e-mail d’invitation n’a pas pu être envoyé. Renvoyez l’invitation.',
     }

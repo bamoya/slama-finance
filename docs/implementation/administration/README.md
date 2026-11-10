@@ -7,6 +7,7 @@ Operator guide for SaaS administrator accounts served under `/admin`. Task recor
 
 - `MIGRATION_DATABASE_URL` must be set; the administrator CLI uses it.
 - `ADMIN_TOTP_KEY` must be set in the API environment: 32 random bytes, base64 (`openssl rand -base64 32`).
+- Passkeys use the relying party `admin.<PLATFORM_DOMAIN>` and origin `<PLATFORM_SCHEME>://admin.<PLATFORM_DOMAIN>` by default. `ADMIN_WEBAUTHN_RP_ID` (bare host, the admin host or a parent domain) and `ADMIN_WEBAUTHN_ORIGIN` override them; production refuses non-HTTPS origins and `localhost` RP IDs. Changing the RP ID invalidates every registered passkey. The same `ADMIN_TOTP_KEY` keys recovery-code hashes (HKDF-derived), so rotating it invalidates recovery codes. See `../admin-security.md`.
   Admin sign-in returns 503 without it. It encrypts administrator TOTP secrets, so keep it stable and backed up.
   Secrets encrypted with one key cannot be read with another.
 
@@ -21,8 +22,9 @@ prompt (entered twice, not echoed).
 
 ## Enroll two-factor authentication
 
-Sign in at `/admin/login` with the email and password. Two-factor authentication (TOTP) is mandatory, so
-enrollment is completed at first sign-in.
+Initial sign-in at `/admin/login` uses the email, password and TOTP enrollment. Password plus TOTP remains
+the fallback. After registering a passkey on the Security page, a verified passkey signs in directly with
+device user verification and no additional TOTP challenge. Multiple named passkeys are supported.
 
 ## Other commands
 
@@ -31,17 +33,20 @@ pnpm --filter ./api admin:reset-2fa --email <email>
 pnpm --filter ./api admin:disable --email <email>
 ```
 
-- `admin:reset-2fa` clears the administrator's 2FA enrollment so they enroll again at the next sign-in.
+- `admin:reset-2fa` clears TOTP enrollment; the next password sign-in enrolls again. Retained passkeys remain usable.
 - `admin:disable` disables the administrator account.
 
 ## Sessions
 
 Administrator sessions last 8 hours and expire after 30 minutes of inactivity.
 
-## Sensitive actions
+## Routine actions and security changes
 
-Payment confirmation and rejection, and customer lifecycle actions (block, suspend, deletion) require a fresh
-2FA code and a reason. Reasons are internal-only: they are never shown to owners, staff or tenant pages.
+Routine subscription changes, payment decisions and customer/organization management require the authorized
+admin session, an audit reason and UI confirmation, without fresh TOTP. Reasons are internal-only.
+Credential changes, passkey addition/removal and recovery-code regeneration require reauthentication within
+five minutes. Recovery uses the pending password sign-in plus a single-use recovery code. Codes are shown
+once and securely hashed; regeneration invalidates the previous set. See [security flows](../admin-security.md).
 
 ## Not automated yet
 

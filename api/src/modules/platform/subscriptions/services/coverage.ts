@@ -2,7 +2,14 @@ export const GRACE_MS = 7 * 86_400_000
 export const RETENTION_MS = 90 * 86_400_000
 
 export type Cycle = 'monthly' | 'annual'
-export type Coverage = { planCode: string; cycle: Cycle | null; start: Date; end: Date }
+export type Coverage = {
+  planCode: string
+  cycle: Cycle | null
+  start: Date
+  end: Date
+  /** Legacy provenance: complimentary trial activation, no grace when it is the latest coverage. */
+  graceless?: boolean
+}
 export type CoverageState = {
   status: 'not_started' | 'trial' | 'active' | 'past_due' | 'expired' | 'suspended'
   planCode: string
@@ -77,7 +84,9 @@ function resolveRunning(
       retentionEndsAt: null,
       nextPlanCode: next && next.planCode !== current.planCode ? next.planCode : null,
     }
-  if (!paidThroughAt) {
+  // Not-yet-started coverage never bridges the gap after the trial (same rule as the period resolver).
+  const started = coverage.some((c) => c.start.getTime() <= t)
+  if (!paidThroughAt || (!started && t >= subscription.trialEndsAt.getTime())) {
     const blocked = t >= subscription.trialEndsAt.getTime() ? subscription.trialEndsAt : null
     return {
       ...empty,
@@ -88,9 +97,10 @@ function resolveRunning(
     }
   }
   const last = coverage.reduce((a, b) => (b.end.getTime() >= a.end.getTime() ? b : a))
-  const graceEndsAt = subscription.cancelAtPeriodEnd
-    ? null
-    : new Date(paidThroughAt.getTime() + GRACE_MS)
+  const graceEndsAt =
+    subscription.cancelAtPeriodEnd || last.graceless
+      ? null
+      : new Date(paidThroughAt.getTime() + GRACE_MS)
   const blockedAt = graceEndsAt ?? paidThroughAt
   const expired = t >= blockedAt.getTime()
   return {

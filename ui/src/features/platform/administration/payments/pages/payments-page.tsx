@@ -177,17 +177,17 @@ export function AdminPaymentsPage() {
           payment={active.payment}
           decision={active.decision}
           onClose={() => setActive(null)}
-          onConfirm={async (receivedReference, auditReason, code) => {
+          onConfirm={async (receivedReference, auditReason) => {
             await confirm.mutateAsync({
               paymentId: active.payment.id,
-              data: { code, auditReason, ...(receivedReference ? { receivedReference } : {}) },
+              data: { auditReason, ...(receivedReference ? { receivedReference } : {}) },
             })
             await refresh()
           }}
-          onReject={async (reason, auditReason, code) => {
+          onReject={async (reason, auditReason) => {
             await reject.mutateAsync({
               paymentId: active.payment.id,
-              data: { reason, auditReason, code },
+              data: { reason, auditReason },
             })
             await refresh()
           }}

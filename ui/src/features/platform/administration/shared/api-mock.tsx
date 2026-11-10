@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { Router, useLocation } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 
@@ -65,6 +65,11 @@ export function mockApi(handler: (key: string, data: unknown) => Reply | undefin
       headers: {},
     } as never
   })
+}
+/** Routine administrator actions carry no authenticator code: the session is the authorization. */
+export function expectNoFreshCode() {
+  for (const call of calls)
+    if (call.data && typeof call.data === 'object') expect(call.data).not.toHaveProperty('code')
 }
 function Location() {
   const [path] = useLocation()

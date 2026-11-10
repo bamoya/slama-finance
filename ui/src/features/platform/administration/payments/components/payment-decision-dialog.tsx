@@ -14,7 +14,6 @@ import { Label } from '../../../../../components/ui/label'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { formatDh } from '../../../subscriptions/components/billing-format'
-import { TwoFactorCodeField } from '../../shared/components/two-factor-code-field'
 
 export type Decision = 'confirm' | 'reject'
 
@@ -29,16 +28,11 @@ export function PaymentDecisionDialog({
   payment: AdminPayment
   decision: Decision
   onClose: () => void
-  onConfirm: (
-    receivedReference: string | undefined,
-    auditReason: string,
-    code: string,
-  ) => Promise<unknown>
-  onReject: (reason: string, auditReason: string, code: string) => Promise<unknown>
+  onConfirm: (receivedReference: string | undefined, auditReason: string) => Promise<unknown>
+  onReject: (reason: string, auditReason: string) => Promise<unknown>
 }) {
   useUiLanguage()
   const [value, setValue] = useState('')
-  const [code, setCode] = useState('')
   const [auditReason, setAuditReason] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [pending, setPending] = useState(false)
@@ -49,16 +43,15 @@ export function PaymentDecisionDialog({
     const text = value.trim()
     setAttempted(true)
     setMissing(reject && !text)
-    if ((reject && !text) || !auditReason.trim() || !/^\d{6}$/.test(code)) return
+    if ((reject && !text) || !auditReason.trim()) return
     setPending(true)
     setError(null)
     try {
-      if (reject) await onReject(text, auditReason.trim(), code)
-      else await onConfirm(text || undefined, auditReason.trim(), code)
+      if (reject) await onReject(text, auditReason.trim())
+      else await onConfirm(text || undefined, auditReason.trim())
       onClose()
     } catch (failure) {
       setError(failure)
-      setCode('')
       setAttempted(false)
     } finally {
       setPending(false)
@@ -149,12 +142,6 @@ export function PaymentDecisionDialog({
               </p>
             )}
           </div>
-          <TwoFactorCodeField
-            value={code}
-            onChange={setCode}
-            invalid={attempted && !/^\d{6}$/.test(code)}
-            disabled={pending}
-          />
           <FormError error={error} />
           <div className="flex flex-wrap justify-end gap-3">
             <Button type="button" variant="outline" disabled={pending} onClick={onClose}>

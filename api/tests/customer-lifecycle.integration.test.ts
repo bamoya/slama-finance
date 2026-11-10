@@ -90,14 +90,6 @@ describe('Customer lifecycle administration', () => {
     await fixture?.cleanup()
   })
 
-  /**
-   * Each code is accepted once and only for a newer time step; tests run faster than 30 s steps,
-   * so the replay marker is cleared before minting another code (replay itself is tested below).
-   */
-  async function freshCode() {
-    await fixture.client`update platform_admins set totp_last_step=null`
-    return totp(key, Date.now())
-  }
   const admin = (url: string, payload: object = {}, method: 'POST' | 'GET' = 'POST') =>
     app.inject({ method, url, headers, cookies: { slama_admin_session: cookie }, payload })
   const detail = async (id = testOwnerId) =>
@@ -153,27 +145,28 @@ describe('Customer lifecycle administration', () => {
     return visited.sort()
   }
 
-  it('blocks a customer with 2FA and a reason, and payment never lifts it', async () => {
+  it('blocks a customer with a reason, and payment never lifts it', async () => {
     const owner = await ownerCookie()
     const staff = await staffSession(testOrganizationId, 'staff-a@example.test')
     const url = `/api/v1/admin/owners/${testOwnerId}/block`
-    expect((await admin(url, { reason: secret })).statusCode).toBe(400)
-    expect((await admin(url, { code: await freshCode() })).statusCode).toBe(400)
-    const wrong = await admin(url, { reason: secret, code: '000000' })
-    expect(wrong.statusCode).toBe(403)
-    expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+    expect((await admin(url, {})).statusCode).toBe(400)
+    // Routine actions take no second factor: the strict contract rejects a code field.
+    expect((await admin(url, { reason: secret, code: '000000' })).statusCode).toBe(400)
+    const anonymous = await app.inject({
+      method: 'POST',
+      url,
+      headers,
+      payload: { reason: secret },
+    })
+    expect(anonymous.statusCode).toBe(401)
     expect(await audits('customer.block')).toHaveLength(0)
 
-    const code = await freshCode()
-    const blocked = await admin(url, { reason: secret, code })
+    const blocked = await admin(url, { reason: secret })
     expect(blocked.statusCode).toBe(200)
     expect(blocked.json().restriction).toMatchObject({ blockReason: secret })
     expect(blocked.json().restriction.blockedAt).toBeTruthy()
-    // Replayed code is refused.
-    expect(
-      (await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, { reason: 'x', code })).json()
-        .code,
-    ).toBe('TWO_FACTOR_INVALID')
+    // A repeated block is a conflict and writes no second audit row.
+    expect((await admin(url, { reason: secret })).json().code).toBe('ALREADY_BLOCKED')
     const [row] = await audits('customer.block')
     expect(row!.before).toMatchObject({ blockedAt: null })
     expect(row!.after).toMatchObject({ reason: secret })
@@ -191,7 +184,6 @@ describe('Customer lifecycle administration', () => {
     expect(
       (
         await admin(`/api/v1/admin/payments/${payment!.id}/confirm`, {
-          code: await freshCode(),
           auditReason: 'receipt verified',
         })
       ).statusCode,
@@ -202,7 +194,6 @@ describe('Customer lifecycle administration', () => {
     expect((await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {})).statusCode).toBe(400)
     const unblocked = await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {
       reason: 'paid',
-      code: await freshCode(),
     })
     expect(unblocked.json().restriction.blockedAt).toBeNull()
     expect(await audits('customer.unblock')).toHaveLength(1)
@@ -221,7 +212,6 @@ describe('Customer lifecycle administration', () => {
     const staffB = await staffSession(orgB, 'staff-b@example.test')
     const response = await admin(`/api/v1/admin/organizations/${testOrganizationId}/suspend`, {
       reason: secret,
-      code: await freshCode(),
     })
     expect(response.statusCode).toBe(200)
     const org = response
@@ -245,7 +235,6 @@ describe('Customer lifecycle administration', () => {
       (
         await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
           reason: 'ok',
-          code: await freshCode(),
         })
       ).statusCode,
     ).toBe(200)
@@ -254,7 +243,6 @@ describe('Customer lifecycle administration', () => {
       (
         await admin(`/api/v1/admin/organizations/${testOrganizationId}/reactivate`, {
           reason: 'ok',
-          code: await freshCode(),
         })
       ).json().code,
     ).toBe('ORGANIZATION_NOT_SUSPENDED')
@@ -272,7 +260,6 @@ describe('Customer lifecycle administration', () => {
       await fixture.client`select coverage_end from subscription_payments where reference='cov'`
     const suspended = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
       reason: secret,
-      code: await freshCode(),
     })
     expect(suspended.statusCode).toBe(200)
     expect(suspended.json().subscription.status).toBe('suspended')
@@ -295,7 +282,6 @@ describe('Customer lifecycle administration', () => {
     })
     const resumed = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/resume`, {
       reason: 'ok',
-      code: await freshCode(),
     })
     expect(resumed.statusCode).toBe(200)
     expect(resumed.json().subscription.status).toBe('active')
@@ -314,13 +300,11 @@ describe('Customer lifecycle administration', () => {
       (
         await admin(`/api/v1/admin/owners/${testOwnerId}/block`, {
           reason: 'fraud',
-          code: await freshCode(),
         })
       ).statusCode,
     ).toBe(200)
     const scheduled = await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, {
       reason: secret,
-      code: await freshCode(),
     })
     expect(scheduled.statusCode).toBe(200)
     const restriction = scheduled.json().restriction
@@ -331,7 +315,6 @@ describe('Customer lifecycle administration', () => {
     expect(restriction.deletionReason).toBe(secret)
     const cancelled = await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
       reason: 'mistake',
-      code: await freshCode(),
     })
     expect(cancelled.json().restriction).toMatchObject({
       deletionRequestedAt: null,
@@ -345,17 +328,14 @@ describe('Customer lifecycle administration', () => {
     // Without an earlier restriction, cancelling restores full access.
     await admin(`/api/v1/admin/owners/${testOwnerId}/unblock`, {
       reason: 'cleared',
-      code: await freshCode(),
     })
     await admin(`/api/v1/admin/owners/${testOwnerId}/deletion`, {
       reason: 'req',
-      code: await freshCode(),
     })
     expect((await ownerLogin()).statusCode).toBe(401)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(403)
     await admin(`/api/v1/admin/owners/${testOwnerId}/deletion/cancel`, {
       reason: 'kept',
-      code: await freshCode(),
     })
     expect((await ownerLogin()).statusCode).toBe(200)
     expect((await staffLogin(orgB, 'staff-b@example.test')).statusCode).toBe(200)
@@ -374,7 +354,6 @@ describe('Customer lifecycle administration', () => {
     const changed = await admin(`${url}/plan`, {
       planCode: 'essential',
       reason: 'downgrade',
-      code: await freshCode(),
     })
     expect(changed.statusCode).toBe(200)
     expect(changed.json().subscription.planCode).toBe('essential')
@@ -393,17 +372,14 @@ describe('Customer lifecycle administration', () => {
       reason: 'downgrade',
     })
     expect(granted!.created_by).not.toBeNull()
-    expect(
-      (
-        await admin(`${url}/plan`, { planCode: 'essential', reason: 'x', code: await freshCode() })
-      ).json().code,
-    ).toBe('SAME_PLAN')
+    expect((await admin(`${url}/plan`, { planCode: 'essential', reason: 'x' })).json().code).toBe(
+      'SAME_PLAN',
+    )
     const before = new Date(changed.json().subscription.paidThroughAt).getTime()
     expect((await admin(`${url}/extension`, { days: 0, reason: 'x' })).statusCode).toBe(400)
     const extended = await admin(`${url}/extension`, {
       days: 10,
       reason: 'goodwill',
-      code: await freshCode(),
     })
     expect(new Date(extended.json().subscription.paidThroughAt).getTime() - before).toBe(10 * DAY)
     expect(await audits('subscription.change_plan')).toHaveLength(1)
@@ -417,15 +393,13 @@ describe('Customer lifecycle administration', () => {
   })
 
   it.each(['unblock', 'cancel-deletion', 'reactivate'] as const)(
-    'requires fresh step-up and restores %s access atomically',
+    'restores %s access atomically under the admin session',
     async (operation) => {
       const setupUrl =
         operation === 'reactivate'
           ? `/api/v1/admin/organizations/${testOrganizationId}/suspend`
           : `/api/v1/admin/owners/${testOwnerId}/${operation === 'unblock' ? 'block' : 'deletion'}`
-      expect(
-        (await admin(setupUrl, { reason: 'restrict', code: await freshCode() })).statusCode,
-      ).toBe(200)
+      expect((await admin(setupUrl, { reason: 'restrict' })).statusCode).toBe(200)
       const url =
         operation === 'reactivate'
           ? `/api/v1/admin/organizations/${testOrganizationId}/reactivate`
@@ -444,18 +418,12 @@ describe('Customer lifecycle administration', () => {
           await fixture.client`select id,suspended_at from organizations order by id`,
         ) +
         JSON.stringify(await audits(action))
-      const code = await freshCode()
       const before = await snapshot()
-      expect((await admin(url, { reason: 'restore' })).statusCode).toBe(400)
-      expect((await admin(url, { code })).statusCode).toBe(400)
-      expect((await admin(url, { reason: '   ', code })).statusCode).toBe(400)
-      const validCodes = [-30_000, 0, 30_000].map((offset) => totp(key, Date.now() + offset))
-      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
-        (candidate) => !validCodes.includes(candidate),
-      )!
-      const wrong = await admin(url, { reason: 'restore', code: invalid })
-      expect(wrong.statusCode).toBe(403)
-      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect((await admin(url, {})).statusCode).toBe(400)
+      expect((await admin(url, { reason: '   ' })).statusCode).toBe(400)
+      expect((await admin(url, { reason: 'restore', code: '123456' })).statusCode).toBe(400)
+      const anonymous = await app.inject({ method: 'POST', url, headers, payload: { reason: 'r' } })
+      expect(anonymous.statusCode).toBe(401)
       expect(await snapshot()).toBe(before)
       await fixture.client
         .unsafe(`create function reject_restore_audit() returns trigger language plpgsql as $$
@@ -463,13 +431,10 @@ describe('Customer lifecycle administration', () => {
       await fixture.client.unsafe(
         'create trigger reject_restore_audit before insert on platform_admin_audit for each row execute function reject_restore_audit()',
       )
-      expect((await admin(url, { reason: 'restore', code })).statusCode).toBe(500)
+      expect((await admin(url, { reason: 'restore' })).statusCode).toBe(500)
       expect(await snapshot()).toBe(before)
-      expect(
-        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
-      ).toBeNull()
       await fixture.client.unsafe('drop trigger reject_restore_audit on platform_admin_audit')
-      expect((await admin(url, { reason: 'restore', code })).statusCode).toBe(200)
+      expect((await admin(url, { reason: 'restore' })).statusCode).toBe(200)
       const [actor] = await fixture.client`select id from platform_admins where email=${adminEmail}`
       const [audit] = await audits(action)
       expect(audit).toMatchObject({
@@ -479,20 +444,19 @@ describe('Customer lifecycle administration', () => {
       })
       expect(audit!.after).not.toHaveProperty('code')
       const committed = await snapshot()
-      const replay = await admin(url, { reason: 'restore', code })
-      expect(replay.statusCode).toBe(403)
-      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
+      // Replaying the request is a state conflict and changes nothing.
+      const replay = await admin(url, { reason: 'restore' })
+      expect(replay.statusCode).toBe(409)
       expect(await snapshot()).toBe(committed)
     },
   )
 
   it.each(['plan', 'extension', 'resume', 'paid-owner'] as const)(
-    'requires fresh step-up and commits %s coverage, actor and audit atomically',
+    'commits %s coverage, actor and audit atomically under the admin session',
     async (operation) => {
       if (operation === 'resume') {
         const suspended = await admin(`/api/v1/admin/owners/${testOwnerId}/subscription/suspend`, {
           reason: 'pause',
-          code: await freshCode(),
         })
         expect(suspended.statusCode).toBe(200)
       }
@@ -525,11 +489,6 @@ describe('Customer lifecycle administration', () => {
           },
         },
       }[operation]
-      const code = await freshCode()
-      const wrongCode = [0, -30_000, 30_000].map((offset) => totp(key, Date.now() + offset))
-      const invalid = Array.from({ length: 10 }, (_, i) => String(i).repeat(6)).find(
-        (candidate) => !wrongCode.includes(candidate),
-      )!
       const snapshot = async () => {
         const tables = [
           'platform_users',
@@ -551,10 +510,9 @@ describe('Customer lifecycle administration', () => {
         )
       }
       const before = await snapshot()
-      expect((await admin(url, payload)).statusCode).toBe(operation === 'paid-owner' ? 403 : 400)
-      const wrong = await admin(url, { ...payload, code: invalid })
-      expect(wrong.statusCode).toBe(403)
-      expect(wrong.json().code).toBe('TWO_FACTOR_INVALID')
+      expect((await admin(url, { ...payload, code: '123456' })).statusCode).toBe(400)
+      const anonymous = await app.inject({ method: 'POST', url, headers, payload })
+      expect(anonymous.statusCode).toBe(401)
       expect(await snapshot()).toEqual(before)
 
       // Fail after the mutation, at the audit insert, to verify the entire transaction rolls back.
@@ -564,15 +522,12 @@ describe('Customer lifecycle administration', () => {
       await fixture.client
         .unsafe(`create trigger reject_coverage_audit before insert on platform_admin_audit
         for each row execute function reject_coverage_audit()`)
-      const failed = await admin(url, { ...payload, code })
+      const failed = await admin(url, payload)
       expect(failed.statusCode, failed.body).toBe(500)
       expect(await snapshot()).toEqual(before)
-      expect(
-        (await fixture.client`select totp_last_step from platform_admins`)[0]!.totp_last_step,
-      ).toBeNull()
       expect(messages).toHaveLength(0)
       await fixture.client.unsafe('drop trigger reject_coverage_audit on platform_admin_audit')
-      const success = await admin(url, { ...payload, code })
+      const success = await admin(url, payload)
       expect(success.statusCode, success.body).toBe(operation === 'paid-owner' ? 201 : 200)
       const [actor] = await fixture.client`select id from platform_admins where email=${adminEmail}`
       const [audit] = await audits(action)
@@ -588,11 +543,13 @@ describe('Customer lifecycle administration', () => {
           join subscription_periods p on p.id=n.period_id where p.owner_id=${success.json().owner.id}`
         expect(notes).toContainEqual({ created_by: actor!.id, reason: 'coverage approval' })
       }
-      const committed = await snapshot()
-      const replay = await admin(url, { ...payload, code })
-      expect(replay.statusCode).toBe(403)
-      expect(replay.json().code).toBe('TWO_FACTOR_INVALID')
-      expect(await snapshot()).toEqual(committed)
+      // Replays: state conflicts change nothing; an extension is additive by design.
+      if (operation !== 'extension') {
+        const committed = await snapshot()
+        const replay = await admin(url, payload)
+        expect(replay.statusCode).toBe(409)
+        expect(await snapshot()).toEqual(committed)
+      }
     },
   )
 
@@ -607,7 +564,6 @@ describe('Customer lifecycle administration', () => {
         email,
         locale: 'en',
         subscription,
-        ...(subscription.kind === 'paid' ? { code: await freshCode() } : {}),
         reason: 'signed contract',
       })
     const created = await create('New@Example.Test')
@@ -688,17 +644,17 @@ describe('Customer lifecycle administration', () => {
       ['support', 'SLUG_RESERVED'],
       ['  API ', 'SLUG_RESERVED'],
     ] as const) {
-      const response = await rename({ slug, reason: 'r', code: await freshCode() })
+      const response = await rename({ slug, reason: 'r' })
       expect(response.statusCode, slug).toBe(400)
       expect(response.json().code).toBe(code)
     }
-    const taken = await rename({ slug: 'second', reason: 'r', code: await freshCode() })
+    const taken = await rename({ slug: 'second', reason: 'r' })
     expect(taken.statusCode).toBe(409)
     expect(taken.json().code).toBe('SLUG_TAKEN')
     expect(
       (await rename({ slug: 'Atelier Neuf', reason: 'rebrand', code: '000000' })).statusCode,
-    ).toBe(403)
-    const renamed = await rename({ slug: 'Atelier Neuf', reason: secret, code: await freshCode() })
+    ).toBe(400)
+    const renamed = await rename({ slug: 'Atelier Neuf', reason: secret })
     expect(renamed.statusCode, renamed.body).toBe(200)
     expect(
       (await fixture.client`select slug from organizations where id=${testOrganizationId}`)[0]!
@@ -735,9 +691,9 @@ describe('Customer lifecycle administration', () => {
       redirectTo: null,
     })
     // A former address stays unavailable to other organizations but the owner may take it back.
-    const stolen = await rename({ slug: 'fixture', reason: 'r', code: await freshCode() }, orgB)
+    const stolen = await rename({ slug: 'fixture', reason: 'r' }, orgB)
     expect(stolen.json().code).toBe('SLUG_TAKEN')
-    const back = await rename({ slug: 'fixture', reason: 'r', code: await freshCode() })
+    const back = await rename({ slug: 'fixture', reason: 'r' })
     expect(back.statusCode, back.body).toBe(200)
     expect(await fixture.client`select slug from organization_slug_history order by slug`).toEqual([
       { slug: 'atelier-neuf' },
@@ -775,7 +731,6 @@ describe('Customer lifecycle administration', () => {
     expect(unknown.statusCode).toBe(404)
     await admin(`/api/v1/admin/organizations/${orgB}/suspend`, {
       reason: 'r',
-      code: await freshCode(),
     })
     const suspended = await address(orgB)
     expect(suspended.statusCode).toBe(404)
