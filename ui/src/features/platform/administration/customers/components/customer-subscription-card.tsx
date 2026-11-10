@@ -3,6 +3,7 @@ import { Button } from '../../../../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../components/ui/card'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate } from '../../../../../lib/i18n'
+import { displayNumber } from '../../../../../lib/number-format'
 import {
   cycleLabel,
   formatDh,
@@ -98,7 +99,7 @@ export function CustomerSubscriptionCard({
             />
             <Item
               label={translate('Storage used')}
-              value={`${(s.usage.storageBytes / 1e9).toFixed(2)} / ${s.entitlements.storageBytes / 1e9} GB`}
+              value={`${displayNumber((s.usage.storageBytes / 1e9).toFixed(2))} / ${displayNumber(s.entitlements.storageBytes / 1e9)} GB`}
             />
             <Item
               label={translate('Business emails queued')}

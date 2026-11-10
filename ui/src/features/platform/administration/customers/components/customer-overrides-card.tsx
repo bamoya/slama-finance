@@ -154,8 +154,8 @@ export function CustomerOverridesCard({ detail }: { detail: AdminOwnerDetail }) 
             <DataTable
               items={query.data.items}
               columns={columns}
-              emptyTitle="No override"
-              emptyDescription="This customer uses the plan values."
+              emptyTitle={translate('No override')}
+              emptyDescription={translate('This customer uses the plan values.')}
             />
           )}
         </section>

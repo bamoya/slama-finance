@@ -24,7 +24,7 @@ export const invoiceColumns: DataColumn<BillingInvoice>[] = [
     ),
   },
   {
-    title: 'Issued',
+    title: 'Issued on',
     render: (i) => <span className="whitespace-nowrap">{displayDateTime(i.issuedAt)}</span>,
   },
   {

@@ -574,3 +574,35 @@ it('does not offer renewal of a withdrawn plan once the subscription has expired
   expect(screen.queryByRole('option', { name: /Current plan, renewal/ })).not.toBeInTheDocument()
   expect(screen.getAllByRole('option')).toHaveLength(1)
 })
+
+it('explains missing payment instructions instead of showing an empty box', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': {
+      ...paidBase,
+      planCode: 'trial',
+      planName: 'Essai',
+      status: 'trial',
+      paidThroughAt: null,
+      cycle: null,
+      trialEndsAt: '2026-11-06T10:00:00Z',
+    },
+    '/api/v1/owner/subscription/billing': { ...catalog, paymentInstructions: '  ' },
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    '/api/v1/owner/subscription/payments': { data: [] },
+  })
+  renderPage()
+  expect(await screen.findByTestId('payment-instructions')).toHaveTextContent(
+    'Payment instructions are not available yet. Contact us before paying.',
+  )
+})
+
+it('keeps wide history tables from widening the page on small screens', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': paidBase,
+    '/api/v1/owner/subscription/billing': catalog,
+    '/api/v1/owner/subscription/payments': { data: [] },
+  })
+  renderPage()
+  // An implicit single column is sized to its widest table; minmax(0, 1fr) lets the tables scroll.
+  expect(await screen.findByTestId('subscription-layout')).toHaveClass('grid-cols-1')
+})

@@ -203,7 +203,8 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
             className="whitespace-pre-line rounded-xl bg-[var(--accent-soft)] p-4 text-sm"
           >
             <p className="mb-1 font-semibold">{translate('How to pay')}</p>
-            {catalog.paymentInstructions}
+            {catalog.paymentInstructions.trim() ||
+              translate('Payment instructions are not available yet. Contact us before paying.')}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field>

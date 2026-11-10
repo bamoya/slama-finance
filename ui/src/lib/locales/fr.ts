@@ -2710,4 +2710,7 @@ export const french: Record<string, string> = {
   'Issue credit note': 'Émettre l’avoir',
   '{{amount}} were already received. Rejecting issues a credit note for the whole invoice; the received amount must be refunded outside the platform.':
     '{{amount}} ont déjà été reçus. Le rejet émet un avoir sur toute la facture ; le montant reçu doit être remboursé hors de la plateforme.',
+  'Issued on': 'Date d’émission',
+  'Payment instructions are not available yet. Contact us before paying.':
+    'Les instructions de paiement ne sont pas encore disponibles. Contactez-nous avant de payer.',
 }

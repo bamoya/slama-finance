@@ -86,3 +86,22 @@ the reset page of the site you are testing locally (for example
 The `postgres-data` Docker volume persists database data across normal restarts and
 container recreation. Do not run `docker compose down -v` unless deliberately
 discarding that database. A local volume is not a backup.
+
+## Timezone data for subscription writes
+
+The API compares Node's ICU zone data for `Africa/Casablanca` with PostgreSQL's at startup; when they
+disagree, subscription boundary writes (payments, confirmations, plan changes) return 503
+`TIMEZONE_DATA_MISMATCH` and `/ready` reports `timezoneData.status: mismatch`. The local PostgreSQL image
+ships tzdata 2026d, newer than the ICU data bundled with current Node releases (2026a/b). Run the API with
+matching ICU zone files (official `unicode-org/icu-data`, `tzdata/icunew/<version>/44/le/*.res`):
+
+```sh
+mkdir -p ~/.cache/icu-tz && cd ~/.cache/icu-tz
+for f in zoneinfo64 timezoneTypes metaZones windowsZones; do
+  curl -fsSLO https://raw.githubusercontent.com/unicode-org/icu-data/main/tzdata/icunew/2026e/44/le/$f.res
+done
+ICU_TIMEZONE_FILES_DIR=~/.cache/icu-tz pnpm dev
+```
+
+Check `curl -s http://127.0.0.1:3000/ready` shows `"status":"consistent"`. Production must update the API and
+database images together (see the subscription decisions record).

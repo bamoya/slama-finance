@@ -73,7 +73,7 @@ export function OwnerSubscriptionPage() {
       {query.isPending || query.error || !s ? (
         <RequestState query={query} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div data-testid="subscription-layout" className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SubscriptionStatusCard s={s} />
           <Card>
             <CardHeader>
@@ -154,7 +154,7 @@ export function OwnerSubscriptionPage() {
               </p>
             </CardContent>
           </Card>
-          <div className="grid gap-4 lg:col-span-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">
             <PlanCheckout s={s} />
             <CancellationCard s={s} />
           </div>

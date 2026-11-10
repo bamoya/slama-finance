@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import i18n from '../../../../lib/i18n'
 import {
   apiError,
   calls,
@@ -158,5 +159,19 @@ describe('customer plan exceptions', () => {
     expect(posts()[0]!.data).toMatchObject({ startsOn: '2026-11-09', endsOn: '2026-12-01' })
     expect(posts()[0]!.data).not.toHaveProperty('startsAt')
     expect(posts()[0]!.data).not.toHaveProperty('code')
+  })
+})
+
+describe('override history in French', () => {
+  it('translates the empty override history', async () => {
+    await i18n.changeLanguage('fr')
+    try {
+      setup([])
+      expect(await screen.findByText('Aucune exception')).toBeInTheDocument()
+      expect(screen.getByText('Ce client utilise les valeurs de son offre.')).toBeInTheDocument()
+      expect(screen.queryByText('No override')).toBeNull()
+    } finally {
+      await i18n.changeLanguage('en')
+    }
   })
 })
