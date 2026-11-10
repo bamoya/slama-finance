@@ -23,7 +23,10 @@ export function createWorkspaceService(
         organization: toOwnerOrganization({ organization, staffCount }),
         identityType: type,
         session: { user, purpose: 'full', permissionKeys: await identity.grants(user.id) },
-        subscription: { entitlements: subscription.entitlements },
+        subscription: {
+          entitlements: subscription.entitlements,
+          accessValidUntil: subscription.accessValidUntil,
+        },
       }
     },
   }

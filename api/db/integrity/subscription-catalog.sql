@@ -159,3 +159,87 @@ ALTER TABLE plan_versions FORCE ROW LEVEL SECURITY;
 ALTER TABLE plan_entitlements FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE plan_version_prices FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+-- S2 selling authority: migration role only, serialized with publication, audited in the same transaction.
+CREATE TRIGGER catalog_selling_lock BEFORE INSERT OR UPDATE OR DELETE OR TRUNCATE ON plan_selling FOR EACH STATEMENT EXECUTE FUNCTION lock_subscription_catalog();
+--> statement-breakpoint
+CREATE FUNCTION guard_plan_selling() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE version_state text; previous_actor text;
+BEGIN
+ PERFORM pg_advisory_xact_lock(173027,32);
+ IF TG_OP='DELETE' OR NOT pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER') THEN
+  RAISE EXCEPTION 'Selling changes require the migration role; deletion is forbidden' USING ERRCODE='42501';
+ END IF;
+ IF TG_OP='UPDATE' AND NEW.plan_code<>OLD.plan_code THEN
+  RAISE EXCEPTION 'Selling plan identity is immutable' USING ERRCODE='23514';
+ END IF;
+ IF TG_OP='UPDATE' AND NEW.plan_version_id IS NOT DISTINCT FROM OLD.plan_version_id THEN
+  RAISE EXCEPTION 'Selling change does not change the selling version' USING ERRCODE='23514';
+ END IF;
+ IF NEW.plan_version_id IS NOT NULL THEN
+  SELECT status INTO version_state FROM plan_versions WHERE id=NEW.plan_version_id AND plan_code=NEW.plan_code;
+  IF version_state IS DISTINCT FROM 'published' THEN
+   RAISE EXCEPTION 'Only a published version of the same plan can be sold' USING ERRCODE='23514';
+  END IF;
+ END IF;
+ NEW.changed_at=clock_timestamp();
+ previous_actor=current_setting('app.actor_type',true);
+ PERFORM set_config('app.actor_type','platform_admin',true);
+ INSERT INTO platform_admin_audit(actor,action,target_type,target_id,before,after)
+ VALUES(NEW.changed_by,CASE WHEN NEW.plan_version_id IS NULL THEN 'subscription_catalog.withdraw' ELSE 'subscription_catalog.select' END,
+  'plan_selling',NEW.plan_code,CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) END,to_jsonb(NEW)||jsonb_build_object(
+   'selling_identity',jsonb_build_object('current_user',current_user::text,'session_user',session_user::text,
+     'transaction_id',txid_current()::text)));
+ PERFORM set_config('app.actor_type',coalesce(previous_actor,''),true);
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER catalog_selling_guard BEFORE INSERT OR UPDATE OR DELETE ON plan_selling FOR EACH ROW EXECUTE FUNCTION guard_plan_selling();
+--> statement-breakpoint
+ALTER TABLE plan_selling FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+-- Version pins. Composite keys keep plan code and version together; SQL-managed to avoid a schema import cycle.
+ALTER TABLE owner_subscriptions ADD CONSTRAINT owner_subscriptions_trial_version_fk
+ FOREIGN KEY (trial_plan_version_id,trial_plan_code) REFERENCES plan_versions(id,plan_code);
+--> statement-breakpoint
+ALTER TABLE subscription_payments ADD CONSTRAINT subscription_payments_version_fk
+ FOREIGN KEY (plan_version_id,plan_code) REFERENCES plan_versions(id,plan_code);
+--> statement-breakpoint
+-- Trial start takes the selling trial version (fail closed when none); the pin never changes.
+CREATE FUNCTION pin_subscription_trial_version() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP='INSERT' THEN
+  IF NEW.trial_plan_version_id IS NULL THEN
+   SELECT plan_version_id INTO NEW.trial_plan_version_id FROM "public".plan_selling WHERE plan_code='trial';
+   IF NEW.trial_plan_version_id IS NULL THEN
+    RAISE EXCEPTION 'No trial plan version is on sale' USING ERRCODE='55000';
+   END IF;
+  ELSIF NOT EXISTS (SELECT 1 FROM "public".plan_versions WHERE id=NEW.trial_plan_version_id AND status='published') THEN
+   RAISE EXCEPTION 'A trial pin requires a published version' USING ERRCODE='23514';
+  END IF;
+ ELSIF NEW.trial_plan_version_id IS DISTINCT FROM OLD.trial_plan_version_id OR NEW.trial_plan_code IS DISTINCT FROM OLD.trial_plan_code THEN
+  RAISE EXCEPTION 'The trial version pin is immutable' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER owner_subscription_trial_version BEFORE INSERT OR UPDATE ON owner_subscriptions FOR EACH ROW EXECUTE FUNCTION pin_subscription_trial_version();
+--> statement-breakpoint
+REVOKE ALL ON FUNCTION pin_subscription_trial_version() FROM PUBLIC;
+--> statement-breakpoint
+-- A payment pins a published paid version at submission (a withdrawn one stays valid); never repinned.
+CREATE FUNCTION guard_subscription_payment_version() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+ IF TG_OP='INSERT' THEN
+  IF NEW.plan_code='trial' OR NOT EXISTS (SELECT 1 FROM "public".plan_versions WHERE id=NEW.plan_version_id AND status='published') THEN
+   RAISE EXCEPTION 'A payment pins a published paid plan version' USING ERRCODE='23514';
+  END IF;
+ ELSIF (NEW.plan_version_id,NEW.plan_code) IS DISTINCT FROM (OLD.plan_version_id,OLD.plan_code) THEN
+  RAISE EXCEPTION 'The payment version pin is immutable' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER subscription_payment_version BEFORE INSERT OR UPDATE ON subscription_payments FOR EACH ROW EXECUTE FUNCTION guard_subscription_payment_version();

@@ -74,3 +74,7 @@ FROM plan_versions v JOIN subscription_plans p ON p.code=v.plan_code
 CROSS JOIN (VALUES ('monthly'),('annual')) c(cycle) WHERE p.code<>'trial';
 --> statement-breakpoint
 UPDATE plan_versions SET status='published',published_at=now(),published_by='migration:subscription-catalog-v1';
+--> statement-breakpoint
+-- Version 1 is on sale for every plan; later selection/withdrawal is an audited migration-role change.
+INSERT INTO plan_selling(plan_code,plan_version_id,changed_by)
+SELECT plan_code,id,'migration:subscription-catalog-v1' FROM plan_versions WHERE version_number=1;

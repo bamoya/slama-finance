@@ -2,7 +2,8 @@
 
 Redesign work: [S1 decisions, approved rules and open gates](decisions.md).
 That record separates current implementation defaults from approved policy and the proposed normalized model.
-Implementation and verification: [redesign progress](progress.md) and [catalog model](entitlement-model.md).
+Implementation and verification: [redesign progress](progress.md), [catalog model](entitlement-model.md) and
+[S2/S4 activation](s2-s4-activation.md).
 
 Implementation record for task 07. The decision record above identifies newly confirmed policies and defaults
 that still need confirmation. Billing is manual: a submitted payment reference never activates coverage by itself.
@@ -72,6 +73,6 @@ pnpm --filter ./api subscription:payment reject <id> --by <name>
 ## Known gaps
 
 - Owner selection of organizations and staff to retain on downgrade is not implemented. Limits apply to new operations only; nothing is deleted.
-- Worker feature gating reads `owner_subscriptions.plan_code`, which updates only for confirmations that take effect immediately. Scheduled changes are not yet reflected there.
+- Workers use the same subscription eligibility as API admissions (per organization at execution). Plan values still come from the legacy JSON until the S2/S4 resolver slice.
 - Administrator portal: task 12.
 - Owner reminder emails: not done.

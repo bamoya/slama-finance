@@ -26,6 +26,22 @@ export function createAdminCustomersService(
   billing: Pick<AdminBillingPort, 'summary'>,
   clock: () => Date = () => new Date(),
 ) {
+  /** Support view stays usable when access cannot be resolved; only resolver 503s are absorbed. */
+  async function subscriptionOrError(
+    id: string,
+  ): Promise<Pick<AdminOwnerDetail, 'subscription' | 'subscriptionError'>> {
+    try {
+      return { subscription: await billing.summary(id), subscriptionError: null }
+    } catch (error) {
+      if (
+        error instanceof AppError &&
+        (error.code === 'SUBSCRIPTION_CATALOG_UNAVAILABLE' ||
+          error.code === 'SUBSCRIPTION_PERIODS_INCONSISTENT')
+      )
+        return { subscription: null, subscriptionError: error.code }
+      throw error
+    }
+  }
   return {
     async list(query: ListAdminOwnersQuery): Promise<AdminOwnerPage> {
       const page = query.page
@@ -34,7 +50,8 @@ export function createAdminCustomersService(
       )
       const items = await Promise.all(
         rows.map(async ({ owner, organizationCount }) => {
-          const s = await billing.summary(owner.id)
+          // One unresolvable owner is a per-row diagnostic; nothing is inferred for it.
+          const { subscription: s, subscriptionError } = await subscriptionOrError(owner.id)
           return {
             id: owner.id,
             email: owner.email,
@@ -42,9 +59,10 @@ export function createAdminCustomersService(
             lastName: owner.lastName,
             createdAt: owner.createdAt.toISOString(),
             disabledAt: iso(owner.disabledAt),
-            subscriptionStatus: s.status,
-            planCode: s.planCode,
-            paidThroughAt: s.paidThroughAt,
+            subscriptionStatus: s?.status ?? null,
+            planCode: s?.planCode ?? null,
+            paidThroughAt: s?.paidThroughAt ?? null,
+            subscriptionError,
             organizationCount: Number(organizationCount),
             blockedAt: iso(owner.blockedAt),
             deletionDueAt: iso(owner.deletionDueAt),
@@ -112,7 +130,7 @@ export function createAdminCustomersService(
           suspendedAt: iso(o.suspendedAt),
           suspensionReason: found.suspensionReasons[index] ?? null,
         })),
-        subscription: await billing.summary(id),
+        ...(await subscriptionOrError(id)),
         payments: ownerPayments.map(toAdminPayment),
       }
     },

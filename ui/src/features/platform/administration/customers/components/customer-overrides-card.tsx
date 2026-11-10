@@ -36,8 +36,9 @@ export function CustomerOverridesCard({ detail }: { detail: AdminOwnerDetail }) 
   const query = useListAdminEntitlementOverrides(ownerId, { query: { retry: false } })
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const sources = new Map(
-    (detail.subscription.entitlementSources ?? []).map((s) => [s.entitlementKey, s]),
+    (detail.subscription?.entitlementSources ?? []).map((s) => [s.entitlementKey, s]),
   )
+  const entitlements = detail.subscription?.entitlements
   const effective = entitlementKeys.map((key) => ({ id: key, key, source: sources.get(key) }))
   const columns: DataColumn<AdminEntitlementOverride>[] = [
     {
@@ -111,25 +112,39 @@ export function CustomerOverridesCard({ detail }: { detail: AdminOwnerDetail }) 
       <CardContent className="space-y-6">
         <section aria-label={translate('Effective limits')}>
           <h3 className="mb-2 text-sm font-semibold">{translate('Effective limits')}</h3>
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {effective.map(({ key, source }) => (
-              <div key={key} data-testid={`effective-${key}`}>
-                <dt className="text-sm text-[var(--muted)]">{translate(entitlementLabels[key])}</dt>
-                <dd className="mt-1 font-semibold">
-                  {effectiveValueLabel(key, detail.subscription.entitlements)}{' '}
-                  <span className="text-xs font-normal text-[var(--muted)]">
-                    {source?.source === 'override'
-                      ? source.effectiveUntil
-                        ? translate('Override until {{date}}', {
-                            date: displayDateTime(source.effectiveUntil),
-                          })
-                        : translate('Override')
-                      : translate('Plan')}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {entitlements ? (
+            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {effective.map(({ key, source }) => (
+                <div key={key} data-testid={`effective-${key}`}>
+                  <dt className="text-sm text-[var(--muted)]">
+                    {translate(entitlementLabels[key])}
+                  </dt>
+                  <dd className="mt-1 font-semibold">
+                    {effectiveValueLabel(key, entitlements)}{' '}
+                    <span className="text-xs font-normal text-[var(--muted)]">
+                      {source?.source === 'override'
+                        ? source.effectiveUntil
+                          ? translate('Override until {{date}}', {
+                              date: displayDateTime(source.effectiveUntil),
+                            })
+                          : translate('Override')
+                        : translate('Plan')}
+                    </span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p
+              role="status"
+              data-testid="effective-unavailable"
+              className="text-sm text-[var(--muted)]"
+            >
+              {translate(
+                'Effective limits are unavailable while the plan terms cannot be resolved.',
+              )}
+            </p>
+          )}
         </section>
         <section aria-label={translate('Override history')}>
           <h3 className="mb-2 text-sm font-semibold">{translate('Override history')}</h3>

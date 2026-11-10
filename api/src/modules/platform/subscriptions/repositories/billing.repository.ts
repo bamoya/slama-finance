@@ -1,5 +1,6 @@
-import { and, asc, desc, eq, gt, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'
 
+import { planVersions } from '../../../../../db/schema/subscription-catalog.js'
 import {
   subscriptionPeriodNotes,
   subscriptionPeriods,
@@ -10,11 +11,34 @@ import {
   billingSettings,
   ownerSubscriptions,
   subscriptionPayments,
-  subscriptionPlans,
 } from '../../../../../db/schema/subscriptions.js'
 import type { Database, Transaction } from '../../../../lib/db.js'
 
-export type PaymentRow = typeof subscriptionPayments.$inferSelect
+/** A payment with the number of the catalog version it pinned at submission (never re-resolved). */
+export type PaymentRow = typeof subscriptionPayments.$inferSelect & { planVersionNumber: number }
+
+/** Plain join on the immutable pin: no catalog validation, so payment history stays readable. */
+async function withVersions(rows: (typeof subscriptionPayments.$inferSelect)[], tx: Transaction) {
+  const ids = [...new Set(rows.map((r) => r.planVersionId))]
+  const numbers = new Map(
+    ids.length
+      ? (
+          await tx
+            .select({ id: planVersions.id, n: planVersions.versionNumber })
+            .from(planVersions)
+            .where(inArray(planVersions.id, ids))
+        ).map((v) => [v.id, v.n])
+      : [],
+  )
+  return rows.map((r) => {
+    const planVersionNumber = numbers.get(r.planVersionId)
+    if (planVersionNumber === undefined)
+      throw new Error(`Payment ${r.id} pins an unreadable catalog version`)
+    return { ...r, planVersionNumber }
+  })
+}
+const one = async (row: typeof subscriptionPayments.$inferSelect | undefined, tx: Transaction) =>
+  row ? (await withVersions([row], tx))[0]! : undefined
 
 export function createBillingRepository(database: () => Database) {
   return {
@@ -30,47 +54,26 @@ export function createBillingRepository(database: () => Database) {
       const [row] = await tx.select().from(billingSettings).where(eq(billingSettings.id, 1))
       return row!
     },
-    paidPlans: (tx: Transaction) =>
-      tx
-        .select()
-        .from(subscriptionPlans)
-        .where(ne(subscriptionPlans.code, 'trial'))
-        .orderBy(asc(subscriptionPlans.rank)),
-    async plan(code: string, tx: Transaction) {
-      const [row] = await tx
-        .select()
-        .from(subscriptionPlans)
-        .where(eq(subscriptionPlans.code, code))
-      return row
-    },
-    payments: (ownerId: string, tx: Transaction) =>
-      tx
-        .select()
-        .from(subscriptionPayments)
-        .where(eq(subscriptionPayments.ownerId, ownerId))
-        .orderBy(desc(subscriptionPayments.submittedAt)),
-    coverage: (ownerId: string, tx: Transaction) =>
-      tx
-        .select()
-        .from(subscriptionPayments)
-        .where(
-          and(
-            eq(subscriptionPayments.ownerId, ownerId),
-            eq(subscriptionPayments.status, 'confirmed'),
-          ),
-        )
-        .orderBy(asc(subscriptionPayments.coverageStart), asc(subscriptionPayments.decidedAt)),
+    payments: async (ownerId: string, tx: Transaction) =>
+      withVersions(
+        await tx
+          .select()
+          .from(subscriptionPayments)
+          .where(eq(subscriptionPayments.ownerId, ownerId))
+          .orderBy(desc(subscriptionPayments.submittedAt)),
+        tx,
+      ),
     async payment(id: string, tx: Transaction) {
       const [row] = await tx
         .select()
         .from(subscriptionPayments)
         .where(eq(subscriptionPayments.id, id))
         .for('update')
-      return row
+      return one(row, tx)
     },
     async submit(values: typeof subscriptionPayments.$inferInsert, tx: Transaction) {
       const [row] = await tx.insert(subscriptionPayments).values(values).returning()
-      return row!
+      return (await one(row, tx))!
     },
     async decide(
       id: string,
@@ -82,7 +85,7 @@ export function createBillingRepository(database: () => Database) {
         .set(values)
         .where(and(eq(subscriptionPayments.id, id), eq(subscriptionPayments.status, 'submitted')))
         .returning()
-      return row
+      return one(row, tx)
     },
     applyCoverage: (
       ownerId: string,
@@ -106,6 +109,7 @@ export function createBillingRepository(database: () => Database) {
         ownerId: string
         kind: 'paid' | 'complimentary'
         planCode: string
+        planVersionId: string
         cycle: 'monthly' | 'annual' | null
         start: Date
         end: Date
@@ -120,6 +124,7 @@ export function createBillingRepository(database: () => Database) {
           ownerId: values.ownerId,
           kind: values.kind,
           planCode: values.planCode,
+          planVersionId: values.planVersionId,
           cycle: values.cycle,
           startsAt: values.start,
           endsAt: values.end,
@@ -159,6 +164,7 @@ export function createBillingRepository(database: () => Database) {
       values: {
         ownerId: string
         planCode: string
+        planVersionId: string
         cycle: 'monthly' | 'annual'
         kind: 'activation' | 'renewal' | 'upgrade'
         start: Date
@@ -175,6 +181,7 @@ export function createBillingRepository(database: () => Database) {
         .values({
           ownerId: values.ownerId,
           planCode: values.planCode,
+          planVersionId: values.planVersionId,
           cycle: values.cycle,
           kind: values.kind,
           status: 'confirmed',
@@ -228,6 +235,30 @@ export function createBillingRepository(database: () => Database) {
         )
       return row
     },
+    /** The notified version transition still scheduled (S8 creates them; at most one per owner). */
+    async versionTransition(ownerId: string, tx: Transaction) {
+      const [row] = await tx
+        .select()
+        .from(subscriptionScheduledChanges)
+        .where(
+          and(
+            eq(subscriptionScheduledChanges.ownerId, ownerId),
+            eq(subscriptionScheduledChanges.kind, 'version_transition'),
+            eq(subscriptionScheduledChanges.status, 'scheduled'),
+          ),
+        )
+      return row
+    },
+    applyScheduledChange: (id: string, tx: Transaction) =>
+      tx
+        .update(subscriptionScheduledChanges)
+        .set({ status: 'applied' })
+        .where(
+          and(
+            eq(subscriptionScheduledChanges.id, id),
+            eq(subscriptionScheduledChanges.status, 'scheduled'),
+          ),
+        ),
     scheduleCancel: (
       ownerId: string,
       effectiveAt: Date,

@@ -11,6 +11,7 @@ import {
   paymentKindLabel,
   paymentStatusTone,
   planLabel,
+  versionLabel,
 } from '../../../subscriptions/components/billing-format'
 
 const paymentStatus = {
@@ -39,7 +40,7 @@ const columns: DataColumn<CustomerPayment>[] = [
     title: 'Plan',
     render: (p) => (
       <span className="whitespace-nowrap">
-        {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
+        {planLabel(p.planCode)} · {versionLabel(p.planVersionNumber)} · {cycleLabel(p.cycle)}
       </span>
     ),
   },

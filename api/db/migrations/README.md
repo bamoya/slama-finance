@@ -16,7 +16,7 @@ operator provisions a replacement volume and runs the normal initializer.
 ## Initial baseline history
 
 This SaaS uses a clean installation baseline: `0000_initial_schema.sql`.
-It creates the current 48 tables, final columns, constraints, indexes, foreign keys,
+It creates the current 49 tables, final columns, constraints, indexes, foreign keys,
 row policies and integrity triggers directly. There are no historical column alterations,
 legacy-company bindings, upgrade backfills or repair migrations.
 

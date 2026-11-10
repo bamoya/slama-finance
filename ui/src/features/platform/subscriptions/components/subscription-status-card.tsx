@@ -3,7 +3,7 @@ import { buttonVariants } from '../../../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { displayDateTime } from '../../../../lib/dates'
 import { translate } from '../../../../lib/i18n'
-import { cycleLabel, formatDh, paymentKindLabel, planLabel } from './billing-format'
+import { cycleLabel, formatDh, paymentKindLabel, planLabel, versionLabel } from './billing-format'
 
 const statusLabel = {
   trial: 'Free trial',
@@ -41,6 +41,11 @@ export function SubscriptionStatusCard({ s }: { s: OwnerSubscription }) {
           >
             {translate(statusLabel[s.status])}
           </span>
+          {s.planVersionNumber !== null && (
+            <span data-testid="plan-version" className="text-sm text-[var(--muted)]">
+              {versionLabel(s.planVersionNumber)}
+            </span>
+          )}
           {s.cycle && s.planCode !== 'trial' && (
             <span className="text-sm text-[var(--muted)]">{cycleLabel(s.cycle)}</span>
           )}
@@ -61,6 +66,18 @@ export function SubscriptionStatusCard({ s }: { s: OwnerSubscription }) {
           <DateLine label={translate('Grace period ends')} value={s.graceEndsAt} />
           <DateLine label={translate('Access blocked since')} value={s.blockedAt} />
           <DateLine label={translate('Data retained until')} value={s.retentionEndsAt} />
+          {s.scheduledVersionTransition && (
+            <p data-testid="version-transition">
+              <strong>{translate('Plan update')}: </strong>
+              {translate('{{version}} of your plan applies from {{date}}.', {
+                version: versionLabel(s.scheduledVersionTransition.targetVersionNumber),
+                date: displayDateTime(
+                  s.scheduledVersionTransition.effectiveAt,
+                  'Africa/Casablanca',
+                ),
+              })}
+            </p>
+          )}
           {s.nextPlanCode && (
             <p>
               <strong>{translate('Next plan')}: </strong>
@@ -84,7 +101,8 @@ export function SubscriptionStatusCard({ s }: { s: OwnerSubscription }) {
             <p className="font-semibold">{translate('Payment awaiting verification')}</p>
             <p>
               {paymentKindLabel(pending.kind)} · {planLabel(pending.planCode)} ·{' '}
-              {cycleLabel(pending.cycle)} · {formatDh(pending.amount.amountTtc)}
+              {versionLabel(pending.planVersionNumber)} · {cycleLabel(pending.cycle)} ·{' '}
+              {formatDh(pending.amount.amountTtc)}
             </p>
             <p className="text-[var(--muted)]">
               {translate('An administrator must verify it before your plan is activated.')}

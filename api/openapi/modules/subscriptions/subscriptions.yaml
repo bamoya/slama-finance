@@ -3,6 +3,7 @@ paths:
     get:
       operationId: getOwnerSubscription
       tags: [subscriptions]
+      description: 'Resolved at one instant from the pinned version of the current coverage, the active owner override and independent restrictions. 503 SUBSCRIPTION_CATALOG_UNAVAILABLE when the pinned version is missing or invalid (never a fallback); billing and payments stay readable.'
       security: [{ ownerSessionCookie: [] }]
       responses:
         '200':
@@ -19,6 +20,7 @@ paths:
     get:
       operationId: getOwnerBilling
       tags: [subscriptions]
+      description: 'Lists only plans with a current selling version; a withdrawn or invalid plan is omitted.'
       security: [{ ownerSessionCookie: [] }]
       responses:
         '200':
@@ -35,6 +37,7 @@ paths:
     post:
       operationId: quoteOwnerSubscription
       tags: [subscriptions]
+      description: '409 PLAN_NOT_SELLABLE for activation, upgrade or plan change to a withdrawn plan (same-plan renewal keeps its pin); 503 SUBSCRIPTION_CATALOG_UNAVAILABLE.'
       security: [{ ownerSessionCookie: [] }]
       requestBody:
         required: true
@@ -78,6 +81,7 @@ paths:
     post:
       operationId: submitOwnerSubscriptionPayment
       tags: [subscriptions]
+      description: 'Pins the quoted plan version and price; the same rules and errors as the quote apply.'
       security: [{ ownerSessionCookie: [] }]
       requestBody:
         required: true
@@ -198,6 +202,9 @@ components:
           organizationCount,
           entitlementSources,
           usage,
+          planVersionNumber,
+          accessValidUntil,
+          scheduledVersionTransition,
         ]
       properties:
         planCode: { type: string, enum: [trial, essential, business, pro] }
@@ -238,6 +245,22 @@ components:
           description: Origin of each effective entitlement at response time (plan value or owner override).
           type: array
           items: { $ref: '#/components/schemas/EntitlementSource' }
+        planVersionNumber:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Published catalog version pinned by the coverage that grants access now (trial, paid or complimentary); for not_started, the trial version new trials receive; null only when no coverage ever existed for a paid plan.',
+          }
+        accessValidUntil:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'Next instant at which the resolved access may change on its own (coverage, grace or trial end, override start/end, scheduled change, next email window). Clients refetch at this instant; null when nothing is scheduled.',
+          }
+        scheduledVersionTransition:
+          anyOf:
+            - { $ref: '#/components/schemas/ScheduledVersionTransition' }
+            - { type: 'null' }
         usage:
           type: object
           additionalProperties: false
@@ -247,6 +270,15 @@ components:
             businessEmails: { type: integer, minimum: 0 }
             emailPeriodStart: { type: [string, 'null'], format: date-time }
             emailPeriodEnd: { type: [string, 'null'], format: date-time }
+    ScheduledVersionTransition:
+      type: object
+      additionalProperties: false
+      description: 'Notified move of this plan to a newer published version. Applies only to a renewal starting at or after effectiveAt, at least 30 days after noticeSentAt; already-paid periods keep their version.'
+      required: [targetVersionNumber, effectiveAt, noticeSentAt]
+      properties:
+        targetVersionNumber: { type: integer, minimum: 1 }
+        effectiveAt: { type: string, format: date-time }
+        noticeSentAt: { type: string, format: date-time }
     PaidPlanCode: { type: string, enum: [essential, business, pro] }
     BillingCycle: { type: string, enum: [monthly, annual] }
     MoneyBreakdown:
@@ -275,9 +307,15 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [code, name, monthlyHt, annualHt, entitlements]
+            required: [code, versionNumber, name, monthlyHt, annualHt, entitlements]
             properties:
               code: { $ref: '#/components/schemas/PaidPlanCode' }
+              versionNumber:
+                {
+                  type: integer,
+                  minimum: 1,
+                  description: 'Current selling version. Withdrawn plans are omitted.',
+                }
               name: { type: string }
               monthlyHt: { type: integer, minimum: 0 }
               annualHt: { type: integer, minimum: 0 }
@@ -292,9 +330,15 @@ components:
     SubscriptionQuote:
       type: object
       additionalProperties: false
-      required: [planCode, cycle, kind, amount, coverageStart, coverageEnd]
+      required: [planCode, planVersionNumber, cycle, kind, amount, coverageStart, coverageEnd]
       properties:
         planCode: { $ref: '#/components/schemas/PaidPlanCode' }
+        planVersionNumber:
+          {
+            type: integer,
+            minimum: 1,
+            description: 'Version whose terms and price this quote uses: the current pin for a same-plan renewal (or an eligible notified transition target), otherwise the selling version.',
+          }
         cycle: { $ref: '#/components/schemas/BillingCycle' }
         kind: { type: string, enum: [activation, renewal, upgrade] }
         amount: { $ref: '#/components/schemas/MoneyBreakdown' }
@@ -321,6 +365,7 @@ components:
         [
           id,
           planCode,
+          planVersionNumber,
           cycle,
           kind,
           status,
@@ -336,6 +381,12 @@ components:
       properties:
         id: { type: string, format: uuid }
         planCode: { $ref: '#/components/schemas/PaidPlanCode' }
+        planVersionNumber:
+          {
+            type: integer,
+            minimum: 1,
+            description: 'Version pinned at submission; confirmation never changes it.',
+          }
         cycle: { $ref: '#/components/schemas/BillingCycle' }
         kind: { type: string, enum: [activation, renewal, upgrade] }
         status: { type: string, enum: [submitted, confirmed, rejected] }

@@ -31,10 +31,14 @@ components:
         subscription:
           type: object
           additionalProperties: false
-          required: [entitlements]
+          required: [entitlements, accessValidUntil]
           properties:
             entitlements:
               $ref: ../subscriptions/subscriptions.yaml#/components/schemas/SubscriptionEntitlements
+            accessValidUntil:
+              type: [string, 'null']
+              format: date-time
+              description: Next instant at which resolved access may change; the client refetches then.
         defaultVatRate:
           type:
             - string

@@ -15,10 +15,9 @@ describe('Manual subscription billing', () => {
   let subscriptions: ReturnType<typeof createSubscriptionService>
 
   beforeEach(async () => {
-    fixture = await isolatedDatabase()
+    fixture = await isolatedDatabase({ owner: 'trial' })
     now = new Date('2026-03-10T09:00:00Z')
     // Fresh trial state at the injected clock; the fixture default is a paid pro owner.
-    await fixture.client`delete from subscription_payments`
     await fixture.client`update owner_subscriptions set plan_code='trial',paid_through_at=null,cancel_at_period_end=false,trial_started_at=${now.toISOString()}::timestamptz,trial_ends_at=${new Date(now.getTime() + 7 * DAY).toISOString()}::timestamptz where owner_id=${testOwnerId}`
     await fixture.client`update billing_settings set tax_rate_basis_points=2000`
     const subscriptionRepo = createSubscriptionRepository(() => fixture.db),

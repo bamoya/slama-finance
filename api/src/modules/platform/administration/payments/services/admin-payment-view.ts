@@ -10,6 +10,7 @@ const iso = (value: Date | null) => value?.toISOString() ?? null
 export function toAdminPayment(row: {
   payment: AdminPaymentRecord
   ownerEmail: string
+  planVersionNumber: number
 }): AdminPayment {
   const p = row.payment
   return {
@@ -17,6 +18,7 @@ export function toAdminPayment(row: {
     ownerId: p.ownerId,
     ownerEmail: row.ownerEmail,
     planCode: p.planCode as AdminPayment['planCode'],
+    planVersionNumber: row.planVersionNumber,
     cycle: p.cycle,
     kind: p.kind,
     status: p.status,

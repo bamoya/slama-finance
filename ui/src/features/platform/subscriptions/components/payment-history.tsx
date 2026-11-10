@@ -14,6 +14,7 @@ import {
   paymentMethodLabel,
   paymentStatusTone,
   planLabel,
+  versionLabel,
 } from './billing-format'
 
 const statusLabel = {
@@ -32,7 +33,7 @@ const columns: DataColumn<ListOwnerSubscriptionPayments200DataItem>[] = [
     title: 'Plan',
     render: (p) => (
       <span className="whitespace-nowrap">
-        {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
+        {planLabel(p.planCode)} · {versionLabel(p.planVersionNumber)} · {cycleLabel(p.cycle)}
       </span>
     ),
   },

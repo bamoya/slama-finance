@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { readdir, readFile } from 'node:fs/promises'
 
+import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import type { FastifyInstance } from 'fastify'
 import postgres from 'postgres'
@@ -18,7 +19,9 @@ export const testUserId = '11111111-1111-4111-8111-111111111111'
  * `trial` leaves the trial only.
  */
 export async function isolatedDatabase({
-  owner = 'legacy',
+  // Default: pinned paid coverage. 'legacy' (an unpinned paid-through marker) is only for tests that
+  // prove it is refused; the resolver never infers a version for it.
+  owner = 'paid',
 }: { owner?: 'legacy' | 'paid' | 'trial' } = {}) {
   const value = process.env.TEST_DATABASE_URL
   if (!value)
@@ -75,14 +78,18 @@ export async function isolatedDatabase({
     const db = drizzle(client, { schema: tables })
     if (owner === 'legacy')
       await client`update owner_subscriptions set plan_code='pro',paid_through_at=now()+interval '30 days' where owner_id=${testOwnerId}`
-    if (owner === 'paid')
+    if (owner === 'paid') {
+      // Access is resolved on the database clock; tests may fake the JS clock. Cover both instants.
+      const [{ now } = { now: new Date() }] = await client<{ now: Date }[]>`select now() as now`
+      const instants = [Date.now(), new Date(now).getTime()]
       await seedPaidCoverage(db, {
         ownerId: testOwnerId,
         planCode: 'pro',
-        start: new Date(Date.now() - 30 * DAY),
-        end: new Date(Date.now() + 30 * DAY),
+        start: new Date(Math.min(...instants) - 30 * DAY),
+        end: new Date(Math.max(...instants) + 30 * DAY),
         reference: 'fixture-coverage',
       })
+    }
     await client`INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password) VALUES (${testUserId}, 'operator@example.test', 'fixture-not-a-login-hash', 'Test', 'Operator', false)`
     await admin.unsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`)
     await admin.unsafe(`GRANT SELECT, INSERT ON "${schema}".actors TO "${role}"`)
@@ -119,6 +126,8 @@ export async function seedPaidCoverage(
     end: Date
     reference: string
     kind?: 'activation' | 'renewal' | 'upgrade'
+    /** Explicit pin; defaults to the plan's selling version. */
+    planVersionId?: string
   },
 ) {
   const billing = createBillingRepository(() => db)
@@ -128,6 +137,10 @@ export async function seedPaidCoverage(
       .values({
         ownerId: values.ownerId,
         planCode: values.planCode,
+        // Fixture pin: the plan's current selling version (writers choose it explicitly).
+        planVersionId:
+          values.planVersionId ??
+          sql`(select plan_version_id from plan_selling where plan_code=${values.planCode})`,
         cycle: 'monthly',
         kind: values.kind ?? 'activation',
         method: 'cash',
@@ -147,6 +160,7 @@ export async function seedPaidCoverage(
         ownerId: values.ownerId,
         kind: 'paid',
         planCode: values.planCode,
+        planVersionId: payment!.planVersionId,
         cycle: 'monthly',
         start: values.start,
         end: values.end,
@@ -204,4 +218,35 @@ export function fixtureSlugs(fixture: Awaited<ReturnType<typeof isolatedDatabase
     >`select slug from organizations where id=${id}`
     return row?.slug
   }
+}
+
+type CatalogValue = number | null | boolean
+/**
+ * Publishes the next version of a plan (copy of its selling version with `values` replaced; prices
+ * plus `priceDelta`) and optionally sells it. Runs as the fixture's migration-capable connection,
+ * exactly like the operator path; publication itself never repins anyone.
+ */
+export async function publishPlanVersion(
+  client: Awaited<ReturnType<typeof isolatedDatabase>>['client'],
+  plan: string,
+  options: { values?: Record<string, CatalogValue>; priceDelta?: number; sell?: boolean } = {},
+) {
+  const [base] =
+    await client`select v.* from plan_selling s join plan_versions v on v.id=s.plan_version_id where s.plan_code=${plan}`
+  const [next] =
+    await client`select coalesce(max(version_number),0)+1 n from plan_versions where plan_code=${plan}`
+  const [created] =
+    await client`insert into plan_versions(plan_code,version_number,display_name,rank) values (${plan},${next!.n},${base!.display_name},${base!.rank}) returning id`
+  const id = String(created!.id)
+  await client`insert into plan_entitlements select ${id}::uuid,entitlement_key,value_type,boolean_value,integer_value,is_unlimited from plan_entitlements where plan_version_id=${base!.id}`
+  for (const [key, value] of Object.entries(options.values ?? {}))
+    if (typeof value === 'boolean')
+      await client`update plan_entitlements set boolean_value=${value} where plan_version_id=${id} and entitlement_key=${key}`
+    else
+      await client`update plan_entitlements set integer_value=${value},is_unlimited=${value === null} where plan_version_id=${id} and entitlement_key=${key}`
+  await client`insert into plan_version_prices(plan_version_id,cycle,currency,amount_ht_minor) select ${id}::uuid,cycle,currency,amount_ht_minor+${options.priceDelta ?? 0} from plan_version_prices where plan_version_id=${base!.id}`
+  await client`update plan_versions set status='published',published_at=now(),published_by='test:operator' where id=${id}`
+  if (options.sell ?? true)
+    await client`update plan_selling set plan_version_id=${id},changed_by='test:operator' where plan_code=${plan}`
+  return id
 }

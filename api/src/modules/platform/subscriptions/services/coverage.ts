@@ -9,10 +9,14 @@ export type Coverage = {
   end: Date
   /** Legacy provenance: complimentary trial activation, no grace when it is the latest coverage. */
   graceless?: boolean
+  /** Catalog version pinned by this coverage; null only for the legacy paid-through marker. */
+  planVersionId?: string | null
 }
 export type CoverageState = {
   status: 'not_started' | 'trial' | 'active' | 'past_due' | 'expired' | 'suspended'
   planCode: string
+  /** Pin of the coverage `planCode` comes from (null for the trial: the subscription row holds it). */
+  planVersionId: string | null
   cycle: Cycle | null
   current: Coverage | null
   paidThroughAt: Date | null
@@ -47,6 +51,7 @@ function resolveRunning(
   now: Date,
 ): CoverageState {
   const empty = {
+    planVersionId: null,
     cycle: null,
     current: null,
     paidThroughAt: null,
@@ -77,6 +82,7 @@ function resolveRunning(
       ...empty,
       status: 'active',
       planCode: current.planCode,
+      planVersionId: current.planVersionId ?? null,
       cycle: current.cycle,
       current,
       paidThroughAt,
@@ -106,6 +112,7 @@ function resolveRunning(
   return {
     status: expired ? 'expired' : 'past_due',
     planCode: last.planCode,
+    planVersionId: last.planVersionId ?? null,
     cycle: last.cycle,
     current: null,
     paidThroughAt,

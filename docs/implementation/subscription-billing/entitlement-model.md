@@ -3,7 +3,7 @@
 Design evidence for #31/#32, prepared 2026-11-08. Status: inactive foundation implemented in source; no deployed/development migration applied.
 [Decisions](decisions.md) remains the commercial gate record. This design adds an inert catalog foundation;
 publication does not assign customers, change checkout, override values or activate new billing semantics.
-User confirmed the product is deployed: all schema changes require forward migrations. Current source evidence is `api/db/schema/subscriptions.ts`,
+Superseded 2026-11-09: pre-client single fresh baseline, no forward migrations ([decisions](decisions.md)); activation design is in [S2/S4 activation](s2-s4-activation.md). Current source evidence is `api/db/schema/subscriptions.ts`,
 `api/db/reference/plans.sql` and `api/openapi/modules/subscriptions/subscriptions.yaml`.
 
 ## Proposed tables and integrity

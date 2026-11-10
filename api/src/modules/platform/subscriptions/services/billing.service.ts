@@ -8,9 +8,11 @@ import type {
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import type { createBillingRepository, PaymentRow } from '../repositories/billing.repository.js'
+import { createCatalogRepository } from '../repositories/catalog.repository.js'
 import type { CoverageReads } from '../repositories/coverage-lifecycle.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
 import { addCycle, billingDay, zonedDayStart } from './billing-calendar.service.js'
+import { createCatalogReader, type VersionTerms } from './catalog-values.service.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
 import { resolvePeriods } from './period-resolver.service.js'
 
@@ -38,11 +40,16 @@ export type AdminActivation = {
 }
 
 const MAX_ACTIVATION_DAYS = 3 * 366
+const paid = (planCode: string) => {
+  if (planCode === 'trial') throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+}
+const priceOf = (terms: VersionTerms, cycle: 'monthly' | 'annual') => terms.prices![cycle]
 
 export function toPayment(row: PaymentRow): SubscriptionPayment {
   return {
     id: row.id,
     planCode: row.planCode as SubscriptionPayment['planCode'],
+    planVersionNumber: row.planVersionNumber,
     cycle: row.cycle,
     kind: row.kind,
     status: row.status,
@@ -69,7 +76,11 @@ export type DecisionHook = (tx: Transaction, before: PaymentRow, after: PaymentR
 export function createBillingService(
   repo: ReturnType<typeof createBillingRepository>,
   subscriptions: ReturnType<typeof createSubscriptionRepository>,
-  clock = () => new Date(),
+  /**
+   * Injected test clock. Production leaves it undefined: writers then read the database transaction
+   * clock, the same instant the access resolver uses, so coverage they write is resolved coherently.
+   */
+  injectedClock?: () => Date,
   /**
    * Throws 503 (TIMEZONE_DATA_MISMATCH/UNCHECKED) when calendar boundaries cannot be computed
    * reliably. Only operations that compute a calendar boundary (addCycle) call it; fixed-duration
@@ -86,7 +97,12 @@ export function createBillingService(
    * subscription_periods (no grace after complimentary coverage) and requires period writes.
    */
   reads: CoverageReads = 'legacy',
+  /** Published version terms (pins and the selling pointer); never the plan JSON or price columns. */
+  catalog = createCatalogReader(createCatalogRepository()),
 ) {
+  /** One authoritative instant per transaction, shared with the access resolver. */
+  const clock = (tx: Transaction) =>
+    injectedClock ? Promise.resolve(injectedClock()) : subscriptions.now(tx)
   if (reads === 'periods' && !periodWrites)
     throw new Error('Period coverage reads require SUBSCRIPTION_PERIOD_WRITES=on')
   // Administration supplies its step-up transaction; operator callers retain the standalone path.
@@ -99,10 +115,18 @@ export function createBillingService(
    * Coverage state from the selected authority. `graceless` says whether a lapse ends access at the
    * paid-through instant (cancellation; with period reads also complimentary coverage).
    */
-  async function state(ownerId: string, tx: Transaction, now = clock(), from = reads) {
-    const row = (await subscriptions.subscription(ownerId, tx))?.owner_subscriptions ?? null
+  async function state(
+    ownerId: string,
+    tx: Transaction,
+    at?: Date,
+    from = reads,
+    /** Snapshot already read by the access resolver. Every input comes from this one statement. */
+    snapshot?: Awaited<ReturnType<typeof subscriptions.periodState>>,
+  ) {
+    const now = at ?? (await clock(tx))
+    const periods = snapshot ?? (await subscriptions.periodState(ownerId, tx))
+    const row = periods.subscription
     if (from === 'periods') {
-      const periods = await subscriptions.periodState(ownerId, tx)
       // Fail closed: a started subscription needs its trial period, and periods need a subscription.
       // Never fall back to the legacy resolver (and its complimentary grace) for one owner.
       if (row ? !periods.periods.some((p) => p.kind === 'trial') : periods.periods.length)
@@ -115,6 +139,7 @@ export function createBillingService(
         .filter((p) => p.kind !== 'trial')
         .map((p) => ({
           planCode: p.planCode,
+          planVersionId: p.planVersionId,
           cycle: p.cycle,
           start: p.startsAt,
           end: p.supersededAt ?? p.endsAt,
@@ -138,9 +163,10 @@ export function createBillingService(
         ...resolvePeriods(periods, now),
       }
     }
-    const coverage: Coverage[] = [...(await repo.coverage(ownerId, tx))]
+    const coverage: Coverage[] = periods.legacyCoverage
       .map((p) => ({
         planCode: p.planCode,
+        planVersionId: p.planVersionId,
         cycle: p.cycle,
         start: p.coverageStart!,
         end: p.coverageEnd!,
@@ -148,8 +174,10 @@ export function createBillingService(
       }))
       .sort((a, b) => a.start.getTime() - b.start.getTime())
     if (!coverage.length && row && row.planCode !== 'trial' && row.paidThroughAt)
+      // Legacy paid-through marker: no pin, so any version-dependent decision fails closed.
       coverage.push({
         planCode: row.planCode,
+        planVersionId: null,
         cycle: null,
         start: row.trialStartedAt,
         end: row.paidThroughAt,
@@ -169,32 +197,65 @@ export function createBillingService(
     }
   }
 
+  /** Pin of a coverage period; the legacy paid-through marker has none and is never inferred. */
+  const pinOf = (c: { planVersionId?: string | null }, tx: Transaction) => {
+    if (!c.planVersionId)
+      throw new AppError(
+        503,
+        'SUBSCRIPTION_PERIODS_INCONSISTENT',
+        'Subscription coverage is temporarily unavailable. Please try again later.',
+      )
+    return catalog.pinned(c.planVersionId, tx)
+  }
+  /**
+   * Notified version transition that applies to a same-plan renewal starting at `start`: scheduled,
+   * same plan, start at or after its effective instant and at least 30 days after the notice.
+   */
+  async function eligibleTransition(
+    ownerId: string,
+    planCode: string,
+    start: Date,
+    tx: Transaction,
+  ) {
+    const t = await repo.versionTransition(ownerId, tx)
+    return t &&
+      t.targetPlanCode === planCode &&
+      t.targetPlanVersionId &&
+      t.noticeSentAt &&
+      start.getTime() >= t.effectiveAt.getTime() &&
+      start.getTime() >= t.noticeSentAt.getTime() + 30 * DAY_MS
+      ? t
+      : null
+  }
+
   async function quote(
     ownerId: string,
     input: SubscriptionQuoteRequest,
     tx: Transaction,
-    now = clock(),
-  ): Promise<SubscriptionQuote> {
-    const [settings, plan, s] = await Promise.all([
-      repo.settings(tx),
-      repo.plan(input.planCode, tx),
-      state(ownerId, tx, now),
-    ])
-    if (!plan || plan.code === 'trial')
-      throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+    at?: Date,
+  ): Promise<SubscriptionQuote & { planVersionId: string }> {
+    paid(input.planCode)
+    const now = at ?? (await clock(tx))
+    const [settings, s] = await Promise.all([repo.settings(tx), state(ownerId, tx, now)])
     if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'Create an organization first.')
     if (s.status === 'suspended') throw suspended()
-    const price = input.cycle === 'annual' ? plan.annualHt : plan.monthlyHt
     const amount = (ht: number) => money(ht, settings.taxRateBasisPoints, settings.currency)
     const current = s.current
     if (current) {
-      const active = await repo.plan(current.planCode, tx)
-      if (active && plan.rank > active.rank && current.cycle === input.cycle) {
-        const old = input.cycle === 'annual' ? active.annualHt : active.monthlyHt
+      // Another plan: ranks compare the running pin with the selling target (withdrawn is 409).
+      // The same plan never needs the selling pointer, so withdrawal leaves its renewal open.
+      const target =
+        current.planCode === input.planCode ? null : await catalog.selling(input.planCode, tx)
+      const active = target && (await pinOf(current, tx))
+      if (target && active && target.rank > active.rank && current.cycle === input.cycle) {
+        // Unused share of the running period at its pinned price, against the selling price.
+        const old = priceOf(active, input.cycle)
         return {
           ...input,
+          planVersionId: target.versionId,
+          planVersionNumber: target.versionNumber,
           kind: 'upgrade',
-          amount: amount(prorate(price - old, current, now)),
+          amount: amount(prorate(priceOf(target, input.cycle) - old, current, now)),
           coverageStart: now.toISOString(),
           coverageEnd: current.end.toISOString(),
         }
@@ -206,10 +267,25 @@ export function createBillingService(
     const continues =
       s.paidThroughAt && (s.status === 'active' || s.status === 'past_due') ? s.paidThroughAt : null
     const start = continues ?? now
+    // A same-plan renewal (either cycle) keeps the latest coverage's pin unless an eligible notified
+    // transition moves it; any other plan, and every activation, takes the selling version.
+    const last = s.coverage.reduce<(typeof s.coverage)[number] | null>(
+      (a, b) => (!a || b.end.getTime() >= a.end.getTime() ? b : a),
+      null,
+    )
+    let terms: VersionTerms
+    if (continues && last?.planCode === input.planCode) {
+      const transition = await eligibleTransition(ownerId, input.planCode, start, tx)
+      terms = transition
+        ? await catalog.pinned(transition.targetPlanVersionId!, tx)
+        : await pinOf(last, tx)
+    } else terms = await catalog.selling(input.planCode, tx)
     return {
       ...input,
+      planVersionId: terms.versionId,
+      planVersionNumber: terms.versionNumber,
       kind: continues ? 'renewal' : 'activation',
-      amount: amount(price),
+      amount: amount(priceOf(terms, input.cycle)),
       coverageStart: start.toISOString(),
       coverageEnd: addCycle(start, input.cycle).toISOString(),
     }
@@ -243,6 +319,7 @@ export function createBillingService(
     ownerId: string,
     values: {
       planCode: string
+      planVersionId: string
       cycle: 'monthly' | 'annual'
       kind: 'activation' | 'renewal' | 'upgrade'
       start: Date
@@ -264,6 +341,7 @@ export function createBillingService(
         ownerId,
         kind: 'complimentary',
         planCode: values.planCode,
+        planVersionId: values.planVersionId,
         cycle: values.cycle,
         start: values.start,
         end: values.end,
@@ -283,7 +361,7 @@ export function createBillingService(
       const s = await state(ownerId, tx)
       if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
       if (s.status === 'suspended') throw suspended()
-      const at = clock()
+      const at = await clock(tx)
       await repo.setSuspended(ownerId, at, tx)
       if (periodWrites) await repo.openSuspension(ownerId, at, tx)
     },
@@ -293,7 +371,7 @@ export function createBillingService(
       const since = s.row?.suspendedAt
       if (!since)
         throw new AppError(409, 'SUBSCRIPTION_NOT_SUSPENDED', 'This subscription is not suspended.')
-      const now = clock()
+      const now = await clock(tx)
       const shift = Math.max(0, now.getTime() - since.getTime())
       // Legacy rows still shift (the legacy resolver reads payment coverage until S5c); periods,
       // scheduled changes and the suspension row move through the controlled DB function.
@@ -303,22 +381,23 @@ export function createBillingService(
     },
     async changePlan(ownerId: string, planCode: string, actor: AdminActor, tx: Transaction) {
       await subscriptions.lock(ownerId, tx)
-      const now = clock()
-      const [s, plan] = await Promise.all([state(ownerId, tx, now), repo.plan(planCode, tx)])
-      if (!plan || plan.code === 'trial')
-        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      const now = await clock(tx)
+      paid(planCode)
+      const s = await state(ownerId, tx, now)
       if (s.status === 'suspended') throw suspended()
       if (!s.current)
         throw new AppError(409, 'NO_PAID_PERIOD', 'There is no current paid period to change.')
-      if (s.current.planCode === plan.code)
+      if (s.current.planCode === planCode)
         throw new AppError(409, 'SAME_PLAN', 'The subscription already uses this plan.')
-      const active = await repo.plan(s.current.planCode, tx)
+      const plan = await catalog.selling(planCode, tx)
+      const active = await pinOf(s.current, tx)
       await complimentary(
         ownerId,
         {
-          planCode: plan.code,
+          planCode: plan.planCode,
+          planVersionId: plan.versionId,
           cycle: s.current.cycle ?? 'monthly',
-          kind: active && plan.rank > active.rank ? 'upgrade' : 'activation',
+          kind: plan.rank > active.rank ? 'upgrade' : 'activation',
           start: now,
           end: s.current.end,
         },
@@ -326,11 +405,11 @@ export function createBillingService(
         now,
         tx,
       )
-      await repo.extendPaidThrough(ownerId, s.current.end, plan.code, tx)
+      await repo.extendPaidThrough(ownerId, s.current.end, plan.planCode, tx)
     },
     async extend(ownerId: string, days: number, actor: AdminActor, tx: Transaction) {
       await subscriptions.lock(ownerId, tx)
-      const now = clock()
+      const now = await clock(tx)
       const s = await state(ownerId, tx, now)
       if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
       if (s.status === 'suspended') throw suspended()
@@ -345,7 +424,15 @@ export function createBillingService(
       const end = new Date(start.getTime() + add)
       await complimentary(
         ownerId,
-        { planCode: last.planCode, cycle: last.cycle ?? 'monthly', kind: 'renewal', start, end },
+        {
+          planCode: last.planCode,
+          // Continues the latest period on its own pin (never the selling version).
+          planVersionId: (await pinOf(last, tx)).versionId,
+          cycle: last.cycle ?? 'monthly',
+          kind: 'renewal',
+          start,
+          end,
+        },
         actor,
         now,
         tx,
@@ -361,14 +448,9 @@ export function createBillingService(
     async activate(ownerId: string, input: AdminActivation, actor: AdminActor, tx: Transaction) {
       writable()
       await subscriptions.lock(ownerId, tx)
-      const now = clock()
-      const [s, plan, settings] = await Promise.all([
-        state(ownerId, tx, now),
-        repo.plan(input.planCode, tx),
-        repo.settings(tx),
-      ])
-      if (!plan || plan.code === 'trial')
-        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      const now = await clock(tx)
+      paid(input.planCode)
+      const [s, settings] = await Promise.all([state(ownerId, tx, now), repo.settings(tx)])
       if (!s.row) throw new AppError(409, 'SUBSCRIPTION_NOT_STARTED', 'The trial has not started.')
       if (s.status === 'suspended') throw suspended()
       if (s.coverage.length || (s.status !== 'trial' && s.status !== 'expired'))
@@ -392,12 +474,14 @@ export function createBillingService(
         end.getTime() - start.getTime() > MAX_ACTIVATION_DAYS * DAY_MS
       )
         throw invalid()
+      const plan = await catalog.selling(input.planCode, tx)
       const settlement = input.settlement
       if (settlement.kind === 'complimentary') {
         await complimentary(
           ownerId,
           {
-            planCode: plan.code,
+            planCode: plan.planCode,
+            planVersionId: plan.versionId,
             cycle: input.cycle,
             kind: 'activation',
             start,
@@ -408,16 +492,17 @@ export function createBillingService(
           now,
           tx,
         )
-        await repo.extendPaidThrough(ownerId, end, start <= now ? plan.code : null, tx)
+        await repo.extendPaidThrough(ownerId, end, start <= now ? plan.planCode : null, tx)
         return
       }
       if (!settings.paymentMethods.includes(settlement.method))
         throw new AppError(400, 'INVALID_PAYMENT_METHOD', 'This payment method is not accepted.')
-      const price = input.cycle === 'annual' ? plan.annualHt : plan.monthlyHt
+      const price = priceOf(plan, input.cycle)
       const payment = await repo.submit(
         {
           ownerId,
-          planCode: plan.code,
+          planCode: plan.planCode,
+          planVersionId: plan.versionId,
           cycle: input.cycle,
           kind: 'activation',
           status: 'confirmed',
@@ -435,7 +520,7 @@ export function createBillingService(
       )
       await repo.applyCoverage(
         ownerId,
-        { paidThroughAt: end, ...(start <= now ? { planCode: plan.code } : {}) },
+        { paidThroughAt: end, ...(start <= now ? { planCode: plan.planCode } : {}) },
         tx,
       )
       if (!periodWrites) return
@@ -443,7 +528,8 @@ export function createBillingService(
         {
           ownerId,
           kind: 'paid',
-          planCode: plan.code,
+          planCode: plan.planCode,
+          planVersionId: plan.versionId,
           cycle: input.cycle,
           start,
           end,
@@ -456,21 +542,21 @@ export function createBillingService(
     /** Paid subscription granted when an administrator creates the account. */
     async grant(ownerId: string, grant: AdminGrant, actor: AdminActor, tx: Transaction) {
       writable()
-      const now = clock()
-      const plan = await repo.plan(grant.planCode, tx)
-      if (!plan || plan.code === 'trial')
-        throw new AppError(400, 'INVALID_PLAN', 'Choose a paid plan.')
+      const now = await clock(tx)
+      paid(grant.planCode)
+      const plan = await catalog.selling(grant.planCode, tx)
       if (grant.start.getTime() > now.getTime() || grant.end.getTime() <= now.getTime())
         throw new AppError(
           400,
           'INVALID_COVERAGE',
           'Coverage must have started and must end in the future.',
         )
-      await repo.createPaid(ownerId, plan.code, grant.end, now, tx)
+      await repo.createPaid(ownerId, plan.planCode, grant.end, now, tx)
       await complimentary(
         ownerId,
         {
-          planCode: plan.code,
+          planCode: plan.planCode,
+          planVersionId: plan.versionId,
           cycle: grant.cycle,
           kind: 'activation',
           start: grant.start,
@@ -487,17 +573,18 @@ export function createBillingService(
     administration,
     async catalog(ownerId: string): Promise<BillingCatalog> {
       return subscriptions.owner(ownerId, async (tx) => {
-        const [settings, plans] = await Promise.all([repo.settings(tx), repo.paidPlans(tx)])
+        const [settings, plans] = await Promise.all([repo.settings(tx), catalog.sellingPaid(tx)])
         return {
           currency: settings.currency,
           taxRateBasisPoints: settings.taxRateBasisPoints,
           paymentMethods: settings.paymentMethods,
           paymentInstructions: settings.paymentInstructions,
           plans: plans.map((p) => ({
-            code: p.code as BillingCatalog['plans'][number]['code'],
+            code: p.planCode as BillingCatalog['plans'][number]['code'],
+            versionNumber: p.versionNumber,
             name: p.name,
-            monthlyHt: p.monthlyHt,
-            annualHt: p.annualHt,
+            monthlyHt: p.prices!.monthly,
+            annualHt: p.prices!.annual,
             entitlements: p.entitlements,
           })),
         }
@@ -505,7 +592,10 @@ export function createBillingService(
     },
     state,
     quote: (ownerId: string, input: SubscriptionQuoteRequest) =>
-      subscriptions.owner(ownerId, (tx) => quote(ownerId, input, tx)),
+      subscriptions.owner(ownerId, async (tx): Promise<SubscriptionQuote> => {
+        const { planVersionId: _, ...q } = await quote(ownerId, input, tx)
+        return q
+      }),
     payments: (ownerId: string) =>
       subscriptions.owner(ownerId, async (tx) => ({
         data: (await repo.payments(ownerId, tx)).map(toPayment),
@@ -525,6 +615,8 @@ export function createBillingService(
             {
               ownerId,
               planCode: q.planCode,
+              // The quoted version; confirmation keeps it even if the selling version moves meanwhile.
+              planVersionId: q.planVersionId,
               cycle: q.cycle,
               kind: q.kind,
               method: input.method,
@@ -573,7 +665,7 @@ export function createBillingService(
         if (payment.status === 'confirmed') return toPayment(payment)
         if (payment.status === 'rejected')
           throw new AppError(409, 'PAYMENT_REJECTED', 'This payment was rejected.')
-        const now = clock(),
+        const now = await clock(tx),
           s = await state(payment.ownerId, tx, now)
         let start = now,
           end: Date
@@ -615,6 +707,7 @@ export function createBillingService(
               ownerId: payment.ownerId,
               kind: 'paid',
               planCode: payment.planCode,
+              planVersionId: payment.planVersionId,
               cycle: payment.cycle,
               start,
               end,
@@ -626,6 +719,13 @@ export function createBillingService(
           const cancel = await repo.scheduledCancel(payment.ownerId, tx)
           if (cancel) await repo.endScheduledChange(cancel.id, 'cancelled', tx)
         }
+        // The renewal that carries a notified transition's target applies it, atomically.
+        const transition =
+          payment.kind === 'renewal'
+            ? await eligibleTransition(payment.ownerId, payment.planCode, start, tx)
+            : null
+        if (transition && transition.targetPlanVersionId === payment.planVersionId)
+          await repo.applyScheduledChange(transition.id, tx)
         await onDecided?.(tx, payment, confirmed!)
         return toPayment(confirmed!)
       }),
@@ -648,7 +748,7 @@ export function createBillingService(
         if (payment.status === 'rejected') return toPayment(payment)
         const row = await repo.decide(
           id,
-          { status: 'rejected', decidedAt: clock(), decidedBy, rejectionReason },
+          { status: 'rejected', decidedAt: await clock(tx), decidedBy, rejectionReason },
           tx,
         )
         if (!row)

@@ -133,6 +133,7 @@ export async function initializeDatabase(env = process.env) {
             'plan_versions',
             'plan_entitlements',
             'plan_version_prices',
+            'plan_selling',
           ],
         ],
         ['SELECT, INSERT', ['organizations']],

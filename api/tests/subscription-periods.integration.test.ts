@@ -54,8 +54,8 @@ describe('S5a coverage periods', () => {
   ) {
     const amount = over.amount ?? 9900
     const [row] =
-      await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at,decided_by)
-      values (${ownerId},${over.plan ?? 'essential'},'monthly','activation','confirmed',${over.method ?? 'cash'},'R','MAD',${amount},0,${amount},${iso(from)},${iso(to)},now(),'ops') returning id`
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,status,method,reference,currency,amount_ht,tax_amount,amount_ttc,coverage_start,coverage_end,decided_at,decided_by)
+      values (${ownerId},${over.plan ?? 'essential'},(select plan_version_id from plan_selling where plan_code=${over.plan ?? 'essential'}),'monthly','activation','confirmed',${over.method ?? 'cash'},'R','MAD',${amount},0,${amount},${iso(from)},${iso(to)},now(),'ops') returning id`
     return String(row!.id)
   }
   const backfill = () => fixture.client`select subscription_periods_reconcile() as n`
@@ -101,7 +101,10 @@ describe('S5a coverage periods', () => {
       amount: 0,
       method: 'admin_adjustment',
     })
+    // Formerly an unpinned paid-through marker; markers are now refused, so the same complimentary
+    // shape is an explicit pinned administrator adjustment.
     const marker = await owner({ plan: 'business', paidThrough: 15 })
+    await payment(marker, -30, 15, { plan: 'business', amount: 0, method: 'admin_adjustment' })
     const cancelled = await owner({ plan: 'essential', paidThrough: 20, cancel: true })
     await payment(cancelled, -10, 20)
     const suspended = await owner({ plan: 'essential', paidThrough: 20, suspendedDaysAgo: 3 })
@@ -178,6 +181,12 @@ describe('S5a coverage periods', () => {
         /ambiguous overlapping/,
       ],
       ['future suspension', async () => owner({ suspendedDaysAgo: -2 }), /future/],
+      // A legacy paid-through marker has no payment, hence no version pin: never inferred.
+      [
+        'unpinned marker',
+        async () => owner({ plan: 'business', paidThrough: 15 }),
+        /no version pin/,
+      ],
     ]
     for (const [name, seed, message] of cases) {
       const id = await seed()
@@ -219,26 +228,29 @@ describe('S5a coverage periods', () => {
         await tx`update subscription_periods set ends_at=ends_at+interval '1 day' where id=${p!.id}`
       }),
     ).rejects.toThrow(/single supersession/)
+    const [{ business } = { business: '' }] = await fixture.client<
+      { business: string }[]
+    >`select plan_version_id business from plan_selling where plan_code='business'`
     const insert = (from: number, to: number, kind = 'complimentary') =>
-      fixture.client`insert into subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source) values (${id},${kind},'business',${iso(from)},${iso(to)},'admin_grant') returning id`
+      fixture.client`insert into subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source) values (${id},${kind},'business',${business},${iso(from)},${iso(to)},'admin_grant') returning id`
     // Overlap and missing note are checked at commit.
     await expect(
       fixture.client.begin(async (tx) => {
         const [row] =
-          await tx`insert into subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source) values (${id},'complimentary','business',${iso(5)},${iso(30)},'admin_grant') returning id`
+          await tx`insert into subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source) values (${id},'complimentary','business',${business},${iso(5)},${iso(30)},'admin_grant') returning id`
         await tx`insert into subscription_period_notes(period_id,reason) values (${row!.id},'grant')`
       }),
     ).rejects.toThrow(/overlap/)
     await expect(insert(20, 40)).rejects.toThrow(/administrator note/)
     await fixture.client.begin(async (tx) => {
       const [row] =
-        await tx`insert into subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source) values (${id},'complimentary','business',${iso(20)},${iso(40)},'admin_grant') returning id`
+        await tx`insert into subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source) values (${id},'complimentary','business',${business},${iso(20)},${iso(40)},'admin_grant') returning id`
       await tx`insert into subscription_period_notes(period_id,reason) values (${row!.id},'adjacent grant')`
     })
     await expect(
       fixture.client.begin(async (tx) => {
         await tx.unsafe('set transaction isolation level repeatable read')
-        await tx`insert into subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source) values (${id},'complimentary','business',${iso(50)},${iso(60)},'admin_grant')`
+        await tx`insert into subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source) values (${id},'complimentary','business',${business},${iso(50)},${iso(60)},'admin_grant')`
       }),
     ).rejects.toThrow(/READ COMMITTED/)
     await expect(
@@ -257,6 +269,7 @@ describe('S5a coverage periods', () => {
 
   it('limits reads to the owner scope and keeps notes administrator-only', async () => {
     const a = await owner({ plan: 'business', paidThrough: 15 })
+    await payment(a, -10, 15, { plan: 'business', amount: 0, method: 'admin_adjustment' })
     const b = await owner({ plan: 'essential' })
     await backfill()
     const read = (table: string, settings: string) =>
@@ -353,7 +366,8 @@ describe('S5a coverage periods', () => {
       ).toHaveLength(0)
       // With it, rows are visible and periods are created.
       const [result] = await asMigrationRole(`select subscription_periods_reconcile() as n`)
-      expect(Number(result!.n)).toBeGreaterThanOrEqual(2)
+      // The trial period is mirrored at subscription insert; the reconciliation adds the paid one.
+      expect(Number(result!.n)).toBeGreaterThanOrEqual(1)
       expect(
         (
           await fixture.client`select kind from subscription_periods where owner_id=${paidOwner} order by starts_at`

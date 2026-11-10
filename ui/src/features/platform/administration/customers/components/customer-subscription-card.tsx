@@ -8,8 +8,10 @@ import {
   formatDh,
   paymentKindLabel,
   planLabel,
+  versionLabel,
 } from '../../../subscriptions/components/billing-format'
 import { type Decision } from '../../payments/components/payment-decision-dialog'
+import { subscriptionErrorDescription } from './subscription-labels'
 import { SubscriptionStatusBadge } from './subscription-status-badge'
 
 function Item({ label, value }: { label: string; value: string }) {
@@ -31,6 +33,24 @@ export function CustomerSubscriptionCard({
   onDecide: (payment: AdminPayment, decision: Decision) => void
 }) {
   const s = detail.subscription
+  if (!s)
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>{translate('Subscription')}</CardTitle>
+            <SubscriptionStatusBadge status={null} error={detail.subscriptionError} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p role="status" data-testid="subscription-unavailable" className="text-sm">
+            {detail.subscriptionError
+              ? subscriptionErrorDescription(detail.subscriptionError)
+              : translate('The subscription of this customer is unavailable.')}
+          </p>
+        </CardContent>
+      </Card>
+    )
   const pending = s.pendingPayment
   const asPayment = (): AdminPayment | null =>
     pending && {
@@ -52,6 +72,10 @@ export function CustomerSubscriptionCard({
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Item label={translate('Plan')} value={planLabel(s.planCode)} />
+            <Item
+              label={translate('Plan version')}
+              value={s.planVersionNumber === null ? '—' : versionLabel(s.planVersionNumber)}
+            />
             <Item label={translate('Cycle')} value={s.cycle ? cycleLabel(s.cycle) : '—'} />
             <Item label={translate('Covered until')} value={date(s.paidThroughAt)} />
             <Item label={translate('Trial ends')} value={date(s.trialEndsAt)} />
@@ -62,6 +86,12 @@ export function CustomerSubscriptionCard({
               label={translate('Next plan')}
               value={s.nextPlanCode ? planLabel(s.nextPlanCode) : '—'}
             />
+            {s.scheduledVersionTransition && (
+              <Item
+                label={translate('Plan update')}
+                value={`${versionLabel(s.scheduledVersionTransition.targetVersionNumber)} · ${date(s.scheduledVersionTransition.effectiveAt)}`}
+              />
+            )}
             <Item
               label={translate('Organizations')}
               value={`${s.organizationCount} / ${s.entitlements.organizations ?? translate('Unlimited')}`}
@@ -94,7 +124,7 @@ export function CustomerSubscriptionCard({
             <dl className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Item
                 label={translate('Plan')}
-                value={`${planLabel(pending.planCode)} · ${cycleLabel(pending.cycle)}`}
+                value={`${planLabel(pending.planCode)} · ${versionLabel(pending.planVersionNumber)} · ${cycleLabel(pending.cycle)}`}
               />
               <Item label={translate('Type')} value={paymentKindLabel(pending.kind)} />
               <Item label={translate('Reference')} value={pending.reference} />

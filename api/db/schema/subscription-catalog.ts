@@ -152,3 +152,34 @@ export const planVersionPrices = pgTable(
     }),
   ],
 ).enableRLS()
+
+/**
+ * Selling authority (S2): the one published version new sales, trials and grants receive per plan.
+ * NULL version = withdrawn (no new sales; existing pins stay readable and same-plan renewals keep
+ * them). Migration role only, audited; the trial cannot be withdrawn. Never repins anyone.
+ */
+export const planSelling = pgTable(
+  'plan_selling',
+  {
+    planCode: text('plan_code')
+      .primaryKey()
+      .references(() => subscriptionPlans.code),
+    planVersionId: uuid('plan_version_id'),
+    changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+    changedBy: text('changed_by').notNull(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.planVersionId, t.planCode],
+      foreignColumns: [planVersions.id, planVersions.planCode],
+    }),
+    check('plan_selling_actor', sql`btrim(${t.changedBy})<>''`),
+    check('plan_selling_trial', sql`${t.planCode}<>'trial' or ${t.planVersionId} is not null`),
+    pgPolicy('plan_selling_migration_write', {
+      for: 'all',
+      using: sql`pg_has_role(current_user,(select relowner from pg_class where oid='plan_selling'::regclass),'MEMBER')`,
+      withCheck: sql`pg_has_role(current_user,(select relowner from pg_class where oid='plan_selling'::regclass),'MEMBER')`,
+    }),
+    pgPolicy('plan_selling_read', { for: 'select', using: reader }),
+  ],
+).enableRLS()

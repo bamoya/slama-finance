@@ -100,7 +100,7 @@ describe('SaaS administration portal', () => {
     fixture.client`select * from platform_admin_audit where action=${action} order by created_at`
   async function submittedPayment(reference: string) {
     const [row] =
-      await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'business','monthly','renewal','cash',${reference},'MAD',29900,0,29900) returning id`
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${testOwnerId},'business',(select plan_version_id from plan_selling where plan_code='business'),'monthly','renewal','cash',${reference},'MAD',29900,0,29900) returning id`
     return row!.id as string
   }
 
@@ -151,7 +151,7 @@ describe('SaaS administration portal', () => {
     await owner('cancelled', -60, [-40, -1], true)
     await owner('lapsed', -60, [-50, -20])
     await owner('noPayment', -30, null)
-    await fixture.client`insert into subscription_payments(owner_id,plan_code,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${trial},'pro','monthly','activation','cash','overview-trial','MAD',100,0,100)`
+    await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc) values (${trial},'pro',(select plan_version_id from plan_selling where plan_code='pro'),'monthly','activation','cash','overview-trial','MAD',100,0,100)`
 
     const anonymous = await app.inject({ method: 'GET', url: '/api/v1/admin/overview' })
     expect(anonymous.statusCode).toBe(401)
@@ -503,6 +503,82 @@ describe('SaaS administration portal', () => {
     await expect(fixture.client`delete from platform_admin_audit`).rejects.toThrow(/append-only/)
   })
 
+  it('reports one unresolvable owner per row without failing the list, filters or other owners', async () => {
+    const healthy = randomBytesUuid()
+    await fixture.client`insert into platform_users (id,email,password_hash) values (${healthy},'healthy-owner@example.test','x')`
+    await fixture.client`insert into organizations(id,owner_id,name,slug,activated_at) values (${randomBytesUuid()},${healthy},'Healthy','healthy',now())`
+    await seedPaidCoverage(fixture.db, {
+      ownerId: healthy,
+      planCode: 'essential',
+      start: new Date(Date.now() - 86_400_000),
+      end: new Date(Date.now() + 30 * 86_400_000),
+      reference: 'healthy',
+    })
+    // The fixture owner pins pro v1; corrupt it behind every guard (simulated storage corruption).
+    await fixture.client.begin(async (tx) => {
+      await tx`set local session_replication_role = replica`
+      await tx`delete from plan_entitlements where entitlement_key='storageBytes' and plan_version_id=(select id from plan_versions where plan_code='pro' and version_number=1)`
+    })
+    const { cookie } = await signIn()
+    const byEmail = (items: { email: string }[]) =>
+      Object.fromEntries(items.map((item) => [item.email, item]))
+    const all = await as(cookie).get('/api/v1/admin/owners')
+    expect(all.statusCode, all.body).toBe(200)
+    expect(all.json().total).toBe(2)
+    const rows = byEmail(all.json().items)
+    expect(rows['fixture-owner@example.test']).toMatchObject({
+      id: testOwnerId,
+      subscriptionStatus: null,
+      planCode: null,
+      paidThroughAt: null,
+      subscriptionError: 'SUBSCRIPTION_CATALOG_UNAVAILABLE',
+      organizationCount: 1,
+    })
+    expect(rows['healthy-owner@example.test']).toMatchObject({
+      subscriptionStatus: 'active',
+      planCode: 'essential',
+      subscriptionError: null,
+    })
+    // Status filtering and pagination use the catalog-independent lifecycle SQL: the corrupt owner is
+    // still counted as active and paged, without fabricated values.
+    const active = (await as(cookie).get('/api/v1/admin/owners?status=active')).json()
+    expect(active.total).toBe(2)
+    expect(Object.keys(byEmail(active.items)).sort()).toEqual([
+      'fixture-owner@example.test',
+      'healthy-owner@example.test',
+    ])
+    expect((await as(cookie).get('/api/v1/admin/owners?status=trial')).json().total).toBe(0)
+    const search = (await as(cookie).get('/api/v1/admin/owners?search=healthy')).json()
+    expect(search.items.map((i: { email: string }) => i.email)).toEqual([
+      'healthy-owner@example.test',
+    ])
+    const broken = await as(cookie).get(`/api/v1/admin/owners/${testOwnerId}`)
+    expect(broken.statusCode, broken.body).toBe(200)
+    expect(broken.json()).toMatchObject({
+      subscription: null,
+      subscriptionError: 'SUBSCRIPTION_CATALOG_UNAVAILABLE',
+      payments: [expect.objectContaining({ planCode: 'pro', planVersionNumber: 1 })],
+    })
+    const fine = (await as(cookie).get(`/api/v1/admin/owners/${healthy}`)).json()
+    expect(fine.subscriptionError).toBeNull()
+    expect(fine.subscription).toMatchObject({ planCode: 'essential', planVersionNumber: 1 })
+    // Payment diagnostics stay readable for both owners.
+    const payments = await as(cookie).get('/api/v1/admin/payments')
+    expect(payments.statusCode).toBe(200)
+    expect(
+      payments
+        .json()
+        .items.map((p: { ownerEmail: string; planVersionNumber: number }) => [
+          p.ownerEmail,
+          p.planVersionNumber,
+        ])
+        .sort(),
+    ).toEqual([
+      ['fixture-owner@example.test', 1],
+      ['healthy-owner@example.test', 1],
+    ])
+  })
+
   it('lists owners and details without tenant finance data', async () => {
     const { cookie } = await signIn()
     const page = await as(cookie).get('/api/v1/admin/owners?search=FIXTURE')
@@ -534,7 +610,13 @@ describe('SaaS administration portal', () => {
       'payments',
       'restriction',
       'subscription',
+      'subscriptionError',
     ])
+    expect(detail.json().subscriptionError).toBeNull()
+    expect(detail.json().subscription.planVersionNumber).toBe(1)
+    expect(
+      detail.json().payments.every((p: { planVersionNumber: number }) => p.planVersionNumber === 1),
+    ).toBe(true)
     expect(detail.body).not.toMatch(/password|invoice|client/i)
     expect((await as(cookie).get(`/api/v1/admin/owners/${randomBytesUuid()}`)).statusCode).toBe(404)
   })

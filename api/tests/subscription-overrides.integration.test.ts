@@ -18,6 +18,7 @@ import {
 import {
   attachTestDatabase,
   isolatedDatabase,
+  seedPaidCoverage,
   testOrganizationId,
   testOwnerId,
 } from './helpers/postgres.js'
@@ -42,7 +43,7 @@ describe('Owner-subscription overrides', () => {
   let subscriptions: ReturnType<typeof createSubscriptionsModule>['publicApi']
 
   beforeEach(async () => {
-    fixture = await isolatedDatabase()
+    fixture = await isolatedDatabase({ owner: 'trial' })
     app = await buildApp({
       environment: loadEnvironment({
         NODE_ENV: 'test',
@@ -61,10 +62,18 @@ describe('Owner-subscription overrides', () => {
     const passwords = createPasswordService()
     await fixture.client`update platform_users set password_hash=${await passwords.hash(ownerPassword)},email_verified_at=now() where id=${testOwnerId}`
     // Essential: one organization, one member, no business emails or features.
-    await fixture.client`update owner_subscriptions set plan_code='essential' where owner_id=${testOwnerId}`
+    const essential = (ownerId: string, reference: string) =>
+      seedPaidCoverage(fixture.db, {
+        ownerId,
+        planCode: 'essential',
+        start: new Date(Date.now() - 86_400_000),
+        end: new Date(Date.now() + 30 * 86_400_000),
+        reference,
+      })
+    await essential(testOwnerId, 'fixture-essential')
     await fixture.client`insert into platform_users (id,email,password_hash) values (${otherOwner},'other-owner@example.test','x')`
     await fixture.client`insert into organizations(id,owner_id,name,slug,activated_at) values (${otherOrganization},${otherOwner},'Other','other',now())`
-    await fixture.client`update owner_subscriptions set plan_code='essential',paid_through_at=now()+interval '30 days' where owner_id=${otherOwner}`
+    await essential(otherOwner, 'other-essential')
     const pending = await app.inject({
       method: 'POST',
       url: '/api/v1/admin/auth/login',

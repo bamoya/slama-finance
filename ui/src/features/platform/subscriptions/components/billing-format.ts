@@ -11,6 +11,9 @@ export function formatDh(centimes: number) {
   return `${value} DH`
 }
 
+/** Immutable published plan version, as numbered by the API. */
+export const versionLabel = (number: number) => translate('Version {{number}}', { number })
+
 export function paymentKindLabel(kind: string) {
   return translate(
     kind === 'upgrade' ? 'Upgrade (prorated)' : kind === 'renewal' ? 'Renewal' : 'Activation',

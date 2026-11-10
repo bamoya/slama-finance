@@ -29,6 +29,7 @@ const workspace: WorkspaceSession = {
     permissionKeys: [],
   },
   subscription: {
+    accessValidUntil: null,
     entitlements: {
       organizations: 1,
       staffPerOrganization: 2,

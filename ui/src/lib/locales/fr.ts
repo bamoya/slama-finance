@@ -2393,6 +2393,7 @@ export const french: Record<string, string> = {
     'Aucun remboursement n’est effectué. L’accès continue jusqu’à la fin de la période couverte, puis s’arrête.',
   'Confirm resume': 'Confirmer la reprise',
   'Choose a plan and pay': 'Choisir une offre et payer',
+  'Current plan, renewal on your version': 'Formule actuelle, renouvellement sur votre version',
   'Billing cycle': 'Cycle de facturation',
   'Amount excl. tax': 'Montant HT',
   'Estimated coverage': 'Couverture estimée',
@@ -2660,4 +2661,20 @@ export const french: Record<string, string> = {
   'Passkey request cancelled.': 'Demande annulée. Aucune modification n’a été effectuée.',
   'This passkey was not accepted. Use another passkey or your password.':
     'Cette clé d’accès n’a pas été acceptée. Utilisez une autre clé ou votre mot de passe.',
+  'Version {{number}}': 'Version {{number}}',
+  'Plan version': 'Version de l’offre',
+  'Plan update': 'Mise à jour de l’offre',
+  '{{version}} of your plan applies from {{date}}.':
+    'La {{version}} de votre offre s’applique à partir du {{date}}.',
+  'Plan terms unavailable': 'Conditions de l’offre indisponibles',
+  'Coverage periods inconsistent': 'Périodes de couverture incohérentes',
+  'The published plan terms of this customer cannot be read. Payments, restrictions and organizations remain available.':
+    'Les conditions publiées de l’offre de ce client sont illisibles. Les paiements, les restrictions et les organisations restent disponibles.',
+  'The coverage periods of this customer are inconsistent. Payments, restrictions and organizations remain available.':
+    'Les périodes de couverture de ce client sont incohérentes. Les paiements, les restrictions et les organisations restent disponibles.',
+  'The subscription of this customer is unavailable.':
+    'L’abonnement de ce client est indisponible.',
+  'Effective limits are unavailable while the plan terms cannot be resolved.':
+    'Les limites effectives sont indisponibles tant que les conditions de l’offre ne peuvent pas être résolues.',
+  Unavailable: 'Indisponible',
 }

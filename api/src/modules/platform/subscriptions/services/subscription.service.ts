@@ -3,25 +3,38 @@ import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import { currentOrganizationId } from '../../../../lib/tenant-database.js'
 import type { createBillingRepository } from '../repositories/billing.repository.js'
+import { createCatalogRepository } from '../repositories/catalog.repository.js'
 import type { CoverageReads } from '../repositories/coverage-lifecycle.repository.js'
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
+import { type AccessResolution, createAccessResolver } from './access-resolver.service.js'
 import { createBillingService, toPayment } from './billing.service.js'
 import { billingMonth, billingMonthKey } from './billing-calendar.service.js'
-import { effectiveEntitlements } from './effective-entitlements.js'
+import { createCatalogReader } from './catalog-values.service.js'
 import { compareCoverage, resolvePeriods, type ShadowDiff } from './period-resolver.service.js'
 /** Never discloses which restriction applies; the organization domain shows a static page. */
 const SHADOW_LOG_KEYS = 1000
+/**
+ * Access denials only (expired, restricted, unknown organization). Catalog and coverage errors (503)
+ * propagate: a worker records a runner failure and an API gate answers 503, never "allowed".
+ */
+const denied = (error: unknown) =>
+  error instanceof AppError && (error.statusCode === 402 || error.statusCode === 403)
 const unavailable = () =>
   new AppError(403, 'ORGANIZATION_SUSPENDED', 'This organization is temporarily unavailable.')
 
 export function createSubscriptionService(
   repo: ReturnType<typeof createSubscriptionRepository>,
   billingRepo: ReturnType<typeof createBillingRepository>,
-  clock = () => new Date(),
+  /**
+   * Injected test clock: replaces the database transaction clock for every access rule. Production
+   * leaves it undefined so each resolution uses one database instant.
+   */
+  injectedClock?: () => Date,
   writable: () => void = () => {},
   onShadowDiff: (diff: ShadowDiff) => void = () => {},
   periodWrites = true,
   reads: CoverageReads = 'legacy',
+  catalog = createCatalogReader(createCatalogRepository()),
 ) {
   /**
    * Shadow mode: the non-authoritative resolver runs beside the selected one on every summary and
@@ -84,27 +97,40 @@ export function createSubscriptionService(
     }
   }
   const billing = {
-    ...createBillingService(billingRepo, repo, clock, writable, periodWrites, reads),
-    plan: billingRepo.plan,
+    ...createBillingService(
+      billingRepo,
+      repo,
+      injectedClock,
+      writable,
+      periodWrites,
+      reads,
+      catalog,
+    ),
     payments: billingRepo.payments,
   }
-  /** Trial: one pool keyed by the trial start. Paid: the local calendar month (stable key). */
-  const allowanceOf = (planCode: string, start: string | null) =>
+  const resolveAccess = createAccessResolver({
+    repo,
+    state: billing.state,
+    catalog,
+    clock: injectedClock,
+  })
+  /** Trial: one pool keyed by the trial start. Paid: the local calendar month of `at` (stable key). */
+  const allowanceOf = (planCode: string, start: string | null, at: Date) =>
     !start
       ? null
       : planCode === 'trial'
         ? { trial: `trial:${start}` }
-        : { month: billingMonthKey(clock()) }
-  const allowanceKey = (planCode: string, start: string | null) => {
-    const a = allowanceOf(planCode, start)
+        : { month: billingMonthKey(at) }
+  const allowanceKey = (planCode: string, start: string | null, at: Date) => {
+    const a = allowanceOf(planCode, start, at)
     return !a ? null : 'trial' in a ? a.trial : `month:${a.month}`
   }
-  async function summary(ownerId: string, tx: Transaction): Promise<OwnerSubscription> {
-    const at = clock()
-    const s = await billing.state(ownerId, tx, at),
+  type Summary = OwnerSubscription & { access: AccessResolution }
+  async function summary(ownerId: string, tx: Transaction): Promise<Summary> {
+    const access = await resolveAccess(ownerId, tx)
+    const { at, state: s } = access,
       subscription = s.row
-    const plan = (await billing.plan(s.planCode, tx)) ?? (await repo.trial(tx)),
-      pending = (await billing.payments(ownerId, tx)).find((p) => p.status === 'submitted')
+    const pending = (await billing.payments(ownerId, tx)).find((p) => p.status === 'submitted')
     const period =
       s.planCode === 'trial'
         ? subscription
@@ -114,27 +140,24 @@ export function createSubscriptionService(
             }
           : { start: null, end: null }
         : (({ start, end }) => ({ start: start.toISOString(), end: end.toISOString() }))(
-            billingMonth(clock()),
+            billingMonth(at),
           )
     await compareShadow(ownerId, s, at, tx)
     const iso = (d: Date | null) => d?.toISOString() ?? null
-    const overrides = await repo.overrides(ownerId, tx)
-    // Server-authored windows are evaluated on the database clock (read only when needed).
-    const effective = effectiveEntitlements(
-      plan.entitlements,
-      overrides,
-      overrides.length ? await repo.now(tx) : clock(),
-    )
     return {
+      access,
       usage: await repo.usage(
         ownerId,
         period.start,
         period.end,
-        allowanceOf(plan.code, period.start),
+        allowanceOf(access.planCode, period.start, at),
         tx,
       ),
-      planCode: plan.code as OwnerSubscription['planCode'],
-      planName: plan.name,
+      planCode: access.planCode as OwnerSubscription['planCode'],
+      planName: access.planName,
+      planVersionNumber: access.planVersionNumber,
+      accessValidUntil: iso(access.accessValidUntil),
+      scheduledVersionTransition: access.scheduledVersionTransition,
       status: s.status,
       trialEndsAt: iso(subscription?.trialEndsAt ?? null),
       paidThroughAt: iso(s.paidThroughAt),
@@ -145,13 +168,15 @@ export function createSubscriptionService(
       retentionEndsAt: iso(s.retentionEndsAt),
       nextPlanCode: s.nextPlanCode as OwnerSubscription['nextPlanCode'],
       pendingPayment: pending ? toPayment(pending) : null,
-      entitlements: effective.entitlements,
+      entitlements: access.entitlements,
       organizationCount: await repo.organizationCount(ownerId, tx),
-      entitlementSources: effective.sources,
+      entitlementSources: access.sources,
     }
   }
-  const available = (s: OwnerSubscription) => {
-    if (s.status === 'suspended') throw unavailable()
+  /** Transport DTO: the internal resolution never leaves the module. */
+  const dto = ({ access: _, ...s }: Summary): OwnerSubscription => s
+  const available = (s: Summary) => {
+    if (s.access.restriction || s.status === 'suspended') throw unavailable()
     if (s.status === 'expired')
       throw new AppError(
         402,
@@ -262,14 +287,14 @@ export function createSubscriptionService(
             ownerId: owner,
             messageKey,
             recipients,
-            allowanceKey: allowanceKey(s.planCode, s.usage.emailPeriodStart)!,
-            queuedAt: clock(),
+            allowanceKey: allowanceKey(s.planCode, s.usage.emailPeriodStart, s.access.at)!,
+            queuedAt: s.access.at,
           },
           tx,
         )
       })
     },
-    summary: (id: string) => repo.owner(id, (tx) => summary(id, tx)),
+    summary: (id: string) => repo.owner(id, async (tx) => dto(await summary(id, tx))),
     /** Shadow-mode counters and the latest differences (S5a diagnostics; not used for decisions). */
     coverageShadow: () => ({ ...shadow, recent: [...shadow.recent] }),
     /** Period-based coverage at the database clock (S5a: exposed, not yet used for decisions). */
@@ -294,12 +319,12 @@ export function createSubscriptionService(
         await repo.start(ownerId, tx)
         s = await summary(ownerId, tx)
       }
-      return s
+      return dto(s)
     },
     async assertAccess(tx: Transaction) {
       const s = await current(tx)
       available(s)
-      return s
+      return dto(s)
     },
     async admitStaff(tx: Transaction, additional = 1) {
       const id = await repo.ownerForOrganization(tx)
@@ -328,7 +353,7 @@ export function createSubscriptionService(
         if (s.status === 'not_started') return false
         return !feature || s.entitlements.features.includes(feature)
       } catch (error) {
-        if (error instanceof AppError) return false
+        if (denied(error)) return false
         throw error
       }
     },
@@ -341,7 +366,7 @@ export function createSubscriptionService(
         available(s)
         return s.entitlements.features.includes(feature)
       } catch (error) {
-        if (error instanceof AppError) return false
+        if (denied(error)) return false
         throw error
       }
     },

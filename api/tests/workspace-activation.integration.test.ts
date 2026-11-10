@@ -269,7 +269,9 @@ describe('Owner activation, workspace access and admission limits', () => {
     const workspace = await staff('GET', '/api/v1/workspace/session', id, admin.token)
     expect(workspace.statusCode, workspace.body).toBe(200)
     expect(workspace.json().identityType).toBe('staff')
-    expect(Object.keys(workspace.json().subscription)).toEqual(['entitlements'])
+    expect(Object.keys(workspace.json().subscription)).toEqual(['entitlements', 'accessValidUntil'])
+    // Pinned paid coverage: the earliest boundary is a real future instant (next email month at most).
+    expect(Date.parse(workspace.json().subscription.accessValidUntil)).toBeGreaterThan(Date.now())
     const client = await staff('POST', '/api/v1/clients', id, admin.token, {
       type: 'company',
       legalName: 'Moroccan client',

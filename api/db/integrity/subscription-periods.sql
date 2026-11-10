@@ -3,6 +3,7 @@
 -- pin search_path; the test fixture rewrites the "public". prefix to its own schema.
 CREATE FUNCTION guard_subscription_period() RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, pg_temp AS $$
+DECLARE payment_version uuid;
 BEGIN
  IF TG_OP IN ('DELETE','TRUNCATE') THEN
   RAISE EXCEPTION 'Subscription periods are append-only' USING ERRCODE='42501';
@@ -29,6 +30,19 @@ BEGIN
  END IF;
  IF NEW.created_at<>now() THEN
   RAISE EXCEPTION 'Period creation time is set by the database' USING ERRCODE='23514';
+ END IF;
+ -- Version pin (immutable afterwards through the update rules above): a period with a payment
+ -- carries exactly that payment's pin; every pin names a published version (withdrawn is fine).
+ IF NEW.payment_id IS NOT NULL THEN
+  SELECT plan_version_id INTO payment_version FROM "public".subscription_payments WHERE id=NEW.payment_id;
+  IF NEW.plan_version_id IS NULL THEN
+   NEW.plan_version_id := payment_version;
+  ELSIF NEW.plan_version_id IS DISTINCT FROM payment_version THEN
+   RAISE EXCEPTION 'A period pins the version of its payment' USING ERRCODE='23514';
+  END IF;
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM "public".plan_versions v WHERE v.id=NEW.plan_version_id AND v.plan_code=NEW.plan_code AND v.status='published') THEN
+  RAISE EXCEPTION 'A period pins a published version of its plan' USING ERRCODE='23514';
  END IF;
  RETURN NEW;
 END $$;
@@ -92,6 +106,11 @@ BEGIN
   IF TG_OP='INSERT' AND (NEW.created_at<>now() OR NEW.status<>'scheduled') THEN
    RAISE EXCEPTION 'Scheduled changes are created now, in scheduled status' USING ERRCODE='23514';
   END IF;
+  -- A version transition targets a published version; publication never creates or retargets one.
+  IF TG_OP='INSERT' AND NEW.kind='version_transition' AND NOT EXISTS (
+   SELECT 1 FROM "public".plan_versions v WHERE v.id=NEW.target_plan_version_id AND v.status='published') THEN
+   RAISE EXCEPTION 'A version transition targets a published version' USING ERRCODE='23514';
+  END IF;
   IF TG_OP='UPDATE' THEN
    -- The suspension shift (table owner, SECURITY DEFINER) moves pending boundaries only.
    IF pg_has_role(current_user,(SELECT relowner FROM pg_class WHERE oid=TG_RELID),'MEMBER')
@@ -131,8 +150,8 @@ BEGIN
  UPDATE "public".subscription_periods SET starts_at=NEW.trial_started_at, ends_at=NEW.trial_ends_at
  WHERE owner_id=NEW.owner_id AND kind='trial';
  IF NOT FOUND THEN
-  INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source)
-  VALUES (NEW.owner_id,'trial','trial',NEW.trial_started_at,NEW.trial_ends_at,'trial');
+  INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source)
+  VALUES (NEW.owner_id,'trial','trial',NEW.trial_plan_version_id,NEW.trial_started_at,NEW.trial_ends_at,'trial');
  END IF;
  RETURN NULL;
 END $$;
@@ -255,8 +274,8 @@ BEGIN
    IF EXISTS (SELECT 1 FROM "public".subscription_periods x WHERE x.owner_id=s.owner_id) THEN
     RAISE EXCEPTION 'S5 reconcile: periods without a trial period (owner %)', s.owner_id;
    END IF;
-   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,starts_at,ends_at,source)
-   VALUES (s.owner_id,'trial','trial',s.trial_started_at,s.trial_ends_at,'migration');
+   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,plan_version_id,starts_at,ends_at,source)
+   VALUES (s.owner_id,'trial','trial',s.trial_plan_version_id,s.trial_started_at,s.trial_ends_at,'migration');
    touched := true;
   ELSIF existing.starts_at<>s.trial_started_at OR existing.ends_at<>s.trial_ends_at THEN
    RAISE EXCEPTION 'S5 reconcile: trial window changed since the backfill (owner %)', s.owner_id;
@@ -291,8 +310,8 @@ BEGIN
     OR (p.coverage_start<last_end AND (p.coverage_start=last_start OR p.coverage_end<last_end))) THEN
     RAISE EXCEPTION 'S5 reconcile: ambiguous overlapping coverage % (owner %)', p.id, s.owner_id;
    END IF;
-   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,cycle,starts_at,ends_at,source,payment_id)
-   VALUES (s.owner_id,period_kind,p.plan_code,p.cycle,p.coverage_start,p.coverage_end,'migration',p.id)
+   INSERT INTO "public".subscription_periods(owner_id,kind,plan_code,plan_version_id,cycle,starts_at,ends_at,source,payment_id)
+   VALUES (s.owner_id,period_kind,p.plan_code,p.plan_version_id,p.cycle,p.coverage_start,p.coverage_end,'migration',p.id)
    RETURNING id INTO new_id;
    IF period_kind='complimentary' THEN
     INSERT INTO "public".subscription_period_notes(period_id,reason)
@@ -316,6 +335,8 @@ BEGIN
      RAISE EXCEPTION 'S5 reconcile: legacy paid-through marker changed since the backfill (owner %)', s.owner_id;
     END IF;
    ELSE
+    -- No version can be inferred for a marker without a payment: refuse instead of guessing.
+    RAISE EXCEPTION 'S5 reconcile: legacy paid-through marker has no version pin (owner %)', s.owner_id;
     IF s.paid_through_at<=s.trial_started_at THEN
      RAISE EXCEPTION 'S5 reconcile: legacy paid-through before the trial start (owner %)', s.owner_id;
     END IF;

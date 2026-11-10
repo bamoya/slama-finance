@@ -84,7 +84,10 @@ export function AdminCustomerDetailPage({ customerId }: { customerId: string }) 
             backHref={adminPaths.customers}
             status={
               <span className="flex flex-wrap items-center gap-2">
-                <SubscriptionStatusBadge status={detail.subscription.status} />
+                <SubscriptionStatusBadge
+                  status={detail.subscription?.status}
+                  error={detail.subscriptionError}
+                />
                 {detail.restriction.blockedAt && <StatusBadge label="Blocked" tone="overdue" />}
                 {detail.restriction.deletionRequestedAt && (
                   <StatusBadge label="Deletion scheduled" tone="overdue" />

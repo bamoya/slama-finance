@@ -10,18 +10,40 @@ import { createBillingRepository } from '../src/modules/platform/subscriptions/r
 import { createSubscriptionRepository } from '../src/modules/platform/subscriptions/repositories/subscription.repository.js'
 import { createSubscriptionService } from '../src/modules/platform/subscriptions/services/subscription.service.js'
 import { createNotificationSupport } from '../src/support/notifications/index.js'
-import { isolatedDatabase, testOrganizationId, testOwnerId } from './helpers/postgres.js'
+import {
+  isolatedDatabase,
+  publishPlanVersion,
+  seedPaidCoverage,
+  testOrganizationId,
+  testOwnerId,
+} from './helpers/postgres.js'
 
 describe('Pooled subscription usage', () => {
   let fixture: Awaited<ReturnType<typeof isolatedDatabase>>
   beforeEach(async () => {
-    fixture = await isolatedDatabase()
+    fixture = await isolatedDatabase({ owner: 'trial' })
   })
   afterEach(async () => {
     await fixture?.cleanup()
   })
-  const limits = async (storage: number, emails: number) => {
-    await fixture.client`update subscription_plans set entitlements=jsonb_set(jsonb_set(entitlements,'{storageBytes}',to_jsonb(${storage}::int)),'{businessEmails}',to_jsonb(${emails}::int)) where code='pro'`
+  /** Pro coverage pinned to a published version with these allowances (plan JSON is never read). */
+  const limits = async (
+    storage: number,
+    emails: number,
+    start = new Date(Date.now() - 86_400_000),
+    end = new Date(Date.now() + 30 * 86_400_000),
+  ) => {
+    const planVersionId = await publishPlanVersion(fixture.client, 'pro', {
+      values: { storageBytes: storage, businessEmails: emails },
+    })
+    await seedPaidCoverage(fixture.db, {
+      ownerId: testOwnerId,
+      planCode: 'pro',
+      planVersionId,
+      start,
+      end,
+      reference: `limits-${storage}-${emails}`,
+    })
   }
   const memory = () => {
     const files = new Map<string, Uint8Array>()
@@ -199,7 +221,6 @@ describe('Pooled subscription usage', () => {
     expect((await subscriptions.publicApi.summary(testOwnerId)).usage.storageBytes).toBe(30)
   })
   it('serializes concurrent email admission and gives paid coverage a separate allowance from trial', async () => {
-    await limits(100, 1)
     const subscriptions = createSubscriptionsModule(() => fixture.db),
       m = memory()
     const notifications = createNotificationSupport(
@@ -219,21 +240,20 @@ describe('Pooled subscription usage', () => {
       text: 'Invoice',
       attachments: [],
     })
+    // Trial pool first, then pinned paid coverage: the paid month never counts trial recipients.
+    await notifications.enqueue(message('trial'))
+    expect((await subscriptions.publicApi.summary(testOwnerId)).usage.businessEmails).toBe(1)
+    await limits(100, 1)
+    expect((await subscriptions.publicApi.summary(testOwnerId)).usage.businessEmails).toBe(0)
     const attempts = await Promise.allSettled([
       notifications.enqueue(message('one')),
       notifications.enqueue(message('two')),
     ])
     expect(attempts.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
-    await fixture.client`update owner_subscriptions set plan_code='trial' where owner_id=${testOwnerId}`
-    expect((await subscriptions.publicApi.summary(testOwnerId)).usage.businessEmails).toBe(0)
-    await notifications.enqueue(message('trial'))
-    expect((await subscriptions.publicApi.summary(testOwnerId)).usage.businessEmails).toBe(1)
-    await fixture.client`update owner_subscriptions set plan_code='pro' where owner_id=${testOwnerId}`
     expect((await subscriptions.publicApi.summary(testOwnerId)).usage.businessEmails).toBe(1)
   })
   it('resets paid email admission at the next Casablanca calendar month without recounting old retries', async () => {
-    await limits(100, 1)
-    await fixture.client`update owner_subscriptions set paid_through_at='2027-01-01' where owner_id=${testOwnerId}`
+    await limits(100, 1, new Date('2026-06-01T00:00:00Z'), new Date('2027-01-01T00:00:00Z'))
     let now = new Date('2026-06-15T12:00:00Z')
     const service = createSubscriptionService(
         createSubscriptionRepository(() => fixture.db),

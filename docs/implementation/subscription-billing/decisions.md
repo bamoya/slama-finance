@@ -28,7 +28,8 @@ Only explicit commercial decisions change the approved agreement. Recommendation
 - Complimentary/free coverage expires without the seven-day paid-renewal grace, including existing free grants.
   The user explicitly confirmed this difference from legacy zero-value payment behavior. It clears the
   `complimentary_no_grace` policy gate; it does not itself authorize production deployment or the S5c read switch.
-- Fresh TOTP is also required for payment confirmation/rejection and administrator actions restoring access:
+- **Superseded (latest user policy):** routine administrator actions use the session, reason and confirmation; a fresh
+  second factor is reserved for security actions. Historical text: fresh TOTP is also required for payment confirmation/rejection and administrator actions restoring access:
   customer unblock, organization reactivation and cancellation of scheduled deletion. Existing required reason
   and audit controls remain. Owner-visible payment rejection text stays distinct from the internal audit reason.
 

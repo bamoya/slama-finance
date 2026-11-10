@@ -8,6 +8,7 @@ import { Button } from '../../../../components/ui/button'
 import { Card, CardContent } from '../../../../components/ui/card'
 import { shouldRetryQuery } from '../../../../lib/api-error'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { useAccessDeadline } from '../../../../lib/use-access-deadline'
 import { WorkspaceContext } from './workspace-state'
 
 function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
@@ -15,6 +16,14 @@ function WorkspaceSessionBoundary({ children }: { children: ReactNode }) {
   const client = useQueryClient()
   const query = useGetWorkspaceSession({
     query: { retry: false, refetchInterval: 60000, refetchOnWindowFocus: 'always' },
+  })
+  // Entitlements may change at the announced instant (trial, grace, override, transition): read them again.
+  const { refetch } = query
+  useAccessDeadline({
+    deadline: query.data?.subscription.accessValidUntil,
+    scope: query.data?.organization.id,
+    updatedAt: query.dataUpdatedAt,
+    onDeadline: () => refetch(),
   })
   useEffect(() => {
     const leave = (path: string) => () => {

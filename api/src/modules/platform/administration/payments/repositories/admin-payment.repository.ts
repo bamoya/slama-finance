@@ -1,12 +1,17 @@
 import { asc, count, desc, eq } from 'drizzle-orm'
 
 import { platformUsers } from '../../../../../../db/schema/organizations.js'
+import { planVersions } from '../../../../../../db/schema/subscription-catalog.js'
 import { subscriptionPayments } from '../../../../../../db/schema/subscriptions.js'
 import type { Transaction } from '../../../../../lib/db.js'
 
 type PaymentStatus = (typeof subscriptionPayments.$inferSelect)['status']
 
-const paymentColumns = { payment: subscriptionPayments, ownerEmail: platformUsers.email }
+const paymentColumns = {
+  payment: subscriptionPayments,
+  ownerEmail: platformUsers.email,
+  planVersionNumber: planVersions.versionNumber,
+}
 
 export function createAdminPaymentRepository() {
   return {
@@ -22,6 +27,7 @@ export function createAdminPaymentRepository() {
           .select(paymentColumns)
           .from(subscriptionPayments)
           .innerJoin(platformUsers, eq(platformUsers.id, subscriptionPayments.ownerId))
+          .innerJoin(planVersions, eq(planVersions.id, subscriptionPayments.planVersionId))
           .where(where)
           .orderBy(
             status === 'submitted'
@@ -40,6 +46,7 @@ export function createAdminPaymentRepository() {
         .select(paymentColumns)
         .from(subscriptionPayments)
         .innerJoin(platformUsers, eq(platformUsers.id, subscriptionPayments.ownerId))
+        .innerJoin(planVersions, eq(planVersions.id, subscriptionPayments.planVersionId))
         .where(eq(subscriptionPayments.id, id))
       return row
     },
@@ -48,6 +55,7 @@ export function createAdminPaymentRepository() {
         .select(paymentColumns)
         .from(subscriptionPayments)
         .innerJoin(platformUsers, eq(platformUsers.id, subscriptionPayments.ownerId))
+        .innerJoin(planVersions, eq(planVersions.id, subscriptionPayments.planVersionId))
         .where(eq(subscriptionPayments.ownerId, ownerId))
         .orderBy(desc(subscriptionPayments.submittedAt)),
   }

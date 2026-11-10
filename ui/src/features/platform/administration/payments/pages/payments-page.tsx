@@ -24,6 +24,7 @@ import {
   paymentMethodLabel,
   paymentStatusTone,
   planLabel,
+  versionLabel,
 } from '../../../subscriptions/components/billing-format'
 import { AdministrationLayout } from '../../shared/components/administration-layout'
 import { AdministrationPageHeader } from '../../shared/components/administration-page-header'
@@ -64,7 +65,7 @@ export function AdminPaymentsPage() {
       render: (p) => (
         <>
           <span className="whitespace-nowrap">
-            {planLabel(p.planCode)} · {cycleLabel(p.cycle)}
+            {planLabel(p.planCode)} · {versionLabel(p.planVersionNumber)} · {cycleLabel(p.cycle)}
           </span>
           <p className="text-xs text-[var(--muted)]">{paymentKindLabel(p.kind)}</p>
         </>

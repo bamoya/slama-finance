@@ -58,6 +58,12 @@ export const ownerSubscriptions = pgTable(
       .references(() => subscriptionPlans.code),
     trialStartedAt: timestamp('trial_started_at', { withTimezone: true }).notNull(),
     trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }).notNull(),
+    // Trial version pin: set by the database from plan_selling at creation (the NULL default is
+    // replaced by a BEFORE INSERT trigger), immutable afterwards. FK in integrity SQL.
+    trialPlanCode: text('trial_plan_code').notNull().default('trial'),
+    trialPlanVersionId: uuid('trial_plan_version_id')
+      .notNull()
+      .default(sql`null`),
     paidThroughAt: timestamp('paid_through_at', { withTimezone: true }),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
     // Administrator suspension freezes the coverage clock; resume shifts coverage by its length.
@@ -74,6 +80,7 @@ export const ownerSubscriptions = pgTable(
       withCheck: sql`current_setting('app.actor_type',true)='platform_admin'`,
     }),
     // Seven days at start; administrator extensions and suspensions may lengthen it.
+    check('trial_plan_code', sql`${t.trialPlanCode}='trial'`),
     check('trial_window', sql`${t.trialEndsAt}>=${t.trialStartedAt}+interval '7 days'`),
     pgPolicy('subscription_scope', {
       for: 'all',
@@ -143,6 +150,8 @@ export const subscriptionPayments = pgTable(
     planCode: text('plan_code')
       .notNull()
       .references(() => subscriptionPlans.code),
+    // Version whose terms and price were quoted; set by the writer, immutable (integrity SQL FK).
+    planVersionId: uuid('plan_version_id').notNull(),
     cycle: text('cycle', { enum: ['monthly', 'annual'] }).notNull(),
     kind: text('kind', { enum: ['activation', 'renewal', 'upgrade'] }).notNull(),
     status: text('status', { enum: ['submitted', 'confirmed', 'rejected'] })

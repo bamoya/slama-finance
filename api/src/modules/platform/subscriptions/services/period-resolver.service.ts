@@ -8,6 +8,7 @@ export type PeriodInput = {
   startsAt: Date
   endsAt: Date
   supersededAt: Date | null
+  planVersionId?: string | null
 }
 export type SuspensionInput = { startedAt: Date; endedAt: Date | null }
 export type ScheduledInput = { kind: string; effectiveAt: Date; status: string }
@@ -33,6 +34,7 @@ export function resolvePeriods(state: PeriodState, now: Date): CoverageState {
 
 function running(state: PeriodState, now: Date): CoverageState {
   const empty = {
+    planVersionId: null,
     cycle: null,
     current: null,
     paidThroughAt: null,
@@ -68,9 +70,11 @@ function running(state: PeriodState, now: Date): CoverageState {
       ...empty,
       status: 'active',
       planCode: current.planCode,
+      planVersionId: current.planVersionId ?? null,
       cycle: current.cycle,
       current: {
         planCode: current.planCode,
+        planVersionId: current.planVersionId ?? null,
         cycle: current.cycle,
         start: current.startsAt,
         end: end(current),
@@ -107,6 +111,7 @@ function running(state: PeriodState, now: Date): CoverageState {
   return {
     status: expired ? 'expired' : 'past_due',
     planCode: last.planCode,
+    planVersionId: last.planVersionId ?? null,
     cycle: last.cycle,
     current: null,
     paidThroughAt,

@@ -39,8 +39,11 @@ export const subscriptionPeriods = pgTable(
     planCode: text('plan_code')
       .notNull()
       .references(() => subscriptionPlans.code),
-    // Pinned catalog version; NULL until version pinning (S4/S8). Never inferred by the backfill.
-    planVersionId: uuid('plan_version_id'),
+    // Pinned published version, immutable. Trial: the subscription's trial pin (mirror); a period
+    // with a payment inherits that payment's pin (equality enforced); complimentary: the writer's.
+    planVersionId: uuid('plan_version_id')
+      .notNull()
+      .default(sql`null`),
     cycle: text('cycle', { enum: ['monthly', 'annual'] }),
     startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
     endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
@@ -135,7 +138,7 @@ export const subscriptionScheduledChanges = pgTable(
     effectiveAt: timestamp('effective_at', { withTimezone: true }).notNull(),
     targetPlanCode: text('target_plan_code').references(() => subscriptionPlans.code),
     targetCycle: text('target_cycle', { enum: ['monthly', 'annual'] }),
-    targetPlanVersionId: uuid('target_plan_version_id').references(() => planVersions.id),
+    targetPlanVersionId: uuid('target_plan_version_id'),
     noticeSentAt: timestamp('notice_sent_at', { withTimezone: true }),
     status: text('status', { enum: ['scheduled', 'applied', 'cancelled', 'superseded'] })
       .notNull()
@@ -155,12 +158,16 @@ export const subscriptionScheduledChanges = pgTable(
       'subscription_scheduled_change_actor',
       sql`(${t.createdBy}='owner' and ${t.actorOwnerId}=${t.ownerId} and ${t.actorAdminId} is null) or (${t.createdBy}='admin' and ${t.actorAdminId} is not null and ${t.actorOwnerId} is null) or (${t.createdBy}='migration' and ${t.actorOwnerId} is null and ${t.actorAdminId} is null)`,
     ),
+    foreignKey({
+      columns: [t.targetPlanVersionId, t.targetPlanCode],
+      foreignColumns: [planVersions.id, planVersions.planCode],
+    }),
     uniqueIndex('subscription_scheduled_changes_one_active')
       .on(t.ownerId, t.kind)
       .where(sql`${t.status}='scheduled'`),
     check(
       'subscription_scheduled_change_target',
-      sql`(${t.kind}='cancel' and ${t.targetPlanCode} is null and ${t.targetCycle} is null and ${t.targetPlanVersionId} is null) or (${t.kind}='plan_change' and ${t.targetPlanCode} is not null and ${t.targetPlanCode}<>'trial') or (${t.kind}='version_transition' and ${t.targetPlanVersionId} is not null and ${t.noticeSentAt} is not null and ${t.effectiveAt}>=${t.noticeSentAt}+interval '30 days')`,
+      sql`(${t.kind}='cancel' and ${t.targetPlanCode} is null and ${t.targetCycle} is null and ${t.targetPlanVersionId} is null) or (${t.kind}='plan_change' and ${t.targetPlanCode} is not null and ${t.targetPlanCode}<>'trial') or (${t.kind}='version_transition' and ${t.targetPlanVersionId} is not null and ${t.targetPlanCode} is not null and ${t.targetPlanCode}<>'trial' and ${t.noticeSentAt} is not null and ${t.effectiveAt}>=${t.noticeSentAt}+interval '30 days')`,
     ),
     pgPolicy('subscription_scheduled_change_admin', {
       for: 'all',

@@ -1,9 +1,18 @@
-import { useGetOwnerSubscription } from '../../../../api/generated/subscriptions/subscriptions'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { useGetOwnerSession } from '../../../../api/generated/identity/identity'
+import {
+  getGetOwnerBillingQueryKey,
+  getGetOwnerSubscriptionQueryKey,
+  getListOwnerSubscriptionPaymentsQueryKey,
+  useGetOwnerSubscription,
+} from '../../../../api/generated/subscriptions/subscriptions'
 import { RequestState } from '../../../../components/management/request-state'
 import { buttonVariants } from '../../../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
+import { useAccessDeadline } from '../../../../lib/use-access-deadline'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
 import { CancellationCard } from '../components/cancellation-card'
 import { PaymentHistory } from '../components/payment-history'
@@ -14,6 +23,22 @@ export function OwnerSubscriptionPage() {
   useUiLanguage()
   const query = useGetOwnerSubscription({ query: { retry: false } }),
     s = query.data
+  const cache = useQueryClient()
+  const account = useGetOwnerSession({ query: { retry: false, staleTime: 30_000 } }).data?.owner.id
+  // Resolved access may change at this instant: read the subscription, history and selling terms again.
+  useAccessDeadline({
+    deadline: s?.accessValidUntil,
+    scope: account,
+    updatedAt: query.dataUpdatedAt,
+    onDeadline: () =>
+      Promise.all(
+        [
+          getGetOwnerSubscriptionQueryKey(),
+          getGetOwnerBillingQueryKey(),
+          getListOwnerSubscriptionPaymentsQueryKey(),
+        ].map((queryKey) => cache.invalidateQueries({ queryKey })),
+      ),
+  })
   const sources = new Map((s?.entitlementSources ?? []).map((x) => [x.entitlementKey, x]))
   /** Customer-specific allowance agreed with B-Finance, shown without internal notes. */
   const custom = (key: string) => {

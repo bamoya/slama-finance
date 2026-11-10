@@ -1,5 +1,5 @@
 {
-  "id": "85322ee6-b795-4f6a-b02a-50b680aac517",
+  "id": "bcfc5256-4dcc-45f8-b476-199fa030ede4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10671,6 +10671,102 @@
       },
       "isRLSEnabled": true
     },
+    "public.plan_selling": {
+      "name": "plan_selling",
+      "schema": "",
+      "columns": {
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_at": {
+          "name": "changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "changed_by": {
+          "name": "changed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plan_selling_plan_code_subscription_plans_code_fk": {
+          "name": "plan_selling_plan_code_subscription_plans_code_fk",
+          "tableFrom": "plan_selling",
+          "tableTo": "subscription_plans",
+          "columnsFrom": [
+            "plan_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "plan_selling_plan_version_id_plan_code_plan_versions_id_plan_code_fk": {
+          "name": "plan_selling_plan_version_id_plan_code_plan_versions_id_plan_code_fk",
+          "tableFrom": "plan_selling",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "plan_version_id",
+            "plan_code"
+          ],
+          "columnsTo": [
+            "id",
+            "plan_code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "plan_selling_migration_write": {
+          "name": "plan_selling_migration_write",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_selling'::regclass),'MEMBER')",
+          "withCheck": "pg_has_role(current_user,(select relowner from pg_class where oid='plan_selling'::regclass),'MEMBER')"
+        },
+        "plan_selling_read": {
+          "name": "plan_selling_read",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "public"
+          ],
+          "using": "(current_setting('app.actor_type',true) in ('owner','worker','platform_admin') or nullif(current_setting('app.organization_id',true),'') is not null)"
+        }
+      },
+      "checkConstraints": {
+        "plan_selling_actor": {
+          "name": "plan_selling_actor",
+          "value": "btrim(\"plan_selling\".\"changed_by\")<>''"
+        },
+        "plan_selling_trial": {
+          "name": "plan_selling_trial",
+          "value": "\"plan_selling\".\"plan_code\"<>'trial' or \"plan_selling\".\"plan_version_id\" is not null"
+        }
+      },
+      "isRLSEnabled": true
+    },
     "public.plan_version_prices": {
       "name": "plan_version_prices",
       "schema": "",
@@ -11319,7 +11415,8 @@
           "name": "plan_version_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "null"
         },
         "cycle": {
           "name": "cycle",
@@ -11670,19 +11767,6 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "subscription_scheduled_changes_target_plan_version_id_plan_versions_id_fk": {
-          "name": "subscription_scheduled_changes_target_plan_version_id_plan_versions_id_fk",
-          "tableFrom": "subscription_scheduled_changes",
-          "tableTo": "plan_versions",
-          "columnsFrom": [
-            "target_plan_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "subscription_scheduled_changes_actor_owner_id_platform_users_id_fk": {
           "name": "subscription_scheduled_changes_actor_owner_id_platform_users_id_fk",
           "tableFrom": "subscription_scheduled_changes",
@@ -11707,6 +11791,21 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subscription_scheduled_changes_target_plan_version_id_target_plan_code_plan_versions_id_plan_code_fk": {
+          "name": "subscription_scheduled_changes_target_plan_version_id_target_plan_code_plan_versions_id_plan_code_fk",
+          "tableFrom": "subscription_scheduled_changes",
+          "tableTo": "plan_versions",
+          "columnsFrom": [
+            "target_plan_version_id",
+            "target_plan_code"
+          ],
+          "columnsTo": [
+            "id",
+            "plan_code"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -11759,7 +11858,7 @@
         },
         "subscription_scheduled_change_target": {
           "name": "subscription_scheduled_change_target",
-          "value": "(\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"target_plan_code\" is null and \"subscription_scheduled_changes\".\"target_cycle\" is null and \"subscription_scheduled_changes\".\"target_plan_version_id\" is null) or (\"subscription_scheduled_changes\".\"kind\"='plan_change' and \"subscription_scheduled_changes\".\"target_plan_code\" is not null and \"subscription_scheduled_changes\".\"target_plan_code\"<>'trial') or (\"subscription_scheduled_changes\".\"kind\"='version_transition' and \"subscription_scheduled_changes\".\"target_plan_version_id\" is not null and \"subscription_scheduled_changes\".\"notice_sent_at\" is not null and \"subscription_scheduled_changes\".\"effective_at\">=\"subscription_scheduled_changes\".\"notice_sent_at\"+interval '30 days')"
+          "value": "(\"subscription_scheduled_changes\".\"kind\"='cancel' and \"subscription_scheduled_changes\".\"target_plan_code\" is null and \"subscription_scheduled_changes\".\"target_cycle\" is null and \"subscription_scheduled_changes\".\"target_plan_version_id\" is null) or (\"subscription_scheduled_changes\".\"kind\"='plan_change' and \"subscription_scheduled_changes\".\"target_plan_code\" is not null and \"subscription_scheduled_changes\".\"target_plan_code\"<>'trial') or (\"subscription_scheduled_changes\".\"kind\"='version_transition' and \"subscription_scheduled_changes\".\"target_plan_version_id\" is not null and \"subscription_scheduled_changes\".\"target_plan_code\" is not null and \"subscription_scheduled_changes\".\"target_plan_code\"<>'trial' and \"subscription_scheduled_changes\".\"notice_sent_at\" is not null and \"subscription_scheduled_changes\".\"effective_at\">=\"subscription_scheduled_changes\".\"notice_sent_at\"+interval '30 days')"
         }
       },
       "isRLSEnabled": true
@@ -11955,6 +12054,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "trial_plan_code": {
+          "name": "trial_plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'trial'"
+        },
+        "trial_plan_version_id": {
+          "name": "trial_plan_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "null"
+        },
         "paid_through_at": {
           "name": "paid_through_at",
           "type": "timestamp with time zone",
@@ -12038,6 +12151,10 @@
         }
       },
       "checkConstraints": {
+        "trial_plan_code": {
+          "name": "trial_plan_code",
+          "value": "\"owner_subscriptions\".\"trial_plan_code\"='trial'"
+        },
         "trial_window": {
           "name": "trial_window",
           "value": "\"owner_subscriptions\".\"trial_ends_at\">=\"owner_subscriptions\".\"trial_started_at\"+interval '7 days'"
@@ -12176,6 +12293,12 @@
         "plan_code": {
           "name": "plan_code",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_version_id": {
+          "name": "plan_version_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },

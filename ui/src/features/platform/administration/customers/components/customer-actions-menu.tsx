@@ -37,10 +37,12 @@ export function CustomerActionsMenu({
   onSelect: (action: CustomerAction) => void
 }) {
   const { subscription, restriction } = detail
-  const suspended = subscription.status === 'suspended'
+  // Subscription operations need the customer's resolved plan terms; access and organization operations do not.
+  const unresolved = subscription === null
+  const suspended = subscription?.status === 'suspended'
   // A trial, running or ended, that never received coverage.
   const activatable =
-    subscription.planCode === 'trial' &&
+    subscription?.planCode === 'trial' &&
     (subscription.status === 'trial' ||
       subscription.status === 'past_due' ||
       subscription.status === 'expired')
@@ -64,14 +66,14 @@ export function CustomerActionsMenu({
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
-            disabled={suspended || subscription.planCode === 'trial'}
+            disabled={unresolved || suspended || subscription.planCode === 'trial'}
             onSelect={() => onSelect({ kind: 'change-plan' })}
           >
             <ArrowLeftRight aria-hidden="true" />
             {translate('Change plan')}
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={suspended || subscription.status === 'not_started'}
+            disabled={unresolved || suspended || subscription.status === 'not_started'}
             onSelect={() => onSelect({ kind: 'extend' })}
           >
             <CalendarPlus aria-hidden="true" />
@@ -84,7 +86,7 @@ export function CustomerActionsMenu({
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
-              disabled={subscription.status === 'not_started'}
+              disabled={unresolved || subscription.status === 'not_started'}
               onSelect={() => onSelect({ kind: 'suspend-subscription' })}
             >
               <Pause aria-hidden="true" />

@@ -60,7 +60,10 @@ const columns = [
   {
     title: 'Status',
     render: (customer: AdminOwnerSummary) => (
-      <SubscriptionStatusBadge status={customer.subscriptionStatus} />
+      <SubscriptionStatusBadge
+        status={customer.subscriptionStatus}
+        error={customer.subscriptionError}
+      />
     ),
   },
   {

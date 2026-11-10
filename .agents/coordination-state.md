@@ -1,4 +1,59 @@
-# Admin deployment bootstrap — 2026-11-10 (implemented, reviewed, uncommitted)
+# Primary coordination transferred to Claude — 2026-11-10
+
+User explicitly requested Claude take over now so Codex can stop. Herdr pane w1:pQ is the primary
+Claude coordinator (Sonnet 5.5 LOW); use Opus LOW for complex implementation/review, Fable LOW where
+appropriate, Antigravity/OpenCode for small tasks. Check availability before dispatch; no new Codex work.
+At transfer: Claude session 51% used, weekly all-models 32% used, Fable weekly 5% used. No paid overage.
+S2/S4 is complete as recorded below. Preserve uncommitted work; do not repeat passed gates or investigate
+the whole repo. Read checkpoint/reports, acknowledge ownership and prepare a concise next-step assessment.
+No next roadmap phase, commit/push, deployment, issue mutation or development database action is authorized.
+
+# Final S2/S4 checkpoint — 2026-11-10
+
+Implementation and validation complete. This checkpoint supersedes pending phase notes below.
+Final pnpm check PASS: API 277, UI 597, format/lint/types/build and structural checks.
+Full isolated integration: 441 passed, 1 skipped, 0 failed; subsequent delta UI-only.
+All three Sol P2s, authoritative-clock follow-up and final expired/withdrawn UI P3 corrected.
+Independent Fable 5.1 LOW final recheck: no blocking findings; final P3 verified fixed.
+Evidence: /tmp/slama-s2-s4/fixes-result.md and /tmp/slama-s2-s4/fable-review-result.md.
+No test runners remain. Changes UNCOMMITTED; no push/deploy/issue mutation/development DB operation.
+Known residuals: browser/server clock skew can cause 1-second successful deadline refreshes; admin list
+lifecycle filters retain host clock; snapshot conversion relies on existing Drizzle timestamp configuration.
+No manual browser or fresh-image E2E claimed. Do not start S6/S7/S8 or commit without user direction.
+Last Codex status: 5% weekly / 5% session remaining. Verified Fable 5.1 LOW via `--model fable`;
+separate Fable weekly allowance was 0% used before independent review. Policy below remains authoritative.
+
+# Provider continuity policy — user approved 2026-11-10
+
+Check actual provider usage before delegation and at completion boundaries. At Codex weekly remaining <=1%,
+stop new Codex work and hand primary orchestration to Claude through Herdr, with a durable checkpoint and
+acknowledged transfer; do not require the user to relay context. Claude may delegate small tasks to Antigravity
+and OpenCode. Prefer available allowances and balance usage; low effort only, no paid overage. Claude CLI
+2.1.309 advertises the `fable` alias; verify its actual model and allowance before assigning substantive work.
+Do not assume ordinary Opus uses the separate Fable allowance. Installed tools: claude, codex, agy, opencode.
+Discovery evidence: /tmp/slama-s2-s4/delegation-discovery.json. Latest Codex status: 6% weekly / 13% session left.
+
+Current executor: Herdr s2s4-fixes (w1:pP), Opus 5.5 LOW. Do not interrupt its running gates or duplicate them.
+It owns three review corrections (consistent resolver snapshot, deadline-refresh retry, withdrawn-plan renewal)
+and sequential pnpm check/full isolated integration. Await /tmp/slama-s2-s4/fixes-result.md and actual final
+marker S2S4_FIXES_DONE_1110. Initial combined pnpm check passed (277 API, 590 UI); final corrected gates pending.
+Independent initial review: /tmp/slama-s2-s4/review-result.md; reviewer s2s4-review (w1:pQ), Sol LOW, currently idle.
+After executor finishes, obtain independent review of corrections; preserve uncommitted changes. No commit,
+push, deployment, issue mutation, or development database operations authorized for this phase.
+
+# Current task — S2/S4 activation and central access resolution
+
+User explicitly chose roadmap step S2/S4 (not deployment setup). Start from clean e336dba.
+See .agents/s2-s4.md and /tmp/slama-s2-s4/issues.json for acceptance. Existing catalog foundation is inactive;
+finish version pins/activation and central API/worker/UI resolution without silently changing purchased terms.
+Pre-client single-baseline policy and approved admin security changes remain authoritative.
+Admin/bootstrap changes below were committed and pushed through e336dba; old uncommitted notes are historical.
+Current phase: backend done (API integration 435/1, unit 274; diagnostics follow-up 40 focused/8 unit). UI phase 3 done
+2026-11-10: typecheck clean, lint 0 errors, UI tests 97 files/590 passed (+14 node architecture/structure), build OK,
+prettier clean. Pending: root `pnpm check`/integration and independent review. Report: /tmp/slama-s2-s4/phase3-result.md.
+Coordinator resumes automatically from disk with fresh context; no user handoff required.
+
+# Historical admin deployment bootstrap — 2026-11-10
 
 All release seams (Dokploy startup; production/Lightsail/Coolify release-profile migrate) run bootstrap-admin.ts after
 migration (&&): creates ADMIN_EMAIL/ADMIN_PASSWORD admin once (audited, actor deployment); existing admins never changed;
@@ -248,3 +303,14 @@ After each bounded pass, record agents/results, changed files, actual test statu
 Claude availability check here. Never substitute old passing results for a later changed tree. Update durable
 progress docs and GitHub task evidence only to match verified scope. Preserve this routing instruction when
 context compacts or the provider coordinator changes.
+
+- 2026-11-10 S2/S4 phase 2A done (schema/catalog prep); see /tmp/slama-s2-s4/phase2a-result.md. Next: 2B writers + resolver.
+- 2026-11-10 S2/S4 phase 2B done (writers, resolver, backend DTOs, CLI); see /tmp/slama-s2-s4/phase2b-result.md.
+  API integration 435 pass/1 skip, unit 274, tsc/eslint clean. Next: UI phase (34 known UI tsc errors), then pnpm check.
+- 2026-11-10 S2/S4 review fixes: 3 P2s fixed (/tmp/slama-s2-s4/fixes-result.md). check exit 0 (API 277, UI 596);
+  integration 437 pass/1 skip/2 fail (admin-security activation, customer-lifecycle change plan) from mixed writer JS
+  clock vs resolver DB clock (~80 ms DB lag); these 2 fail without the fixes too. Needs a clock decision, then recheck.
+- 2026-11-10 S2/S4 clock fix: writers and resolver share the DB transaction clock; drift regression added. check exit 0;
+  integration 441 pass/1 skip/0 fail (/tmp/slama-s2-s4/fixes/integration3.log). Next: independent review.
+- 2026-11-10 S2/S4 P3 (UI-only) fixed: withdrawn renewal option only when coverage continues; check exit 0 (UI 597).
+  Integration3 stands for the unchanged API. Residual risks listed in /tmp/slama-s2-s4/fixes-result.md. Final review of the UI delta is pending.

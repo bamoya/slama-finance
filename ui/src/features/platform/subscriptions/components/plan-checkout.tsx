@@ -19,7 +19,13 @@ import { Select, SelectOption } from '../../../../components/ui/select'
 import { ApiError } from '../../../../lib/api-error'
 import { displayDate, displayDateTime } from '../../../../lib/dates'
 import { translate } from '../../../../lib/i18n'
-import { cycleLabel, formatDh, paymentKindLabel, paymentMethodLabel } from './billing-format'
+import {
+  cycleLabel,
+  formatDh,
+  paymentKindLabel,
+  paymentMethodLabel,
+  versionLabel,
+} from './billing-format'
 
 type PlanCode = 'essential' | 'business' | 'pro'
 type Cycle = 'monthly' | 'annual'
@@ -37,18 +43,29 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
     [reference, setReference] = useState(''),
     [submitted, setSubmitted] = useState(false)
   const { mutate: requestQuote, reset: resetQuote } = quote
+  const validUntil = s.accessValidUntil
   const loaded = !!billing.data
   const suspended = s.status === 'suspended'
   useEffect(() => {
     if (!loaded || suspended) return
     resetQuote()
     requestQuote({ data: { planCode, cycle } })
-  }, [loaded, suspended, planCode, cycle, requestQuote, resetQuote])
+    // The quote is priced by the API on the selling version at this instant: ask again when access changes.
+  }, [loaded, suspended, planCode, cycle, validUntil, requestQuote, resetQuote])
 
   if (billing.isPending || billing.isError) return <RequestState query={billing} />
   const catalog = billing.data,
     q = quote.data,
     methodValue = method || catalog.paymentMethods[0] || ''
+  // A withdrawn plan leaves the selling catalog, but the API still renews it on the purchased version while
+  // coverage continues (active or past due): keep it selectable then, labelled from the subscription's pin;
+  // the price comes only from the API quote. After expiry the API sells only the catalog, so it is not offered.
+  const withdrawnCurrent =
+    s.planCode !== 'trial' &&
+    (s.status === 'active' || s.status === 'past_due') &&
+    !catalog.plans.some((p) => p.code === s.planCode)
+      ? s
+      : null
   const blocked = !!s.pendingPayment
   const renewalCovered = quote.error instanceof ApiError && quote.error.code === 'RENEWAL_EXISTS'
   const notice = suspended
@@ -94,9 +111,18 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
             >
               {catalog.plans.map((p) => (
                 <SelectOption key={p.code} value={p.code}>
-                  {p.name} — {formatDh(cycle === 'annual' ? p.annualHt : p.monthlyHt)} HT
+                  {p.name} · {versionLabel(p.versionNumber)} —{' '}
+                  {formatDh(cycle === 'annual' ? p.annualHt : p.monthlyHt)} HT
                 </SelectOption>
               ))}
+              {withdrawnCurrent && (
+                <SelectOption value={withdrawnCurrent.planCode}>
+                  {withdrawnCurrent.planName}
+                  {withdrawnCurrent.planVersionNumber !== null &&
+                    ` · ${versionLabel(withdrawnCurrent.planVersionNumber)}`}{' '}
+                  — {translate('Current plan, renewal on your version')}
+                </SelectOption>
+              )}
             </Select>
           </Field>
           <Field>
@@ -121,7 +147,9 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
           >
             <div className="flex justify-between gap-4">
               <dt className="font-semibold">{paymentKindLabel(q.kind)}</dt>
-              <dd className="text-[var(--muted)]">{cycleLabel(q.cycle)}</dd>
+              <dd className="text-[var(--muted)]" data-testid="quote-version">
+                {versionLabel(q.planVersionNumber)} · {cycleLabel(q.cycle)}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt>{translate('Amount excl. tax')}</dt>

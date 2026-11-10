@@ -380,7 +380,7 @@ paths:
       operationId: changeAdminSubscriptionPlan
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a reason and UI confirmation; no fresh second factor. Paid subscriptions only: switches the current paid period to another plan immediately without payment, preserving the existing coverage start and end (recorded as a confirmed 0-amount admin_adjustment payment and a complimentary coverage period). Trial customers use subscription/activation. Downgrades never delete data. 409 NO_PAID_PERIOD, SAME_PLAN or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Paid subscriptions only: switches the current paid period to another plan immediately without payment, preserving the existing coverage start and end (recorded as a confirmed 0-amount admin_adjustment payment and a complimentary coverage period). Trial customers use subscription/activation. Downgrades never delete data. The new period pins the target plan selling version. 409 NO_PAID_PERIOD, SAME_PLAN, PLAN_NOT_SELLABLE or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -404,7 +404,7 @@ paths:
       operationId: extendAdminSubscription
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Requires a reason and UI confirmation; no fresh second factor. Adds days to paid coverage (an admin_adjustment payment and complimentary period continuing the last plan) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
+      description: 'Requires a reason and UI confirmation; no fresh second factor. Adds days to paid coverage (an admin_adjustment payment and complimentary period continuing the last plan and its pinned version) or, without paid coverage, to the trial. 409 SUBSCRIPTION_NOT_STARTED or SUBSCRIPTION_SUSPENDED.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -866,7 +866,7 @@ paths:
       operationId: activateAdminSubscriptionPlan
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
-      description: 'Trial customers only (trial running, or ended without any paid or complimentary coverage): activates a paid plan over explicit coverage days (startsOn inclusive, endsOn exclusive, in the customer timezone, today means now) settled by a confirmed payment (price snapshot of the plan and cycle, current tax) or as complimentary access (no grace after it ends). The trial is never extended to bridge a gap before startsOn. Requires a reason and UI confirmation; no fresh second factor. 400 COVERAGE_INVALID, 400 PAYMENT_DETAILS_REQUIRED, 400 PAYMENT_DETAILS_UNEXPECTED, 400 INVALID_PAYMENT_METHOD, 400 INVALID_PLAN, 409 SUBSCRIPTION_NOT_STARTED, 409 SUBSCRIPTION_NOT_TRIAL, 409 SUBSCRIPTION_SUSPENDED. Audited subscription.activate.'
+      description: 'Trial customers only (trial running, or ended without any paid or complimentary coverage): activates a paid plan over explicit coverage days (startsOn inclusive, endsOn exclusive, in the customer timezone, today means now) settled by a confirmed payment (price snapshot of the plan and cycle, current tax) or as complimentary access (no grace after it ends). The trial is never extended to bridge a gap before startsOn. Requires a reason and UI confirmation; no fresh second factor. 400 COVERAGE_INVALID, 400 PAYMENT_DETAILS_REQUIRED, 400 PAYMENT_DETAILS_UNEXPECTED, 400 INVALID_PAYMENT_METHOD, 400 INVALID_PLAN, 409 SUBSCRIPTION_NOT_STARTED, 409 SUBSCRIPTION_NOT_TRIAL, 409 SUBSCRIPTION_SUSPENDED, 409 PLAN_NOT_SELLABLE (pins the selling version). Audited subscription.activate.'
       parameters:
         - { name: ownerId, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -946,6 +946,7 @@ components:
           ownerId,
           ownerEmail,
           planCode,
+          planVersionNumber,
           cycle,
           kind,
           status,
@@ -965,6 +966,7 @@ components:
         ownerId: { type: string, format: uuid }
         ownerEmail: { type: string }
         planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
+        planVersionNumber: { type: integer, minimum: 1 }
         cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
         kind: { type: string, enum: [activation, renewal, upgrade] }
         status: { type: string, enum: [submitted, confirmed, rejected] }
@@ -1039,6 +1041,7 @@ components:
           blockedAt,
           deletionDueAt,
           invitationPending,
+          subscriptionError,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -1048,9 +1051,24 @@ components:
         createdAt: { type: string, format: date-time }
         disabledAt: { type: [string, 'null'], format: date-time }
         subscriptionStatus:
-          { type: string, enum: [not_started, trial, active, past_due, expired, suspended] }
-        planCode: { type: string, enum: [trial, essential, business, pro] }
+          {
+            type: [string, 'null'],
+            enum: [not_started, trial, active, past_due, expired, suspended, null],
+            description: 'Null when access cannot be resolved for this owner; subscriptionError then says why.',
+          }
+        planCode:
+          {
+            type: [string, 'null'],
+            enum: [trial, essential, business, pro, null],
+            description: 'Null when access cannot be resolved (see subscriptionError).',
+          }
         paidThroughAt: { type: [string, 'null'], format: date-time }
+        subscriptionError:
+          {
+            type: [string, 'null'],
+            enum: [SUBSCRIPTION_CATALOG_UNAVAILABLE, SUBSCRIPTION_PERIODS_INCONSISTENT, null],
+            description: 'Per-row diagnostic; other owners in the page are unaffected.',
+          }
         organizationCount: { type: integer, minimum: 0 }
         blockedAt: { type: [string, 'null'], format: date-time, description: Administrator block. }
         deletionDueAt:
@@ -1070,7 +1088,8 @@ components:
     AdminOwnerDetail:
       type: object
       additionalProperties: false
-      required: [owner, organizations, subscription, payments, restriction, invitationPending]
+      required:
+        [owner, organizations, subscription, subscriptionError, payments, restriction, invitationPending]
       properties:
         restriction: { $ref: '#/components/schemas/AdminOwnerRestriction' }
         invitationPending:
@@ -1109,7 +1128,16 @@ components:
               suspendedAt: { type: [string, 'null'], format: date-time }
               suspensionReason:
                 { type: [string, 'null'], description: 'Internal administrator note.' }
-        subscription: { $ref: ../../openapi.yaml#/components/schemas/OwnerSubscription }
+        subscription:
+          description: 'Null when access cannot be resolved; subscriptionError then says why. Payments and restrictions stay available for support.'
+          anyOf:
+            - { $ref: ../../openapi.yaml#/components/schemas/OwnerSubscription }
+            - { type: 'null' }
+        subscriptionError:
+          {
+            type: [string, 'null'],
+            enum: [SUBSCRIPTION_CATALOG_UNAVAILABLE, SUBSCRIPTION_PERIODS_INCONSISTENT, null],
+          }
         payments:
           type: array
           items: { $ref: '#/components/schemas/AdminPayment' }

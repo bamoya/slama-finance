@@ -35,7 +35,7 @@ function PlanChangeFields({
   value,
   onChange,
 }: {
-  current: string
+  current: string | undefined
   value: PaidPlan
   onChange: (plan: PaidPlan) => void
 }) {
@@ -136,7 +136,7 @@ export function CustomerActionDialogs({
   const ownerId = detail.owner.id
   const email = detail.owner.email
   const count = detail.organizations.length
-  const currentPlan = detail.subscription.planCode
+  const currentPlan = detail.subscription?.planCode
   const [plan, setPlan] = useState<PaidPlan>(
     paidPlans.find((item) => item !== currentPlan) ?? 'essential',
   )

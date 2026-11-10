@@ -28,7 +28,7 @@ describe('S5c coverage read authority', () => {
   let at: number
   const clock = () => new Date(at)
   beforeEach(async () => {
-    fixture = await isolatedDatabase()
+    fixture = await isolatedDatabase({ owner: 'trial' })
     at = Date.now()
     await createAdminAccounts(() => fixture.db).create({
       email: 'ops@example.test',
@@ -316,7 +316,10 @@ describe('S5c coverage read authority', () => {
     await expect(scoped.transaction((tx) => subscriptions.assertAccess(tx))).rejects.toMatchObject({
       code: 'SUBSCRIPTION_PERIODS_INCONSISTENT',
     })
-    expect(await scoped.transaction((tx) => subscriptions.workerEligible(tx))).toBe(false)
+    // A coverage error is a runner failure, never a silent "not eligible".
+    await expect(
+      scoped.transaction((tx) => subscriptions.workerEligible(tx)),
+    ).rejects.toMatchObject({ code: 'SUBSCRIPTION_PERIODS_INCONSISTENT' })
     expect(await adminStatus('periods', o.id)).toBe('expired')
     // Legacy reads are unaffected (explicit rollback path).
     expect((await services('legacy').subscriptions.summary(o.id)).status).toBe('expired')

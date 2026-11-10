@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { users } from '../../../../../db/schema/auth.js'
 import { organizations } from '../../../../../db/schema/organizations.js'
@@ -11,6 +11,7 @@ import {
 import {
   ownerSubscriptions,
   subscriptionEmails,
+  subscriptionPayments,
   subscriptionPlans,
   subscriptionStorage,
 } from '../../../../../db/schema/subscriptions.js'
@@ -133,13 +134,6 @@ export function createSubscriptionRepository(database: () => Database) {
         .where(eq(ownerSubscriptions.ownerId, ownerId))
       return row
     },
-    async trial(tx: Transaction) {
-      const [row] = await tx
-        .select()
-        .from(subscriptionPlans)
-        .where(eq(subscriptionPlans.code, 'trial'))
-      return row!
-    },
     async start(ownerId: string, tx: Transaction) {
       await tx
         .insert(ownerSubscriptions)
@@ -152,12 +146,22 @@ export function createSubscriptionRepository(database: () => Database) {
         .onConflictDoNothing()
     },
     /**
-     * Coverage periods, suspensions and scheduled changes (values only; notes are admin-only), read in
-     * ONE statement so the three datasets share a snapshot: a concurrent resume or confirmation is
-     * seen entirely or not at all.
+     * The owner subscription row, legacy confirmed payment coverage, coverage periods with their
+     * version pins, suspensions, scheduled changes and owner overrides (values only; notes are
+     * admin-only), read in ONE statement so the datasets share a snapshot: a concurrent trial
+     * creation or extension, resume, confirmation or override change is seen entirely or not at all.
      */
     async periodState(ownerId: string, tx: Transaction) {
       const [row] = await tx.execute<{
+        subscription: Record<string, unknown> | null
+        legacyCoverage: {
+          planCode: string
+          planVersionId: string
+          cycle: 'monthly' | 'annual'
+          coverageStart: string
+          coverageEnd: string
+          graceless: boolean
+        }[]
         periods: {
           kind: 'trial' | 'paid' | 'complimentary'
           planCode: string
@@ -165,19 +169,67 @@ export function createSubscriptionRepository(database: () => Database) {
           startsAt: string
           endsAt: string
           supersededAt: string | null
+          planVersionId: string
         }[]
         suspensions: { startedAt: string; endedAt: string | null }[]
-        scheduled: { kind: string; effectiveAt: string; status: string }[]
+        scheduled: {
+          kind: string
+          effectiveAt: string
+          status: string
+          targetPlanCode: string | null
+          targetPlanVersionId: string | null
+          noticeSentAt: string | null
+        }[]
+        overrides: {
+          entitlementKey: string
+          booleanValue: boolean | null
+          integerValue: number | null
+          isUnlimited: boolean
+          startsAt: string
+          endsAt: string | null
+          revokedAt: string | null
+          createdAt: string
+        }[]
       }>(sql`select
+        (select row_to_json(s) from ${ownerSubscriptions} s where s.owner_id=${ownerId}) subscription,
+        coalesce((select json_agg(json_build_object('planCode',y.plan_code,'planVersionId',y.plan_version_id,
+          'cycle',y.cycle,'coverageStart',y.coverage_start,'coverageEnd',y.coverage_end,'graceless',y.graceless)
+          order by y.coverage_start, y.decided_at)
+          from ${subscriptionPayments} y where y.owner_id=${ownerId} and y.status='confirmed'),'[]') "legacyCoverage",
         coalesce((select json_agg(json_build_object('kind',p.kind,'planCode',p.plan_code,'cycle',p.cycle,
-          'startsAt',p.starts_at,'endsAt',p.ends_at,'supersededAt',p.superseded_at) order by p.starts_at)
+          'startsAt',p.starts_at,'endsAt',p.ends_at,'supersededAt',p.superseded_at,
+          'planVersionId',p.plan_version_id) order by p.starts_at)
           from ${subscriptionPeriods} p where p.owner_id=${ownerId}),'[]') periods,
         coalesce((select json_agg(json_build_object('startedAt',u.started_at,'endedAt',u.ended_at))
           from ${subscriptionSuspensions} u where u.owner_id=${ownerId}),'[]') suspensions,
-        coalesce((select json_agg(json_build_object('kind',c.kind,'effectiveAt',c.effective_at,'status',c.status))
-          from ${subscriptionScheduledChanges} c where c.owner_id=${ownerId}),'[]') scheduled`)
+        coalesce((select json_agg(json_build_object('kind',c.kind,'effectiveAt',c.effective_at,'status',c.status,
+          'targetPlanCode',c.target_plan_code,'targetPlanVersionId',c.target_plan_version_id,
+          'noticeSentAt',c.notice_sent_at))
+          from ${subscriptionScheduledChanges} c where c.owner_id=${ownerId}),'[]') scheduled,
+        coalesce((select json_agg(json_build_object('entitlementKey',o.entitlement_key,
+          'booleanValue',o.boolean_value,'integerValue',o.integer_value,'isUnlimited',o.is_unlimited,
+          'startsAt',o.starts_at,'endsAt',o.ends_at,'revokedAt',o.revoked_at,'createdAt',o.created_at)
+          order by o.starts_at desc, o.created_at desc)
+          from ${subscriptionOverrides} o where o.owner_id=${ownerId}),'[]') overrides`)
       const date = (value: string) => new Date(value)
+      const maybe = (value: string | null) => (value ? date(value) : null)
+      const subscription = row!.subscription
       return {
+        subscription: subscription
+          ? (Object.fromEntries(
+              Object.entries(getTableColumns(ownerSubscriptions)).map(([key, column]) => [
+                key,
+                subscription[column.name] === null
+                  ? null
+                  : column.mapFromDriverValue(subscription[column.name]),
+              ]),
+            ) as typeof ownerSubscriptions.$inferSelect)
+          : null,
+        legacyCoverage: row!.legacyCoverage.map((p) => ({
+          ...p,
+          coverageStart: date(p.coverageStart),
+          coverageEnd: date(p.coverageEnd),
+        })),
         periods: row!.periods.map((p) => ({
           ...p,
           startsAt: date(p.startsAt),
@@ -188,7 +240,19 @@ export function createSubscriptionRepository(database: () => Database) {
           startedAt: date(u.startedAt),
           endedAt: u.endedAt ? date(u.endedAt) : null,
         })),
-        scheduled: row!.scheduled.map((c) => ({ ...c, effectiveAt: date(c.effectiveAt) })),
+        scheduled: row!.scheduled.map((c) => ({
+          ...c,
+          effectiveAt: date(c.effectiveAt),
+          noticeSentAt: maybe(c.noticeSentAt),
+        })),
+        overrides: row!.overrides.map((o) => ({
+          ...o,
+          integerValue: o.integerValue === null ? null : Number(o.integerValue),
+          startsAt: date(o.startsAt),
+          endsAt: maybe(o.endsAt),
+          revokedAt: maybe(o.revokedAt),
+          createdAt: date(o.createdAt),
+        })),
       }
     },
     /** Database time: override windows are server-authored, so they are evaluated on the same clock. */
