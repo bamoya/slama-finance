@@ -71,6 +71,10 @@ services:
   migrate:
     cap_drop:
       - ALL
+    command:
+      - sh
+      - -c
+      - node --import tsx node_modules/drizzle-kit/bin.cjs migrate && node --import tsx scripts/bootstrap-admin.ts
     cpus: 0.4
     depends_on:
       postgres:
@@ -78,6 +82,9 @@ services:
         required: true
     environment:
       - MIGRATION_DATABASE_URL=${MIGRATION_DATABASE_URL:?Set the migration-owner database URL}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_NAME=${ADMIN_NAME:-}
       - NODE_OPTIONS=--max-old-space-size=256
     image: ${RELEASE_IMAGE:?Set the matching prebuilt release-tooling image}
     logging:

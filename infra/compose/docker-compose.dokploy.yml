@@ -132,11 +132,20 @@ services:
     logging: *logging
 
   # One-shot initialization. A failure blocks the API. No owner credentials in API.
+  # Migrates and provisions the runtime role, then creates the ADMIN_EMAIL administrator once
+  # (existing administrators are never changed; leave both unset to skip).
   migrate:
     image: ${RELEASE_IMAGE:?Set the newly published release image containing initialize-database.mjs}
-    command: ['node', 'scripts/initialize-database.mjs']
+    command:
+      - sh
+      - -c
+      - node scripts/initialize-database.mjs && node --import tsx scripts/bootstrap-admin.ts
     restart: 'no'
     environment:
+      # First SaaS administrator; both or neither. Password: at least 12 characters.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
       MIGRATION_DATABASE_URL: postgres://slama_owner:${POSTGRES_OWNER_PASSWORD:-CHANGE_ME_owner_dev_2026}@bfinance-postgres:5432/slama_finance
       DATABASE_URL: postgres://slama_runtime:${POSTGRES_RUNTIME_PASSWORD:-CHANGE_ME_runtime_dev_2026}@bfinance-postgres:5432/slama_finance
     networks:

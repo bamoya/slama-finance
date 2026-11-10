@@ -13,6 +13,12 @@ together. Production pulls images; it does not build or automatically deploy whe
 CI finishes. Review the workflow result and image references before promoting.
 
 The API Dockerfile's `release` target contains source, migration SQL and tooling.
+The production, Lightsail and Coolify `migrate` services run that migration CLI and then
+`scripts/bootstrap-admin.ts` (`&&`: a migration failure stops the job). The bootstrap creates the
+`ADMIN_EMAIL`/`ADMIN_PASSWORD` administrator once (optional `ADMIN_NAME`; both or neither; 12+
+characters), never changes an existing administrator, and skips when both are unset. These values
+belong only to the release job's environment, not the API. See the
+[administration guide](../implementation/administration/README.md).
 Its default command invokes the installed migration CLI through Node and tsx
 without downloading a package manager; it is a one-shot operator tool, not a
 long-running application or public service. Runtime images do not auto-migrate.
@@ -32,7 +38,9 @@ still uses manual release-profile migrations. Dokploy's initializer provisions s
    Do not mistake successful execution for a complete production access policy.
 3. Run reviewed migrations using `MIGRATION_DATABASE_URL` through the release
    profile. Verify the migration journal before starting the API.
-4. Register the owner through owner authentication. No global staff administrator is bootstrapped.
+4. The release job creates the SaaS administrator from `ADMIN_EMAIL`/`ADMIN_PASSWORD` when set; sign
+   in at `admin.<PLATFORM_DOMAIN>` (password, then TOTP enrollment, then optional passkeys).
+   Register the owner through owner authentication. No global staff administrator is bootstrapped.
    Complete tenant activation/isolation work before opening finance workspaces to customers.
 5. Verify all CRUD domains and protected issued-document behavior using the
    runtime role, including jobs, notification rules and scheduled reports.

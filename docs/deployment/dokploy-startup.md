@@ -18,8 +18,9 @@ and Resend credentials and override both development password defaults.
 
 Startup order is PostgreSQL healthy → migrate exits successfully → API healthy
 → UI. The `migrate` service no longer requires an explicit profile. It runs
-`node scripts/initialize-database.mjs` from the release image. Its exit code
-blocks API startup on errors; do not disable this dependency to bypass failures.
+`node scripts/initialize-database.mjs` and then `scripts/bootstrap-admin.ts` from the
+release image. Its exit code blocks API startup on errors; do not disable this dependency
+to bypass failures.
 
 The initializer:
 
@@ -31,6 +32,22 @@ The initializer:
   superuser privileges, or audit update/delete access.
 - Checks existing runtime credentials and never rotates them implicitly.
 - Verifies runtime access before returning success; errors redact SQL and credentials.
+
+The administrator bootstrap then reads `ADMIN_EMAIL`, `ADMIN_PASSWORD` and optional
+`ADMIN_NAME` (default `Administrator`) from the Dokploy environment:
+
+- Both unset: skipped (existing deployments keep working; no administrator is created).
+- Only one set, an invalid email or a password under 12 characters: `migrate` fails and
+  the API does not start. Values are never logged.
+- No administrator with that email: created once with a hashed password and one
+  `admin.create` audit entry (actor `deployment`). Concurrent runs create one account.
+- Administrator already exists (enabled or disabled): left completely unchanged. Changing
+  `ADMIN_PASSWORD` later does not rotate the password, re-enable the account, reset TOTP,
+  passkeys or recovery codes, or end sessions. Use the operator CLI for those.
+
+After the first deployment, sign in at `admin.<PLATFORM_DOMAIN>` with the email and password,
+enroll TOTP, then optionally register passkeys. You may then clear `ADMIN_PASSWORD` and
+`ADMIN_EMAIL` from Dokploy (recommended); keeping them has no effect on the existing account.
 
 ## Deploying this change
 

@@ -21,6 +21,7 @@
     "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate",
     "db:grant-sales-runtime": "tsx scripts/grant-sales-runtime.ts",
     "subscription:payment": "tsx scripts/subscription-payment.ts",
+    "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "admin:create": "tsx scripts/admin.ts create",
     "admin:disable": "tsx scripts/admin.ts disable",
     "admin:reset-2fa": "tsx scripts/admin.ts reset-2fa"

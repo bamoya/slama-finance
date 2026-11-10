@@ -122,12 +122,22 @@ services:
     logging: *logging
 
   # Run explicitly before starting/replacing runtime services. Never automatic on API boot.
+  # Migrates, then creates the ADMIN_EMAIL administrator once (existing ones are never changed;
+  # leave both unset to skip). A failure in either step exits non-zero.
   migrate:
     image: ${RELEASE_IMAGE:?Set the matching prebuilt release-tooling image}
     profiles: ['release']
+    command:
+      - sh
+      - -c
+      - node --import tsx node_modules/drizzle-kit/bin.cjs migrate && node --import tsx scripts/bootstrap-admin.ts
     restart: 'no'
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set the migration-owner database URL}
+      # First SaaS administrator; both or neither. Password: at least 12 characters.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
     networks:
       database:
         aliases: [bfinance-migrate]

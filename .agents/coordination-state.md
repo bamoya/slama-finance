@@ -1,3 +1,25 @@
+# Admin deployment bootstrap — 2026-11-10 (implemented, reviewed, uncommitted)
+
+All release seams (Dokploy startup; production/Lightsail/Coolify release-profile migrate) run bootstrap-admin.ts after
+migration (&&): creates ADMIN_EMAIL/ADMIN_PASSWORD admin once (audited, actor deployment); existing admins never changed;
+both unset = skip; partial/invalid = fail. ADMIN_* only on migrate, never API. Gates: pnpm check PASS (API 269, UI 574);
+integration 420 pass / 1 skip (45 files). Fresh release-image build blocked (Docker Hub x509); cached-image smoke partial.
+Report: /tmp/slama-admin-bootstrap/REPORT.md, logs in /tmp/slama-admin-bootstrap/logs/.
+
+Independent Sol LOW final recheck passed: no actionable findings; the all-target deployment P2 is fixed.
+Evidence: /tmp/slama-admin-bootstrap/final-review.md. Current-image container execution remains unverified:
+fresh image build blocked by Docker Hub x509; old cached-image smoke lacked the newer WebAuthn dependency.
+Do not claim image E2E success. Supported release commands were executed successfully against isolated DBs.
+No commit/push/deploy or development/live DB operations for this task. Finished worker panes closed.
+Usage before recheck: Codex30%5h/24%weekly remaining; Claude13%session/24%weekly used. Recheck at next dispatch.
+
+## Historical Dokploy-only first pass (superseded by all-target wiring above)
+
+Dokploy migrate step now runs scripts/bootstrap-admin.ts after initialize-database: creates ADMIN_EMAIL/ADMIN_PASSWORD
+admin once (audited, actor deployment); existing admins never changed; both unset = skip; partial/invalid = fail.
+Gates: pnpm check PASS (API 269, UI 574); integration 416 pass / 1 skip (44 files). Report:
+/tmp/slama-admin-bootstrap/REPORT.md, logs in /tmp/slama-admin-bootstrap/logs/.
+
 # Current approved work — 2026-11-10
 
 Implement approved SaaS admin trial activation and authentication changes from .agents/admin-security.md.

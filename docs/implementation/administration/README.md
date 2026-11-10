@@ -13,12 +13,31 @@ Operator guide for SaaS administrator accounts served under `/admin`. Task recor
 
 ## Create the first administrator
 
+Deployments create it automatically: set `ADMIN_EMAIL` and `ADMIN_PASSWORD` (at least 12 characters;
+optional `ADMIN_NAME`) for the `migrate` job of every supported deployment: Dokploy (automatic on each
+deploy), and the production, Lightsail and Coolify release profile
+(`docker compose --profile release run --rm migrate`, already the required release step). After migrations it creates that administrator if no
+account has the email, audited once as actor `deployment`, and otherwise changes nothing (password,
+name, disabled state, TOTP, passkeys, recovery codes and sessions are all preserved). Both unset skips
+the step; only one set, an invalid email or a weak password fails the deployment. Credentials are never
+logged. Details: [Dokploy startup](../../deployment/dokploy-startup.md) and
+[release procedure](../../deployment/release-procedure.md). Locally:
+`ADMIN_EMAIL=... ADMIN_PASSWORD=... pnpm --filter ./api admin:bootstrap`.
+
+The CLI remains available for additional administrators and operator recovery:
+
 ```text
 pnpm --filter ./api admin:create --email <email> --name "<name>"
 ```
 
 The password is read from `ADMIN_PASSWORD` when set, from piped stdin when not on a terminal, or from a
 prompt (entered twice, not echoed).
+
+Bootstrap verification (2026-11-10): focused tests 8/8; `pnpm check` passed (269 API / 574 UI tests);
+isolated integration 420 passed / 1 opt-in skip. Independent review and recheck found no remaining actionable
+issues. Release commands for all four targets were executed against isolated databases. A fresh release-image
+build was blocked by local Docker Hub certificate validation, so current-image container execution remains
+unverified. Logs and review: `/tmp/slama-admin-bootstrap/`.
 
 ## Enroll two-factor authentication
 

@@ -40,7 +40,8 @@
    `51.44.43.230`. Publish reviewed API/UI/release images off-host,
    configure Resend and dedicated S3 credentials, then complete first-launch gates
    in `release-procedure.md`. Application deployment remains pending.
-5. Merge production Compose with the Lightsail dev overlay, in that order. Do not
+5. Merge production Compose with the Lightsail dev overlay, in that order. Set `ADMIN_EMAIL` and
+   `ADMIN_PASSWORD` for the release `migrate` job to create the first SaaS administrator. Do not
    build on this host. Monitor memory under actual report/PDF workloads.
 
 Do not expose the Coolify dashboard through a public proxy domain. The private
