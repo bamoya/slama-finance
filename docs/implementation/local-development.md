@@ -91,9 +91,13 @@ discarding that database. A local volume is not a backup.
 
 The API compares Node's ICU zone data for `Africa/Casablanca` with PostgreSQL's at startup; when they
 disagree, subscription boundary writes (payments, confirmations, plan changes) return 503
-`TIMEZONE_DATA_MISMATCH` and `/ready` reports `timezoneData.status: mismatch`. The local PostgreSQL image
-ships tzdata 2026d, newer than the ICU data bundled with current Node releases (2026a/b). Run the API with
-matching ICU zone files (official `unicode-org/icu-data`, `tzdata/icunew/<version>/44/le/*.res`):
+`TIMEZONE_DATA_MISMATCH` and `/ready` reports `timezoneData.status: mismatch`.
+
+Use the official Node 22 build (`.nvmrc`; `nvm install && nvm use`), which bundles current tzdata (2026e at
+the time of writing), and keep the PostgreSQL image current. Homebrew's `node@22` links the system ICU and
+still carries older zone data (2026a), so it triggers the mismatch against the PostgreSQL image. The API
+Docker image (`node:22-alpine`) and CI (`node-version: 22`) already use the official build. If you must run
+an older Node, point it at newer ICU zone files (`unicode-org/icu-data`, `tzdata/icunew/<version>/44/le/*.res`):
 
 ```sh
 mkdir -p ~/.cache/icu-tz && cd ~/.cache/icu-tz
