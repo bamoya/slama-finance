@@ -7,6 +7,7 @@ import { organizationAdminDeliveries } from '../../../../../../db/schema/organiz
 import { organizations } from '../../../../../../db/schema/organizations.js'
 import type { Database, Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
+import { queueSql, queueTime } from '../../../../../lib/queue-time.js'
 
 export function createAdminProvisioningRepository(database: () => Database) {
   return {
@@ -112,7 +113,8 @@ export function createAdminProvisioningRepository(database: () => Database) {
             status: 'sending',
             attempts: job.attempts + 1,
             leaseId,
-            leaseExpiresAt: new Date(Date.now() + 120000),
+            // Database clock, like the claim comparison (no host/database skew).
+            leaseExpiresAt: queueSql(queueTime(undefined, 120000)),
           })
           .where(eq(organizationAdminDeliveries.organizationId, job.organizationId))
         return {
@@ -131,10 +133,10 @@ export function createAdminProvisioningRepository(database: () => Database) {
         .update(organizationAdminDeliveries)
         .set(
           success
-            ? { status: 'sent', sentAt: new Date(), lastErrorCode: null, leaseExpiresAt: null }
+            ? { status: 'sent', sentAt: sql`now()`, lastErrorCode: null, leaseExpiresAt: null }
             : {
                 status: 'pending',
-                availableAt: new Date(Date.now() + 60000),
+                availableAt: queueSql(queueTime(undefined, 60000)),
                 lastErrorCode: 'ADMIN_EMAIL_FAILED',
                 leaseExpiresAt: null,
               },

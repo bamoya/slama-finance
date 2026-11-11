@@ -11,6 +11,7 @@ import { requireActorPermission } from '../../../../../lib/actor-permissions.js'
 import type { Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import { createPasswordService } from '../../../../../lib/password.js'
+import { queueTime } from '../../../../../lib/queue-time.js'
 import { hashToken as hash } from '../../../../../lib/token-hash.js'
 import type { SubscriptionsPublicApi } from '../../../../platform/subscriptions/index.js'
 import type { createStaffRepository } from '../../staff/repositories/staff.repository.js'
@@ -284,7 +285,7 @@ export function createInvitationService(
             tx,
             row.id,
             waitingForPassword
-              ? { availableAt: new Date(Date.now() + 60000) }
+              ? { availableAt: queueTime(undefined, 60000) }
               : { deliveryState: 'failed', leaseId: null, leaseExpiresAt: null },
           )
           return null
@@ -296,7 +297,7 @@ export function createInvitationService(
           deliveryState: 'sending',
           attempts: row.attempts + 1,
           leaseId,
-          leaseExpiresAt: new Date(Date.now() + 120000),
+          leaseExpiresAt: queueTime(undefined, 120000),
         })
         return { ...updated, organizationName: org.name }
       })

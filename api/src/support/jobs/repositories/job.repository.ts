@@ -1,13 +1,15 @@
 import { and, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm'
+import type { PgUpdateSetSource } from 'drizzle-orm/pg-core'
 
 import { backgroundJobs } from '../../../../db/schema/jobs.js'
 import type { Database, Transaction } from '../../../lib/db.js'
+import { queueSql, queueTime, withQueueSql, type WithQueueTime } from '../../../lib/queue-time.js'
 
 export type BackgroundJob = typeof backgroundJobs.$inferSelect
 
 export function createJobRepository(database: () => Database) {
   return {
-    metrics: async (now: Date) =>
+    metrics: async (now?: Date) =>
       database().execute<{
         jobType: string
         queued: number
@@ -19,7 +21,7 @@ export function createJobRepository(database: () => Database) {
       count(*) filter(where status='running')::int as running,
       count(*) filter(where attempts>1)::int as retried,
       count(*) filter(where status='failed')::int as failed,
-      coalesce(greatest(0,extract(epoch from (${now.toISOString()}::timestamptz-min(available_at) filter(where status='queued' and available_at<=${now.toISOString()}::timestamptz)))),0)::float8 as "oldestEligibleAgeSeconds"
+      coalesce(greatest(0,extract(epoch from (${queueSql(now)}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now)})))),0)::float8 as "oldestEligibleAgeSeconds"
       from background_jobs group by job_type`),
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async enqueue(data: typeof backgroundJobs.$inferInsert, tx: Transaction) {
@@ -41,7 +43,7 @@ export function createJobRepository(database: () => Database) {
         .set({
           status: 'queued',
           attempts: 0,
-          availableAt: new Date(),
+          availableAt: sql`now()`,
           startedAt: null,
           finishedAt: null,
           lastErrorCode: null,
@@ -53,17 +55,18 @@ export function createJobRepository(database: () => Database) {
       return row ?? null
     },
     async claim(
-      now: Date,
+      now: Date | undefined,
       leaseToken: string,
-      leaseUntil: Date,
+      leaseMs: number,
       tx: Transaction,
       supportedTypes: string[] = ['prepare_pdf'],
     ) {
+      const at = queueSql(now)
       await tx
         .update(backgroundJobs)
         .set({
           status: 'failed',
-          finishedAt: now,
+          finishedAt: at,
           leaseToken: null,
           lockedUntil: null,
           lastErrorCode: 'LEASE_EXHAUSTED',
@@ -72,7 +75,7 @@ export function createJobRepository(database: () => Database) {
           and(
             eq(backgroundJobs.status, 'running'),
             inArray(backgroundJobs.jobType, supportedTypes),
-            lte(backgroundJobs.lockedUntil, now),
+            lte(backgroundJobs.lockedUntil, at),
             eq(backgroundJobs.attempts, backgroundJobs.maxAttempts),
           ),
         )
@@ -81,7 +84,7 @@ export function createJobRepository(database: () => Database) {
         .from(backgroundJobs)
         .where(
           and(
-            lte(backgroundJobs.availableAt, now),
+            lte(backgroundJobs.availableAt, at),
             inArray(backgroundJobs.jobType, supportedTypes),
             gt(backgroundJobs.maxAttempts, backgroundJobs.attempts),
             or(
@@ -89,7 +92,7 @@ export function createJobRepository(database: () => Database) {
               and(
                 eq(backgroundJobs.status, 'running'),
                 isNotNull(backgroundJobs.lockedUntil),
-                lte(backgroundJobs.lockedUntil, now),
+                lte(backgroundJobs.lockedUntil, at),
               ),
             ),
           ),
@@ -104,8 +107,8 @@ export function createJobRepository(database: () => Database) {
           status: 'running',
           attempts: candidate.attempts + 1,
           leaseToken,
-          lockedUntil: leaseUntil,
-          startedAt: now,
+          lockedUntil: queueSql(queueTime(now, leaseMs)),
+          startedAt: at,
         })
         .where(eq(backgroundJobs.id, candidate.id))
         .returning()
@@ -114,19 +117,19 @@ export function createJobRepository(database: () => Database) {
     async fence(
       id: string,
       token: string,
-      now: Date,
-      changes: Partial<typeof backgroundJobs.$inferInsert>,
+      now: Date | undefined,
+      changes: WithQueueTime<PgUpdateSetSource<typeof backgroundJobs>>,
       tx: Transaction,
     ) {
       const [row] = await tx
         .update(backgroundJobs)
-        .set(changes)
+        .set(withQueueSql(changes))
         .where(
           and(
             eq(backgroundJobs.id, id),
             eq(backgroundJobs.status, 'running'),
             eq(backgroundJobs.leaseToken, token),
-            gt(backgroundJobs.lockedUntil, now),
+            gt(backgroundJobs.lockedUntil, queueSql(now)),
           ),
         )
         .returning()
@@ -145,7 +148,7 @@ export function createJobRepository(database: () => Database) {
         .set({
           status: 'queued',
           maxAttempts: sql`${backgroundJobs.maxAttempts}+3`,
-          availableAt: new Date(),
+          availableAt: sql`now()`,
           finishedAt: null,
           leaseToken: null,
           lockedUntil: null,
@@ -165,7 +168,7 @@ export function createJobRepository(database: () => Database) {
         .update(backgroundJobs)
         .set({
           status: 'cancelled',
-          finishedAt: new Date(),
+          finishedAt: sql`now()`,
           leaseToken: null,
           lockedUntil: null,
           lastErrorCode: 'CANCELLED',

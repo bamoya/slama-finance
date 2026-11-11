@@ -8,6 +8,12 @@ import {
 } from '../../../../../../db/schema/staff-invitations.js'
 import type { ListStaffInvitationsQuery } from '../../../../../contracts/generated/identity/staff-invitations.schemas.js'
 import type { Database, Transaction } from '../../../../../lib/db.js'
+import {
+  queueSql,
+  queueTime,
+  withQueueSql,
+  type WithQueueTime,
+} from '../../../../../lib/queue-time.js'
 
 export function createInvitationRepository(database: () => Database) {
   const org = sql`nullif(current_setting('app.organization_id',true),'')::uuid`
@@ -133,12 +139,13 @@ export function createInvitationRepository(database: () => Database) {
     async update(
       tx: Transaction,
       id: string,
-      values: Partial<typeof staffInvitations.$inferInsert>,
+      // Queue fields (availableAt, leaseExpiresAt) may be QueueTime: written with the database clock.
+      values: WithQueueTime<Partial<typeof staffInvitations.$inferInsert>>,
     ) {
       return (
         await tx
           .update(staffInvitations)
-          .set({ ...values, updatedAt: new Date() })
+          .set({ ...withQueueSql(values), updatedAt: new Date() })
           .where(and(scope(), eq(staffInvitations.id, id)))
           .returning()
       )[0]!
@@ -191,7 +198,7 @@ export function createInvitationRepository(database: () => Database) {
         .update(staffInvitations)
         .set({
           deliveryState: success ? 'sent' : attempts >= 5 ? 'failed' : 'queued',
-          availableAt: new Date(Date.now() + 60000),
+          availableAt: queueSql(queueTime(undefined, 60000)),
           leaseExpiresAt: null,
           updatedAt: new Date(),
         })

@@ -4,6 +4,7 @@ import type { EmailProvider, ObjectStorage } from '../../../integrations/contrac
 import { EmailTransportError } from '../../../integrations/email/transport.js'
 import type { Transaction } from '../../../lib/db.js'
 import { AppError } from '../../../lib/errors.js'
+import { queueTime } from '../../../lib/queue-time.js'
 import { observeWorker, type WorkerObserver } from '../../../lib/worker-observer.js'
 import type { createNotificationRepository } from '../repositories/notification.repository.js'
 import type { ComposedMessage, NotificationPublicApi } from '../types/notification.types.js'
@@ -90,7 +91,8 @@ export function createNotificationService(
   provider: EmailProvider,
   options: { allowedFrom: string[]; clock?: () => Date; observe?: WorkerObserver },
 ) {
-  const clock = options.clock ?? (() => new Date())
+  // Injected for tests only. Omitted, every queue instant comes from the database clock in SQL.
+  const clock = (): Date | undefined => options.clock?.()
   const transaction = <T>(tx: Transaction | undefined, fn: (tx: Transaction) => Promise<T>) =>
     tx ? fn(tx) : repo.transaction(fn)
   const api: NotificationPublicApi = {
@@ -107,7 +109,7 @@ export function createNotificationService(
         if (
           row.payloadErasedAt ||
           row.lastErrorCode === 'PROVIDER_OUTCOME_UNCERTAIN' ||
-          (row.firstAttemptAt && clock().getTime() - row.firstAttemptAt.getTime() >= 23 * 3600_000)
+          (await repo.uncertain(id, clock(), t))
         )
           throw new AppError(
             409,
@@ -117,7 +119,7 @@ export function createNotificationService(
         return repo.transition(
           id,
           'failed',
-          { status: 'queued', maxAttempts: row.maxAttempts + 3, availableAt: clock() },
+          { status: 'queued', maxAttempts: row.maxAttempts + 3, availableAt: queueTime(clock()) },
           t,
         )
       })
@@ -138,8 +140,7 @@ export function createNotificationService(
     metrics: () => repo.metrics(clock()),
     async retainPayloads(days: number) {
       if (!Number.isInteger(days) || days < 1) return 0
-      return (await repo.erasePayloads(new Date(clock().getTime() - days * 86400_000), clock()))
-        .length
+      return (await repo.erasePayloads(days, clock())).length
     },
     worker: {
       async runOne() {
@@ -167,7 +168,7 @@ export function createNotificationService(
             if (heartbeatFlight) return
             heartbeatFlight = repo
               .transaction((tx) =>
-                repo.fence(row, clock(), { lockedUntil: new Date(clock().getTime() + 30_000) }, tx),
+                repo.fence(row, clock(), { lockedUntil: queueTime(clock(), 30_000) }, tx),
               )
               .catch((error) => {
                 leaseError = error
@@ -209,7 +210,7 @@ export function createNotificationService(
               clock(),
               {
                 status: 'sent',
-                sentAt: clock(),
+                sentAt: queueTime(clock()),
                 providerMessageId: result.providerMessageId,
                 leaseToken: null,
                 lockedUntil: null,
@@ -250,9 +251,9 @@ export function createNotificationService(
                   leaseToken: null,
                   lockedUntil: null,
                   lastErrorCode: code,
-                  availableAt: new Date(
-                    clock().getTime() +
-                      Math.min(60_000 * 2 ** (row.attempts - 1), 3600_000) +
+                  availableAt: queueTime(
+                    clock(),
+                    Math.min(60_000 * 2 ** (row.attempts - 1), 3600_000) +
                       Math.floor(Math.random() * 1000),
                   ),
                 },

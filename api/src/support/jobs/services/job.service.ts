@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import type { Transaction } from '../../../lib/db.js'
 import { AppError } from '../../../lib/errors.js'
+import { queueTime } from '../../../lib/queue-time.js'
 import type { BackgroundJob, createJobRepository } from '../repositories/job.repository.js'
 
 export interface PreparePdfPayload {
@@ -44,6 +45,12 @@ function samePayload(left: unknown, right: PreparePdfPayload) {
   )
 }
 
+const LEASE_MS = 30_000
+
+/**
+ * `now` parameters are optional test injections. Omitted (production), every queue timestamp and
+ * comparison uses the database clock inside the statement.
+ */
 export function createJobService(repo: ReturnType<typeof createJobRepository>) {
   async function enqueuePdfInTransaction(
     tx: Transaction,
@@ -71,43 +78,41 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
     return job.status === 'failed' ? ((await repo.retryFailed(job.id, tx)) ?? job) : job
   }
   return {
-    metrics: (now = new Date()) => repo.metrics(now),
+    metrics: (now?: Date) => repo.metrics(now),
     enqueuePdfInTransaction,
     async enqueuePdf(payload: PreparePdfPayload, actor: string | null) {
       return repo.transaction((tx) => enqueuePdfInTransaction(tx, payload, actor))
     },
-    claim(now = new Date(), supportedTypes: string[] = ['prepare_pdf']) {
-      return repo.transaction((tx) =>
-        repo.claim(now, randomUUID(), new Date(now.getTime() + 30_000), tx, supportedTypes),
-      )
+    claim(now?: Date, supportedTypes: string[] = ['prepare_pdf']) {
+      return repo.transaction((tx) => repo.claim(now, randomUUID(), LEASE_MS, tx, supportedTypes))
     },
-    heartbeat(job: BackgroundJob, now = new Date()) {
+    heartbeat(job: BackgroundJob, now?: Date) {
       return repo.transaction(async (tx) => {
         const row = await repo.fence(
           job.id,
           job.leaseToken!,
           now,
-          { lockedUntil: new Date(now.getTime() + 30_000) },
+          { lockedUntil: queueTime(now, LEASE_MS) },
           tx,
         )
         if (!row) throw new AppError(409, 'STALE_JOB_LEASE', 'Job lease is no longer valid.')
         return row
       })
     },
-    complete(job: BackgroundJob, now = new Date()) {
+    complete(job: BackgroundJob, now?: Date) {
       return repo.transaction(async (tx) => {
         const row = await repo.fence(
           job.id,
           job.leaseToken!,
           now,
-          { status: 'succeeded', finishedAt: now, leaseToken: null, lockedUntil: null },
+          { status: 'succeeded', finishedAt: queueTime(now), leaseToken: null, lockedUntil: null },
           tx,
         )
         if (!row) throw new AppError(409, 'STALE_JOB_LEASE', 'Job lease is no longer valid.')
         return row
       })
     },
-    fail(job: BackgroundJob, code: string, now = new Date(), permanent = false) {
+    fail(job: BackgroundJob, code: string, now?: Date, permanent = false) {
       if (!/^[A-Z][A-Z0-9_]{0,63}$/.test(code)) code = 'JOB_FAILED'
       const terminal = permanent || job.attempts >= job.maxAttempts
       const backoff = Math.min(60_000 * 2 ** Math.max(0, job.attempts - 1), 3_600_000)
@@ -121,8 +126,8 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
             leaseToken: null,
             lockedUntil: null,
             lastErrorCode: code,
-            finishedAt: terminal ? now : null,
-            availableAt: new Date(now.getTime() + backoff + Math.floor(Math.random() * 1000)),
+            finishedAt: terminal ? queueTime(now) : null,
+            availableAt: queueTime(now, backoff + Math.floor(Math.random() * 1000)),
           },
           tx,
         )
@@ -155,7 +160,7 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
         )
       return job
     },
-    async completeInTransaction(job: BackgroundJob, tx: Transaction, now = new Date()) {
+    async completeInTransaction(job: BackgroundJob, tx: Transaction, now?: Date) {
       const row = await repo.fence(
         job.id,
         job.leaseToken!,

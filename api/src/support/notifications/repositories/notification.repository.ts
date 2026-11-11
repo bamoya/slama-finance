@@ -1,4 +1,5 @@
 import { and, eq, gt, inArray, isNotNull, lte, or, sql } from 'drizzle-orm'
+import type { PgUpdateSetSource } from 'drizzle-orm/pg-core'
 
 import {
   outboundMessageAttachments,
@@ -6,9 +7,12 @@ import {
 } from '../../../../db/schema/notifications.js'
 import type { Database, Transaction } from '../../../lib/db.js'
 import { AppError } from '../../../lib/errors.js'
+import { queueSql, queueTime, withQueueSql, type WithQueueTime } from '../../../lib/queue-time.js'
 import type { ComposedMessage } from '../types/notification.types.js'
 
 export type OutboundMessage = typeof outboundMessages.$inferSelect
+/** Provider outcomes older than this are uncertain: never resent automatically. */
+const UNCERTAIN_AFTER_MS = 23 * 3600_000
 
 // The same keyed lock protects artifact publication, attachment pins and deletion.
 export async function lockStorageReference(tx: Transaction, key: string) {
@@ -20,7 +24,8 @@ export function createNotificationRepository(
   reserveEmail?: (tx: Transaction, key: string, recipients: number) => Promise<void>,
 ) {
   return {
-    async metrics(now: Date) {
+    // `now` is an optional test injection; omitted, the database clock decides (see QueueTime).
+    async metrics(now?: Date) {
       const [row] = await database().execute<{
         queued: number
         sending: number
@@ -31,7 +36,7 @@ export function createNotificationRepository(
         count(*) filter(where status='sending')::int as sending,
         count(*) filter(where attempts>1)::int as retried,
         count(*) filter(where status='failed')::int as failed,
-        coalesce(greatest(0,extract(epoch from (${now.toISOString()}::timestamptz-min(available_at) filter(where status='queued' and available_at<=${now.toISOString()}::timestamptz)))),0)::float8 as "oldestEligibleAgeSeconds"
+        coalesce(greatest(0,extract(epoch from (${queueSql(now)}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now)})))),0)::float8 as "oldestEligibleAgeSeconds"
         from outbound_messages`)
       return row!
     },
@@ -98,7 +103,9 @@ export function createNotificationRepository(
         .where(eq(outboundMessageAttachments.messageId, id))
         .orderBy(outboundMessageAttachments.position)
     },
-    async claim(now: Date, token: string, tx: Transaction) {
+    async claim(now: Date | undefined, token: string, tx: Transaction) {
+      const at = queueSql(now)
+      const uncertainBefore = queueSql(queueTime(now, -UNCERTAIN_AFTER_MS))
       await tx
         .update(outboundMessages)
         .set({
@@ -110,26 +117,29 @@ export function createNotificationRepository(
         .where(
           and(
             eq(outboundMessages.status, 'sending'),
-            lte(outboundMessages.lockedUntil, now),
+            lte(outboundMessages.lockedUntil, at),
             or(
               eq(outboundMessages.attempts, outboundMessages.maxAttempts),
-              lte(outboundMessages.firstAttemptAt, new Date(now.getTime() - 23 * 3600_000)),
+              lte(outboundMessages.firstAttemptAt, uncertainBefore),
             ),
           ),
         )
-      const [row] = await tx
-        .select()
+      const [found] = await tx
+        .select({
+          row: outboundMessages,
+          uncertain: sql<boolean>`coalesce(${outboundMessages.firstAttemptAt} <= ${uncertainBefore}, false)`,
+        })
         .from(outboundMessages)
         .where(
           and(
-            lte(outboundMessages.availableAt, now),
+            lte(outboundMessages.availableAt, at),
             gt(outboundMessages.maxAttempts, outboundMessages.attempts),
             or(
               eq(outboundMessages.status, 'queued'),
               and(
                 eq(outboundMessages.status, 'sending'),
                 isNotNull(outboundMessages.lockedUntil),
-                lte(outboundMessages.lockedUntil, now),
+                lte(outboundMessages.lockedUntil, at),
               ),
             ),
           ),
@@ -137,8 +147,9 @@ export function createNotificationRepository(
         .orderBy(outboundMessages.availableAt, outboundMessages.createdAt)
         .limit(1)
         .for('update', { skipLocked: true })
-      if (!row) return null
-      if (row.firstAttemptAt && now.getTime() - row.firstAttemptAt.getTime() >= 23 * 3600_000) {
+      if (!found) return null
+      const row = found.row
+      if (found.uncertain) {
         await tx
           .update(outboundMessages)
           .set({
@@ -156,8 +167,8 @@ export function createNotificationRepository(
           status: 'sending',
           attempts: row.attempts + 1,
           leaseToken: token,
-          lockedUntil: new Date(now.getTime() + 30_000),
-          firstAttemptAt: row.firstAttemptAt ?? now,
+          lockedUntil: queueSql(queueTime(now, 30_000)),
+          firstAttemptAt: row.firstAttemptAt ?? at,
         })
         .where(eq(outboundMessages.id, row.id))
         .returning()
@@ -165,19 +176,19 @@ export function createNotificationRepository(
     },
     async fence(
       row: OutboundMessage,
-      now: Date,
-      changes: Partial<typeof outboundMessages.$inferInsert>,
+      now: Date | undefined,
+      changes: WithQueueTime<PgUpdateSetSource<typeof outboundMessages>>,
       tx: Transaction,
     ) {
       const [updated] = await tx
         .update(outboundMessages)
-        .set(changes)
+        .set(withQueueSql(changes))
         .where(
           and(
             eq(outboundMessages.id, row.id),
             eq(outboundMessages.status, 'sending'),
             eq(outboundMessages.leaseToken, row.leaseToken!),
-            gt(outboundMessages.lockedUntil, now),
+            gt(outboundMessages.lockedUntil, queueSql(now)),
           ),
         )
         .returning()
@@ -188,12 +199,12 @@ export function createNotificationRepository(
     async transition(
       id: string,
       status: 'failed' | 'queued',
-      changes: Partial<typeof outboundMessages.$inferInsert>,
+      changes: WithQueueTime<PgUpdateSetSource<typeof outboundMessages>>,
       tx: Transaction,
     ) {
       const [row] = await tx
         .update(outboundMessages)
-        .set(changes)
+        .set(withQueueSql(changes))
         .where(and(eq(outboundMessages.id, id), eq(outboundMessages.status, status)))
         .returning()
       if (!row)
@@ -204,15 +215,25 @@ export function createNotificationRepository(
         )
       return row
     },
-    async erasePayloads(before: Date, now: Date) {
+    /** Whether a provider outcome is too old to resend safely (same clock as claim). */
+    async uncertain(id: string, now: Date | undefined, tx: Transaction) {
+      const [row] = await tx
+        .select({
+          uncertain: sql<boolean>`coalesce(${outboundMessages.firstAttemptAt} <= ${queueSql(queueTime(now, -UNCERTAIN_AFTER_MS))}, false)`,
+        })
+        .from(outboundMessages)
+        .where(eq(outboundMessages.id, id))
+      return Boolean(row?.uncertain)
+    },
+    async erasePayloads(days: number, now: Date | undefined) {
       // Retention is explicitly enabled by configuration. Attachment pins remain permanent.
       return database()
         .update(outboundMessages)
-        .set({ to: '', cc: [], subject: '', html: '', text: '', payloadErasedAt: now })
+        .set({ to: '', cc: [], subject: '', html: '', text: '', payloadErasedAt: queueSql(now) })
         .where(
           and(
             inArray(outboundMessages.status, ['sent', 'cancelled']),
-            lte(outboundMessages.createdAt, before),
+            lte(outboundMessages.createdAt, queueSql(queueTime(now, -days * 86400_000))),
             sql`${outboundMessages.payloadErasedAt} is null`,
           ),
         )
