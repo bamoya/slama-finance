@@ -85,7 +85,10 @@ export function createSalesNotificationService(
   prepareAttachment: PrepareNotificationAttachment,
   options: { reportOwner?: ReportNotificationOwner; clock?: () => Date } = {},
 ) {
+  // Business dates (reminders, expiry) use the application clock; queue instants are left to the
+  // database clock (undefined) unless a test injects one.
   const clock = options.clock ?? (() => new Date())
+  const queueClock = (): Date | undefined => options.clock?.()
   let reminderCursor: { invoice?: string; estimate?: string } = {}
   async function owner(tx: Transaction, type: Type, id: string, actor: string, retry = false) {
     if (type === 'report_run') {
@@ -366,7 +369,7 @@ export function createSalesNotificationService(
     },
     worker: {
       async runOne() {
-        const job = await jobs.claim(clock(), ['prepare_notification'])
+        const job = await jobs.claim(queueClock(), ['prepare_notification'])
         if (!job) return false
         let heartbeat: ReturnType<typeof setInterval> | undefined
         let heartbeatFlight: Promise<unknown> | undefined
@@ -382,7 +385,7 @@ export function createSalesNotificationService(
           heartbeat = setInterval(() => {
             if (heartbeatFlight) return
             heartbeatFlight = jobs
-              .heartbeat(job, clock())
+              .heartbeat(job, queueClock())
               .catch((error) => {
                 leaseError = error
               })
@@ -434,14 +437,14 @@ export function createSalesNotificationService(
               },
               tx,
             )
-            await jobs.completeInTransaction(job, tx, clock())
+            await jobs.completeInTransaction(job, tx, queueClock())
           })
         } catch (error) {
           try {
             await jobs.fail(
               job,
               error instanceof AppError ? error.code : 'NOTIFICATION_PREPARATION_FAILED',
-              clock(),
+              queueClock(),
               error instanceof AppError && [400, 403, 404, 409].includes(error.statusCode),
             )
           } catch {

@@ -5,18 +5,36 @@ import { type SQL, sql } from 'drizzle-orm'
  * injection; production leaves it undefined so the database clock decides inside the statement
  * (the clock that also stamps `available_at` on enqueue). Host/database skew then can never make a
  * job unclaimable or a lease look expired. `plusMs` offsets it (lease length, retry backoff).
+ *
+ * The database instant is `statement_timestamp()`: current for every statement even inside a long
+ * caller transaction (a lease that expired while that transaction ran fails its fence), yet one
+ * instant within a statement, so a lease set with its start is exactly `start + lease`. `now()`
+ * (the transaction start) is used only where one instant per transaction is intended.
  */
 export type QueueTime = { readonly queueTime: true; at?: Date; plusMs: number }
 
-export const queueTime = (at?: Date, plusMs = 0): QueueTime => ({ queueTime: true, at, plusMs })
+export function queueTime(at?: Date, plusMs = 0): QueueTime {
+  // A NaN/Infinity offset is a programming error: fail loudly instead of dropping the backoff.
+  if (!Number.isFinite(plusMs))
+    throw new RangeError(`Queue time offset must be a finite number of milliseconds: ${plusMs}`)
+  if (at && Number.isNaN(at.getTime())) throw new RangeError('Queue time instant is invalid')
+  return { queueTime: true, at, plusMs }
+}
 
 const isQueueTime = (value: unknown): value is QueueTime =>
   typeof value === 'object' && value !== null && 'queueTime' in value
 
 /** Repositories only: the SQL expression of a queue instant. */
-export function queueSql(value: QueueTime | Date | undefined): SQL {
+export function queueSql(
+  value: QueueTime | Date | undefined,
+  clock: 'statement' | 'transaction' = 'statement',
+): SQL {
   const time = isQueueTime(value) ? value : queueTime(value)
-  const base = time.at ? sql`${time.at.toISOString()}::timestamptz` : sql`now()`
+  const base = time.at
+    ? sql`${time.at.toISOString()}::timestamptz`
+    : clock === 'transaction'
+      ? sql`now()`
+      : sql`statement_timestamp()`
   return time.plusMs ? sql`(${base} + ${Math.trunc(time.plusMs)} * interval '1 millisecond')` : base
 }
 

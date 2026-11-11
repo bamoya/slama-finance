@@ -55,7 +55,10 @@ export function createScheduleService(
   analysis: ReturnType<typeof createAnalysisService>,
   options: Options = {},
 ) {
+  // Schedule occurrences (next_run_at, scheduled_for) follow the application clock. Run-queue
+  // instants (availability, leases, fences, backoff) use the database clock unless a test injects one.
   const now = options.clock ?? (() => new Date())
+  const queueNow = (): Date | undefined => options.clock?.()
   const dto = (row: ScheduleRow, recipientIds: string[]): ReportSchedule => {
     const {
       organizationId: _organization,
@@ -126,7 +129,7 @@ export function createScheduleService(
     let count = 0
     const clock = now()
     while (occurrence && occurrence <= clock && count < REPORT_LIMITS.catchUp) {
-      await repo.insertRun(snapshot, occurrence, occurrencePeriod(row, occurrence), clock, tx)
+      await repo.insertRun(snapshot, occurrence, occurrencePeriod(row, occurrence), queueNow(), tx)
       occurrence = nextOccurrence(row, occurrence)
       count++
     }
@@ -186,7 +189,7 @@ export function createScheduleService(
     },
   }
   return {
-    metrics: () => repo.metrics(now()),
+    metrics: () => repo.metrics(now(), queueNow()),
     async sendTest(id: string, expectedVersion: number, actor: string) {
       return repo.transaction(async (tx) => {
         await authorize(actor, tx)
@@ -220,6 +223,7 @@ export function createScheduleService(
           occurrencePeriod(row, clock),
           clock,
           tx,
+          queueNow(),
         )
         await repo.audit(
           tx,
@@ -325,7 +329,7 @@ export function createScheduleService(
           recipientIds,
         )
         if (!data.enabled) {
-          for (const item of await repo.cancelPending(id, now(), tx))
+          for (const item of await repo.cancelPending(id, queueNow(), tx))
             await options.notifications?.cancel(item.messageId, tx)
         }
         await repo.audit(tx, actor, 'update', id, row, data)
@@ -381,7 +385,7 @@ export function createScheduleService(
           tx,
         )
         if (!enabled)
-          for (const item of await repo.cancelPending(id, now(), tx))
+          for (const item of await repo.cancelPending(id, queueNow(), tx))
             await options.notifications?.cancel(item.messageId, tx)
         await repo.audit(tx, actor, action, id, row, changed)
         return config(changed, tx)
@@ -435,7 +439,7 @@ export function createScheduleService(
             'REPORT_RUN_STATE',
             'Only failed report production can be retried.',
           )
-        await repo.retry(id, now(), tx)
+        await repo.retry(id, queueNow(), tx)
         await repo.audit(
           tx,
           actor,
@@ -453,7 +457,7 @@ export function createScheduleService(
         const grants = new Set(await identity.grants(row.createdByActorId!, tx))
         if (grants.has('reports.read')) continue
         await repo.update(row.id, { enabled: false, nextRunAt: null }, tx)
-        for (const item of await repo.cancelPending(row.id, now(), tx))
+        for (const item of await repo.cancelPending(row.id, queueNow(), tx))
           await options.notifications?.cancel(item.messageId, tx)
         await repo.audit(
           tx,
@@ -515,7 +519,7 @@ export function createScheduleService(
         }),
       async runOne(artifacts: ReturnType<typeof createArtifactSupport>['service']) {
         const claimed = await repo.transaction((tx) =>
-          repo.claim(now(), options.leaseMs ?? 300000, tx),
+          repo.claim(queueNow(), options.leaseMs ?? 300000, tx),
         )
         if (!claimed) return false
         const token = claimed.leaseToken!
@@ -526,7 +530,7 @@ export function createScheduleService(
           () => {
             if (heartbeat) return
             heartbeat = repo
-              .transaction((tx) => repo.heartbeat(claimed.id, token, now(), leaseMs, tx))
+              .transaction((tx) => repo.heartbeat(claimed.id, token, queueNow(), leaseMs, tx))
               .then(() => undefined)
               .catch(() => undefined)
               .finally(() => {
@@ -537,13 +541,8 @@ export function createScheduleService(
         )
         timer.unref()
         const guard = async (tx: Transaction) => {
-          const row = await repo.run(claimed.id, tx, true)
-          if (
-            row.leaseToken !== token ||
-            row.status !== 'running' ||
-            !row.lockedUntil ||
-            row.lockedUntil <= now()
-          )
+          await repo.run(claimed.id, tx, true)
+          if (!(await repo.leaseLive(claimed.id, token, queueNow(), tx)))
             throw new AppError(409, 'REPORT_LEASE_LOST', 'The report worker lease changed.')
         }
         try {
@@ -554,12 +553,7 @@ export function createScheduleService(
             const captureStarted = Date.now()
             snapshot = await repo.snapshot(async (tx) => {
               const row = await repo.run(claimed.id, tx, true)
-              if (
-                row.leaseToken !== token ||
-                row.status !== 'running' ||
-                !row.lockedUntil ||
-                row.lockedUntil <= now()
-              )
+              if (!(await repo.leaseLive(claimed.id, token, queueNow(), tx)))
                 throw new AppError(409, 'REPORT_LEASE_LOST', 'The report worker lease changed.')
               if (row.dataSnapshot) return ReportAnalysisSchema.parse(row.dataSnapshot)
               const configuration = ReportScheduleSchema.parse(row.configurationSnapshot)
@@ -576,7 +570,7 @@ export function createScheduleService(
               const data = await analysis.capture(input, null, tx, REPORT_LIMITS.csvRows + 1, [
                 'reports.read',
               ])
-              if (!(await repo.saveCapture(row.id, token, data, tx, now())))
+              if (!(await repo.saveCapture(row.id, token, data, tx, queueNow())))
                 throw new AppError(409, 'REPORT_LEASE_LOST', 'The report worker lease changed.')
               return data
             })
@@ -622,12 +616,7 @@ export function createScheduleService(
             await repo.authorizeLock(tx)
             const schedule = await repo.one(claimed.scheduleId, tx, true)
             const row = await repo.run(claimed.id, tx, true)
-            if (
-              row.leaseToken !== token ||
-              row.status !== 'running' ||
-              !row.lockedUntil ||
-              row.lockedUntil <= now()
-            )
+            if (!(await repo.leaseLive(claimed.id, token, queueNow(), tx)))
               throw new AppError(409, 'REPORT_LEASE_LOST', 'The report worker lease changed.')
             const configuration = ReportScheduleSchema.parse(row.configurationSnapshot)
             const outcomes: ReportRecipientDelivery[] = []
@@ -689,7 +678,7 @@ export function createScheduleService(
                 messageId: message.id,
               })
             }
-            if (!(await repo.complete(row.id, token, outcomes, now(), tx)))
+            if (!(await repo.complete(row.id, token, outcomes, queueNow(), tx)))
               throw new AppError(409, 'REPORT_LEASE_LOST', 'The report worker lease changed.')
             await repo.audit(
               tx,
@@ -723,7 +712,7 @@ export function createScheduleService(
               claimed.id,
               token,
               error instanceof AppError ? error.code : 'REPORT_PRODUCTION_FAILED',
-              now(),
+              queueNow(),
               tx,
             ),
           )

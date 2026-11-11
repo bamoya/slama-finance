@@ -22,6 +22,7 @@ import type {
 } from '../../../../../contracts/generated/reporting/reporting.schemas.js'
 import type { Database, Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
+import { queueSql, queueTime } from '../../../../../lib/queue-time.js'
 
 export type ScheduleRow = typeof reportSchedules.$inferSelect
 export type RunRow = typeof reportRuns.$inferSelect
@@ -72,7 +73,8 @@ export function createScheduleRepository(database: () => Database) {
         )
       return artifact
     },
-    async metrics(now: Date) {
+    /** `queueNow` is an optional test injection for run-queue instants (database clock otherwise). */
+    async metrics(now: Date, queueNow?: Date) {
       const [row] = await database().execute<{
         queued: number
         running: number
@@ -84,7 +86,7 @@ export function createScheduleRepository(database: () => Database) {
         count(*) filter(where status='running')::int as running,
         count(*) filter(where status='failed')::int as failed,
         count(*) filter(where attempts>1)::int as retried,
-        coalesce(greatest(0,extract(epoch from (${now.toISOString()}::timestamptz-min(next_attempt_at) filter(where status='queued' and next_attempt_at<=${now.toISOString()}::timestamptz)))),0)::float8 as "oldestEligibleAgeSeconds",
+        coalesce(greatest(0,extract(epoch from (${queueSql(queueNow, 'transaction')}-min(next_attempt_at) filter(where status='queued' and next_attempt_at<=${queueSql(queueNow, 'transaction')})))),0)::float8 as "oldestEligibleAgeSeconds",
         (select coalesce(greatest(0,extract(epoch from (${now.toISOString()}::timestamptz-min(next_run_at)))),0)::float8 from report_schedules where enabled and archived_at is null) as "scheduleLagSeconds"
         from report_runs`)
       return row!
@@ -202,10 +204,10 @@ export function createScheduleRepository(database: () => Database) {
         )
       await tx.delete(reportSchedules).where(eq(reportSchedules.id, id))
     },
-    async cancelPending(id: string, now: Date, tx: Transaction) {
+    async cancelPending(id: string, now: Date | undefined, tx: Transaction) {
       await tx
         .update(reportRuns)
-        .set({ status: 'cancelled', finishedAt: now, errorCode: 'SCHEDULE_DISABLED' })
+        .set({ status: 'cancelled', finishedAt: queueSql(now), errorCode: 'SCHEDULE_DISABLED' })
         .where(
           and(
             eq(reportRuns.scheduleId, id),
@@ -242,7 +244,7 @@ export function createScheduleRepository(database: () => Database) {
       config: ReportSchedule,
       scheduledFor: Date,
       period: { from: string; to: string },
-      now: Date,
+      now: Date | undefined,
       tx: Transaction,
     ) {
       return tx
@@ -253,7 +255,7 @@ export function createScheduleRepository(database: () => Database) {
           periodStart: period.from,
           periodEnd: period.to,
           configurationSnapshot: config,
-          nextAttemptAt: now,
+          nextAttemptAt: queueSql(now),
           createdByActorId: null,
         })
         .onConflictDoNothing()
@@ -275,6 +277,7 @@ export function createScheduleRepository(database: () => Database) {
       period: { from: string; to: string },
       now: Date,
       tx: Transaction,
+      queueNow?: Date,
     ) {
       const [row] = await tx
         .insert(reportRuns)
@@ -285,7 +288,7 @@ export function createScheduleRepository(database: () => Database) {
           periodStart: period.from,
           periodEnd: period.to,
           configurationSnapshot: { ...config, recipientIds: [actor] },
-          nextAttemptAt: now,
+          nextAttemptAt: queueSql(queueNow),
           createdAt: now,
           createdByActorId: actor,
         })
@@ -368,24 +371,25 @@ export function createScheduleRepository(database: () => Database) {
           ),
         )
     },
-    async claim(now: Date, leaseMs: number, tx: Transaction) {
+    async claim(now: Date | undefined, leaseMs: number, tx: Transaction) {
+      const at = queueSql(now)
       await tx
         .update(reportRuns)
         .set({
           status: 'failed',
           leaseToken: null,
           lockedUntil: null,
-          finishedAt: now,
+          finishedAt: at,
           errorCode: 'LEASE_EXPIRED_FINAL_ATTEMPT',
         })
         .where(
-          sql`${reportRuns.status}='running' and ${reportRuns.lockedUntil}<=${now.toISOString()} and ${reportRuns.attempts}>=${reportRuns.maxAttempts}`,
+          sql`${reportRuns.status}='running' and ${reportRuns.lockedUntil}<=${at} and ${reportRuns.attempts}>=${reportRuns.maxAttempts}`,
         )
       const [row] = await tx
         .select()
         .from(reportRuns)
         .where(
-          sql`((${reportRuns.status}='queued' and ${reportRuns.nextAttemptAt}<=${now.toISOString()}) or (${reportRuns.status}='running' and ${reportRuns.lockedUntil}<=${now.toISOString()})) and ${reportRuns.attempts}<${reportRuns.maxAttempts}`,
+          sql`((${reportRuns.status}='queued' and ${reportRuns.nextAttemptAt}<=${at}) or (${reportRuns.status}='running' and ${reportRuns.lockedUntil}<=${at})) and ${reportRuns.attempts}<${reportRuns.maxAttempts}`,
         )
         .orderBy(reportRuns.nextAttemptAt, reportRuns.id)
         .limit(1)
@@ -397,8 +401,8 @@ export function createScheduleRepository(database: () => Database) {
           status: 'running',
           attempts: row.attempts + 1,
           leaseToken: randomUUID(),
-          lockedUntil: new Date(now.getTime() + leaseMs),
-          startedAt: row.startedAt ?? now,
+          lockedUntil: queueSql(queueTime(now, leaseMs)),
+          startedAt: row.startedAt ?? at,
           finishedAt: null,
           errorCode: null,
         })
@@ -411,7 +415,7 @@ export function createScheduleRepository(database: () => Database) {
       token: string,
       snapshot: ReportAnalysis,
       tx: Transaction,
-      now: Date,
+      now?: Date,
     ) {
       return tx
         .update(reportRuns)
@@ -421,22 +425,43 @@ export function createScheduleRepository(database: () => Database) {
             eq(reportRuns.id, id),
             eq(reportRuns.leaseToken, token),
             eq(reportRuns.status, 'running'),
-            sql`${reportRuns.dataSnapshot} is null and ${reportRuns.lockedUntil}>${now.toISOString()}`,
+            sql`${reportRuns.dataSnapshot} is null and ${reportRuns.lockedUntil}>${queueSql(now)}`,
           ),
         )
         .returning()
         .then((rows) => rows[0] ?? null)
     },
-    async heartbeat(id: string, token: string, now: Date, leaseMs: number, tx: Transaction) {
+    /** Whether `token` still holds a current lease, on the same clock as every fence. */
+    async leaseLive(id: string, token: string, now: Date | undefined, tx: Transaction) {
       const [row] = await tx
-        .update(reportRuns)
-        .set({ lockedUntil: new Date(now.getTime() + leaseMs) })
+        .select({ id: reportRuns.id })
+        .from(reportRuns)
         .where(
           and(
             eq(reportRuns.id, id),
             eq(reportRuns.leaseToken, token),
             eq(reportRuns.status, 'running'),
-            sql`${reportRuns.lockedUntil}>${now.toISOString()}`,
+            sql`${reportRuns.lockedUntil}>${queueSql(now)}`,
+          ),
+        )
+      return Boolean(row)
+    },
+    async heartbeat(
+      id: string,
+      token: string,
+      now: Date | undefined,
+      leaseMs: number,
+      tx: Transaction,
+    ) {
+      const [row] = await tx
+        .update(reportRuns)
+        .set({ lockedUntil: queueSql(queueTime(now, leaseMs)) })
+        .where(
+          and(
+            eq(reportRuns.id, id),
+            eq(reportRuns.leaseToken, token),
+            eq(reportRuns.status, 'running'),
+            sql`${reportRuns.lockedUntil}>${queueSql(now)}`,
           ),
         )
         .returning({ id: reportRuns.id })
@@ -446,7 +471,7 @@ export function createScheduleRepository(database: () => Database) {
       id: string,
       token: string,
       outcomes: ReportRecipientDelivery[],
-      now: Date,
+      now: Date | undefined,
       tx: Transaction,
     ) {
       return tx
@@ -454,7 +479,7 @@ export function createScheduleRepository(database: () => Database) {
         .set({
           status: 'succeeded',
           recipientOutcomes: outcomes,
-          finishedAt: now,
+          finishedAt: queueSql(now),
           leaseToken: null,
           lockedUntil: null,
           errorCode: null,
@@ -464,7 +489,7 @@ export function createScheduleRepository(database: () => Database) {
             eq(reportRuns.id, id),
             eq(reportRuns.leaseToken, token),
             eq(reportRuns.status, 'running'),
-            sql`${reportRuns.lockedUntil}>${now.toISOString()}`,
+            sql`${reportRuns.lockedUntil}>${queueSql(now)}`,
           ),
         )
         .returning()
@@ -483,16 +508,10 @@ export function createScheduleRepository(database: () => Database) {
         })
         .onConflictDoNothing()
     },
-    async fail(id: string, token: string, code: string, now: Date, tx: Transaction) {
+    async fail(id: string, token: string, code: string, now: Date | undefined, tx: Transaction) {
       const row = await run(id, tx, true)
-      if (
-        row.leaseToken !== token ||
-        row.status !== 'running' ||
-        !row.lockedUntil ||
-        row.lockedUntil <= now
-      )
-        return
       const terminal = row.attempts >= row.maxAttempts
+      // The lease check is part of the update, on the same clock as the claim that set it.
       await tx
         .update(reportRuns)
         .set({
@@ -500,18 +519,25 @@ export function createScheduleRepository(database: () => Database) {
           leaseToken: null,
           lockedUntil: null,
           errorCode: code,
-          nextAttemptAt: new Date(now.getTime() + Math.min(3600000, 1000 * 2 ** row.attempts)),
-          finishedAt: terminal ? now : null,
+          nextAttemptAt: queueSql(queueTime(now, Math.min(3600000, 1000 * 2 ** row.attempts))),
+          finishedAt: terminal ? queueSql(now) : null,
         })
-        .where(eq(reportRuns.id, id))
+        .where(
+          and(
+            eq(reportRuns.id, id),
+            eq(reportRuns.leaseToken, token),
+            eq(reportRuns.status, 'running'),
+            sql`${reportRuns.lockedUntil}>${queueSql(now)}`,
+          ),
+        )
     },
-    retry(id: string, now: Date, tx: Transaction) {
+    retry(id: string, now: Date | undefined, tx: Transaction) {
       return tx
         .update(reportRuns)
         .set({
           status: 'queued',
           maxAttempts: sql`${reportRuns.attempts}+5`,
-          nextAttemptAt: now,
+          nextAttemptAt: queueSql(now),
           errorCode: null,
           finishedAt: null,
         })

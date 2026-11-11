@@ -36,7 +36,7 @@ export function createNotificationRepository(
         count(*) filter(where status='sending')::int as sending,
         count(*) filter(where attempts>1)::int as retried,
         count(*) filter(where status='failed')::int as failed,
-        coalesce(greatest(0,extract(epoch from (${queueSql(now)}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now)})))),0)::float8 as "oldestEligibleAgeSeconds"
+        coalesce(greatest(0,extract(epoch from (${queueSql(now, 'transaction')}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now, 'transaction')})))),0)::float8 as "oldestEligibleAgeSeconds"
         from outbound_messages`)
       return row!
     },

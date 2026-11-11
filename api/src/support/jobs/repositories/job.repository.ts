@@ -21,7 +21,7 @@ export function createJobRepository(database: () => Database) {
       count(*) filter(where status='running')::int as running,
       count(*) filter(where attempts>1)::int as retried,
       count(*) filter(where status='failed')::int as failed,
-      coalesce(greatest(0,extract(epoch from (${queueSql(now)}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now)})))),0)::float8 as "oldestEligibleAgeSeconds"
+      coalesce(greatest(0,extract(epoch from (${queueSql(now, 'transaction')}-min(available_at) filter(where status='queued' and available_at<=${queueSql(now, 'transaction')})))),0)::float8 as "oldestEligibleAgeSeconds"
       from background_jobs group by job_type`),
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async enqueue(data: typeof backgroundJobs.$inferInsert, tx: Transaction) {

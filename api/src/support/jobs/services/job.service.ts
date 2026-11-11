@@ -165,7 +165,7 @@ export function createJobService(repo: ReturnType<typeof createJobRepository>) {
         job.id,
         job.leaseToken!,
         now,
-        { status: 'succeeded', finishedAt: now, leaseToken: null, lockedUntil: null },
+        { status: 'succeeded', finishedAt: queueTime(now), leaseToken: null, lockedUntil: null },
         tx,
       )
       if (!row) throw new AppError(409, 'STALE_JOB_LEASE', 'Job lease is no longer valid.')

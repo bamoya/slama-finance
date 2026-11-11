@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
@@ -361,11 +361,13 @@ describe('consent-aware sales notifications', () => {
     expect(await w.transport.worker.runOne()).toBe(true)
     expect(w.provider.messages).toHaveLength(1)
   })
-  function workers(now = new Date(Date.now() + 5000)) {
+  /** `now: null` wires the workers as in production: no injected clock, queues on the DB clock. */
+  function workers(now: Date | null = new Date(Date.now() + 5000)) {
+    const clock = now ? { clock: () => now } : {}
     const provider = createRecordingEmailProvider()
     const transport = createNotificationSupport(() => fixture.db, storage, provider, {
       allowedFrom: ['notifications@example.invalid'],
-      clock: () => now,
+      ...clock,
     })
     const policies = createNotificationSettingsModule(() => fixture.db, transport, {
       allowedFrom: ['notifications@example.invalid'],
@@ -382,10 +384,53 @@ describe('consent-aware sales notifications', () => {
       policies.publicApi,
       clients.publicApi,
       sales.prepareNotificationAttachment,
-      { clock: () => now },
+      clock,
     )
     return { provider, transport, producer }
   }
+  it('prepares and sends just-queued work in production wiring while the host clock is behind the database', async () => {
+    const r = await rule('delivery_prepared', false)
+    const pref = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/clients/${clientId}/notification-preferences/${r.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: 0, enabled: true, cc: [] },
+    })
+    expect(pref.statusCode, pref.body).toBe(200)
+    const draft = await post('/api/v1/delivery-notes', {
+      clientId,
+      invoiceId: null,
+      deliveryDate: companyDate(new Date()),
+      deliveryAddress: 'Rue Hassan, Rabat',
+      instructions: null,
+      includeReceptionSignature: true,
+      lines: [
+        { productVariantId: null, productName: 'Wheat', quantity: 2, sourceInvoiceLineId: null },
+      ],
+    })
+    expect(draft.statusCode, draft.body).toBe(201)
+    expect(
+      (await post(`/api/v1/delivery-notes/${draft.json().id}/deliver`, { expectedVersion: 1 }))
+        .statusCode,
+    ).toBe(200)
+    const [row] = await fixture.client<{ db: Date }[]>`select clock_timestamp() as db`
+    const db = row!.db
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(new Date(new Date(db).getTime() - 60_000))
+      const w = workers(null)
+      expect(await w.producer.worker.runOne()).toBe(true)
+      expect(await w.transport.worker.runOne()).toBe(true)
+      expect(w.provider.messages).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
+    const [job] = await fixture.client<
+      { status: string; finished: boolean }[]
+    >`select status, finished_at is not null and finished_at>=started_at as finished from background_jobs where job_type='prepare_notification'`
+    expect(job).toEqual({ status: 'succeeded', finished: true })
+  })
   it('resolves bilingual content from company language and honors explicit rule overrides', async () => {
     const { transport } = workers()
     const policies = createNotificationSettingsModule(() => fixture.db, transport, {

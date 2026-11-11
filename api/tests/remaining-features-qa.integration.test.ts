@@ -160,6 +160,16 @@ describe('Independent remaining-feature regression QA', () => {
     )
     return { producer, notifications }
   }
+  /**
+   * The app (HTTP routes) runs production wiring: run-queue instants come from the database clock,
+   * which Vitest cannot fake. After an HTTP action that requeues work, move the injected worker
+   * clock to the database instant so the deterministic worker sees that work as due.
+   */
+  async function followDatabaseClock() {
+    const [row] = await fixture.client<{ t: Date }[]>`select clock_timestamp() as t`
+    clock = new Date(row!.t)
+    vi.setSystemTime(clock)
+  }
   function reportWorkers(observe?: WorkerObserver) {
     const notifications = transport(observe)
     const reporting = createReportingModule({
@@ -791,6 +801,7 @@ describe('Independent remaining-feature regression QA', () => {
     failExcelUpload = false
     const retry = await request('POST', `/api/v1/report-runs/${runId}/retry`, {})
     expect(retry.statusCode, retry.body).toBe(200)
+    await followDatabaseClock()
     expect(await reporting.worker.runOne()).toBe(true)
     const [saved] =
       await fixture.client`select status,data_snapshot,data_captured_at from report_runs where id=${runId}`
@@ -829,6 +840,7 @@ describe('Independent remaining-feature regression QA', () => {
     const retry = await request('POST', `/api/v1/report-runs/${runId}/retry`, {})
     expect(retry.statusCode, retry.body).toBe(200)
     expect(retry.json()).toMatchObject({ attempts: 5, maxAttempts: 10 })
+    await followDatabaseClock()
     expect(await reporting.worker.runOne()).toBe(true)
     const [saved] = await fixture.client`select status,attempts from report_runs where id=${runId}`
     expect(saved).toMatchObject({ status: 'succeeded', attempts: 6 })
