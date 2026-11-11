@@ -38,9 +38,18 @@ export const billingSettings = pgTable(
       .notNull()
       .default(sql`'{bank_transfer,cash}'::text[]`),
     paymentInstructions: text('payment_instructions').notNull().default(''),
+    // Platform issuer printed on invoices and snapshotted at issue; an empty legal name blocks issuing.
+    issuerLegalName: text('issuer_legal_name').notNull().default(''),
+    issuerAddress: text('issuer_address').notNull().default(''),
+    issuerIce: text('issuer_ice').notNull().default(''),
+    issuerRegistrationNumber: text('issuer_registration_number').notNull().default(''),
+    issuerTaxIdentifier: text('issuer_tax_identifier').notNull().default(''),
+    issuerTaxMention: text('issuer_tax_mention').notNull().default(''),
+    issuerPaymentTerms: text('issuer_payment_terms').notNull().default(''),
   },
   (t) => [
     check('billing_settings_singleton', sql`${t.id}=1`),
+    check('billing_settings_issuer_ice', sql`${t.issuerIce}='' or ${t.issuerIce} ~ '^[0-9]{15}$'`),
     check(
       'billing_settings_tax',
       sql`${t.taxRateBasisPoints} is null or ${t.taxRateBasisPoints} between 0 and 10000`,

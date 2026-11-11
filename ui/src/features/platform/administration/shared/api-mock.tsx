@@ -46,6 +46,7 @@ export const payment = (over: Record<string, unknown> = {}) => ({
   quoteExpiresAt: '2026-10-16T09:00:00Z',
   receivedTtc: 0,
   invoiceNumber: null,
+  customer: null,
   ...over,
 })
 export const apiError = (status: number, code: string) => ({

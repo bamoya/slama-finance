@@ -13,6 +13,7 @@ import { createSubscriptionRepository } from './repositories/subscription.reposi
 import { createTimezoneRepository } from './repositories/timezone.repository.js'
 import { registerSubscriptionRoutes } from './routes/subscription.routes.js'
 import { createBillingService, toInvoice } from './services/billing.service.js'
+import { renderBillingInvoicePdf } from './services/billing-invoice-pdf.service.js'
 import { createMeteredStorage } from './services/metered-storage.service.js'
 import type { ShadowDiff } from './services/period-resolver.service.js'
 import { createSubscriptionService } from './services/subscription.service.js'
@@ -23,6 +24,12 @@ import {
 } from './services/timezone-consistency.service.js'
 export type { CoverageReads } from './repositories/coverage-lifecycle.repository.js'
 export { billingDay, billingTimezone, zonedDayStart } from './services/billing-calendar.service.js'
+export {
+  billingIssuer,
+  issuerInput,
+  issuerMissing,
+  publicCustomer,
+} from './services/billing-identity.service.js'
 export type { ShadowDiff } from './services/period-resolver.service.js'
 export type { TimezoneReport } from './services/timezone-consistency.service.js'
 export type SubscriptionsPublicApi = ReturnType<typeof createSubscriptionService>
@@ -107,6 +114,9 @@ export function createSubscriptionsModule(
             tx,
           ),
         ),
+      // The record is read in its own transaction, which commits before the CPU-bound render.
+      invoicePdf: async (invoiceId: string, language: 'fr' | 'en') =>
+        renderBillingInvoicePdf(await billing.adminInvoice(invoiceId), language),
       lifecycle: billing.administration,
       /** Set-based lifecycle status for bounded administrator counts and filters (same authority). */
       lifecycleStatus: coverageLifecycleSql(reads),

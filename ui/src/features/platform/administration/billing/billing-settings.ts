@@ -1,3 +1,4 @@
+import type { BillingIssuer } from '../../../../api/generated/models'
 import {
   type AdminBillingSettingsUpdate,
   AdminBillingSettingsUpdateSchema,
@@ -8,8 +9,11 @@ export type BillingFormValues = {
   vatPercent: string
   paymentMethods: string
   paymentInstructions: string
+  issuer: BillingIssuer
 }
-export type BillingErrors = Partial<Record<keyof BillingFormValues, string>>
+export type BillingErrors = Partial<
+  Record<Exclude<keyof BillingFormValues, 'issuer'> | 'issuerIce' | 'issuerForm', string>
+>
 
 const methodPattern = /^[a-z0-9_]+$/
 
@@ -36,6 +40,7 @@ export function toFormValues(settings: {
   taxRateBasisPoints: number | null
   paymentMethods: string[]
   paymentInstructions: string
+  issuer: BillingIssuer
 }): BillingFormValues {
   return {
     vatApplicable: settings.taxRateBasisPoints !== null,
@@ -43,6 +48,7 @@ export function toFormValues(settings: {
       settings.taxRateBasisPoints === null ? '' : basisPointsToPercent(settings.taxRateBasisPoints),
     paymentMethods: settings.paymentMethods.join(', '),
     paymentInstructions: settings.paymentInstructions,
+    issuer: { ...settings.issuer },
   }
 }
 
@@ -67,12 +73,23 @@ export function validateBilling(
     errors.paymentMethods = 'Payment methods must be unique.'
   if (values.paymentInstructions.length > 2000)
     errors.paymentInstructions = 'Instructions must not exceed 2000 characters.'
+  const issuer = Object.fromEntries(
+    Object.entries(values.issuer).map(([key, text]) => [key, text.trim()]),
+  ) as BillingIssuer
+  issuer.ice = issuer.ice.replace(/\s+/g, '')
+  if (issuer.ice && !/^\d{15}$/.test(issuer.ice)) errors.issuerIce = 'The ICE has 15 digits.'
   if (Object.keys(errors).length) return { errors }
   const parsed = AdminBillingSettingsUpdateSchema.safeParse({
     taxRateBasisPoints,
     paymentMethods: methods,
     paymentInstructions: values.paymentInstructions,
+    issuer,
   })
-  if (!parsed.success) return { errors: { paymentMethods: 'Check the payment methods.' } }
+  if (!parsed.success)
+    return {
+      errors: parsed.error.issues.some((issue) => issue.path[0] === 'issuer')
+        ? { issuerForm: 'Check the issuer profile.' }
+        : { paymentMethods: 'Check the payment methods.' },
+    }
   return { payload: parsed.data }
 }

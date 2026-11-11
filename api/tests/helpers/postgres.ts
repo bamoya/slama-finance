@@ -75,6 +75,8 @@ export async function isolatedDatabase({
     }
     await client`insert into platform_users (id,email,password_hash) values (${testOwnerId},'fixture-owner@example.test','not-a-login-hash')`
     await client`insert into organizations(id,owner_id,name,slug,activated_at) values (${testOrganizationId},${testOwnerId},'Fixture','fixture',now())`
+    // Invoices need an issuer legal name (billing-identity.md); production starts empty.
+    await client`update billing_settings set issuer_legal_name='Fixture Platform SARL'`
     const db = drizzle(client, { schema: tables })
     if (owner === 'legacy')
       await client`update owner_subscriptions set plan_code='pro',paid_through_at=now()+interval '30 days' where owner_id=${testOwnerId}`

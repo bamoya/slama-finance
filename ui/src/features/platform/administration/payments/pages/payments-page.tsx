@@ -17,6 +17,7 @@ import { Card } from '../../../../../components/ui/card'
 import { Select, SelectGroup, SelectOption } from '../../../../../components/ui/select'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { BillingCustomerSummary } from '../../../subscriptions/components/billing-customer-summary'
 import {
   cycleLabel,
   formatDh,
@@ -61,7 +62,15 @@ export function AdminPaymentsPage() {
           queryKey[0].startsWith('/api/v1/admin/overview')),
     })
   const columns: DataColumn<AdminPayment>[] = [
-    { title: 'Customer', render: (p) => <span className="break-all">{p.ownerEmail}</span> },
+    {
+      title: 'Customer',
+      render: (p) => (
+        <>
+          <span className="break-all">{p.ownerEmail}</span>
+          <BillingCustomerSummary customer={p.customer} />
+        </>
+      ),
+    },
     {
       title: 'Plan',
       render: (p) => (

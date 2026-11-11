@@ -1,4 +1,7 @@
-import type { BillingInvoice } from '../../../../contracts/generated/subscriptions/subscriptions.schemas.js'
+import type {
+  BillingCustomer,
+  BillingInvoice,
+} from '../../../../contracts/generated/subscriptions/subscriptions.schemas.js'
 import type { Transaction } from '../../../../lib/db.js'
 import { AppError } from '../../../../lib/errors.js'
 import type { PaymentRow } from '../repositories/billing.repository.js'
@@ -7,6 +10,13 @@ import type {
   InvoiceRecord,
 } from '../repositories/billing-documents.repository.js'
 import { billingTimezone } from './billing-calendar.service.js'
+import {
+  billingCustomer,
+  billingIssuer,
+  individualCustomer,
+  publicCustomer,
+  requireIssuer,
+} from './billing-identity.service.js'
 import { money } from './coverage.js'
 
 /** Quotes stay valid this long; funds received later are not accepted for them (C6 default). */
@@ -64,6 +74,8 @@ export function toInvoice(row: InvoiceRecord): BillingInvoice {
     creditedTtc: invoice ? row.creditedTtc : 0,
     balanceTtc,
     status: balanceTtc > 0 ? 'open' : balanceTtc < 0 ? 'refund_due' : 'settled',
+    customer: publicCustomer(row.customer),
+    issuer: row.issuer,
   }
 }
 
@@ -79,6 +91,8 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
       paymentId?: string
       correctsInvoiceId?: string
       reason?: string
+      /** Snapshot from the quote (credit note: from the corrected invoice). */
+      customer: BillingCustomer
       line: {
         planCode: string
         planVersionId: string
@@ -91,6 +105,9 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
     },
     tx: Transaction,
   ) {
+    // Checked before numbering: an empty issuer legal name fails loudly and the transaction rolls
+    // back, so a receipt never exists without its invoice (billing-identity.md).
+    const issuer = requireIssuer(billingIssuer(await repo.issuer(tx)))
     const series = values.kind === 'invoice' ? 'F' : 'A'
     const { sequence, year: y, issuedAt } = await repo.nextSequence(series, billingTimezone, tx)
     return repo.insertInvoice(
@@ -107,6 +124,8 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
         ...values.amount,
         issuedAt,
         issuedBy: values.by,
+        customer: values.customer,
+        issuer,
       },
       [
         {
@@ -124,7 +143,7 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
 
   return {
     /** Immutable offer recorded with a submission (same snapshot, enforced by the database). */
-    quote: (
+    quote: async (
       values: {
         ownerId: string
         planCode: string
@@ -132,6 +151,7 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
         cycle: 'monthly' | 'annual'
         kind: 'activation' | 'renewal' | 'upgrade'
         amount: ReturnType<typeof money>
+        customer: BillingCustomer
       },
       now: Date,
       tx: Transaction,
@@ -144,6 +164,8 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
           cycle: values.cycle,
           kind: values.kind,
           ...values.amount,
+          // The e-mail is snapshotted too, so an individual's documents never read live account data.
+          customer: { ...values.customer, email: await repo.ownerEmail(values.ownerId, tx) },
           issuedAt: now,
           expiresAt: new Date(now.getTime() + QUOTE_VALIDITY_MS),
         },
@@ -204,6 +226,7 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
             kind: 'invoice',
             ownerId: payment.ownerId,
             paymentId: payment.id,
+            customer: quote.customer,
             line: quote,
             amount: {
               currency: quote.currency,
@@ -298,6 +321,7 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
           ownerId: invoice.ownerId,
           correctsInvoiceId: invoice.id,
           reason,
+          customer: invoice.customer,
           line: line!,
           amount,
           by: input.by,
@@ -323,6 +347,26 @@ export function createBillingDocuments(repo: ReturnType<typeof createBillingDocu
         now,
         tx,
       )
+    },
+    /** Saved checkout identity (individual when never set). */
+    async customer(ownerId: string, tx: Transaction): Promise<BillingCustomer> {
+      const row = await repo.customerProfile(ownerId, tx)
+      return row
+        ? {
+            type: row.type,
+            legalName: row.legalName,
+            ice: row.ice,
+            address: row.address,
+            registrationNumber: row.registrationNumber,
+            taxIdentifier: row.taxIdentifier,
+          }
+        : individualCustomer
+    },
+    /** Validates and saves the checkout identity; returns the stored value. */
+    async saveCustomer(ownerId: string, input: BillingCustomer, tx: Transaction) {
+      const customer = billingCustomer(input)
+      await repo.saveCustomerProfile({ ownerId, ...customer }, tx)
+      return customer
     },
     invoice: (id: string, tx: Transaction) => repo.invoice(id, tx),
     invoices: (filter: { ownerId?: string; page: number; pageSize: number }, tx: Transaction) =>

@@ -110,7 +110,7 @@ paths:
             schema: { $ref: '#/components/schemas/AdminPaymentConfirmation' }
       responses:
         '200':
-          description: 'Records one verified receipt (default: the remaining balance) and allocates it to the payment''s invoice, issued at the first receipt. Coverage is granted once, in the same transaction, when the allocations reach the amount due; a partial receipt leaves the payment submitted. Idempotent: a confirmed payment, or an explicit receipt reference already recorded with the same amount, returns unchanged; a defaulted reference already recorded is 409 RECEIPT_REFERENCE_REQUIRED (never a silent no-op). Lifecycle checks (409 UPGRADE_STALE) run before any receipt; an upgrade is received in full only (400 UPGRADE_REQUIRES_FULL_AMOUNT). 409 PAYMENT_REJECTED; 409 QUOTE_EXPIRED when the first receipt''s receivedAt is after the quote validity (later instalments complete an accepted quote); 409 RECEIPT_REFERENCE_USED; 400 AMOUNT_EXCEEDS_BALANCE; 400 RECEIVED_AT_INVALID (future or before submission).'
+          description: "Records one verified receipt (default: the remaining balance) and allocates it to the payment's invoice, issued at the first receipt. Coverage is granted once, in the same transaction, when the allocations reach the amount due; a partial receipt leaves the payment submitted. Idempotent: a confirmed payment, or an explicit receipt reference already recorded with the same amount, returns unchanged; a defaulted reference already recorded is 409 RECEIPT_REFERENCE_REQUIRED (never a silent no-op). Lifecycle checks (409 UPGRADE_STALE) run before any receipt; an upgrade is received in full only (400 UPGRADE_REQUIRES_FULL_AMOUNT). 409 PAYMENT_REJECTED; 409 QUOTE_EXPIRED when the first receipt's receivedAt is after the quote validity (later instalments complete an accepted quote); 409 RECEIPT_REFERENCE_USED; 400 AMOUNT_EXCEEDS_BALANCE; 400 RECEIVED_AT_INVALID (future or before submission); 409 ISSUER_PROFILE_INCOMPLETE before any write when an invoice must be issued and the issuer legal name is empty."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminPayment' }
@@ -140,10 +140,30 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/admin/invoices/{invoiceId}/pdf:
+    get:
+      operationId: downloadAdminInvoicePdf
+      tags: [administration]
+      description: 'Invoice or credit note PDF rendered from its immutable snapshot only. French by default.'
+      security: [{ adminSessionCookie: [] }]
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: ../subscriptions/subscriptions.yaml#/components/parameters/DocumentLanguage }
+      responses:
+        '200':
+          description: PDF document.
+          headers: { Content-Disposition: { schema: { type: string } } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
   /api/v1/admin/invoices/{invoiceId}/credit-notes:
     post:
       operationId: createAdminCreditNote
-      description: 'Explicit correction: issues a linked credit note at the invoice''s tax rate. Only for an invoice whose payment is decided (confirmed or rejected); credited HT and tax each never exceed the invoice, and the note crediting the remaining HT takes the remaining tax. Coverage is not changed (use lifecycle actions); refunds happen outside the platform. Requires an audit reason and UI confirmation. 409 PAYMENT_PENDING; 400 CREDIT_EXCEEDS_INVOICE.'
+      description: "Explicit correction: issues a linked credit note at the invoice's tax rate. Only for an invoice whose payment is decided (confirmed or rejected); credited HT and tax each never exceed the invoice, and the note crediting the remaining HT takes the remaining tax. Coverage is not changed (use lifecycle actions); refunds happen outside the platform. Requires an audit reason and UI confirmation. 409 PAYMENT_PENDING; 400 CREDIT_EXCEEDS_INVOICE."
       tags: [administration]
       security: [{ adminSessionCookie: [] }]
       parameters:
@@ -1008,8 +1028,14 @@ components:
           quoteExpiresAt,
           receivedTtc,
           invoiceNumber,
+          customer,
         ]
       properties:
+        customer:
+          anyOf:
+            - { $ref: ../../openapi.yaml#/components/schemas/BillingCustomer }
+            - { type: 'null' }
+          description: 'Identity snapshotted on the quote; null only for administrator adjustments.'
         quoteExpiresAt: { type: [string, 'null'], format: date-time }
         receivedTtc: { type: integer, minimum: 0 }
         invoiceNumber: { type: [string, 'null'] }
@@ -1059,7 +1085,7 @@ components:
             type: string,
             minLength: 1,
             maxLength: 120,
-            description: 'Bank or cash receipt reference actually observed; defaults to the owner''s reference. Unique per payment (idempotency key of the receipt).',
+            description: "Bank or cash receipt reference actually observed; defaults to the owner's reference. Unique per payment (idempotency key of the receipt).",
           }
         receivedAmountTtc:
           {
@@ -1097,8 +1123,19 @@ components:
       additionalProperties: false
       required: [amountHt, reason, auditReason]
       properties:
-        amountHt: { type: integer, minimum: 1, description: 'Centimes excluding tax; tax uses the invoice rate, rounded half-up.' }
-        reason: { type: string, minLength: 1, maxLength: 500, description: Printed on the credit note and shown to the owner. }
+        amountHt:
+          {
+            type: integer,
+            minimum: 1,
+            description: 'Centimes excluding tax; tax uses the invoice rate, rounded half-up.',
+          }
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            description: Printed on the credit note and shown to the owner.,
+          }
         auditReason: { type: string, minLength: 1, maxLength: 500 }
     AdminPaymentRejection:
       type: object
@@ -1179,7 +1216,15 @@ components:
       type: object
       additionalProperties: false
       required:
-        [owner, organizations, subscription, subscriptionError, payments, restriction, invitationPending]
+        [
+          owner,
+          organizations,
+          subscription,
+          subscriptionError,
+          payments,
+          restriction,
+          invitationPending,
+        ]
       properties:
         restriction: { $ref: '#/components/schemas/AdminOwnerRestriction' }
         invitationPending:
@@ -1388,8 +1433,15 @@ components:
     AdminBillingSettings:
       type: object
       additionalProperties: false
-      required: [currency, taxRateBasisPoints, paymentMethods, paymentInstructions]
+      required:
+        [currency, taxRateBasisPoints, paymentMethods, paymentInstructions, issuer, issuerMissing]
       properties:
+        issuer: { $ref: ../../openapi.yaml#/components/schemas/BillingIssuer }
+        issuerMissing:
+          type: array
+          description: 'Empty issuer identity fields, shown as a warning. Invoices are not issued while legalName is missing (409 ISSUER_PROFILE_INCOMPLETE on confirmation); payments can still be submitted.'
+          items:
+            { type: string, enum: [legalName, address, ice, registrationNumber, taxIdentifier] }
         currency: { type: string, readOnly: true }
         taxRateBasisPoints: { type: [integer, 'null'], minimum: 0, maximum: 10000 }
         paymentMethods:
@@ -1399,8 +1451,13 @@ components:
     AdminBillingSettingsUpdate:
       type: object
       additionalProperties: false
-      required: [taxRateBasisPoints, paymentMethods, paymentInstructions]
+      required: [taxRateBasisPoints, paymentMethods, paymentInstructions, issuer]
       properties:
+        issuer:
+          {
+            $ref: ../../openapi.yaml#/components/schemas/BillingIssuer,
+            description: 'Applies to documents issued afterwards; issued invoices keep their snapshot. ICE empty or 15 digits.',
+          }
         taxRateBasisPoints:
           {
             type: [integer, 'null'],
@@ -1566,8 +1623,18 @@ components:
       properties:
         planCode: { $ref: ../../openapi.yaml#/components/schemas/PaidPlanCode }
         cycle: { $ref: ../../openapi.yaml#/components/schemas/BillingCycle }
-        startsOn: { type: string, format: date, description: 'Inclusive; today or later, not before the trial start.' }
-        endsOn: { type: string, format: date, description: 'Exclusive; after startsOn, at most 3 years later.' }
+        startsOn:
+          {
+            type: string,
+            format: date,
+            description: 'Inclusive; today or later, not before the trial start.',
+          }
+        endsOn:
+          {
+            type: string,
+            format: date,
+            description: 'Exclusive; after startsOn, at most 3 years later.',
+          }
         settlement: { type: string, enum: [confirmed_payment, complimentary] }
         paymentMethod: { type: string, minLength: 1, maxLength: 40, pattern: '^[a-z0-9_]+$' }
         receivedReference: { type: string, minLength: 1, maxLength: 120 }

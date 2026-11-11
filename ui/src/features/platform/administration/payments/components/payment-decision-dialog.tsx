@@ -14,7 +14,9 @@ import { Label } from '../../../../../components/ui/label'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { BillingCustomerSummary } from '../../../subscriptions/components/billing-customer-summary'
 import { formatDh, parseDh } from '../../../subscriptions/components/billing-format'
+import { IssuerProfileWarning } from '../../billing/components/issuer-profile-warning'
 
 export type Decision = 'confirm' | 'reject'
 
@@ -104,6 +106,10 @@ export function PaymentDecisionDialog({
           <dl className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--accent-soft)] p-3 text-sm">
             <dt className="text-[var(--muted)]">{translate('Customer')}</dt>
             <dd className="break-all font-semibold">{payment.ownerEmail}</dd>
+            <dt className="text-[var(--muted)]">{translate('Billed to')}</dt>
+            <dd className="font-semibold">
+              <BillingCustomerSummary customer={payment.customer} />
+            </dd>
             <dt className="text-[var(--muted)]">{translate('Reference')}</dt>
             <dd className="break-all font-semibold">{payment.reference}</dd>
             <dt className="text-[var(--muted)]">{translate('Total incl. tax')}</dt>
@@ -121,6 +127,7 @@ export function PaymentDecisionDialog({
               </>
             )}
           </dl>
+          {!reject && <IssuerProfileWarning />}
           {reject && payment.receivedTtc > 0 && (
             <p role="note" className="text-sm text-[var(--error-text)]">
               {translate(

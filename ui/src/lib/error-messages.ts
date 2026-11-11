@@ -44,6 +44,8 @@ export function errorMessage(error: unknown): string {
       INVALID_CODE: 'Code de vérification incorrect ou expiré. Vérifiez votre application.',
       ADMIN_UNAVAILABLE:
         'L’administration est temporairement indisponible : la configuration du serveur est incomplète.',
+      ISSUER_PROFILE_INCOMPLETE:
+        'La facture ne peut pas être émise : renseignez la raison sociale de l’émetteur dans les paramètres de facturation, puis confirmez à nouveau.',
       PAYMENT_REJECTED: 'Ce paiement a déjà été rejeté et ne peut plus être modifié.',
       PAYMENT_CONFIRMED: 'Ce paiement a déjà été confirmé et ne peut plus être modifié.',
       QUOTE_EXPIRED:

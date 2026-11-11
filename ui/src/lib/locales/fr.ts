@@ -2713,4 +2713,33 @@ export const french: Record<string, string> = {
   'Issued on': 'Date d’émission',
   'Payment instructions are not available yet. Contact us before paying.':
     'Les instructions de paiement ne sont pas encore disponibles. Contactez-nous avant de payer.',
+  'The issuer profile is incomplete.': 'Le profil de l’émetteur est incomplet.',
+  'Missing: {{fields}}.': 'Champs manquants : {{fields}}.',
+  'Invoices cannot be issued while the legal name is empty: payment confirmations will fail.':
+    'Aucune facture ne peut être émise tant que la raison sociale est vide : les confirmations de paiement échoueront.',
+  'Issuer profile': 'Profil de l’émetteur',
+  'Identity printed on every invoice and credit note. It is copied onto each document when it is issued.':
+    'Identité imprimée sur chaque facture et avoir. Elle est copiée sur chaque document à son émission.',
+  Address: 'Adresse',
+  'Tax mention': 'Mention fiscale',
+  'Payment terms and footer': 'Conditions de paiement et pied de page',
+  'Billed to': 'Facturé à',
+  'Individual or company?': 'Particulier ou entreprise ?',
+  'Legal name': 'Raison sociale',
+  'RC (optional)': 'RC (facultatif)',
+  'IF (optional)': 'IF (facultatif)',
+  'Enter the legal name.': 'Saisissez la raison sociale.',
+  'Enter the ICE.': 'Saisissez l’ICE.',
+  'The ICE has 15 digits.': 'L’ICE comporte 15 chiffres.',
+  'Enter the address.': 'Saisissez l’adresse.',
+  'Billing details': 'Informations de facturation',
+  'Check the issuer profile.': 'Vérifiez le profil de l’émetteur.',
+  'Your invoices are issued to you as an individual, without company details.':
+    'Vos factures sont établies à votre nom en tant que particulier, sans informations d’entreprise.',
+  'Billing details saved.': 'Informations de facturation enregistrées.',
+  'Changes apply to your next invoices. Issued invoices are never modified.':
+    'Les modifications s’appliquent à vos prochaines factures. Les factures émises ne sont jamais modifiées.',
+  'Edit billing details': 'Modifier les informations de facturation',
+  'Download PDF {{number}}': 'Télécharger le PDF {{number}}',
+  'Preparing…': 'Préparation…',
 }

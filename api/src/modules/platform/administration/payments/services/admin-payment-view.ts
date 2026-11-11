@@ -1,4 +1,5 @@
 import type { AdminPayment } from '../../../../../contracts/generated/administration/administration.schemas.js'
+import { publicCustomer } from '../../../subscriptions/index.js'
 import type { createAdminPaymentRepository } from '../repositories/admin-payment.repository.js'
 
 export type AdminPaymentRecord = NonNullable<
@@ -14,6 +15,7 @@ export function toAdminPayment(row: {
   quoteExpiresAt: Date | null
   receivedTtc: number
   invoiceNumber: string | null
+  customer: AdminPayment['customer']
 }): AdminPayment {
   const p = row.payment
   return {
@@ -44,6 +46,7 @@ export function toAdminPayment(row: {
     quoteExpiresAt: iso(row.quoteExpiresAt),
     receivedTtc: row.receivedTtc,
     invoiceNumber: row.invoiceNumber,
+    customer: row.customer && publicCustomer(row.customer),
   }
 }
 

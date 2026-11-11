@@ -7,6 +7,7 @@ export function registerSubscriptionRoutes(
 ) {
   app.get('/api/v1/owner/subscription', controller.get)
   app.get('/api/v1/owner/subscription/billing', controller.billing)
+  app.put('/api/v1/owner/subscription/billing', controller.saveCustomer)
   app.post('/api/v1/owner/subscription/quote', controller.quote)
   app.get('/api/v1/owner/subscription/payments', controller.payments)
   app.post(
@@ -15,5 +16,6 @@ export function registerSubscriptionRoutes(
     controller.submit,
   )
   app.get('/api/v1/owner/subscription/invoices', controller.invoices)
+  app.get('/api/v1/owner/subscription/invoices/:invoiceId/pdf', controller.invoicePdf)
   app.put('/api/v1/owner/subscription/cancellation', controller.cancellation)
 }

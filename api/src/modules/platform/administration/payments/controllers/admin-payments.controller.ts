@@ -6,6 +6,8 @@ import {
   AdminPaymentRejectionSchema,
   confirmAdminPaymentParamsSchema,
   createAdminCreditNoteParamsSchema,
+  downloadAdminInvoicePdfParamsSchema,
+  downloadAdminInvoicePdfQuerySchema,
   listAdminInvoicesQuerySchema,
   listAdminPaymentsQuerySchema,
   rejectAdminPaymentParamsSchema,
@@ -32,6 +34,15 @@ export function createAdminPaymentsController(
     async invoices(request: FastifyRequest) {
       const query = listAdminInvoicesQuerySchema.parse(request.query)
       return payments.invoices(query.ownerId, query.page)
+    },
+    async invoicePdf(request: FastifyRequest, reply: FastifyReply) {
+      const { invoiceId } = downloadAdminInvoicePdfParamsSchema.parse(request.params)
+      const { language } = downloadAdminInvoicePdfQuerySchema.parse(request.query)
+      const file = await payments.invoicePdf(invoiceId, language as 'fr' | 'en')
+      return reply
+        .type('application/pdf')
+        .header('Content-Disposition', `attachment; filename="${file.filename}"`)
+        .send(Buffer.from(file.bytes))
     },
     async creditNote(request: FastifyRequest, reply: FastifyReply) {
       const { invoiceId } = createAdminCreditNoteParamsSchema.parse(request.params)

@@ -359,6 +359,23 @@ describe('customer invoices', () => {
       creditedTtc: 0,
       balanceTtc: 0,
       status: 'settled',
+      customer: {
+        type: 'company',
+        legalName: 'Atlas SARL',
+        ice: '001234567000089',
+        address: '12 rue Atlas',
+        registrationNumber: null,
+        taxIdentifier: null,
+      },
+      issuer: {
+        legalName: 'B-Finance SARL',
+        address: '1 rue du Port',
+        ice: '001234567000089',
+        registrationNumber: 'RC 1',
+        taxIdentifier: 'IF 1',
+        taxMention: '',
+        paymentTerms: '',
+      },
     }
     mockApi((key) => {
       if (key === 'GET /api/v1/admin/auth/me') return { body: session }
@@ -379,6 +396,8 @@ describe('customer invoices', () => {
         }
     })
     renderAt(`/customers/${ownerId}`, <AdminCustomerDetailPage customerId={ownerId} />)
+    expect(await screen.findByText('Atlas SARL')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download PDF F-2026-000001' })).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: 'Credit note' }))
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(screen.getByRole('button', { name: 'Issue credit note' }))

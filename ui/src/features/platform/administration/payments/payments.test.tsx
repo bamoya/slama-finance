@@ -15,11 +15,11 @@ import { AdminPaymentsPage } from './pages/payments-page'
 useAdminTestLifecycle()
 
 describe('admin payments', () => {
-  function setup(fail = false) {
+  function setup(fail = false, over: Record<string, unknown> = {}) {
     mockApi((key) => {
       if (key === 'GET /api/v1/admin/auth/me') return { body: session }
       if (key === 'GET /api/v1/admin/payments')
-        return { body: { items: [payment()], page: 1, pageSize: 20, total: 1 } }
+        return { body: { items: [payment(over)], page: 1, pageSize: 20, total: 1 } }
       if (key.startsWith('POST /api/v1/admin/payments/'))
         return fail
           ? apiError(403, 'TWO_FACTOR_INVALID')
@@ -32,6 +32,60 @@ describe('admin payments', () => {
     expect(await screen.findByText('owner@example.test')).toBeInTheDocument()
     expect(screen.getByText('120,00 DH')).toBeInTheDocument()
     expect(calls.find((call) => call.url === '/api/v1/admin/payments')).toBeTruthy()
+  })
+
+  it('shows the customer type and company details', async () => {
+    setup(false, {
+      customer: {
+        type: 'company',
+        legalName: 'Atlas SARL',
+        ice: '001234567000089',
+        address: '12 rue Atlas',
+        registrationNumber: null,
+        taxIdentifier: null,
+      },
+    })
+    expect(await screen.findByText('Atlas SARL')).toBeInTheDocument()
+    expect(screen.getByText('Company')).toBeInTheDocument()
+    expect(screen.getByText('ICE 001234567000089')).toBeInTheDocument()
+  })
+
+  it('shows a clear error when the issuer profile blocks the confirmation', async () => {
+    mockApi((key) => {
+      if (key === 'GET /api/v1/admin/auth/me') return { body: session }
+      if (key === 'GET /api/v1/admin/payments')
+        return { body: { items: [payment()], page: 1, pageSize: 20, total: 1 } }
+      if (key === 'GET /api/v1/admin/billing-settings')
+        return {
+          body: {
+            currency: 'MAD',
+            taxRateBasisPoints: null,
+            paymentMethods: ['cash'],
+            paymentInstructions: '',
+            issuer: {
+              legalName: '',
+              address: '',
+              ice: '',
+              registrationNumber: '',
+              taxIdentifier: '',
+              taxMention: '',
+              paymentTerms: '',
+            },
+            issuerMissing: ['legalName'],
+          },
+        }
+      if (key.startsWith('POST /api/v1/admin/payments/'))
+        return apiError(409, 'ISSUER_PROFILE_INCOMPLETE')
+    })
+    renderAt('/payments', <AdminPaymentsPage />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByTestId('issuer-warning')).toHaveTextContent('Legal name')
+    fireEvent.change(within(dialog).getByLabelText('Reason (internal)'), {
+      target: { value: 'Bank verified' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm payment' }))
+    expect(await within(dialog).findByText('server ISSUER_PROFILE_INCOMPLETE')).toBeInTheDocument()
   })
 
   it('confirms with an optional received reference', async () => {

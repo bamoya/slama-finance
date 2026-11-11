@@ -38,6 +38,16 @@ function setup(detail = trialDetail(), activation?: { status?: number; body?: un
           taxRateBasisPoints: 2000,
           paymentMethods: ['bank_transfer', 'cash'],
           paymentInstructions: '',
+          issuer: {
+            legalName: 'B-Finance SARL',
+            address: '',
+            ice: '',
+            registrationNumber: '',
+            taxIdentifier: '',
+            taxMention: '',
+            paymentTerms: '',
+          },
+          issuerMissing: [],
         },
       }
     if (key === `POST /api/v1/admin/owners/${ownerId}/subscription/activation`)

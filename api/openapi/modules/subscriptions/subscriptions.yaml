@@ -33,6 +33,27 @@ paths:
           content:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+    put:
+      operationId: updateOwnerBillingCustomer
+      tags: [subscriptions]
+      description: 'Saves the billing identity prefilled at checkout. Individual (default) carries no details; company requires legal name, ICE (15 digits, format only) and address, RC and IF optional. Never changes quotes or issued invoices, which keep their snapshot. 400 VALIDATION_ERROR with field errors.'
+      security: [{ ownerSessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BillingCustomer' }
+      responses:
+        '200':
+          description: Billing catalog with the saved identity.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BillingCatalog' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
   /api/v1/owner/subscription/quote:
     post:
       operationId: quoteOwnerSubscription
@@ -81,7 +102,7 @@ paths:
     post:
       operationId: submitOwnerSubscriptionPayment
       tags: [subscriptions]
-      description: 'Records an immutable quote (pinned plan version, price and tax snapshot, valid 15 days) and the owner''s payment declaration against it; the same rules and errors as the quote apply.'
+      description: "Records an immutable quote (pinned plan version, price and tax snapshot, valid 15 days) and the owner's payment declaration against it; the same rules and errors as the quote apply."
       security: [{ ownerSessionCookie: [] }]
       requestBody:
         required: true
@@ -103,21 +124,38 @@ paths:
     get:
       operationId: listOwnerSubscriptionInvoices
       tags: [subscriptions]
-      description: 'Issued invoices and credit notes of the owner, newest first. Amounts are immutable snapshots; balances derive from verified receipts and credit notes.'
+      description: 'Issued invoices and credit notes of the owner, newest first, 20 per page. Amounts are immutable snapshots; balances derive from verified receipts and credit notes.'
       security: [{ ownerSessionCookie: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 1 }
       responses:
         '200':
           description: Issued billing documents.
           content:
             application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/BillingInvoice' }
+              schema: { $ref: '#/components/schemas/BillingInvoicePage' }
+        default:
+          description: Request failed
+          content:
+            application/json:
+              schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
+  /api/v1/owner/subscription/invoices/{invoiceId}/pdf:
+    get:
+      operationId: downloadOwnerSubscriptionInvoicePdf
+      tags: [subscriptions]
+      description: "Invoice or credit note PDF rendered from its immutable snapshot only (amounts, lines, customer and issuer identity at issue). French by default. 404 NOT_FOUND for another owner's document."
+      security: [{ ownerSessionCookie: [] }]
+      parameters:
+        - { name: invoiceId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/DocumentLanguage' }
+      responses:
+        '200':
+          description: PDF document.
+          headers: { Content-Disposition: { schema: { type: string } } }
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
         default:
           description: Request failed
           content:
@@ -145,7 +183,56 @@ paths:
             application/json:
               schema: { $ref: ../../openapi.yaml#/components/schemas/Error }
 components:
+  parameters:
+    DocumentLanguage:
+      name: language
+      in: query
+      description: 'Printed language of generated labels; customer and issuer data are printed as recorded.'
+      schema: { type: string, enum: [fr, en], default: fr }
   schemas:
+    BillingCustomer:
+      type: object
+      additionalProperties: false
+      description: 'Who the platform invoices. individual (default) carries no details (all null); company requires legalName, ice (15 digits, format only, no registry check) and address; registrationNumber (RC) and taxIdentifier (IF) are optional.'
+      required: [type, legalName, ice, address, registrationNumber, taxIdentifier]
+      properties:
+        type: { type: string, enum: [individual, company] }
+        legalName: { type: [string, 'null'], maxLength: 200 }
+        ice: { type: [string, 'null'], maxLength: 20, description: 'Spaces are removed; 15 digits remain.' }
+        address: { type: [string, 'null'], maxLength: 500 }
+        registrationNumber: { type: [string, 'null'], maxLength: 40 }
+        taxIdentifier: { type: [string, 'null'], maxLength: 40 }
+    BillingIssuer:
+      type: object
+      additionalProperties: false
+      description: 'Platform identity printed on invoices and credit notes; snapshotted at issue. Empty strings are not printed.'
+      required:
+        [legalName, address, ice, registrationNumber, taxIdentifier, taxMention, paymentTerms]
+      properties:
+        legalName: { type: string, maxLength: 200 }
+        address: { type: string, maxLength: 500 }
+        ice: { type: string, maxLength: 20, description: 'Empty or 15 digits once spaces are removed.' }
+        registrationNumber: { type: string, maxLength: 40 }
+        taxIdentifier: { type: string, maxLength: 40 }
+        taxMention:
+          {
+            type: string,
+            maxLength: 500,
+            description: 'Legal tax statement, such as an exemption mention.',
+          }
+        paymentTerms:
+          { type: string, maxLength: 1000, description: 'Payment terms and legal footer.' }
+    BillingInvoicePage:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/BillingInvoice' }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
     SubscriptionEntitlements:
       description: >-
         Effective owner-subscription entitlements. Null count limits mean unlimited;
@@ -318,8 +405,13 @@ components:
     BillingCatalog:
       type: object
       additionalProperties: false
-      required: [currency, taxRateBasisPoints, paymentMethods, paymentInstructions, plans]
+      required: [currency, taxRateBasisPoints, paymentMethods, paymentInstructions, plans, customer]
       properties:
+        customer:
+          {
+            $ref: '#/components/schemas/BillingCustomer',
+            description: 'Saved billing identity prefilled at checkout (individual when never set).',
+          }
         currency: { type: string }
         taxRateBasisPoints: { type: [integer, 'null'], minimum: 0, maximum: 10000 }
         paymentMethods:
@@ -382,6 +474,11 @@ components:
         cycle: { $ref: '#/components/schemas/BillingCycle' }
         method: { type: string, minLength: 1, maxLength: 40 }
         reference: { type: string, minLength: 1, maxLength: 120 }
+        customer:
+          {
+            $ref: '#/components/schemas/BillingCustomer',
+            description: 'Billing identity for this quote; also saved to the profile. Omitted: the saved profile (individual when never set) is used.',
+          }
     SubscriptionPayment:
       type: object
       additionalProperties: false
@@ -404,8 +501,14 @@ components:
           quoteExpiresAt,
           receivedTtc,
           invoiceNumber,
+          customer,
         ]
       properties:
+        customer:
+          anyOf:
+            - { $ref: '#/components/schemas/BillingCustomer' }
+            - { type: 'null' }
+          description: 'Identity snapshotted on the quote; null only for administrator adjustments.'
         quoteExpiresAt:
           {
             type: [string, 'null'],
@@ -482,10 +585,26 @@ components:
           creditedTtc,
           balanceTtc,
           status,
+          customer,
+          issuer,
         ]
       properties:
+        customer:
+          {
+            $ref: '#/components/schemas/BillingCustomer',
+            description: 'Snapshot from the quote (credit notes: from the corrected invoice). Never changes.',
+          }
+        issuer:
+          {
+            $ref: '#/components/schemas/BillingIssuer',
+            description: 'Issuer profile snapshotted at issue.',
+          }
         id: { type: string, format: uuid }
-        number: { type: string, description: 'F-YYYY-NNNNNN (invoice) or A-YYYY-NNNNNN (credit note), gap-free per series and Casablanca year.' }
+        number:
+          {
+            type: string,
+            description: 'F-YYYY-NNNNNN (invoice) or A-YYYY-NNNNNN (credit note), gap-free per series and Casablanca year.',
+          }
         kind: { type: string, enum: [invoice, credit_note] }
         correctsInvoiceNumber: { type: [string, 'null'] }
         reason: { type: [string, 'null'], description: 'Correction reason, credit notes only.' }
@@ -495,8 +614,14 @@ components:
           type: array
           items: { $ref: '#/components/schemas/BillingInvoiceLine' }
         issuedAt: { type: string, format: date-time }
-        allocatedTtc: { type: integer, minimum: 0, description: 'Verified receipts allocated (invoices only).' }
-        creditedTtc: { type: integer, minimum: 0, description: 'Credit notes issued against it (invoices only).' }
+        allocatedTtc:
+          { type: integer, minimum: 0, description: 'Verified receipts allocated (invoices only).' }
+        creditedTtc:
+          {
+            type: integer,
+            minimum: 0,
+            description: 'Credit notes issued against it (invoices only).',
+          }
         balanceTtc:
           {
             type: integer,

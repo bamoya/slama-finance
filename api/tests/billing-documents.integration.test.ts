@@ -65,7 +65,7 @@ describe('Billing documents', () => {
       receivedTtc: 35880,
       invoiceNumber: `F-${year}-000001`,
     })
-    const { data } = await billing.invoices(testOwnerId)
+    const { items: data } = await billing.invoices(testOwnerId, 1)
     expect(data).toHaveLength(1)
     expect(data[0]).toMatchObject({
       kind: 'invoice',
@@ -171,7 +171,7 @@ describe('Billing documents', () => {
   it('corrects only decided invoices with bounded, linked credit notes and keeps coverage', async () => {
     const submitted = await submit()
     await billing.confirm(submitted.id, 'ops', { reference: 'bank-1', amountTtc: 100 })
-    const [invoice] = (await billing.invoices(testOwnerId)).data
+    const [invoice] = (await billing.invoices(testOwnerId, 1)).items
     await expect(
       billing.creditNote(invoice!.id, { amountHt: 1000, reason: 'Geste commercial' }, 'ops'),
     ).rejects.toMatchObject({ code: 'PAYMENT_PENDING' })
@@ -198,7 +198,7 @@ describe('Billing documents', () => {
       billing.creditNote(note.id, { amountHt: 1, reason: 'Avoir sur avoir' }, 'ops'),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
 
-    const invoices = (await billing.invoices(testOwnerId)).data
+    const invoices = (await billing.invoices(testOwnerId, 1)).items
     expect(invoices.find((i) => i.kind === 'invoice')).toMatchObject({
       creditedTtc: 12000,
       balanceTtc: -12000,
@@ -319,7 +319,7 @@ describe('Billing documents', () => {
     const before = await subscriptions.summary(testOwnerId)
     const rejected = await billing.reject(submitted.id, 'ops', 'Remainder never received')
     expect(rejected).toMatchObject({ status: 'rejected', receivedTtc: 10000 })
-    const invoices = (await billing.invoices(testOwnerId)).data
+    const invoices = (await billing.invoices(testOwnerId, 1)).items
     expect(invoices.find((i) => i.kind === 'invoice')).toMatchObject({
       allocatedTtc: 10000,
       creditedTtc: 35880,
@@ -342,7 +342,7 @@ describe('Billing documents', () => {
   it('keeps credited HT and tax within the invoice split, the last note taking the remainder', async () => {
     const submitted = await submit()
     await billing.confirm(submitted.id, 'ops')
-    const [invoice] = (await billing.invoices(testOwnerId)).data
+    const [invoice] = (await billing.invoices(testOwnerId, 1)).items
     // 3 HT at 20 % rounds tax up to 1 each time; the remainder note absorbs the drift.
     for (let i = 0; i < 3; i++)
       expect(
@@ -381,7 +381,7 @@ describe('Billing documents', () => {
       await restricted.confirm(submitted.id, 'ops', { reference: 'bank-1', amountTtc: 10000 })
       const confirmed = await restricted.confirm(submitted.id, 'ops', { reference: 'bank-2' })
       expect(confirmed.status).toBe('confirmed')
-      const [invoice] = (await billing.invoices(testOwnerId)).data
+      const [invoice] = (await billing.invoices(testOwnerId, 1)).items
       const note = await restricted.creditNote(
         invoice!.id,
         { amountHt: 100, reason: 'Remise' },

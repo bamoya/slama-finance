@@ -20,8 +20,10 @@ import { Input } from '../../../../../components/ui/input'
 import { Label } from '../../../../../components/ui/label'
 import { Textarea } from '../../../../../components/ui/textarea'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { BillingCustomerSummary } from '../../../subscriptions/components/billing-customer-summary'
 import { formatDh, parseDh } from '../../../subscriptions/components/billing-format'
 import { invoiceColumns } from '../../../subscriptions/components/invoice-columns'
+import { InvoicePdfButton } from '../../../subscriptions/components/invoice-pdf-button'
 import { useRefreshAdministration } from '../hooks/use-refresh-administration'
 
 /** Issued invoices and credit notes of one customer, with explicit corrections. */
@@ -32,15 +34,22 @@ export function CustomerInvoicesCard({ ownerId }: { ownerId: string }) {
   const columns: DataColumn<BillingInvoice>[] = [
     ...invoiceColumns,
     {
+      title: 'Billed to',
+      render: (i) => <BillingCustomerSummary customer={i.customer} />,
+    },
+    {
       title: 'Actions',
       align: 'right',
-      render: (i) =>
-        i.kind === 'invoice' &&
-        i.creditedTtc < i.totals.amountTtc && (
-          <Button size="sm" variant="outline" onClick={() => setCorrecting(i)}>
-            {translate('Credit note')}
-          </Button>
-        ),
+      render: (i) => (
+        <div className="flex flex-col items-end gap-2">
+          <InvoicePdfButton invoice={i} scope="admin" />
+          {i.kind === 'invoice' && i.creditedTtc < i.totals.amountTtc && (
+            <Button size="sm" variant="outline" onClick={() => setCorrecting(i)}>
+              {translate('Credit note')}
+            </Button>
+          )}
+        </div>
+      ),
     },
   ]
   return (

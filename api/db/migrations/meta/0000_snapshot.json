@@ -1,5 +1,5 @@
 {
-  "id": "ee3f5a30-aab6-4e34-b7f8-9b769003e48c",
+  "id": "2b4110cf-b8f0-4d42-80ff-0adab033d482",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2252,6 +2252,108 @@
       },
       "isRLSEnabled": true
     },
+    "public.billing_customer_profiles": {
+      "name": "billing_customer_profiles",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ice": {
+          "name": "ice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_identifier": {
+          "name": "tax_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "billing_customer_profiles_owner_id_platform_users_id_fk": {
+          "name": "billing_customer_profiles_owner_id_platform_users_id_fk",
+          "tableFrom": "billing_customer_profiles",
+          "tableTo": "platform_users",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "billing_customer_profile_owner": {
+          "name": "billing_customer_profile_owner",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "\"billing_customer_profiles\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'",
+          "withCheck": "\"billing_customer_profiles\".\"owner_id\"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner'"
+        },
+        "billing_customer_profile_admin": {
+          "name": "billing_customer_profile_admin",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "current_setting('app.actor_type',true)='platform_admin'",
+          "withCheck": "current_setting('app.actor_type',true)='platform_admin'"
+        }
+      },
+      "checkConstraints": {
+        "billing_customer_profile_identity": {
+          "name": "billing_customer_profile_identity",
+          "value": "(\"billing_customer_profiles\".\"type\"='individual' and \"billing_customer_profiles\".\"legal_name\" is null and \"billing_customer_profiles\".\"ice\" is null and \"billing_customer_profiles\".\"address\" is null and \"billing_customer_profiles\".\"registration_number\" is null and \"billing_customer_profiles\".\"tax_identifier\" is null) or (\"billing_customer_profiles\".\"type\"='company' and btrim(coalesce(\"billing_customer_profiles\".\"legal_name\",''))<>'' and coalesce(\"billing_customer_profiles\".\"ice\",'') ~ '^[0-9]{15}$' and btrim(coalesce(\"billing_customer_profiles\".\"address\",''))<>'')"
+        }
+      },
+      "isRLSEnabled": true
+    },
     "public.billing_invoice_counters": {
       "name": "billing_invoice_counters",
       "schema": "",
@@ -2556,6 +2658,18 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "customer": {
+          "name": "customer",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issuer": {
+          "name": "issuer",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -2709,6 +2823,14 @@
           "name": "billing_invoice_amounts",
           "value": "\"billing_invoices\".\"amount_ht\">=0 and \"billing_invoices\".\"tax_amount\">=0 and \"billing_invoices\".\"amount_ttc\"=\"billing_invoices\".\"amount_ht\"+\"billing_invoices\".\"tax_amount\" and (\"billing_invoices\".\"tax_rate_basis_points\" is null or \"billing_invoices\".\"tax_rate_basis_points\" between 0 and 10000)"
         },
+        "billing_invoice_customer": {
+          "name": "billing_invoice_customer",
+          "value": "((\"billing_invoices\".\"customer\"->>'type')='individual' or ((\"billing_invoices\".\"customer\"->>'type')='company' and btrim(coalesce(\"billing_invoices\".\"customer\"->>'legalName',''))<>'' and coalesce(\"billing_invoices\".\"customer\"->>'ice','') ~ '^[0-9]{15}$' and btrim(coalesce(\"billing_invoices\".\"customer\"->>'address',''))<>'')) and (\"billing_invoices\".\"customer\"->'email' is null or (jsonb_typeof(\"billing_invoices\".\"customer\"->'email')='string' and btrim(\"billing_invoices\".\"customer\"->>'email')<>''))"
+        },
+        "billing_invoice_issuer": {
+          "name": "billing_invoice_issuer",
+          "value": "btrim(coalesce(\"billing_invoices\".\"issuer\"->>'legalName',''))<>''"
+        },
         "billing_invoice_positive": {
           "name": "billing_invoice_positive",
           "value": "\"billing_invoices\".\"amount_ttc\">0"
@@ -2810,6 +2932,13 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
+        },
+        "customer": {
+          "name": "customer",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"type\":\"individual\",\"legalName\":null,\"ice\":null,\"address\":null,\"registrationNumber\":null,\"taxIdentifier\":null}'::jsonb"
         }
       },
       "indexes": {
@@ -2899,6 +3028,10 @@
         "billing_quote_amounts": {
           "name": "billing_quote_amounts",
           "value": "\"billing_quotes\".\"amount_ht\">=0 and \"billing_quotes\".\"tax_amount\">=0 and \"billing_quotes\".\"amount_ttc\"=\"billing_quotes\".\"amount_ht\"+\"billing_quotes\".\"tax_amount\" and (\"billing_quotes\".\"tax_rate_basis_points\" is null or \"billing_quotes\".\"tax_rate_basis_points\" between 0 and 10000)"
+        },
+        "billing_quote_customer": {
+          "name": "billing_quote_customer",
+          "value": "((\"billing_quotes\".\"customer\"->>'type')='individual' or ((\"billing_quotes\".\"customer\"->>'type')='company' and btrim(coalesce(\"billing_quotes\".\"customer\"->>'legalName',''))<>'' and coalesce(\"billing_quotes\".\"customer\"->>'ice','') ~ '^[0-9]{15}$' and btrim(coalesce(\"billing_quotes\".\"customer\"->>'address',''))<>'')) and (\"billing_quotes\".\"customer\"->'email' is null or (jsonb_typeof(\"billing_quotes\".\"customer\"->'email')='string' and btrim(\"billing_quotes\".\"customer\"->>'email')<>''))"
         },
         "billing_quote_validity": {
           "name": "billing_quote_validity",
@@ -12970,6 +13103,55 @@
           "primaryKey": false,
           "notNull": true,
           "default": "''"
+        },
+        "issuer_legal_name": {
+          "name": "issuer_legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_address": {
+          "name": "issuer_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_ice": {
+          "name": "issuer_ice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_registration_number": {
+          "name": "issuer_registration_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_tax_identifier": {
+          "name": "issuer_tax_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_tax_mention": {
+          "name": "issuer_tax_mention",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "issuer_payment_terms": {
+          "name": "issuer_payment_terms",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
         }
       },
       "indexes": {},
@@ -12981,6 +13163,10 @@
         "billing_settings_singleton": {
           "name": "billing_settings_singleton",
           "value": "\"billing_settings\".\"id\"=1"
+        },
+        "billing_settings_issuer_ice": {
+          "name": "billing_settings_issuer_ice",
+          "value": "\"billing_settings\".\"issuer_ice\"='' or \"billing_settings\".\"issuer_ice\" ~ '^[0-9]{15}$'"
         },
         "billing_settings_tax": {
           "name": "billing_settings_tax",

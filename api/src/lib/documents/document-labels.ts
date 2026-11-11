@@ -39,6 +39,12 @@ const french: Record<string, string> = {
     'Virement enregistré — en attente de confirmation',
   'Cheque collected': 'Chèque encaissé',
   'Payment collected': 'Paiement encaissé',
+  'Individual customer': 'Client particulier',
+  'Corrects invoice': 'Facture corrigée',
+  Subscription: 'Abonnement',
+  Monthly: 'Mensuel',
+  Annual: 'Annuel',
+  Reason: 'Motif',
   'This receipt does not confirm cleared funds.':
     'Ce reçu ne confirme pas l’encaissement des fonds.',
 }

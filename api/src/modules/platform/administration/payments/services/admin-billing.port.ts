@@ -42,6 +42,14 @@ export type AdminBillingPort = {
     onIssued?: (tx: Transaction, note: AdminInvoice) => Promise<void>,
     transaction?: Transaction,
   ) => Promise<AdminInvoice>
+  /**
+   * Invoice or credit note PDF from its immutable snapshot, read in an administrator transaction that
+   * commits before rendering.
+   */
+  invoicePdf: (
+    invoiceId: string,
+    language: 'fr' | 'en',
+  ) => Promise<{ bytes: Uint8Array; filename: string }>
   summary: (ownerId: string) => Promise<OwnerSubscription>
   lifecycle: AdminLifecyclePort
   /** Set-based lifecycle status (owner_id, trial_ends_at, status) at `at`, same authority as the API. */

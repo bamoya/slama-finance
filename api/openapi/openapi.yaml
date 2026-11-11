@@ -426,6 +426,10 @@ paths:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1payments
   /api/v1/owner/subscription/invoices:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1invoices
+  '/api/v1/owner/subscription/invoices/{invoiceId}/pdf':
+    $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1invoices~1{invoiceId}~1pdf
+  '/api/v1/admin/invoices/{invoiceId}/pdf':
+    $ref: ./modules/administration/administration.yaml#/paths/~1api~1v1~1admin~1invoices~1{invoiceId}~1pdf
   /api/v1/owner/subscription/cancellation:
     $ref: ./modules/subscriptions/subscriptions.yaml#/paths/~1api~1v1~1owner~1subscription~1cancellation
   /api/v1/workspace/session:
@@ -984,5 +988,11 @@ components:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingInvoice
     BillingInvoiceLine:
       $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingInvoiceLine
+    BillingCustomer:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingCustomer
+    BillingIssuer:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingIssuer
+    BillingInvoicePage:
+      $ref: ./modules/subscriptions/subscriptions.yaml#/components/schemas/BillingInvoicePage
     WorkspaceSession:
       $ref: ./modules/identity/workspace.yaml#/components/schemas/WorkspaceSession

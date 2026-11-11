@@ -1,6 +1,7 @@
 import type {
   BillingCatalog,
-  BillingInvoice,
+  BillingCustomer,
+  BillingInvoicePage,
   SubscriptionPayment,
   SubscriptionPaymentSubmission,
   SubscriptionQuote,
@@ -16,11 +17,13 @@ import type { CoverageReads } from '../repositories/coverage-lifecycle.repositor
 import type { createSubscriptionRepository } from '../repositories/subscription.repository.js'
 import { addCycle, billingDay, zonedDayStart } from './billing-calendar.service.js'
 import { createBillingDocuments, toInvoice } from './billing-documents.service.js'
+import { publicCustomer } from './billing-identity.service.js'
 import { createCatalogReader, type VersionTerms } from './catalog-values.service.js'
 import { type Coverage, GRACE_MS, money, prorate, resolveCoverage } from './coverage.js'
 import { resolvePeriods } from './period-resolver.service.js'
 
 const DAY_MS = 86_400_000
+const INVOICE_PAGE_SIZE = 20
 const suspended = () =>
   new AppError(409, 'SUBSCRIPTION_SUSPENDED', 'This subscription is suspended.')
 
@@ -74,6 +77,7 @@ export function toPayment(row: PaymentRow): SubscriptionPayment {
     quoteExpiresAt: row.quoteExpiresAt?.toISOString() ?? null,
     receivedTtc: row.receivedTtc,
     invoiceNumber: row.invoiceNumber,
+    customer: row.customer && publicCustomer(row.customer),
   }
 }
 
@@ -535,6 +539,7 @@ export function createBillingService(
           cycle: input.cycle,
           kind: 'activation',
           amount,
+          customer: await documents.customer(ownerId, tx),
         },
         now,
         tx,
@@ -618,27 +623,38 @@ export function createBillingService(
     },
   }
 
+  async function billingCatalog(ownerId: string, tx: Transaction): Promise<BillingCatalog> {
+    const [settings, plans, customer] = await Promise.all([
+      repo.settings(tx),
+      catalog.sellingPaid(tx),
+      documents.customer(ownerId, tx),
+    ])
+    return {
+      customer,
+      currency: settings.currency,
+      taxRateBasisPoints: settings.taxRateBasisPoints,
+      paymentMethods: settings.paymentMethods,
+      paymentInstructions: settings.paymentInstructions,
+      plans: plans.map((p) => ({
+        code: p.planCode as BillingCatalog['plans'][number]['code'],
+        versionNumber: p.versionNumber,
+        name: p.name,
+        monthlyHt: p.prices!.monthly,
+        annualHt: p.prices!.annual,
+        entitlements: p.entitlements,
+      })),
+    }
+  }
+
   return {
     administration,
-    async catalog(ownerId: string): Promise<BillingCatalog> {
-      return subscriptions.owner(ownerId, async (tx) => {
-        const [settings, plans] = await Promise.all([repo.settings(tx), catalog.sellingPaid(tx)])
-        return {
-          currency: settings.currency,
-          taxRateBasisPoints: settings.taxRateBasisPoints,
-          paymentMethods: settings.paymentMethods,
-          paymentInstructions: settings.paymentInstructions,
-          plans: plans.map((p) => ({
-            code: p.planCode as BillingCatalog['plans'][number]['code'],
-            versionNumber: p.versionNumber,
-            name: p.name,
-            monthlyHt: p.prices!.monthly,
-            annualHt: p.prices!.annual,
-            entitlements: p.entitlements,
-          })),
-        }
-      })
-    },
+    catalog: (ownerId: string) => subscriptions.owner(ownerId, (tx) => billingCatalog(ownerId, tx)),
+    /** Saves the identity prefilled at checkout; quotes and issued invoices keep their snapshot. */
+    saveCustomer: (ownerId: string, input: BillingCustomer) =>
+      subscriptions.owner(ownerId, async (tx) => {
+        await documents.saveCustomer(ownerId, input, tx)
+        return billingCatalog(ownerId, tx)
+      }),
     state,
     quote: (ownerId: string, input: SubscriptionQuoteRequest) =>
       subscriptions.owner(ownerId, async (tx): Promise<SubscriptionQuote> => {
@@ -660,6 +676,10 @@ export function createBillingService(
           throw new AppError(409, 'PAYMENT_PENDING', 'A payment is already awaiting verification.')
         const now = await clock(tx)
         const q = await quote(ownerId, input, tx, now)
+        // The identity given at checkout becomes the saved profile; the quote snapshots it.
+        const customer = input.customer
+          ? await documents.saveCustomer(ownerId, input.customer, tx)
+          : await documents.customer(ownerId, tx)
         // The immutable offer this declaration accepts (S6); the payment repeats its snapshot.
         const offer = await documents.quote(
           {
@@ -669,6 +689,7 @@ export function createBillingService(
             cycle: q.cycle,
             kind: q.kind,
             amount: q.amount,
+            customer,
           },
           now,
           tx,
@@ -873,12 +894,28 @@ export function createBillingService(
         return toPayment(row)
       }),
     /** Owner's issued invoices and credit notes, newest first. */
-    invoices: (ownerId: string) =>
-      subscriptions.owner(ownerId, async (tx): Promise<{ data: BillingInvoice[] }> => ({
-        data: (await documents.invoices({ ownerId, page: 1, pageSize: 500 }, tx)).rows.map(
-          toInvoice,
-        ),
-      })),
+    invoices: (ownerId: string, page: number) =>
+      subscriptions.owner(ownerId, async (tx): Promise<BillingInvoicePage> => {
+        const { rows, total } = await documents.invoices(
+          { ownerId, page, pageSize: INVOICE_PAGE_SIZE },
+          tx,
+        )
+        return { items: rows.map(toInvoice), page, pageSize: INVOICE_PAGE_SIZE, total }
+      }),
+    /** One of the owner's documents (RLS limits the read to the owner), for its PDF. */
+    ownerInvoice: (ownerId: string, invoiceId: string) =>
+      subscriptions.owner(ownerId, async (tx) => {
+        const invoice = await documents.invoice(invoiceId, tx)
+        if (!invoice || invoice.ownerId !== ownerId)
+          throw new AppError(404, 'NOT_FOUND', 'Invoice not found.')
+        return invoice
+      }),
+    adminInvoice: (invoiceId: string, transaction?: Transaction) =>
+      inAdminTransaction(transaction, async (tx) => {
+        const invoice = await documents.invoice(invoiceId, tx)
+        if (!invoice) throw new AppError(404, 'NOT_FOUND', 'Invoice not found.')
+        return invoice
+      }),
     /** Administrator listing (optionally one owner), newest first. */
     adminInvoices: (
       filter: { ownerId?: string; page: number; pageSize: number },

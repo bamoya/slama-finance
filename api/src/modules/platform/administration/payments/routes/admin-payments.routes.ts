@@ -10,5 +10,6 @@ export function registerAdminPaymentsRoutes(
   app.post('/payments/:paymentId/confirm', controller.confirm)
   app.post('/payments/:paymentId/reject', controller.reject)
   app.get('/invoices', controller.invoices)
+  app.get('/invoices/:invoiceId/pdf', controller.invoicePdf)
   app.post('/invoices/:invoiceId/credit-notes', controller.creditNote)
 }

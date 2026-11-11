@@ -515,6 +515,146 @@ describe('SaaS administration portal', () => {
     ).rejects.toThrow()
   })
 
+  it('blocks invoicing without an issuer name, then serves snapshot PDFs and paged owner invoices', async () => {
+    const { cookie } = await signIn()
+    await fixture.client`update billing_settings set issuer_legal_name=''`
+    const settings = (await as(cookie).get('/api/v1/admin/billing-settings')).json()
+    expect(settings.issuerMissing).toContain('legalName')
+    const id = await submittedPayment('bank-issuer')
+    const blocked = await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, {
+      auditReason: 'received',
+    })
+    expect(blocked.statusCode).toBe(409)
+    expect(blocked.json().code).toBe('ISSUER_PROFILE_INCOMPLETE')
+    const [rows] =
+      await fixture.client`select (select count(*)::int from billing_receipts) as receipts, (select count(*)::int from billing_invoices) as invoices, (select status from subscription_payments where id=${id}) as status`
+    expect(rows).toEqual({ receipts: 0, invoices: 0, status: 'submitted' })
+
+    const { currency: _, issuerMissing: __, ...editable } = settings
+    const named = await as(cookie).put('/api/v1/admin/billing-settings', {
+      ...editable,
+      issuer: { ...settings.issuer, legalName: 'Slama SaaS SARL', ice: '001234567000089' },
+    })
+    expect(named.json().issuerMissing).not.toContain('legalName')
+    expect(
+      (await as(cookie).post(`/api/v1/admin/payments/${id}/confirm`, { auditReason: 'received' }))
+        .statusCode,
+    ).toBe(200)
+    const [entry] = (await as(cookie).get(`/api/v1/admin/invoices?ownerId=${testOwnerId}`)).json()
+      .items
+    expect(entry.invoice).toMatchObject({
+      customer: { type: 'individual' },
+      issuer: { legalName: 'Slama SaaS SARL', ice: '001234567000089' },
+    })
+    // Later issuer edits never change the issued snapshot.
+    await fixture.client`update billing_settings set issuer_legal_name='Renamed SA'`
+    const pdf = await as(cookie).get(`/api/v1/admin/invoices/${entry.invoice.id}/pdf?language=en`)
+    expect(pdf.statusCode).toBe(200)
+    expect(pdf.headers['content-type']).toBe('application/pdf')
+    expect(pdf.headers['content-disposition']).toContain(`${entry.invoice.number}-en.pdf`)
+    expect(pdf.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
+
+    await fixture.client`update platform_users set email_verified_at=now() where id=${testOwnerId}`
+    const token = randomBytes(32).toString('base64url')
+    await fixture.client`insert into owner_sessions(owner_id,token_hash,expires_at) values (${testOwnerId},${sha(token)},now()+interval '1 day')`
+    const owner = (url: string, method: 'GET' | 'PUT' = 'GET', payload?: object) =>
+      app.inject({ method, url, headers, payload, cookies: { slama_owner_session: token } })
+    // 21 one-centime credit notes: 22 documents over two pages of 20.
+    for (let i = 0; i < 21; i++)
+      expect(
+        (
+          await as(cookie).post(`/api/v1/admin/invoices/${entry.invoice.id}/credit-notes`, {
+            amountHt: 1,
+            reason: `Geste ${i}`,
+            auditReason: 'support',
+          })
+        ).statusCode,
+      ).toBe(201)
+    const first = (await owner('/api/v1/owner/subscription/invoices')).json()
+    expect(first).toMatchObject({ page: 1, pageSize: 20, total: 22 })
+    expect(first.items).toHaveLength(20)
+    const second = (await owner('/api/v1/owner/subscription/invoices?page=2')).json()
+    expect(second.items).toHaveLength(2)
+    const note = first.items[0]
+    expect(note).toMatchObject({
+      kind: 'credit_note',
+      customer: { type: 'individual' },
+      issuer: { legalName: 'Renamed SA' },
+    })
+    expect(second.items.at(-1)).toMatchObject({ issuer: { legalName: 'Slama SaaS SARL' } })
+    const ownerPdf = await owner(`/api/v1/owner/subscription/invoices/${note.id}/pdf`)
+    expect(ownerPdf.statusCode).toBe(200)
+    expect(ownerPdf.headers['content-disposition']).toContain(`${note.number}.pdf`)
+    // A second owner's issued invoice: invisible to the first owner, downloadable by the administrator.
+    const other = '20000000-0000-4000-8000-000000000009'
+    await fixture.client`insert into platform_users (id,email,password_hash) values (${other},'other-owner@example.test','x')`
+    const [foreign] =
+      await fixture.client`insert into subscription_payments(owner_id,plan_code,plan_version_id,cycle,kind,method,reference,currency,amount_ht,tax_amount,amount_ttc,quote_id) values (${other},'business',(select plan_version_id from plan_selling where plan_code='business'),'monthly','activation','cash','other-ref','MAD',29900,0,29900,${await seedQuote(fixture.client, { ownerId: other, planCode: 'business', amount: 29900 })}) returning id`
+    expect(
+      (
+        await as(cookie).post(`/api/v1/admin/payments/${foreign!.id}/confirm`, {
+          auditReason: 'received',
+        })
+      ).statusCode,
+    ).toBe(200)
+    const [foreignInvoice] = (
+      await as(cookie).get(`/api/v1/admin/invoices?ownerId=${other}`)
+    ).json().items
+    expect(foreignInvoice.ownerId).toBe(other)
+    expect(
+      (await owner(`/api/v1/owner/subscription/invoices/${foreignInvoice.invoice.id}/pdf`))
+        .statusCode,
+    ).toBe(404)
+    expect(
+      (await as(cookie).get(`/api/v1/admin/invoices/${foreignInvoice.invoice.id}/pdf`)).statusCode,
+    ).toBe(200)
+    expect(
+      (await owner('/api/v1/owner/subscription/invoices'))
+        .json()
+        .items.map((i: { id: string }) => i.id),
+    ).not.toContain(foreignInvoice.invoice.id)
+
+    // Billing profile: company details are validated, then prefilled; issued documents keep theirs.
+    const invalid = await owner('/api/v1/owner/subscription/billing', 'PUT', {
+      type: 'company',
+      legalName: ' ',
+      ice: '12',
+      address: null,
+      registrationNumber: null,
+      taxIdentifier: null,
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(Object.keys(invalid.json().fieldErrors)).toEqual(
+      expect.arrayContaining(['legalName', 'ice', 'address']),
+    )
+    const company = {
+      type: 'company',
+      legalName: 'Atlas SARL',
+      ice: '001122334455667',
+      address: '25 Rue des Oliviers, Rabat',
+      registrationNumber: '12345',
+      taxIdentifier: null,
+    }
+    // The printed ICE format (digits grouped by spaces) is accepted and stored as 15 digits.
+    const saved = await owner('/api/v1/owner/subscription/billing', 'PUT', {
+      ...company,
+      ice: '001 122 334 455 667',
+    })
+    expect(saved.statusCode).toBe(200)
+    expect(saved.json().customer).toEqual(company)
+    const tooShort = await owner('/api/v1/owner/subscription/billing', 'PUT', {
+      ...company,
+      ice: '001 122 334 455',
+    })
+    expect(tooShort.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      fieldErrors: { ice: expect.any(Array) },
+    })
+    expect((await owner('/api/v1/owner/subscription/billing')).json().customer).toEqual(company)
+    const again = (await owner('/api/v1/owner/subscription/invoices?page=2')).json()
+    expect(again.items.at(-1).customer.type).toBe('individual')
+  })
+
   it('updates billing settings with an audited before/after', async () => {
     const { cookie } = await signIn()
     const before = (await as(cookie).get('/api/v1/admin/billing-settings')).json()
@@ -529,17 +669,42 @@ describe('SaaS administration portal', () => {
           taxRateBasisPoints: 10001,
           paymentMethods: ['cash'],
           paymentInstructions: '',
+          issuer: before.issuer,
         })
       ).statusCode,
     ).toBe(400)
+    const issuer = {
+      legalName: 'Slama SaaS SARL',
+      address: '1 Rue Test, Casablanca',
+      ice: '',
+      registrationNumber: '',
+      taxIdentifier: '',
+      taxMention: '',
+      paymentTerms: 'Payable à réception',
+    }
+    const badIce = await as(cookie).put('/api/v1/admin/billing-settings', {
+      taxRateBasisPoints: null,
+      paymentMethods: ['cash'],
+      paymentInstructions: '',
+      issuer: { ...issuer, ice: '12345' },
+    })
+    expect(badIce.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      fieldErrors: { 'issuer.ice': expect.any(Array) },
+    })
     const update = {
       taxRateBasisPoints: 2000,
       paymentMethods: ['bank_transfer'],
       paymentInstructions: 'RIB 0000',
+      issuer,
     }
     const updated = await as(cookie).put('/api/v1/admin/billing-settings', update)
     expect(updated.statusCode).toBe(200)
-    expect(updated.json()).toEqual({ currency: 'MAD', ...update })
+    expect(updated.json()).toEqual({
+      currency: 'MAD',
+      ...update,
+      issuerMissing: ['ice', 'registrationNumber', 'taxIdentifier'],
+    })
     const [audit] = await auditRows('billing_settings.update')
     expect(audit!.before).toMatchObject({ paymentMethods: before.paymentMethods })
     expect(audit!.after).toMatchObject(update)

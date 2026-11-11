@@ -4,12 +4,14 @@ const titles = {
     estimate: 'Devis',
     delivery: 'Bon de livraison',
     payment_receipt: 'Reçu de paiement',
+    credit_note: 'Avoir',
   },
   en: {
     invoice: 'Invoice',
     estimate: 'Estimate',
     delivery: 'Delivery note',
     payment_receipt: 'Payment receipt',
+    credit_note: 'Credit note',
   },
 }
 

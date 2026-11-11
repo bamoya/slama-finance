@@ -24,6 +24,7 @@ import {
   toFormValues,
   validateBilling,
 } from '../billing-settings'
+import { IssuerProfileWarning } from '../components/issuer-profile-warning'
 import { PaymentMethodsInput } from '../components/payment-methods-input'
 
 function BillingSettingsForm({
@@ -41,11 +42,15 @@ function BillingSettingsForm({
   const [errors, setErrors] = useState<BillingErrors>({})
   const [error, setError] = useState<unknown>(null)
   const [saved, setSaved] = useState(false)
+  const setIssuer = (key: keyof BillingFormValues['issuer'], value: string) => {
+    setSaved(false)
+    setValues((current) => ({ ...current, issuer: { ...current.issuer, [key]: value } }))
+  }
   const set = <K extends keyof BillingFormValues>(key: K, value: BillingFormValues[K]) => {
     setSaved(false)
     setValues((current) => ({ ...current, [key]: value }))
   }
-  const fieldError = (key: keyof BillingFormValues) =>
+  const fieldError = (key: keyof BillingErrors) =>
     errors[key] && (
       <p id={`${key}-error`} role="alert" className="text-sm text-[var(--error-text)]">
         {translate(errors[key])}
@@ -150,6 +155,67 @@ function BillingSettingsForm({
             />
             {fieldError('paymentInstructions')}
           </div>
+          <fieldset className="space-y-4 border-t border-[var(--border)] pt-5">
+            <legend className="text-base font-semibold">{translate('Issuer profile')}</legend>
+            <p className="text-sm text-[var(--muted)]">
+              {translate(
+                'Identity printed on every invoice and credit note. It is copied onto each document when it is issued.',
+              )}
+            </p>
+            {fieldError('issuerForm')}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  ['legalName', 'Legal name', 200],
+                  ['ice', 'ICE', 20],
+                  ['registrationNumber', 'RC', 40],
+                  ['taxIdentifier', 'IF', 40],
+                ] as const
+              ).map(([key, label, max]) => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={`issuer-${key}`}>{translate(label)}</Label>
+                  <Input
+                    id={`issuer-${key}`}
+                    maxLength={max}
+                    value={values.issuer[key]}
+                    aria-invalid={key === 'ice' && !!errors.issuerIce}
+                    aria-describedby={
+                      key === 'ice' && errors.issuerIce ? 'issuerIce-error' : undefined
+                    }
+                    onChange={(event) => setIssuer(key, event.target.value)}
+                  />
+                  {key === 'ice' && fieldError('issuerIce')}
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="issuer-address">{translate('Address')}</Label>
+              <Textarea
+                id="issuer-address"
+                maxLength={500}
+                value={values.issuer.address}
+                onChange={(event) => setIssuer('address', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="issuer-taxMention">{translate('Tax mention')}</Label>
+              <Textarea
+                id="issuer-taxMention"
+                maxLength={500}
+                value={values.issuer.taxMention}
+                onChange={(event) => setIssuer('taxMention', event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="issuer-paymentTerms">{translate('Payment terms and footer')}</Label>
+              <Textarea
+                id="issuer-paymentTerms"
+                maxLength={1000}
+                value={values.issuer.paymentTerms}
+                onChange={(event) => setIssuer('paymentTerms', event.target.value)}
+              />
+            </div>
+          </fieldset>
           <FormError error={error} />
           {saved && <p role="status">{translate('Billing settings saved.')}</p>}
           <FormActionBar>
@@ -174,7 +240,10 @@ export function AdminBillingSettingsPage() {
       {query.isPending || query.isError ? (
         <RequestState query={query} />
       ) : (
-        <BillingSettingsForm initial={toFormValues(query.data)} currency={query.data.currency} />
+        <>
+          <IssuerProfileWarning missing={query.data.issuerMissing} />
+          <BillingSettingsForm initial={toFormValues(query.data)} currency={query.data.currency} />
+        </>
       )}
     </AdministrationLayout>
   )

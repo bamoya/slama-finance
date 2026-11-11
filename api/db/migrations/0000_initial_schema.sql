@@ -288,6 +288,23 @@ CREATE TABLE IF NOT EXISTS "billing_allocations" (
 ALTER TABLE "billing_allocations" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "billing_customer_profiles" (
+	"owner_id" uuid PRIMARY KEY NOT NULL,
+	"type" text NOT NULL,
+	"legal_name" text,
+	"ice" text,
+	"address" text,
+	"registration_number" text,
+	"tax_identifier" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_customer_profile_identity" CHECK (("billing_customer_profiles"."type"='individual' and "billing_customer_profiles"."legal_name" is null and "billing_customer_profiles"."ice" is null and "billing_customer_profiles"."address" is null and "billing_customer_profiles"."registration_number" is null and "billing_customer_profiles"."tax_identifier" is null) or ("billing_customer_profiles"."type"='company' and btrim(coalesce("billing_customer_profiles"."legal_name",''))<>'' and coalesce("billing_customer_profiles"."ice",'') ~ '^[0-9]{15}$' and btrim(coalesce("billing_customer_profiles"."address",''))<>''))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "billing_customer_profiles" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "billing_invoice_counters" (
 	"series" text NOT NULL,
 	"year" integer NOT NULL,
@@ -341,7 +358,11 @@ CREATE TABLE IF NOT EXISTS "billing_invoices" (
 	"amount_ttc" integer NOT NULL,
 	"issued_at" timestamp with time zone NOT NULL,
 	"issued_by" text NOT NULL,
+	"customer" jsonb NOT NULL,
+	"issuer" jsonb NOT NULL,
 	CONSTRAINT "billing_invoice_amounts" CHECK ("billing_invoices"."amount_ht">=0 and "billing_invoices"."tax_amount">=0 and "billing_invoices"."amount_ttc"="billing_invoices"."amount_ht"+"billing_invoices"."tax_amount" and ("billing_invoices"."tax_rate_basis_points" is null or "billing_invoices"."tax_rate_basis_points" between 0 and 10000)),
+	CONSTRAINT "billing_invoice_customer" CHECK ((("billing_invoices"."customer"->>'type')='individual' or (("billing_invoices"."customer"->>'type')='company' and btrim(coalesce("billing_invoices"."customer"->>'legalName',''))<>'' and coalesce("billing_invoices"."customer"->>'ice','') ~ '^[0-9]{15}$' and btrim(coalesce("billing_invoices"."customer"->>'address',''))<>'')) and ("billing_invoices"."customer"->'email' is null or (jsonb_typeof("billing_invoices"."customer"->'email')='string' and btrim("billing_invoices"."customer"->>'email')<>''))),
+	CONSTRAINT "billing_invoice_issuer" CHECK (btrim(coalesce("billing_invoices"."issuer"->>'legalName',''))<>''),
 	CONSTRAINT "billing_invoice_positive" CHECK ("billing_invoices"."amount_ttc">0),
 	CONSTRAINT "billing_invoice_kind" CHECK (("billing_invoices"."kind"='invoice' and "billing_invoices"."series"='F' and "billing_invoices"."payment_id" is not null and "billing_invoices"."corrects_invoice_id" is null and "billing_invoices"."reason" is null) or ("billing_invoices"."kind"='credit_note' and "billing_invoices"."series"='A' and "billing_invoices"."payment_id" is null and "billing_invoices"."corrects_invoice_id" is not null and btrim(coalesce("billing_invoices"."reason",''))<>'')),
 	CONSTRAINT "billing_invoice_number" CHECK ("billing_invoices"."number"="billing_invoices"."series"||'-'||"billing_invoices"."year"::text||'-'||lpad("billing_invoices"."sequence"::text,6,'0')),
@@ -367,7 +388,9 @@ CREATE TABLE IF NOT EXISTS "billing_quotes" (
 	"amount_ttc" integer NOT NULL,
 	"issued_at" timestamp with time zone NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
+	"customer" jsonb DEFAULT '{"type":"individual","legalName":null,"ice":null,"address":null,"registrationNumber":null,"taxIdentifier":null}'::jsonb NOT NULL,
 	CONSTRAINT "billing_quote_amounts" CHECK ("billing_quotes"."amount_ht">=0 and "billing_quotes"."tax_amount">=0 and "billing_quotes"."amount_ttc"="billing_quotes"."amount_ht"+"billing_quotes"."tax_amount" and ("billing_quotes"."tax_rate_basis_points" is null or "billing_quotes"."tax_rate_basis_points" between 0 and 10000)),
+	CONSTRAINT "billing_quote_customer" CHECK ((("billing_quotes"."customer"->>'type')='individual' or (("billing_quotes"."customer"->>'type')='company' and btrim(coalesce("billing_quotes"."customer"->>'legalName',''))<>'' and coalesce("billing_quotes"."customer"->>'ice','') ~ '^[0-9]{15}$' and btrim(coalesce("billing_quotes"."customer"->>'address',''))<>'')) and ("billing_quotes"."customer"->'email' is null or (jsonb_typeof("billing_quotes"."customer"->'email')='string' and btrim("billing_quotes"."customer"->>'email')<>''))),
 	CONSTRAINT "billing_quote_validity" CHECK ("billing_quotes"."expires_at">"billing_quotes"."issued_at")
 );
 
@@ -1633,7 +1656,15 @@ CREATE TABLE IF NOT EXISTS "billing_settings" (
 	"tax_rate_basis_points" integer,
 	"payment_methods" text[] DEFAULT '{bank_transfer,cash}'::text[] NOT NULL,
 	"payment_instructions" text DEFAULT '' NOT NULL,
+	"issuer_legal_name" text DEFAULT '' NOT NULL,
+	"issuer_address" text DEFAULT '' NOT NULL,
+	"issuer_ice" text DEFAULT '' NOT NULL,
+	"issuer_registration_number" text DEFAULT '' NOT NULL,
+	"issuer_tax_identifier" text DEFAULT '' NOT NULL,
+	"issuer_tax_mention" text DEFAULT '' NOT NULL,
+	"issuer_payment_terms" text DEFAULT '' NOT NULL,
 	CONSTRAINT "billing_settings_singleton" CHECK ("billing_settings"."id"=1),
+	CONSTRAINT "billing_settings_issuer_ice" CHECK ("billing_settings"."issuer_ice"='' or "billing_settings"."issuer_ice" ~ '^[0-9]{15}$'),
 	CONSTRAINT "billing_settings_tax" CHECK ("billing_settings"."tax_rate_basis_points" is null or "billing_settings"."tax_rate_basis_points" between 0 and 10000)
 );
 
@@ -2286,6 +2317,14 @@ END $$;
 
 DO $$ BEGIN
  ALTER TABLE "billing_allocations" ADD CONSTRAINT "billing_allocations_invoice_id_billing_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."billing_invoices"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "billing_customer_profiles" ADD CONSTRAINT "billing_customer_profiles_owner_id_platform_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."platform_users"("id") ON DELETE restrict ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -3634,6 +3673,12 @@ CREATE POLICY "billing_allocation_owner" ON "billing_allocations" AS PERMISSIVE 
 CREATE POLICY "billing_allocation_admin" ON "billing_allocations" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
+CREATE POLICY "billing_customer_profile_owner" ON "billing_customer_profiles" AS PERMISSIVE FOR ALL TO public USING ("billing_customer_profiles"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner') WITH CHECK ("billing_customer_profiles"."owner_id"=nullif(current_setting('app.owner_id',true),'')::uuid and current_setting('app.actor_type',true)='owner');
+--> statement-breakpoint
+
+CREATE POLICY "billing_customer_profile_admin" ON "billing_customer_profiles" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
+--> statement-breakpoint
+
 CREATE POLICY "billing_invoice_counter_admin" ON "billing_invoice_counters" AS PERMISSIVE FOR ALL TO public USING (current_setting('app.actor_type',true)='platform_admin') WITH CHECK (current_setting('app.actor_type',true)='platform_admin');
 --> statement-breakpoint
 
@@ -3916,6 +3961,8 @@ ALTER TABLE "user_settings" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "users" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "billing_allocations" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "billing_customer_profiles" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "billing_invoice_counters" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -5622,7 +5669,8 @@ END $$;
 CREATE TRIGGER billing_receipt_payment BEFORE INSERT ON billing_receipts FOR EACH ROW EXECUTE FUNCTION check_billing_receipt();
 --> statement-breakpoint
 -- At commit: an invoice equals the sum of its lines (at least one); an invoice belongs to its payment's
--- owner; a credit note corrects an invoice of the same owner, currency and tax rate, and the credited
+-- owner and repeats its quote's customer; a credit note corrects an invoice of the same owner, customer,
+-- currency and tax rate, and the credited
 -- total never exceeds that invoice.
 CREATE FUNCTION check_billing_invoice() RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, pg_temp AS $$
@@ -5642,11 +5690,16 @@ BEGIN
  IF inv.kind='invoice' AND NOT EXISTS (SELECT 1 FROM "public".subscription_payments p WHERE p.id=inv.payment_id AND p.owner_id=inv.owner_id AND p.currency=inv.currency) THEN
   RAISE EXCEPTION 'An invoice belongs to its payment''s owner' USING ERRCODE='23514';
  END IF;
+ IF inv.kind='invoice' AND NOT EXISTS (SELECT 1 FROM "public".subscription_payments p JOIN "public".billing_quotes q ON q.id=p.quote_id
+   WHERE p.id=inv.payment_id AND q.customer=inv.customer) THEN
+  RAISE EXCEPTION 'An invoice repeats the customer snapshot of its quote' USING ERRCODE='23514';
+ END IF;
  IF inv.kind='credit_note' THEN
   SELECT * INTO orig FROM "public".billing_invoices WHERE id=inv.corrects_invoice_id;
   IF orig.kind<>'invoice' OR orig.owner_id<>inv.owner_id OR orig.currency<>inv.currency
+   OR orig.customer<>inv.customer
    OR orig.tax_rate_basis_points IS DISTINCT FROM inv.tax_rate_basis_points THEN
-   RAISE EXCEPTION 'A credit note corrects an invoice of the same owner, currency and tax rate' USING ERRCODE='23514';
+   RAISE EXCEPTION 'A credit note corrects an invoice of the same owner, customer, currency and tax rate' USING ERRCODE='23514';
   END IF;
   IF (SELECT sum(amount_ttc)>orig.amount_ttc OR sum(amount_ht)>orig.amount_ht OR sum(tax_amount)>orig.tax_amount
       FROM "public".billing_invoices WHERE corrects_invoice_id=orig.id) THEN

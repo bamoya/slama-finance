@@ -19,6 +19,14 @@ const entitlements = {
   features: ['business_emails'],
 }
 const catalog = {
+  customer: {
+    type: 'individual',
+    legalName: null,
+    ice: null,
+    address: null,
+    registrationNumber: null,
+    taxIdentifier: null,
+  },
   currency: 'MAD',
   taxRateBasisPoints: 2000,
   paymentMethods: ['bank_transfer', 'cash'],
@@ -75,6 +83,7 @@ const payment = (status: string, reference = 'REF-1') => ({
   quoteExpiresAt: '2026-10-16T09:00:00Z',
   receivedTtc: status === 'confirmed' ? quoteBody(2000).amount.amountTtc : 0,
   invoiceNumber: status === 'confirmed' ? 'F-2026-000001' : null,
+  customer: null,
 })
 const calls: { url?: string; method?: string; data?: unknown }[] = []
 function mockApi(routes: Record<string, unknown>) {
@@ -83,7 +92,9 @@ function mockApi(routes: Record<string, unknown>) {
     calls.push({ url: config.url, method: config.method, data: config.data })
     const body = routes[`${config.method ?? 'GET'} ${config.url}`] ??
       routes[config.url ?? ''] ??
-      (config.url === '/api/v1/owner/subscription/invoices' ? { data: [] } : undefined) ?? {
+      (config.url === '/api/v1/owner/subscription/invoices'
+        ? { items: [], page: 1, pageSize: 20, total: 0 }
+        : undefined) ?? {
         owner: {
           id: '22222222-2222-4222-8222-222222222222',
           email: 'owner@example.test',
@@ -267,8 +278,186 @@ it('shows HT, VAT and TTC from the quote before submitting, and posts the paymen
       cycle: 'monthly',
       method: 'bank_transfer',
       reference: 'REF-9',
+      customer: {
+        type: 'individual',
+        legalName: null,
+        ice: null,
+        address: null,
+        registrationNumber: null,
+        taxIdentifier: null,
+      },
     }),
   )
+  expect(screen.queryByLabelText('ICE')).not.toBeInTheDocument()
+})
+
+const trialSubscription = {
+  ...paidBase,
+  planCode: 'trial',
+  planName: 'Essai',
+  status: 'trial',
+  paidThroughAt: null,
+  cycle: null,
+  trialEndsAt: '2026-11-06T10:00:00Z',
+}
+const company = {
+  type: 'company',
+  legalName: 'Atlas SARL',
+  ice: '001234567000089',
+  address: '12 rue Atlas, Rabat',
+  registrationNumber: null,
+  taxIdentifier: null,
+}
+
+it('asks company details at checkout, checks the ICE format, and posts the company identity', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': trialSubscription,
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    'POST /api/v1/owner/subscription/payments': payment('submitted'),
+  })
+  renderPage()
+  await screen.findByTestId('quote')
+  fireEvent.change(screen.getByLabelText('Payment reference'), { target: { value: 'REF-9' } })
+  fireEvent.click(within(screen.getByTestId('checkout-customer')).getByRole('combobox'))
+  fireEvent.click(await screen.findByRole('option', { name: 'Company' }))
+  fireEvent.change(screen.getByLabelText('Legal name'), { target: { value: ' Atlas SARL ' } })
+  fireEvent.change(screen.getByLabelText('ICE'), { target: { value: '123' } })
+  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '12 rue Atlas, Rabat' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Submit payment' }))
+  expect(await screen.findByText('The ICE has 15 digits.')).toBeInTheDocument()
+  expect(calls.some((c) => c.method === 'POST' && c.url?.endsWith('/payments'))).toBe(false)
+  // The printed format, digits grouped by spaces, is accepted and sent without spaces.
+  fireEvent.change(screen.getByLabelText('ICE'), { target: { value: '001 234 567 000 089' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Submit payment' }))
+  await waitFor(() =>
+    expect(calls.find((c) => c.method === 'POST' && c.url?.endsWith('/payments'))?.data).toEqual({
+      planCode: 'essential',
+      cycle: 'monthly',
+      method: 'bank_transfer',
+      reference: 'REF-9',
+      customer: company,
+    }),
+  )
+})
+
+it('prefills the company identity saved in the billing profile', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': trialSubscription,
+    '/api/v1/owner/subscription/billing': { ...catalog, customer: company },
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+  })
+  renderPage()
+  await screen.findByTestId('quote')
+  const checkout = within(screen.getByTestId('checkout-customer'))
+  expect(checkout.getByLabelText('Legal name')).toHaveValue('Atlas SARL')
+  expect(checkout.getByLabelText('ICE')).toHaveValue('001234567000089')
+})
+
+it('shows API field errors on the company fields', async () => {
+  mockApi({
+    '/api/v1/owner/subscription': trialSubscription,
+    '/api/v1/owner/subscription/billing': { ...catalog, customer: company },
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    'POST /api/v1/owner/subscription/payments': new ApiError(
+      400,
+      'VALIDATION_ERROR',
+      'Invalid',
+      undefined,
+      { 'customer.ice': ['Invalid ICE'] },
+    ),
+  })
+  renderPage()
+  await screen.findByTestId('quote')
+  fireEvent.change(screen.getByLabelText('Payment reference'), { target: { value: 'REF-9' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Submit payment' }))
+  const message = await screen.findByText('Invalid ICE', { selector: '[data-slot="field-error"]' })
+  expect(screen.getByLabelText('ICE')).toHaveAttribute('aria-invalid', 'true')
+  expect(message).toBeInTheDocument()
+})
+
+it('refreshes the billing details card after a company checkout', async () => {
+  const routes: Record<string, unknown> = {
+    '/api/v1/owner/subscription': trialSubscription,
+    '/api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    'POST /api/v1/owner/subscription/payments': payment('submitted'),
+  }
+  mockApi(routes)
+  renderPage()
+  await screen.findByTestId('quote')
+  expect(screen.getByTestId('billing-details-type')).toHaveTextContent('Individual')
+  fireEvent.change(screen.getByLabelText('Payment reference'), { target: { value: 'REF-9' } })
+  const checkout = within(screen.getByTestId('checkout-customer'))
+  fireEvent.click(checkout.getByRole('combobox'))
+  fireEvent.click(await screen.findByRole('option', { name: 'Company' }))
+  fireEvent.change(checkout.getByLabelText('Legal name'), { target: { value: 'Atlas SARL' } })
+  fireEvent.change(checkout.getByLabelText('ICE'), { target: { value: '001234567000089' } })
+  fireEvent.change(checkout.getByLabelText('Address'), { target: { value: '12 rue Atlas, Rabat' } })
+  // The submission saves the profile; the refetched catalog returns it.
+  routes['/api/v1/owner/subscription/billing'] = { ...catalog, customer: company }
+  fireEvent.click(screen.getByRole('button', { name: 'Submit payment' }))
+  await waitFor(() =>
+    expect(screen.getByTestId('billing-details-type')).toHaveTextContent('Company'),
+  )
+})
+
+it('drops an unsent checkout identity when the billing details card saves another one', async () => {
+  const routes: Record<string, unknown> = {
+    '/api/v1/owner/subscription': trialSubscription,
+    '/api/v1/owner/subscription/billing': { ...catalog, customer: company },
+    'POST /api/v1/owner/subscription/quote': quoteBody(2000),
+    'PUT /api/v1/owner/subscription/billing': catalog,
+    'POST /api/v1/owner/subscription/payments': payment('submitted'),
+  }
+  mockApi(routes)
+  renderPage()
+  await screen.findByTestId('quote')
+  const checkout = within(screen.getByTestId('checkout-customer'))
+  // Touch the checkout draft (company), then switch the saved profile to individual in the card.
+  fireEvent.change(checkout.getByLabelText('Legal name'), { target: { value: 'Draft SARL' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Edit billing details' }))
+  const form = within(screen.getByTestId('details-customer'))
+  fireEvent.click(form.getByRole('combobox'))
+  fireEvent.click(await screen.findByRole('option', { name: 'Individual' }))
+  routes['/api/v1/owner/subscription/billing'] = catalog
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+  await waitFor(() =>
+    expect(
+      within(screen.getByTestId('checkout-customer')).queryByLabelText('Legal name'),
+    ).toBeNull(),
+  )
+  fireEvent.change(screen.getByLabelText('Payment reference'), { target: { value: 'REF-10' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Submit payment' }))
+  await waitFor(() =>
+    expect(
+      calls.find((c) => c.method === 'POST' && c.url?.endsWith('/payments'))?.data,
+    ).toMatchObject({ customer: { type: 'individual', legalName: null } }),
+  )
+})
+
+it('edits the saved billing details with a PUT and refreshes the card', async () => {
+  const routes: Record<string, unknown> = {
+    '/api/v1/owner/subscription': paidBase,
+    '/api/v1/owner/subscription/billing': catalog,
+    'PUT /api/v1/owner/subscription/billing': { ...catalog, customer: company },
+  }
+  mockApi(routes)
+  renderPage()
+  expect(await screen.findByTestId('billing-details-type')).toHaveTextContent('Individual')
+  fireEvent.click(screen.getByRole('button', { name: 'Edit billing details' }))
+  const form = within(screen.getByTestId('details-customer'))
+  fireEvent.click(form.getByRole('combobox'))
+  fireEvent.click(await screen.findByRole('option', { name: 'Company' }))
+  fireEvent.change(screen.getByLabelText('Legal name'), { target: { value: 'Atlas SARL' } })
+  fireEvent.change(screen.getByLabelText('ICE'), { target: { value: '001234567000089' } })
+  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '12 rue Atlas, Rabat' } })
+  // The server now returns the saved identity on the refetch.
+  routes['/api/v1/owner/subscription/billing'] = { ...catalog, customer: company }
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.data).toEqual(company))
+  expect(await screen.findByText('Atlas SARL')).toBeInTheDocument()
 })
 
 it('hides VAT when no tax rate is configured and labels upgrades as prorated', async () => {

@@ -70,7 +70,8 @@ END $$;
 CREATE TRIGGER billing_receipt_payment BEFORE INSERT ON billing_receipts FOR EACH ROW EXECUTE FUNCTION check_billing_receipt();
 --> statement-breakpoint
 -- At commit: an invoice equals the sum of its lines (at least one); an invoice belongs to its payment's
--- owner; a credit note corrects an invoice of the same owner, currency and tax rate, and the credited
+-- owner and repeats its quote's customer; a credit note corrects an invoice of the same owner, customer,
+-- currency and tax rate, and the credited
 -- total never exceeds that invoice.
 CREATE FUNCTION check_billing_invoice() RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, pg_temp AS $$
@@ -90,11 +91,16 @@ BEGIN
  IF inv.kind='invoice' AND NOT EXISTS (SELECT 1 FROM "public".subscription_payments p WHERE p.id=inv.payment_id AND p.owner_id=inv.owner_id AND p.currency=inv.currency) THEN
   RAISE EXCEPTION 'An invoice belongs to its payment''s owner' USING ERRCODE='23514';
  END IF;
+ IF inv.kind='invoice' AND NOT EXISTS (SELECT 1 FROM "public".subscription_payments p JOIN "public".billing_quotes q ON q.id=p.quote_id
+   WHERE p.id=inv.payment_id AND q.customer=inv.customer) THEN
+  RAISE EXCEPTION 'An invoice repeats the customer snapshot of its quote' USING ERRCODE='23514';
+ END IF;
  IF inv.kind='credit_note' THEN
   SELECT * INTO orig FROM "public".billing_invoices WHERE id=inv.corrects_invoice_id;
   IF orig.kind<>'invoice' OR orig.owner_id<>inv.owner_id OR orig.currency<>inv.currency
+   OR orig.customer<>inv.customer
    OR orig.tax_rate_basis_points IS DISTINCT FROM inv.tax_rate_basis_points THEN
-   RAISE EXCEPTION 'A credit note corrects an invoice of the same owner, currency and tax rate' USING ERRCODE='23514';
+   RAISE EXCEPTION 'A credit note corrects an invoice of the same owner, customer, currency and tax rate' USING ERRCODE='23514';
   END IF;
   IF (SELECT sum(amount_ttc)>orig.amount_ttc OR sum(amount_ht)>orig.amount_ht OR sum(tax_amount)>orig.tax_amount
       FROM "public".billing_invoices WHERE corrects_invoice_id=orig.id) THEN

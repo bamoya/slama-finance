@@ -12,6 +12,16 @@ import { AdminBillingSettingsPage } from './pages/billing-settings-page'
 
 useAdminTestLifecycle()
 
+const issuer = {
+  legalName: 'B-Finance SARL',
+  address: '1 rue du Port, Casablanca',
+  ice: '001234567000089',
+  registrationNumber: 'RC 123',
+  taxIdentifier: 'IF 456',
+  taxMention: '',
+  paymentTerms: '',
+}
+
 describe('billing settings', () => {
   it('converts percent to basis points and back', () => {
     expect(percentToBasisPoints('20')).toBe(2000)
@@ -31,12 +41,17 @@ describe('billing settings', () => {
       vatPercent: '20',
       paymentMethods: 'cash',
       paymentInstructions: '',
+      issuer,
     }
     expect(validateBilling(base).payload).toEqual({
       taxRateBasisPoints: 2000,
       paymentMethods: ['cash'],
       paymentInstructions: '',
+      issuer,
     })
+    expect(
+      validateBilling({ ...base, issuer: { ...issuer, ice: '12' } }).errors?.issuerIce,
+    ).toBeTruthy()
     expect(
       validateBilling({ ...base, vatApplicable: false }).payload?.taxRateBasisPoints,
     ).toBeNull()
@@ -56,12 +71,14 @@ describe('billing settings', () => {
     ).toBeTruthy()
   })
 
-  function setup() {
+  function setup(missing = false) {
     const settings = {
       currency: 'MAD',
       taxRateBasisPoints: null,
       paymentMethods: ['bank_transfer'],
       paymentInstructions: 'RIB 123',
+      issuer: { ...issuer, ...(missing ? { legalName: '', ice: '' } : {}) },
+      issuerMissing: missing ? ['legalName', 'ice'] : [],
     }
     mockApi((key, data) => {
       if (key === 'GET /api/v1/admin/auth/me') return { body: session }
@@ -83,6 +100,7 @@ describe('billing settings', () => {
         taxRateBasisPoints: 2000,
         paymentMethods: ['bank_transfer'],
         paymentInstructions: 'RIB 123',
+        issuer,
       }),
     )
     expect(await screen.findByRole('status')).toHaveTextContent('Billing settings saved.')
@@ -116,6 +134,41 @@ describe('billing settings', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByText(/lowercase letters/)).toBeInTheDocument()
+    expect(calls.some((call) => call.method === 'PUT')).toBe(false)
+  })
+
+  it('warns loudly when the issuer profile is incomplete', async () => {
+    setup(true)
+    const warning = await screen.findByTestId('issuer-warning')
+    expect(warning).toHaveTextContent('Missing: Legal name, ICE.')
+    expect(warning).toHaveTextContent('Invoices cannot be issued while the legal name is empty')
+  })
+
+  it('shows no warning for a complete issuer profile', async () => {
+    setup()
+    await screen.findByLabelText('Payment methods')
+    expect(screen.queryByTestId('issuer-warning')).not.toBeInTheDocument()
+  })
+
+  it('saves the edited issuer profile', async () => {
+    setup(true)
+    fireEvent.change(await screen.findByLabelText('Legal name'), {
+      target: { value: ' Slama SARL ' },
+    })
+    fireEvent.change(screen.getByLabelText('ICE'), { target: { value: '001234567000089' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(calls.find((call) => call.method === 'PUT')?.data).toMatchObject({
+        issuer: { ...issuer, legalName: 'Slama SARL' },
+      }),
+    )
+  })
+
+  it('rejects a malformed issuer ICE without calling the API', async () => {
+    setup()
+    fireEvent.change(await screen.findByLabelText('ICE'), { target: { value: '123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('The ICE has 15 digits.')).toBeInTheDocument()
     expect(calls.some((call) => call.method === 'PUT')).toBe(false)
   })
 })

@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 
 import {
   billingAllocations,
+  billingCustomerProfiles,
   billingInvoiceCounters,
   billingInvoiceLines,
   billingInvoices,
@@ -10,6 +11,7 @@ import {
 } from '../../../../../db/schema/billing-documents.js'
 import { platformUsers } from '../../../../../db/schema/organizations.js'
 import { planVersions } from '../../../../../db/schema/subscription-catalog.js'
+import { billingSettings } from '../../../../../db/schema/subscriptions.js'
 import type { Transaction } from '../../../../lib/db.js'
 
 export type QuoteRow = typeof billingQuotes.$inferSelect
@@ -26,6 +28,7 @@ export type InvoiceRecord = InvoiceRow & {
 /** Billing document facts shown beside a payment submission. */
 export type PaymentDocuments = {
   quoteExpiresAt: Date | null
+  customer: QuoteRow['customer'] | null
   receivedTtc: number
   invoiceNumber: string | null
 }
@@ -85,6 +88,39 @@ export function createBillingDocumentsRepository() {
     rows.map((r) => ({ ...r.invoice, ownerEmail: r.ownerEmail, correctsNumber: r.correctsNumber }))
 
   return {
+    /** Saved checkout identity, or undefined (individual) when never set. */
+    async customerProfile(ownerId: string, tx: Transaction) {
+      const [row] = await tx
+        .select()
+        .from(billingCustomerProfiles)
+        .where(eq(billingCustomerProfiles.ownerId, ownerId))
+      return row
+    },
+    async saveCustomerProfile(
+      values: Omit<typeof billingCustomerProfiles.$inferInsert, 'updatedAt'>,
+      tx: Transaction,
+    ) {
+      const { ownerId: _, ...set } = values
+      await tx
+        .insert(billingCustomerProfiles)
+        .values(values)
+        .onConflictDoUpdate({
+          target: billingCustomerProfiles.ownerId,
+          set: { ...set, updatedAt: sql`statement_timestamp()` },
+        })
+    },
+    async ownerEmail(ownerId: string, tx: Transaction) {
+      const [row] = await tx
+        .select({ email: platformUsers.email })
+        .from(platformUsers)
+        .where(eq(platformUsers.id, ownerId))
+      return row!.email
+    },
+    /** Issuer profile columns of the platform billing settings. */
+    async issuer(tx: Transaction) {
+      const [row] = await tx.select().from(billingSettings).where(eq(billingSettings.id, 1))
+      return row!
+    },
     async insertQuote(values: typeof billingQuotes.$inferInsert, tx: Transaction) {
       const [row] = await tx.insert(billingQuotes).values(values).returning()
       return row!
@@ -205,7 +241,11 @@ export function createBillingDocumentsRepository() {
       const [quotes, invoices] = await Promise.all([
         quoteIds.length
           ? tx
-              .select({ id: billingQuotes.id, expiresAt: billingQuotes.expiresAt })
+              .select({
+                id: billingQuotes.id,
+                expiresAt: billingQuotes.expiresAt,
+                customer: billingQuotes.customer,
+              })
               .from(billingQuotes)
               .where(inArray(billingQuotes.id, quoteIds))
           : [],
@@ -224,7 +264,7 @@ export function createBillingDocumentsRepository() {
             ),
           ),
       ])
-      const expiry = new Map(quotes.map((q) => [q.id, q.expiresAt]))
+      const quoted = new Map(quotes.map((q) => [q.id, q]))
       const issued = new Map(invoices.map((i) => [i.paymentId, i]))
       return new Map(
         payments.map((p) => {
@@ -232,7 +272,8 @@ export function createBillingDocumentsRepository() {
           return [
             p.id,
             {
-              quoteExpiresAt: p.quoteId ? (expiry.get(p.quoteId) ?? null) : null,
+              quoteExpiresAt: (p.quoteId && quoted.get(p.quoteId)?.expiresAt) || null,
+              customer: (p.quoteId && quoted.get(p.quoteId)?.customer) || null,
               receivedTtc: Number(invoice?.received ?? 0),
               invoiceNumber: invoice?.number ?? null,
             },

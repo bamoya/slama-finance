@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import type { OwnerSubscription } from '../../../../api/generated/models'
 import {
+  getGetOwnerBillingQueryKey,
   getGetOwnerSubscriptionQueryKey,
   getListOwnerSubscriptionPaymentsQueryKey,
   useGetOwnerBilling,
@@ -19,6 +20,14 @@ import { Select, SelectOption } from '../../../../components/ui/select'
 import { ApiError } from '../../../../lib/api-error'
 import { displayDate, displayDateTime } from '../../../../lib/dates'
 import { translate } from '../../../../lib/i18n'
+import {
+  customerApiErrors,
+  type CustomerErrors,
+  type CustomerForm,
+  customerToForm,
+  validateCustomer,
+} from './billing-customer'
+import { BillingCustomerFields } from './billing-customer-fields'
 import {
   cycleLabel,
   formatDh,
@@ -42,6 +51,8 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
   const [method, setMethod] = useState(''),
     [reference, setReference] = useState(''),
     [submitted, setSubmitted] = useState(false)
+  const [customerDraft, setCustomerDraft] = useState<CustomerForm | null>(null),
+    [customerErrors, setCustomerErrors] = useState<CustomerErrors>({})
   const { mutate: requestQuote, reset: resetQuote } = quote
   const validUntil = s.accessValidUntil
   const loaded = !!billing.data
@@ -53,10 +64,19 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
     // The quote is priced by the API on the selling version at this instant: ask again when access changes.
   }, [loaded, suspended, planCode, cycle, validUntil, requestQuote, resetQuote])
 
+  // A profile saved elsewhere (billing details card, another tab) replaces an unsent checkout draft,
+  // so submitting never writes the old identity back.
+  const savedCustomer = JSON.stringify(billing.data?.customer ?? null)
+  useEffect(() => {
+    setCustomerDraft(null)
+    setCustomerErrors({})
+  }, [savedCustomer])
+
   if (billing.isPending || billing.isError) return <RequestState query={billing} />
   const catalog = billing.data,
     q = quote.data,
-    methodValue = method || catalog.paymentMethods[0] || ''
+    methodValue = method || catalog.paymentMethods[0] || '',
+    customerForm = customerDraft ?? customerToForm(catalog.customer)
   // A withdrawn plan leaves the selling catalog, but the API still renews it on the purchased version while
   // coverage continues (active or past due): keep it selectable then, labelled from the subscription's pin;
   // the price comes only from the API quote. After expiry the API sells only the catalog, so it is not offered.
@@ -183,13 +203,26 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault()
+            const identity = validateCustomer(customerForm)
+            setCustomerErrors(identity.errors ?? {})
+            if (!identity.customer) return
             submit.mutate(
-              { data: { planCode, cycle, method: methodValue, reference: reference.trim() } },
+              {
+                data: {
+                  planCode,
+                  cycle,
+                  method: methodValue,
+                  reference: reference.trim(),
+                  customer: identity.customer,
+                },
+              },
               {
                 onSuccess: () => {
                   setReference('')
                   setSubmitted(true)
                   void cache.invalidateQueries({ queryKey: getGetOwnerSubscriptionQueryKey() })
+                  // The submitted identity became the saved billing profile.
+                  void cache.invalidateQueries({ queryKey: getGetOwnerBillingQueryKey() })
                   void cache.invalidateQueries({
                     queryKey: getListOwnerSubscriptionPaymentsQueryKey(),
                   })
@@ -231,6 +264,16 @@ export function PlanCheckout({ s }: { s: OwnerSubscription }) {
                 onChange={(e) => setReference(e.target.value)}
               />
             </Field>
+          </div>
+          <div className="space-y-2 border-t border-[var(--border)] pt-4">
+            <p className="font-semibold">{translate('Invoice details')}</p>
+            <BillingCustomerFields
+              idPrefix="checkout"
+              value={customerForm}
+              onChange={setCustomerDraft}
+              errors={customerErrors}
+              apiErrors={customerApiErrors(submit.error)}
+            />
           </div>
           <p className="text-sm text-[var(--muted)]">
             {translate(

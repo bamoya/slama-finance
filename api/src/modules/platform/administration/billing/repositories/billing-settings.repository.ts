@@ -13,7 +13,16 @@ export function createBillingSettingsRepository() {
     async updateSettings(
       values: Pick<
         typeof billingSettings.$inferInsert,
-        'taxRateBasisPoints' | 'paymentMethods' | 'paymentInstructions'
+        | 'taxRateBasisPoints'
+        | 'paymentMethods'
+        | 'paymentInstructions'
+        | 'issuerLegalName'
+        | 'issuerAddress'
+        | 'issuerIce'
+        | 'issuerRegistrationNumber'
+        | 'issuerTaxIdentifier'
+        | 'issuerTaxMention'
+        | 'issuerPaymentTerms'
       >,
       tx: Transaction,
     ) {

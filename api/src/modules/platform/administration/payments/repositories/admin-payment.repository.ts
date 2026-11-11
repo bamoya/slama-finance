@@ -3,6 +3,7 @@ import { asc, count, desc, eq, sql } from 'drizzle-orm'
 import { platformUsers } from '../../../../../../db/schema/organizations.js'
 import { planVersions } from '../../../../../../db/schema/subscription-catalog.js'
 import { subscriptionPayments } from '../../../../../../db/schema/subscriptions.js'
+import type { AdminPayment } from '../../../../../contracts/generated/administration/administration.schemas.js'
 import type { Transaction } from '../../../../../lib/db.js'
 
 type PaymentStatus = (typeof subscriptionPayments.$inferSelect)['status']
@@ -23,6 +24,9 @@ const paymentColumns = {
   invoiceNumber: sql<
     string | null
   >`(select i.number from billing_invoices i where i.payment_id=${subscriptionPayments.id})`,
+  customer: sql<
+    AdminPayment['customer']
+  >`(select q.customer from billing_quotes q where q.id=${subscriptionPayments.quoteId})`,
 }
 
 export function createAdminPaymentRepository() {

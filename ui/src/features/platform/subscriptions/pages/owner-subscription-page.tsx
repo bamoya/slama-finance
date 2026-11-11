@@ -14,6 +14,7 @@ import { displayDateTime } from '../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../lib/i18n'
 import { useAccessDeadline } from '../../../../lib/use-access-deadline'
 import { OwnerPortalLayout } from '../../shared/components/owner-portal-layout'
+import { BillingDetailsCard } from '../components/billing-details-card'
 import { CancellationCard } from '../components/cancellation-card'
 import { InvoiceHistory } from '../components/invoice-history'
 import { PaymentHistory } from '../components/payment-history'
@@ -157,6 +158,9 @@ export function OwnerSubscriptionPage() {
           <div className="grid grid-cols-1 gap-4 lg:col-span-2 lg:grid-cols-2">
             <PlanCheckout s={s} />
             <CancellationCard s={s} />
+          </div>
+          <div className="lg:col-span-2">
+            <BillingDetailsCard />
           </div>
           <div className="lg:col-span-2">
             <PaymentHistory />

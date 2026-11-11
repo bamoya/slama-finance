@@ -76,6 +76,9 @@ export function createAdminPaymentsService(
       })
       return payment(id)
     },
+    /** Reads the snapshot in its own short transaction and renders after it ends (no held connection). */
+    invoicePdf: (invoiceId: string, language: 'fr' | 'en') =>
+      billing.invoicePdf(invoiceId, language),
     async invoices(ownerId: string | undefined, page: number): Promise<AdminInvoicePage> {
       const { rows, total } = await withAdmin((tx) =>
         billing.invoices({ ownerId, page, pageSize: PAGE_SIZE }, tx),
