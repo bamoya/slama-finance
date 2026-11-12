@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
 import { EstimateLineSchema } from '../../../../../contracts/generated/sales/estimates.schemas.js'
@@ -362,48 +361,34 @@ export function createInvoiceService(
         const currentClientSnapshot = (
           await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
         ).snapshot
-        const year = new Intl.DateTimeFormat('en', {
-          year: 'numeric',
-          timeZone: 'Africa/Casablanca',
-        }).format(new Date())
-        let row: InvoiceRow | undefined
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const number = `FAC-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
-          try {
-            row = await tx.transaction(async (savepoint) =>
-              repo.update(
-                id,
-                {
-                  status: 'issued',
-                  dueDate: finalDate,
-                  ...(!before.templateId && defaultTemplate
-                    ? {
-                        templateId: defaultTemplate.id,
-                        appearanceSnapshot: documentAppearance(defaultTemplate, company),
-                      }
-                    : {}),
-                  locale: issuedLocale,
-                  issuerSnapshot: {
-                    ...(before.issuerSnapshot as Record<string, unknown>),
-                    locale: issuedLocale,
-                  },
-                  number,
-                  issuedAt: new Date(),
-                  updatedByActorId: actor,
-                  clientSnapshot: currentClientSnapshot,
-                  bankDetailsSnapshot: await repo.bankSnapshot(savepoint, before.bankAccountId),
-                },
-                savepoint,
-                true,
-              ),
-            )
-            break
-          } catch (error) {
-            if ((error as { code?: string }).code !== '23505') throw error
-          }
-        }
-        if (!row)
-          throw new AppError(409, 'NUMBER_COLLISION', 'Could not assign a unique invoice number.')
+        const bankDetailsSnapshot = await repo.bankSnapshot(tx, before.bankAccountId)
+        // Number and issue instant are taken last, under the series counter lock.
+        const { number, issuedAt } = await repo.nextNumber(tx, 'FAC', company.timezone)
+        const row = await repo.update(
+          id,
+          {
+            status: 'issued',
+            dueDate: finalDate,
+            ...(!before.templateId && defaultTemplate
+              ? {
+                  templateId: defaultTemplate.id,
+                  appearanceSnapshot: documentAppearance(defaultTemplate, company),
+                }
+              : {}),
+            locale: issuedLocale,
+            issuerSnapshot: {
+              ...(before.issuerSnapshot as Record<string, unknown>),
+              locale: issuedLocale,
+            },
+            number,
+            issuedAt,
+            updatedByActorId: actor,
+            clientSnapshot: currentClientSnapshot,
+            bankDetailsSnapshot,
+          },
+          tx,
+          true,
+        )
         await jobs.enqueuePdfInTransaction(
           tx,
           { documentType: 'invoice', documentId: id, sourceVersion: row.contentVersion },

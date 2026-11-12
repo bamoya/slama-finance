@@ -163,7 +163,7 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
     <div>
       <p className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
         {translate(
-          'VAT remains optional and off by default. Public document numbers use FAC / DEV / BL / PAY, the year and a random suffix—not a visible running count.',
+          'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.',
         )}
       </p>
 

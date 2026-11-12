@@ -407,6 +407,10 @@ export const french: Record<string, string> = {
   'Files preserved: {{count}}': 'Fichiers conservés : {{count}}',
   'Pending jobs stopped: {{count}}': 'Tâches en attente arrêtées : {{count}}',
   'Email records removed: {{count}}': 'Enregistrements d’e-mails supprimés : {{count}}',
+  'Issued documents and payments keep their numbers and cannot be deleted. Cancel them instead; only drafts can be deleted.':
+    'Les documents émis et les paiements conservent leur numéro et ne peuvent pas être supprimés. Annulez-les plutôt ; seuls les brouillons peuvent être supprimés.',
+  'This client has issued documents or payments. They keep their numbers and cannot be deleted: delete the client without its documents to keep them, or cancel them first.':
+    'Ce client a des documents émis ou des paiements. Ils conservent leur numéro et ne peuvent pas être supprimés : supprimez le client sans ses documents pour les conserver, ou annulez-les d’abord.',
   EMAIL_DELIVERY_IN_PROGRESS:
     'Un e-mail est en cours d’envoi. Attendez la fin de l’envoi, puis vérifiez à nouveau.',
   'Delete permanently': 'Supprimer définitivement',
@@ -912,8 +916,8 @@ export const french: Record<string, string> = {
   'VAT is off unless you choose a rate for a line.':
     'La TVA est désactivée tant qu’aucun taux n’est choisi pour une ligne.',
   'VAT rate': 'Taux de TVA',
-  'VAT remains optional and off by default. Public document numbers use FAC / DEV / BL / PAY, the year and a random suffix—not a visible running count.':
-    'La TVA reste facultative et désactivée par défaut. Les numéros publics utilisent FAC / DEV / BL / PAY, l’année et un suffixe aléatoire, sans compteur visible.',
+  'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.':
+    'La TVA reste facultative et désactivée par défaut. Les numéros se suivent sans trou pour chaque série (FAC / DEV / BL / PAY) et chaque année. Confirmez les exigences de numérotation exactes avec votre expert-comptable.',
   'VAT:': 'TVA :',
   'Valid until': 'Valable jusqu’au',
   Variants: 'Variantes',
@@ -1363,8 +1367,8 @@ export const french: Record<string, string> = {
     'Seuls les bons indépendants et livrés peuvent être facturés.',
   'Only schedules without any runs can be deleted. History is retained by archiving.':
     'Seules les planifications sans exécution peuvent être supprimées. L’archivage conserve l’historique.',
-  'Uses current company and client details and the selected template. The chosen template is saved on this document. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.':
-    'Utilise les coordonnées actuelles de l’entreprise et du client et le modèle sélectionné. Ce modèle sera enregistré sur le document. Les données financières restent inchangées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
+  'Keeps the company and client details recorded when the document was issued and applies the selected template. The chosen template is saved on this document. Financial details remain unchanged. The previous PDF stays available until the replacement is ready.':
+    'Conserve les coordonnées de l’entreprise et du client enregistrées à l’émission du document et applique le modèle sélectionné. Ce modèle sera enregistré sur le document. Les données financières restent inchangées. Le PDF précédent reste disponible jusqu’à la génération du nouveau.',
   'Open documents': 'Documents ouverts',
   'Open draft revision': 'Ouvrir la révision en brouillon',
   'Open full list': 'Ouvrir la liste complète',

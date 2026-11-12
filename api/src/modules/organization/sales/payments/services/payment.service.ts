@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
 import {
@@ -160,10 +159,6 @@ export function createPaymentService(
         const balance = await paymentBalanceForInvoice(tx, invoice.id)
         if (!balance || new FinancialDecimal(input.amount).gt(balance.availableBalance))
           throw new AppError(409, 'OVERPAYMENT', 'Payment exceeds the available invoice balance.')
-        const year = new Intl.DateTimeFormat('en', {
-          year: 'numeric',
-          timeZone: 'Africa/Casablanca',
-        }).format(new Date())
         const paidAtRecording = new FinancialDecimal(balance.paidAmount)
           .plus(input.status === 'confirmed' ? input.amount : 0)
           .toFixed(2)
@@ -183,52 +178,49 @@ export function createPaymentService(
             .minus(paidAtRecording)
             .toFixed(2),
         })
-        let row: PaymentRow | undefined
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const number = `PAY-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
-          try {
-            row = await tx.transaction(async (savepoint) =>
-              repo.insert(
-                {
-                  number,
-                  operationId: input.operationId,
-                  creationRequest: input,
-                  receiptSnapshot,
-                  invoiceId: invoice.id,
-                  amount: new FinancialDecimal(input.amount).toFixed(2),
-                  currency: input.currency,
-                  method: input.method,
-                  status: input.status,
-                  paymentDate: input.paymentDate,
-                  collectedOn: input.collectedOn,
-                  bankAccountId: input.bankAccountId,
-                  bankAccountSnapshot: await repo.bankSnapshot(savepoint, input.bankAccountId),
-                  reference: input.reference?.trim() || null,
-                  chequeBank: input.chequeBank?.trim() || null,
-                  chequeNumber: input.chequeNumber?.trim() || null,
-                  confirmedAt: input.status === 'confirmed' ? new Date() : null,
-                  createdByActorId: actor,
-                  updatedByActorId: actor,
-                },
-                savepoint,
-              ),
-            )
-            break
-          } catch (error) {
-            const databaseError = error as {
-              code?: string
-              constraint_name?: string
-              constraint?: string
-            }
-            if (databaseError.code !== '23505') throw error
-            const constraint = databaseError.constraint_name ?? databaseError.constraint
-            if (constraint === 'payments_cheque_identity_idx')
-              throw new AppError(409, 'DUPLICATE_CHEQUE', 'This cheque is already recorded.')
-            if (constraint !== 'payments_number_unique') throw error
+        const bankAccountSnapshot = await repo.bankSnapshot(tx, input.bankAccountId)
+        // Number is taken last, under the series counter lock (stored as PAY, displayed as REC).
+        const { number } = await repo.nextNumber(tx, 'PAY', await repo.timezone(tx))
+        let row: PaymentRow
+        try {
+          row = await repo.insert(
+            {
+              number,
+              operationId: input.operationId,
+              creationRequest: input,
+              receiptSnapshot,
+              invoiceId: invoice.id,
+              amount: new FinancialDecimal(input.amount).toFixed(2),
+              currency: input.currency,
+              method: input.method,
+              status: input.status,
+              paymentDate: input.paymentDate,
+              collectedOn: input.collectedOn,
+              bankAccountId: input.bankAccountId,
+              bankAccountSnapshot,
+              reference: input.reference?.trim() || null,
+              chequeBank: input.chequeBank?.trim() || null,
+              chequeNumber: input.chequeNumber?.trim() || null,
+              confirmedAt: input.status === 'confirmed' ? new Date() : null,
+              createdByActorId: actor,
+              updatedByActorId: actor,
+            },
+            tx,
+          )
+        } catch (error) {
+          const databaseError = error as {
+            code?: string
+            constraint_name?: string
+            constraint?: string
           }
+          if (
+            databaseError.code === '23505' &&
+            (databaseError.constraint_name ?? databaseError.constraint) ===
+              'payments_cheque_identity_idx'
+          )
+            throw new AppError(409, 'DUPLICATE_CHEQUE', 'This cheque is already recorded.')
+          throw error
         }
-        if (!row)
-          throw new AppError(409, 'NUMBER_COLLISION', 'Could not assign a unique payment number.')
         const result = await output(row, tx)
         await repo.audit(tx, actor, 'create', row.id, null, result)
         if (row.status === 'confirmed') await callbacks?.paymentConfirmed(tx, row.id)
@@ -360,14 +352,12 @@ export function createPaymentService(
         await repo.invoice(initial.invoiceId, tx)
         const before = await repo.one(id, tx, true)
         assertVersion(before.version, expectedVersion)
-        if (before.receiptIssuedAt)
-          throw new AppError(
-            409,
-            'RECEIPT_ISSUED',
-            'A receipt has been issued. Cancel this payment instead of deleting it.',
-          )
-        await repo.delete(id, tx)
-        await repo.audit(tx, actor, 'delete', id, before, null)
+        // Payments are numbered when recorded, so deleting one would leave a gap in the receipt series.
+        throw new AppError(
+          409,
+          'PAYMENT_NOT_DELETABLE',
+          'Payments cannot be deleted because receipt numbers must stay gap-free. Cancel this payment instead.',
+        )
       })
     },
   }

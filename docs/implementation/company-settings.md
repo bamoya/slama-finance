@@ -43,7 +43,7 @@ Mutable records include version, creation/update timestamps and actor FKs. Updat
 
 Archiving a template clears the company default in the same transaction, increments the company version, and audits both changes. Archived records cannot be edited or selected as new defaults, but can still be read for historical references. Archived template images stay referenced. Replacing/removing the final reference schedules the old media for cleanup after 24 hours; there is no immediate file deletion. No financial documents are modified.
 
-VAT remains optional/off by default: no company toggle silently enables it. Number issuance (FAC/DEV/BL/PAY + year + random suffix) remains owned by the upcoming sales/payment modules, not a mutable sequential company counter.
+VAT remains optional/off by default: no company toggle silently enables it. Number issuance (FAC/DEV/BL/PAY + year + gap-free sequence) is owned by the sales/payment modules through the `document_number_counters` table, not by a mutable company setting.
 
 ## Private images and preview
 

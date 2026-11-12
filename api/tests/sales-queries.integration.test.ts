@@ -173,7 +173,7 @@ describe('Sales search and client overview', () => {
     })
     expect(delivered.statusCode, delivered.body).toBe(200)
     expect(delivered.json()).toMatchObject({ status: 'delivered', receivedByName: null })
-    expect(delivered.json().number).toMatch(/^BL-\d{4}-\d{10}$/)
+    expect(delivered.json().number).toMatch(/^BL-\d{4}-\d{6,}$/)
     const [stored] =
       await fixture.client`select delivered_at from delivery_notes where id=${draft.id}`
     expect(stored!.delivered_at).toBeTruthy()

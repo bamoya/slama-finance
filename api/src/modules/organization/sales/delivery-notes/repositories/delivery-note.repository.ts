@@ -19,6 +19,7 @@ import type { Database, Transaction } from '../../../../../lib/db.js'
 import { AppError } from '../../../../../lib/errors.js'
 import { documentClientNameSql } from '../../shared/repositories/document-client.js'
 import { snapshotClientName } from '../../shared/repositories/document-client.js'
+import { nextDocumentNumber } from '../../shared/repositories/document-number.js'
 
 export type DeliveryNoteRow = typeof deliveryNotes.$inferSelect
 export type DeliveryLineRow = typeof deliveryNoteLines.$inferSelect
@@ -28,6 +29,7 @@ const clientNameSql = documentClientNameSql(deliveryNotes.clientSnapshot)
 export function createDeliveryNoteRepository(database: () => Database) {
   return {
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
+    nextNumber: nextDocumentNumber,
     authorize: requireActorPermission,
     async one(id: string, tx: Database | Transaction = database(), lock = false) {
       const query = tx.select().from(deliveryNotes).where(eq(deliveryNotes.id, id))

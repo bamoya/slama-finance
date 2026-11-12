@@ -10,6 +10,7 @@ import { assertVersion } from '../../../../../lib/validation.js'
 import type { createArtifactSupport } from '../../../../../support/artifacts/index.js'
 import type { createInvoiceRepository } from '../../invoices/repositories/invoice.repository.js'
 import { createDeletionRepository } from '../repositories/deletion.repository.js'
+import { hasNumberedDocuments, NUMBERED_DOCUMENTS_BLOCKER } from './numbered-documents.js'
 
 export function createSalesDeletionService(
   invoices: ReturnType<typeof createInvoiceRepository>,
@@ -73,11 +74,12 @@ export function createSalesDeletionService(
           [...state.references.files, ...state.references.attachments].map((row) => row.objectKey),
         )
         const keys = new Set([...state.files, ...state.attachments].map((row) => row.objectKey))
-        const blockers: SalesDeletionImpact['blockers'] = state.messages.some(
-          (row) => row.status === 'sending',
-        )
-          ? ['EMAIL_DELIVERY_IN_PROGRESS']
-          : []
+        const blockers: SalesDeletionImpact['blockers'] = [
+          ...(state.messages.some((row) => row.status === 'sending')
+            ? (['EMAIL_DELIVERY_IN_PROGRESS'] as const)
+            : []),
+          ...(hasNumberedDocuments(state.removed) ? ([NUMBERED_DOCUMENTS_BLOCKER] as const) : []),
+        ]
         return {
           ...confirmation.issue(impact),
           groups,
@@ -101,6 +103,12 @@ export function createSalesDeletionService(
       const files = await invoices.transaction(async (tx) => {
         const impact = await graph(input, actor, tx)
         confirmation.assert(input.token, impact)
+        if (hasNumberedDocuments(impact.state.removed))
+          throw new AppError(
+            409,
+            NUMBERED_DOCUMENTS_BLOCKER,
+            'Issued documents and payments cannot be deleted because numbers must stay gap-free. Cancel them instead.',
+          )
         if (impact.state.messages.some((row) => row.status === 'sending'))
           throw new AppError(
             409,

@@ -159,8 +159,8 @@ creating the baseline; do not silently rely on untracked migration history.
 
 Manual exports are downloads, not emails or scheduled report runs. Report snapshots
 are immutable, dashboard/analysis live. VAT is opt-in. Public numbers use prefix,
-company-local assignment year and a random 10-digit suffix. Confirm statutory
-numbering with the accountant before launch; exact retention periods, VAT choices,
+company-local assignment year and a gap-free six-digit sequence per series and
+year. Confirm the statutory numbering format with the accountant before launch; exact retention periods, VAT choices,
 rounding examples and final printed wording also require approval. Proposed route
 and permission names in this plan are implementation specifications, not claims
 that these endpoints already exist.

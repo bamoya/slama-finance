@@ -51,7 +51,7 @@ components:
           type: string
           enum: [saved, latest]
           deprecated: true
-          description: Ignored for compatibility. Regeneration uses current company/client details and the selected or company default template, preserving financial data.
+          description: Ignored for compatibility. Regeneration renders the issuer and client identity stored on the document when it was issued, with the selected or company default template, preserving financial data.
     RegeneratedDocumentPdf:
       type: object
       additionalProperties: false

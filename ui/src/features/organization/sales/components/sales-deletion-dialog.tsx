@@ -26,6 +26,8 @@ registerTranslations('salesDeletion', {
   jobs: 'Pending or running preparation jobs stopped: {{count}}',
   emails: 'Pending emails stopped: {{count}}',
   sending: 'An email is being sent. Wait for delivery to finish, then review again.',
+  numbered:
+    'Issued documents and payments keep their numbers and cannot be deleted. Cancel them instead; only drafts can be deleted.',
   unnamed: 'Unnumbered draft',
 })
 
@@ -96,9 +98,14 @@ export function SalesDeletionDialog({
               {!!impact.retainedFiles && <p>{t('retained', { count: impact.retainedFiles })}</p>}
               <p>{t('jobs', { count: impact.jobs })}</p>
               <p>{t('emails', { count: impact.emails })}</p>
-              {!!impact.blockers.length && (
+              {impact.blockers.includes('EMAIL_DELIVERY_IN_PROGRESS') && (
                 <p role="alert" className="text-[var(--error-text)]">
                   {t('sending')}
+                </p>
+              )}
+              {impact.blockers.includes('NUMBERED_DOCUMENTS') && (
+                <p role="alert" className="text-[var(--error-text)]">
+                  {t('numbered')}
                 </p>
               )}
             </div>

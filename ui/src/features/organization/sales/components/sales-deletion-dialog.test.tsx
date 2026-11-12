@@ -88,6 +88,13 @@ describe('shared sales deletion dialog', () => {
     expect(complete).not.toHaveBeenCalled()
     expect(apiRequest).toHaveBeenCalledTimes(2)
   })
+  it('explains that numbered documents cannot be deleted and keeps confirmation disabled', async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({ ...impact, blockers: ['NUMBERED_DOCUMENTS'] })
+    setup()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('cannot be deleted')
+    expect(button()).toBeDisabled()
+  })
   it('sends the signed selection once and requires fresh review after a stale confirmation', async () => {
     vi.mocked(apiRequest)
       .mockResolvedValueOnce(impact)

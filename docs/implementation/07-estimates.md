@@ -81,6 +81,6 @@ when a background query refreshes; show a conflict and explicit reload choice.
 
 Test VAT off/zero/positive, line ordering, grams conversion, server total tampering,
 concurrent edits/issue, archived selections, missing client, expiry and immutable
-issued snapshots. Test random-number collision retry and PDF product-name rendering.
+issued snapshots. Test gap-free numbering under concurrency and PDF product-name rendering.
 UI verifies draft→issue→download and guarded edit/actions. Exit: independent
 estimate lifecycle working without invoice-table coupling.

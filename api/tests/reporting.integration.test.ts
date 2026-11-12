@@ -54,6 +54,9 @@ describe('Live and frozen reporting', () => {
     failDeletion = false
     objects.clear()
     fixture = await isolatedDatabase()
+    // These fixtures seed reporting data directly, adding lines to already issued invoices.
+    await fixture.client`alter table invoice_lines disable trigger invoice_lines_issued_guard`
+    await fixture.client`alter table delivery_note_lines disable trigger delivery_note_lines_issued_guard`
     hash = await createPasswordService().hash('reporting-password-123')
     await fixture.client`update users set password_hash=${hash} where id=${testUserId}`
     await fixture.client`insert into user_roles(user_id,role_id) select ${testUserId},id from roles where key='admin'`
@@ -544,7 +547,12 @@ describe('Live and frozen reporting', () => {
       JSON.stringify(await fixture.client`select status,error_code from report_runs`),
     ).toBeTruthy()
     const snapshot = run!.data_snapshot
-    await fixture.client`update payments set amount='40.00' where number='PAY-REPORT-1'`
+    // Financial edit behind the guard, to prove frozen report figures stay unchanged.
+    await fixture.client.begin(async (tx) => {
+      await tx`alter table payments disable trigger payments_guard`
+      await tx`update payments set amount='40.00' where number='PAY-REPORT-1'`
+      await tx`alter table payments enable trigger payments_guard`
+    })
     const saved = await get(`/api/v1/report-runs/${run!.id}`)
     expect(saved.statusCode, saved.body).toBe(200)
     expect(saved.json().dataSnapshot).toEqual(snapshot)
@@ -754,7 +762,12 @@ describe('Live and frozen reporting', () => {
       dataSnapshot: before.dataSnapshot,
       artifacts: [],
     })
-    await fixture.client`update invoices set total='999.00',subtotal='979.00' where id=${invoiceId}`
+    // Financial edit behind the guard, to prove frozen report figures stay unchanged.
+    await fixture.client.begin(async (tx) => {
+      await tx`alter table invoices disable trigger invoices_issued_guard`
+      await tx`update invoices set total='999.00',subtotal='979.00' where id=${invoiceId}`
+      await tx`alter table invoices enable trigger invoices_issued_guard`
+    })
     const restored = await post(`/api/v1/report-runs/${run.id}/regenerate-files`, {})
     expect(restored.statusCode, restored.body).toBe(200)
     expect(restored.json().dataSnapshot).toEqual(before.dataSnapshot)

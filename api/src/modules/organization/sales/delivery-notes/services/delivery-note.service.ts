@@ -1,5 +1,3 @@
-import { randomInt } from 'node:crypto'
-
 import {
   type DeliveryNoteInput,
   DeliveryNoteLineSchema,
@@ -306,39 +304,24 @@ export function createDeliveryNoteService(
           before.localeOverride,
           before.invoiceId ? issuer.locale : company.locale,
         )
-        const year = new Intl.DateTimeFormat('en', {
-          year: 'numeric',
-          timeZone: 'Africa/Casablanca',
-        }).format(new Date())
-        let row: DeliveryNoteRow | undefined
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const number = `BL-${year}-${randomInt(0, 10_000_000_000).toString().padStart(10, '0')}`
-          try {
-            row = await tx.transaction((savepoint) =>
-              repo.update(
-                id,
-                {
-                  status: 'delivered',
-                  deliveredAt: new Date(),
-                  receivedByName: receivedByName?.trim() || null,
-                  issuerSnapshot: { ...issuer, locale },
-                  number,
-                  updatedByActorId: actor,
-                  clientSnapshot: currentClientSnapshot,
-                  templateId: template?.id ?? null,
-                  appearanceSnapshot: documentAppearance(template, company),
-                },
-                savepoint,
-                true,
-              ),
-            )
-            break
-          } catch (error) {
-            if ((error as { code?: string }).code !== '23505') throw error
-          }
-        }
-        if (!row)
-          throw new AppError(409, 'NUMBER_COLLISION', 'Could not assign a unique delivery number.')
+        // Number and delivery instant are taken last, under the series counter lock.
+        const { number, issuedAt } = await repo.nextNumber(tx, 'BL', company.timezone)
+        const row = await repo.update(
+          id,
+          {
+            status: 'delivered',
+            deliveredAt: issuedAt,
+            receivedByName: receivedByName?.trim() || null,
+            issuerSnapshot: { ...issuer, locale },
+            number,
+            updatedByActorId: actor,
+            clientSnapshot: currentClientSnapshot,
+            templateId: template?.id ?? null,
+            appearanceSnapshot: documentAppearance(template, company),
+          },
+          tx,
+          true,
+        )
         await jobs.enqueuePdfInTransaction(
           tx,
           { documentType: 'delivery_note', documentId: id, sourceVersion: row.contentVersion },

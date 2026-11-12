@@ -82,7 +82,8 @@ export function SalesBulkActions({
         />
       ),
     })
-  if (can(`${resource}.delete`))
+  // Numbered documents and payments are cancelled, never deleted; only drafts can be removed.
+  if (resource !== 'payments' && can(`${resource}.delete`))
     actions.push({
       key: 'delete',
       label: t('delete'),

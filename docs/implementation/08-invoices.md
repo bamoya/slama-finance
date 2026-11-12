@@ -42,8 +42,12 @@ expectedVersion; enforce draft/issued/sent/cancelled transitions explicitly.
 Keep balance badges separate from lifecycle. Payment-aware cancellation rules are
 added in 10; fulfillment/allocation rules in 09. Do not release to production
 until these dependent checks exist. Downloads resolve immutable content version.
-Shared number helper assigns FAC references; accountant numbering approval is a
-release gate, not something random generation tests establish.
+The shared number helper assigns gap-free sequential FAC references under the
+series counter lock; accountant validation of the numbering format remains a
+release gate that concurrency tests do not replace.
+Issued (numbered) invoices, estimates, delivery notes and payments are never hard-deleted
+(database triggers plus the `NUMBERED_DOCUMENTS` blocker in the deletion preview); only drafts
+are deleted and cancellation is the correction path. See `docs/database-schema-design.md`.
 
 ## UI/state
 

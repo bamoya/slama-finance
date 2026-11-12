@@ -1,5 +1,5 @@
 {
-  "id": "2b4110cf-b8f0-4d42-80ff-0adab033d482",
+  "id": "5342dbb8-decb-4fa6-aff7-58eef1543ffa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4931,6 +4931,87 @@
         "delivery_notes_prepared_data": {
           "name": "delivery_notes_prepared_data",
           "value": "(\"delivery_notes\".\"status\" = 'draft' and \"delivery_notes\".\"number\" is null) or (\"delivery_notes\".\"status\" = 'delivered' and \"delivery_notes\".\"number\" is not null) or \"delivery_notes\".\"status\" = 'cancelled'"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.document_number_counters": {
+      "name": "document_number_counters",
+      "schema": "",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "nullif(current_setting('app.organization_id', true), '')::uuid"
+        },
+        "series": {
+          "name": "series",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last": {
+          "name": "last",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "document_number_counters_organization_id_organizations_id_fk": {
+          "name": "document_number_counters_organization_id_organizations_id_fk",
+          "tableFrom": "document_number_counters",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "document_number_counters_organization_id_series_year_pk": {
+          "name": "document_number_counters_organization_id_series_year_pk",
+          "columns": [
+            "organization_id",
+            "series",
+            "year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "tenant_isolation": {
+          "name": "tenant_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "\"document_number_counters\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid",
+          "withCheck": "\"document_number_counters\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {
+        "document_number_counter_last": {
+          "name": "document_number_counter_last",
+          "value": "\"document_number_counters\".\"last\" > 0"
+        },
+        "document_number_counter_series": {
+          "name": "document_number_counter_series",
+          "value": "\"document_number_counters\".\"series\" in ('FAC','DEV','BL','PAY')"
         }
       },
       "isRLSEnabled": true

@@ -131,6 +131,8 @@ export function runtimeGrantStatements(role, schema = 'public') {
       ],
     ],
     ['SELECT, INSERT, UPDATE', ['billing_invoice_counters']],
+    // Organization document numbering: advanced by one inside the issuing transaction (trigger-guarded).
+    ['SELECT, INSERT, UPDATE', ['document_number_counters']],
     // Owner billing identity prefilled at checkout (quotes snapshot it; never deleted).
     ['SELECT, INSERT, UPDATE', ['billing_customer_profiles']],
     ['SELECT, INSERT, UPDATE', ['platform_admins', 'platform_admin_sessions']],

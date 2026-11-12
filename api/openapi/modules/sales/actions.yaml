@@ -5,7 +5,7 @@ paths:
     post:
       operationId: previewSalesDeletion
       tags: [sales]
-      description: Compute single or bulk permanent deletion impact. Requires Read/Delete on every removed resource and Read/Update on detached resources. No partial skipping.
+      description: Compute single or bulk permanent deletion impact. Only unnumbered drafts can be deleted; any numbered document (issued estimate, invoice or delivery note, or any payment) in the graph adds the NUMBERED_DOCUMENTS blocker, because numbers must stay gap-free, so cancel such documents instead. Requires Read/Delete on every removed resource and Read/Update on detached resources. No partial skipping.
       requestBody:
         required: true
         content:
@@ -26,7 +26,7 @@ paths:
     post:
       operationId: confirmSalesDeletion
       tags: [sales]
-      description: Revalidate the signed preview under ownership locks, then delete the whole graph atomically. File removal is attempted after commit with durable orphan-maintenance fallback. Never recalls sent emails or reverses real transfers.
+      description: Refused with 409 NUMBERED_DOCUMENTS when the graph contains a numbered document. Revalidate the signed preview under ownership locks, then delete the whole graph atomically. File removal is attempted after commit with durable orphan-maintenance fallback. Never recalls sent emails or reverses real transfers.
       requestBody:
         required: true
         content:
@@ -127,7 +127,7 @@ components:
           items: { type: string }
         blockers:
           type: array
-          items: { type: string, enum: [EMAIL_DELIVERY_IN_PROGRESS] }
+          items: { type: string, enum: [EMAIL_DELIVERY_IN_PROGRESS, NUMBERED_DOCUMENTS] }
     ConfirmSalesDeletion:
       type: object
       additionalProperties: false

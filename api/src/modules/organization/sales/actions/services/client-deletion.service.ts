@@ -7,6 +7,7 @@ import type { createInvoiceRepository } from '../../invoices/repositories/invoic
 import { clientSnapshot } from '../../shared/services/client-snapshot.js'
 import { createDeletionRepository } from '../repositories/deletion.repository.js'
 import type { SalesClientDeletionApi } from '../types/deletion.types.js'
+import { hasNumberedDocuments, NUMBERED_DOCUMENTS_BLOCKER } from './numbered-documents.js'
 
 export function createSalesClientDeletionService(
   authority: ReturnType<typeof createInvoiceRepository>,
@@ -62,9 +63,12 @@ export function createSalesClientDeletionService(
       groups,
       requiredPermissions: [...new Set(requiredPermissions)].sort(),
       media: 0,
-      blockers: state.messages.some((row) => row.status === 'sending')
-        ? ['EMAIL_DELIVERY_IN_PROGRESS']
-        : [],
+      blockers: [
+        ...(state.messages.some((row) => row.status === 'sending')
+          ? ['EMAIL_DELIVERY_IN_PROGRESS']
+          : []),
+        ...(cascade && hasNumberedDocuments(state.removed) ? [NUMBERED_DOCUMENTS_BLOCKER] : []),
+      ],
       files: [...keys].filter((key) => !retainedKeys.has(key)).length,
       retainedFiles: new Set([
         ...[...keys].filter((key) => retainedKeys.has(key)),
@@ -96,6 +100,12 @@ export function createSalesClientDeletionService(
       const value = await graph(tx, ids, cascade, actor)
       if (value.fingerprint !== fingerprint)
         throw new AppError(409, 'IMPACT_CHANGED', 'The impact changed or expired. Review it again.')
+      if (value.impact.blockers.includes(NUMBERED_DOCUMENTS_BLOCKER))
+        throw new AppError(
+          409,
+          NUMBERED_DOCUMENTS_BLOCKER,
+          'Issued documents and payments cannot be deleted because numbers must stay gap-free. Detach them or cancel them instead.',
+        )
       if (value.impact.blockers.length)
         throw new AppError(
           409,

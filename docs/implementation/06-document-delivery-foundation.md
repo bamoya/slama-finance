@@ -122,9 +122,9 @@ uploads checks references/grace period. File deletion checks both artifact and
 attachment tables. Rendering, signed URLs and email credentials never become
 business-table secrets. Files/PDF buffers are private, size-bounded and redacted.
 
-Provide random public-number helper now: FAC/DEV/BL/PAY + assignment year + random
-10-digit suffix, unique collision-safe retry in business transaction. It is not
-a public security token or claim of legal compliance.
+Provide the public-number helper: FAC/DEV/BL/PAY + assignment year + gap-free
+six-digit sequence from the per-organization counter, allocated inside the business
+transaction. It is not a public security token or claim of legal compliance.
 
 ## UI and state
 

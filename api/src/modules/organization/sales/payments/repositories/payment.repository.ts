@@ -11,6 +11,7 @@ import { AppError } from '../../../../../lib/errors.js'
 import { companyDate, FinancialDecimal } from '../../../../../lib/validation.js'
 import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
 import { documentClientNameSql } from '../../shared/repositories/document-client.js'
+import { nextDocumentNumber } from '../../shared/repositories/document-number.js'
 
 export type PaymentRow = typeof payments.$inferSelect
 type Db = Database | Transaction
@@ -88,6 +89,7 @@ export function createPaymentRepository(database: () => Database) {
   return {
     bankSnapshot: documentBankSnapshot,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
+    nextNumber: nextDocumentNumber,
     authorize: requireActorPermission,
     async lockOperation(operationId: string, tx: Transaction) {
       await tx.execute(
@@ -158,9 +160,6 @@ export function createPaymentRepository(database: () => Database) {
         .where(eq(payments.id, id))
         .returning()
         .then((rows) => rows[0]!)
-    },
-    delete(id: string, tx: Transaction) {
-      return tx.delete(payments).where(eq(payments.id, id))
     },
     async receiptMetadata(
       id: string,

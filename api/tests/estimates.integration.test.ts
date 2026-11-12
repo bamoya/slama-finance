@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 
 import { PDFDict, PDFDocument, PDFName } from 'pdf-lib'
 import sharp from 'sharp'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
@@ -11,7 +11,7 @@ import { createPasswordService } from '../src/modules/organization/identity/auth
 import { createMediaModule } from '../src/modules/organization/media/index.js'
 import { createEstimateRepository } from '../src/modules/organization/sales/estimates/repositories/estimate.repository.js'
 import { createSalesModule } from '../src/modules/organization/sales/index.js'
-import { createFreshDocumentParties } from '../src/modules/organization/sales/shared/repositories/fresh-document-parties.js'
+import * as salesPdf from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
 import { renderSalesPdf } from '../src/modules/organization/sales/shared/services/sales-pdf.service.js'
 import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
 
@@ -44,29 +44,26 @@ describe('Estimates lifecycle', () => {
   let storage: ObjectStorage
   let objects: Map<string, Uint8Array>
 
-  it('refreshes printable company/client identity without rewriting issued data, including detached fallback', async () => {
+  it('regenerates PDFs from the stored issuer and client snapshots, not current company or client rows', async () => {
     const invoice = await cancellableInvoice()
     const [before] = await fixture.client`select * from invoices where id=${invoice.id}`
     await fixture.client`update company_settings set legal_name='Fresh company',phone='06 11 22 33 44 05 22 33 44 55' where id=1`
     await fixture.client`update clients set legal_name='Fresh client',phone='06 55 44 33 22' where id=${clientId}`
-    const refresh = createFreshDocumentParties(() => fixture.db)
-    const parties = await refresh(clientId, before!.issuer_snapshot, before!.client_snapshot)
-    expect(parties.issuerSnapshot).toMatchObject({
-      legalName: 'Fresh company',
-      phone: '06 11 22 33 44 05 22 33 44 55',
-    })
-    expect(parties.clientSnapshot).toMatchObject({
-      legalName: 'Fresh client',
-      phone: '06 55 44 33 22',
-    })
+    const render = vi.spyOn(salesPdf, 'renderSalesPdf')
     const regenerated = await post(`/api/v1/documents/invoice/${invoice.id}/regenerate-pdf`, {})
     expect(regenerated.statusCode, regenerated.body).toBe(200)
+    const rendered = render.mock.calls.at(-1)![0] as {
+      issuerSnapshot: { legalName: string }
+      clientSnapshot: { legalName: string }
+    }
+    render.mockRestore()
+    expect(rendered.issuerSnapshot.legalName).toBe('Slama Agricole')
+    expect(rendered.clientSnapshot.legalName).toBe('Atlas SARL')
+    expect(rendered.issuerSnapshot).toEqual(before!.issuer_snapshot)
+    expect(rendered.clientSnapshot).toEqual(before!.client_snapshot)
     expect(
       businessFields((await fixture.client`select * from invoices where id=${invoice.id}`)[0]!),
     ).toEqual(businessFields(before!))
-    expect(
-      (await refresh(null, before!.issuer_snapshot, before!.client_snapshot)).clientSnapshot,
-    ).toEqual(before!.client_snapshot)
   })
   beforeEach(async () => {
     fixture = await isolatedDatabase()
@@ -376,7 +373,12 @@ describe('Estimates lifecycle', () => {
     const first = await cancellableInvoice()
     const second = await cancellableInvoice()
     const payment = await cancellationPayment(first.id)
-    await fixture.client`update invoices set notes='force rollback' where id=${second.id}`
+    // Forge a failing batch member: bypass the issued-document guard for this fixture edit only.
+    await fixture.client.begin(async (tx) => {
+      await tx`alter table invoices disable trigger invoices_issued_guard`
+      await tx`update invoices set notes='force rollback' where id=${second.id}`
+      await tx`alter table invoices enable trigger invoices_issued_guard`
+    })
     await fixture.client
       .unsafe(`create function reject_test_cancellation() returns trigger language plpgsql as $$
       begin
@@ -1051,7 +1053,7 @@ describe('Estimates lifecycle', () => {
     const issue = await post(`/api/v1/estimates/${id}/issue`, { expectedVersion: 1 })
     expect(issue.statusCode).toBe(200)
     expect(issue.json()).toMatchObject({ status: 'issued', version: 2, contentVersion: 2 })
-    expect(issue.json().number).toMatch(/^DEV-\d{4}-\d{10}$/)
+    expect(issue.json().number).toMatch(/^DEV-\d{4}-\d{6,}$/)
     expect((await post(`/api/v1/estimates/${id}/issue`, { expectedVersion: 1 })).statusCode).toBe(
       409,
     )
@@ -1237,7 +1239,7 @@ describe('Estimates lifecycle', () => {
     expect(linked.json()).toHaveLength(2)
     const issue = await post(`/api/v1/invoices/${first.json().id}/issue`, { expectedVersion: 1 })
     expect(issue.statusCode, JSON.stringify(issue.json())).toBe(200)
-    expect(issue.json().number).toMatch(/^FAC-\d{4}-\d{10}$/)
+    expect(issue.json().number).toMatch(/^FAC-\d{4}-\d{6,}$/)
     const beforeInvoice = (
       await app.inject({ url: `/api/v1/invoices/${first.json().id}`, cookies })
     ).json()
@@ -1404,7 +1406,7 @@ describe('Estimates lifecycle', () => {
       expectedVersion: 1,
     })
     expect(prepared.statusCode, JSON.stringify(prepared.json())).toBe(200)
-    expect(prepared.json().number).toMatch(/^BL-\d{4}-\d{10}$/)
+    expect(prepared.json().number).toMatch(/^BL-\d{4}-\d{6,}$/)
     const worker = createSalesModule(
       () => fixture.db,
       storage,

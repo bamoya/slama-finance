@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'wouter'
 
 import type { Payment } from '../../../../../api/generated/models'
 import { PaymentVersionSchema } from '../../../../../api/generated/schemas/sales/payments.schemas'
@@ -10,7 +9,6 @@ import { MoreActions } from '../../../../../components/management/more-actions'
 import { useUiLanguage } from '../../../../../lib/i18n'
 import { Can, useAuthorization } from '../../../identity'
 import { SalesCancellationDialog } from '../../components/sales-cancellation-dialog'
-import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
 import { refreshPayments, usePaymentActions } from '../queries'
 import { PaymentConfirmationDialog } from './payment-confirmation-dialog'
 
@@ -19,14 +17,12 @@ export function PaymentActions({ payment }: { payment: Payment }) {
 
   const { t } = useTranslation('sales')
   const { can } = useAuthorization()
-  const [, navigate] = useLocation()
   const cache = useQueryClient()
   const actions = usePaymentActions()
   const canConfirm = payment.status === 'pending' && can('payments.update')
   const canCancel = payment.status !== 'cancelled' && can('payments.update')
   const canRestore = payment.status === 'cancelled' && can('payments.update')
-  const canDelete = can('payments.delete')
-  if (!canConfirm && !canCancel && !canRestore && !canDelete) return null
+  if (!canConfirm && !canCancel && !canRestore) return null
   return (
     <>
       {canConfirm && (
@@ -63,18 +59,6 @@ export function PaymentActions({ payment }: { payment: Payment }) {
                 const data = PaymentVersionSchema.parse({ expectedVersion: payment.version })
                 await actions.restore(payment.id, data)
                 await refreshPayments(cache)
-              }}
-            />
-          </Can>
-        )}
-        {canDelete && (
-          <Can permission="payments.delete">
-            <SalesDeletionDialog
-              resource="payments"
-              selected={[payment]}
-              onComplete={async () => {
-                await refreshPayments(cache)
-                navigate('/payments')
               }}
             />
           </Can>

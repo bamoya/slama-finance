@@ -44,7 +44,7 @@ components:
       additionalProperties: false
       required: [records]
       properties:
-        cascadeDocuments: { type: boolean, default: false }
+        cascadeDocuments: { type: boolean, default: false, description: 'Delete the unnumbered draft documents of the client too. Refused with blocker NUMBERED_DOCUMENTS (409) when any numbered document exists, because numbered documents are only ever detached.' }
         records:
           type: array
           minItems: 1

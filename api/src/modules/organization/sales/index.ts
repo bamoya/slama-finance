@@ -1,6 +1,5 @@
 import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
-import { PaymentReceiptSnapshotSchema } from '../../../contracts/generated/sales/payments.schemas.js'
 import type { ObjectStorage } from '../../../integrations/contracts.js'
 import type { Database } from '../../../lib/db.js'
 import type { Transaction } from '../../../lib/db.js'
@@ -70,7 +69,6 @@ import {
   createPaymentReceiptService,
 } from './payments/services/payment-receipt.service.js'
 import { renderPaymentReceiptPdf } from './payments/services/payment-receipt-pdf.service.js'
-import { createFreshDocumentParties } from './shared/repositories/fresh-document-parties.js'
 import { createReportingReadRepository } from './shared/repositories/reporting-read.repository.js'
 import { renderDeliveryPdf } from './shared/services/delivery-pdf.service.js'
 import { createReportingReadService } from './shared/services/reporting-read.service.js'
@@ -155,7 +153,6 @@ export function createSalesModule(
   const artifacts = createArtifactSupport(database, storage, owners)
   const deletions = createSalesDeletionService(invoicesRepo, artifacts.service)
   const jobs = createJobSupport(database)
-  const freshParties = createFreshDocumentParties(database)
   const receipts = createPaymentReceiptService(
     paymentsRepo,
     artifacts.service,
@@ -163,20 +160,8 @@ export function createSalesModule(
       const images = await media.documentImages('payment_receipt', id, version, design, templateId)
       const row = await paymentsRepo.one(id)
       if (design === 'saved') return { bytes: await renderPaymentReceiptPdf(row, images) }
-      const snapshot = PaymentReceiptSnapshotSchema.parse(row.receiptSnapshot)
-      const invoice = await invoicesRepo.one(row.invoiceId)
-      const parties = await freshParties(invoice.clientId, snapshot.issuer, snapshot.client)
-      const bytes = await renderPaymentReceiptPdf(
-        {
-          ...row,
-          receiptSnapshot: {
-            ...snapshot,
-            issuer: parties.issuerSnapshot,
-            client: parties.clientSnapshot,
-          },
-        },
-        images,
-      )
+      // Stored snapshots stay authoritative; only the chosen design is applied.
+      const bytes = await renderPaymentReceiptPdf(row, images)
       return { bytes, design: images }
     },
   )
@@ -211,21 +196,15 @@ export function createSalesModule(
       const images = await media.documentImages(type, id, version, design, templateId)
       if (type === 'delivery_note') {
         const row = await deliveryNotesRepo.one(id)
-        const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
         return {
-          bytes: await renderDeliveryPdf(
-            { ...row, ...parties },
-            await deliveryNotesRepo.lines(id),
-            images,
-          ),
+          bytes: await renderDeliveryPdf(row, await deliveryNotesRepo.lines(id), images),
           design: images,
         }
       }
       if (type === 'invoice') {
         const row = await invoicesRepo.one(id)
-        const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
         const bytes = await renderSalesPdf(
-          { ...row, ...parties, appearanceSnapshot: images.appearance },
+          { ...row, appearanceSnapshot: images.appearance },
           await invoicesRepo.lines(id),
           'INVOICE',
           images,
@@ -233,9 +212,8 @@ export function createSalesModule(
         return { bytes, design: images }
       }
       const row = await estimatesRepo.one(id)
-      const parties = await freshParties(row.clientId, row.issuerSnapshot, row.clientSnapshot)
       const bytes = await renderSalesPdf(
-        { ...row, ...parties, appearanceSnapshot: images.appearance },
+        { ...row, appearanceSnapshot: images.appearance },
         await estimatesRepo.lines(id),
         'ESTIMATE',
         images,

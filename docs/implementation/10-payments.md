@@ -12,17 +12,17 @@ status field checks. Payments are entries, not gateways or future installment pl
 
 ## API routes and rules
 
-| Route                                                   | Behavior / permission                                                         |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `GET /v1/payments`, `GET /v1/payments/:id`              | Search/filter invoice/client/method/status/date, `payments.read`              |
-| `POST /v1/payments`                                     | Cash confirmed, transfer pending/confirmed, cheque pending; `payments.create` |
-| `POST /v1/payments/:id/confirm`                         | Pending transfer/cheque → confirmed with collected_on; `payments.confirm`     |
-| `POST /v1/payments/:id/cancel`                          | Reasoned correction, not refund; `payments.cancel`                            |
-| `POST /v1/payments/:id/restore`                         | Cancelled → prior pending/confirmed state; `payments.restore`                 |
-| `DELETE /v1/payments/:id`                               | Delete any status only before receipt issuance; `payments.delete`             |
-| `POST /v1/payments/:id/receipt`                         | Prepare/reuse receipt PDF on demand; `payments.read`                          |
-| `POST /v1/documents/payment_receipt/:id/regenerate-pdf` | Saved/latest design; `payments.read` + `payments.create`                      |
-| `GET /v1/payments?invoiceId=:id`                        | Invoice payment history, `payments.read`                                      |
+| Route                                                   | Behavior / permission                                                            |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `GET /v1/payments`, `GET /v1/payments/:id`              | Search/filter invoice/client/method/status/date, `payments.read`                 |
+| `POST /v1/payments`                                     | Cash confirmed, transfer pending/confirmed, cheque pending; `payments.create`    |
+| `POST /v1/payments/:id/confirm`                         | Pending transfer/cheque → confirmed with collected_on; `payments.confirm`        |
+| `POST /v1/payments/:id/cancel`                          | Reasoned correction, not refund; `payments.cancel`                               |
+| `POST /v1/payments/:id/restore`                         | Cancelled → prior pending/confirmed state; `payments.restore`                    |
+| `DELETE /v1/payments/:id`                               | Always 409 `PAYMENT_NOT_DELETABLE`: numbered payments are cancelled, not deleted |
+| `POST /v1/payments/:id/receipt`                         | Prepare/reuse receipt PDF on demand; `payments.read`                             |
+| `POST /v1/documents/payment_receipt/:id/regenerate-pdf` | Saved/latest design; `payments.read` + `payments.create`                         |
+| `GET /v1/payments?invoiceId=:id`                        | Invoice payment history, `payments.read`                                         |
 
 Creating an already-confirmed bank transfer also requires `payments.confirm`.
 Cash is collected immediately and only requires `payments.create`. There is no
@@ -30,12 +30,13 @@ separate deposit/reject endpoint: cancel an unsuccessful pending payment with it
 reason. Statuses are `pending`, `confirmed`, and `cancelled`.
 
 There is no generic PATCH for amounts or dates. Cancel and restore retain the
-original amount and collection date; delete removes the payment record and
-releases its balance effect. Every transition and deletion requires
+original amount and collection date. A payment is numbered when recorded and is
+never deleted (API 409 `PAYMENT_NOT_DELETABLE`, database trigger refusal unless the
+reserved `app.sales_teardown` flag is set by a future organization teardown), so
+the receipt series stays gap-free. Every transition requires
 `expectedVersion` and writes an audit event. Repeated create requests with an
 identical operation ID resolve to one payment; mismatched payloads return 409.
-An operation ID for a deleted payment remains reserved through its audit record
-and cannot silently recreate it. Generate a PAY number only once.
+Generate a PAY number only once.
 
 ## Services and transaction guards
 
@@ -70,8 +71,8 @@ inside the recording transaction. Balance is **at recording**, not backdated to
 the payment date, and excludes pending funds. Legacy records explicitly show
 historical balance unavailable, never a fabricated current balance.
 
-The receipt number is `REC-<year>-<random suffix>`, using the payment's unique
-suffix. Download prepares the PDF only when necessary; regeneration supports
+The receipt number is `REC-<year>-<sequence>`, the payment's gap-free `PAY` series
+number displayed with the REC prefix. Download prepares the PDF only when necessary; regeneration supports
 the saved appearance or latest linked/default template. Logo and optional
 signature resolve through media management. Payment details use generated Orval
 hooks and the shared Button/RegeneratePdfDialog components.

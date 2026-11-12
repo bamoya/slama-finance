@@ -71,7 +71,7 @@ the same `.github/workflows/publish-images.yml` workflow:
 
 ## Release checklist
 
-- [ ] Accountant validates public invoice numbering and final document wording.
+- [ ] Accountant validates the public invoice numbering format (gap-free sequential per series and year; numbers are never deleted, cancelled documents keep theirs) and final document wording. Confirm the series year follows the assignment instant, not the business `issue_date` (an invoice dated 31 December but issued on 2 January takes the new year's series).
 - [ ] VAT choices and exact rounding examples approved; VAT remains off by default.
 - [ ] Retention durations, sensitive audit access and backups approved/tested.
 - [ ] PostgreSQL migrations/seeds and UI contract generation reproducible.

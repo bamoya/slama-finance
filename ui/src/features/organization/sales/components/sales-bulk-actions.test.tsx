@@ -91,7 +91,7 @@ describe('Sales bulk actions through generated API hooks', () => {
       expect(clear).toHaveBeenCalledOnce()
     },
   )
-  it.each(['invoices', 'estimates', 'delivery_notes', 'payments'] as const)(
+  it.each(['invoices', 'estimates', 'delivery_notes'] as const)(
     'deletes the entire %s selection in one impact-confirmed request',
     async (resource) => {
       auth.permissions.add(`${resource}.delete`)
@@ -239,7 +239,7 @@ describe('Sales bulk actions through generated API hooks', () => {
       undefined,
     )
   })
-  it('offers impact-confirmed deletion of payments that have issued receipts', () => {
+  it('offers no deletion for payments, only cancellation', () => {
     setup('payments', [
       {
         ...row,
@@ -247,7 +247,7 @@ describe('Sales bulk actions through generated API hooks', () => {
         receiptIssuedAt: '2026-10-02T10:00:00Z',
       } as unknown as PaymentPageItemsItem,
     ])
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
   })
   it('regenerates only issued documents using the saved design by default', async () => {
     setup('invoices', [row, { ...row, id: 'draft', status: 'draft' }])

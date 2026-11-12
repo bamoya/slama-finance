@@ -797,7 +797,12 @@ describe('Independent remaining-feature regression QA', () => {
       await fixture.client`select id,object_key,sha256 from document_artifacts where document_id=${runId}`
     expect(before).toHaveLength(1)
     const pdfBytes = files.get(before[0]!.object_key)!
-    await fixture.client`update invoices set total='900',subtotal='900' where number='QA-FROZEN'`
+    // Edit an issued invoice behind the guard to prove frozen report figures stay unchanged.
+    await fixture.client.begin(async (tx) => {
+      await tx`alter table invoices disable trigger invoices_issued_guard`
+      await tx`update invoices set total='900',subtotal='900' where number='QA-FROZEN'`
+      await tx`alter table invoices enable trigger invoices_issued_guard`
+    })
     failExcelUpload = false
     const retry = await request('POST', `/api/v1/report-runs/${runId}/retry`, {})
     expect(retry.statusCode, retry.body).toBe(200)

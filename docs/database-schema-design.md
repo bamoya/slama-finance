@@ -630,19 +630,54 @@ erDiagram
     }
 ```
 
-Public numbers use `FAC-YYYY-<random>`, `DEV-YYYY-<random>`,
-`BL-YYYY-<random>` and `PAY-YYYY-<random>`. Use a cryptographically random
-10-digit decimal suffix, preserved as text including leading zeros. Generate
-inside the issuing/preparing/payment-recording transaction and enforce the
-existing number UNIQUE constraints. On collision, retry with a new suffix
-using a savepoint or conflict-safe operation; cap retries and fail atomically.
-Numbers are immutable, never reused after cancellation, and independent of UUID
-primary keys. The year is the assignment year in the company timezone, not a
-backdated payment date. Drafts have no public number. No counter/sequence table
-is needed. Random suffixes do not reveal a sequential document count and are
-not authorization tokens. This is the agreed public-reference design, not a
-claim of statutory numbering compliance: confirm invoice numbering requirements
-with the company's accountant before production.
+Public numbers are gap-free and sequential per organization, series and year:
+`FAC-YYYY-NNNNNN`, `DEV-YYYY-NNNNNN`, `BL-YYYY-NNNNNN` and `PAY-YYYY-NNNNNN`
+(payments are stored as PAY and displayed as REC). NNNNNN is zero-padded to six
+digits and grows beyond that without truncation. The counter table
+`document_number_counters` is keyed `(organization_id, series, year)` with
+`last > 0`, tenant RLS and runtime grants of SELECT, INSERT and UPDATE only.
+The issuing, delivering or payment-recording transaction takes a per-series
+advisory lock, then runs one `INSERT .. ON CONFLICT DO UPDATE .. RETURNING`
+on the counter row and writes the document in the same transaction, so a
+rollback releases the number and no gap is created by failures. Concurrent
+issuers are serialized; the year and `issued_at` come from one `statement_timestamp()`
+read after the lock, so number order equals issue order. The year is the
+calendar year of the assignment instant in `company_settings.timezone`
+(NOT NULL, default Africa/Casablanca), the same timezone that defines company
+dates; a document issued just after local midnight on 1 January starts the new
+year's series at 1. The unique `(organization_id, number)` indexes remain as a
+safety net; there is no retry loop. Numbers are immutable (database trigger),
+never reused after cancellation, and independent of UUID primary keys. Drafts
+have no public number. Numbered documents are never hard-deleted: BEFORE DELETE
+triggers on invoices, estimates and delivery notes (rows with a number) and on
+payments (always) raise 23514, and the counter table refuses DELETE. Cancellation
+is the correction path; the bulk sales deletion action and the client
+cascade deletion only remove drafts (the preview returns the `NUMBERED_DOCUMENTS`
+blocker otherwise) and `DELETE /v1/payments/:id` always answers 409
+`PAYMENT_NOT_DELETABLE`. The single exception is the transaction-local flag
+`app.sales_teardown = 'on'` (`sales_teardown_enabled()`): it is reserved for a
+future organization teardown routine, covers documents, payments and the
+counters together, is set nowhere in product code, and is used only by
+privileged test fixtures that purge data. Cancelled is terminal at database level
+(status, `cancelled_at` and `cancellation_reason` freeze) and an issued document's status
+never returns to draft. All integrity functions pin
+`search_path = pg_catalog, pg_temp`. Counters are not authorization tokens.
+Accountant list: (1) whether the scheme and format meet the statutory requirements;
+(2) the series year is the year of the assignment instant, not of the business
+`issue_date`, so an invoice dated 31 December but issued on 2 January takes the new
+year's series. This is still needed from the company's accountant before production.
+
+Issued sales documents are protected at the database level by BEFORE UPDATE
+triggers (`api/db/integrity/sales-documents.sql`): once an invoice, estimate or
+delivery note leaves draft, its number, issue/delivery instant, issuer, client
+and bank snapshots, currency and amounts cannot change, and neither can its
+lines (except clearing live catalogue references). A payment's number, amount,
+currency, invoice, method, bank snapshot (once set) and receipt snapshot (except
+the chosen design) are frozen from insert. Lifecycle fields (status, sent,
+accepted, cancelled, version, content_version, template and appearance chosen
+when a PDF is regenerated, detached references) stay writable. PDF
+regeneration renders from the stored snapshots, never from current company or
+client rows.
 
 Snapshots have versioned application schemas: issuer/client snapshots contain
 client type, the applicable personal or legal/trade names, structured addresses,
@@ -1311,15 +1346,15 @@ This is operational traceability, not a claim of cryptographic tamper-proofing.
 - Pending cheque amounts are checked against current balance at recording,
   and checked again at clearing. They do not reserve paid balance. If another
   payment settles the invoice first, clearing needs manual resolution.
-- Authorized staff may cancel, restore, or delete payment records. Cancellation
+- Authorized staff may cancel or restore payment records; payments are numbered
+  when recorded and are never deleted (the API answers 409 `PAYMENT_NOT_DELETABLE`
+  and a database trigger refuses the row delete). Cancellation
   collects its reason in a confirmation modal, not an inline page field.
   Restoration returns a cancelled payment to its prior pending/confirmed state,
   provided the invoice is payable and its available balance is sufficient.
-  Deletion is available for every payment status, requires confirmation, and
-  removes the payment from live balances. All actions require a version check
-  and preserve an audit event; they do not initiate a bank refund. Deleted
-  creation-operation keys remain recorded in the audit trail so a delayed
-  retry cannot recreate a deleted payment. See implementation sequence 10 for
+  Cancelling removes the payment from live balances. All actions require a
+  version check and preserve an audit event; they do not initiate a bank refund.
+  See implementation sequence 10 for
   the implemented payment statuses and reservation rules.
 - Cancelling an invoice with received payments requires resolving those
   payments first. Credit notes and actual refunds need a separate design.
@@ -1570,9 +1605,9 @@ must disable accounts instead of physically removing them.
 <details>
 <summary>Decisions to confirm before implementation</summary>
 
-1. Confirmed public references: FAC/DEV/BL/PAY, assignment year and random
-   10-digit suffix; no public sequential counter. Accountant validation remains
-   a production prerequisite for invoice numbering requirements.
+1. Confirmed public references: FAC/DEV/BL/PAY, assignment year and a
+   gap-free six-digit sequence per organization, series and year. Accountant
+   validation of the format remains a production prerequisite.
 2. Confirmed: one estimate may produce multiple invoices without deleting
    earlier ones. Credit notes, refunds and multi-invoice payment allocations
    are not included; this does not introduce a deposit-invoice workflow.

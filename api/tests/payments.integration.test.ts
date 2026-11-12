@@ -7,9 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildApp } from '../src/app.js'
 import { loadEnvironment } from '../src/config/env.js'
 import type { ObjectStorage } from '../src/integrations/contracts.js'
+import * as renderModule from '../src/lib/documents/render-document.js'
 import { companyDate } from '../src/lib/validation.js'
 import { createPasswordService } from '../src/modules/organization/identity/auth/services/password.service.js'
 import { attachTestDatabase, isolatedDatabase, testUserId } from './helpers/postgres.js'
+
+vi.mock('../src/lib/documents/render-document.js', async (importOriginal) => {
+  const original = await importOriginal<typeof renderModule>()
+  return { ...original, renderDocument: vi.fn(original.renderDocument) }
+})
 
 const headers = {
   origin: 'http://localhost:5173',
@@ -152,7 +158,7 @@ describe('Payments lifecycle', () => {
     )
     expect(first.statusCode, first.body).toBe(201)
     expect(first.json()).toMatchObject({
-      receiptNumber: expect.stringMatching(/^REC-\d{4}-\d{10}$/),
+      receiptNumber: expect.stringMatching(/^REC-\d{4}-\d{6,}$/),
       receiptIssuedAt: null,
     })
     const id = first.json().id
@@ -172,7 +178,7 @@ describe('Payments lifecycle', () => {
     })
     expect(downloaded.statusCode).toBe(200)
     expect(downloaded.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
-    expect((await remove(id, 1)).json().code).toBe('RECEIPT_ISSUED')
+    expect((await remove(id, 1)).json().code).toBe('PAYMENT_NOT_DELETABLE')
     expect(
       (await app.inject({ url: `/api/v1/payments/${id}`, cookies })).json().receiptIssuedAt,
     ).toBeTruthy()
@@ -208,7 +214,7 @@ describe('Payments lifecycle', () => {
     expect((await app.inject({ url, cookies })).statusCode).toBe(409)
     expect((await post(`/api/v1/payments/${id}/receipt`, {})).statusCode).toBe(200)
     expect((await app.inject({ url, cookies })).statusCode).toBe(200)
-    expect((await remove(id, 3)).json().code).toBe('RECEIPT_ISSUED')
+    expect((await remove(id, 3)).json().code).toBe('PAYMENT_NOT_DELETABLE')
     expect((await post(`/api/v1/payments/${id}/restore`, { expectedVersion: 3 })).statusCode).toBe(
       200,
     )
@@ -223,7 +229,12 @@ describe('Payments lifecycle', () => {
   it('leaves no issued receipt on storage failure and never invents legacy balances', async () => {
     const pending = await post('/api/v1/payments', payment())
     const id = pending.json().id
-    await fixture.client`update payments set receipt_snapshot=null where id=${id}`
+    // Forge a legacy record without receipt snapshot: bypass the payment guard for this fixture edit only.
+    await fixture.client.begin(async (tx) => {
+      await tx`alter table payments disable trigger payments_guard`
+      await tx`update payments set receipt_snapshot=null where id=${id}`
+      await tx`alter table payments enable trigger payments_guard`
+    })
     const put = vi
       .spyOn(storage, 'putImmutable')
       .mockRejectedValueOnce(new Error('Storage offline'))
@@ -290,12 +301,19 @@ describe('Payments lifecycle', () => {
     const [before] = await fixture.client`select receipt_snapshot from payments where id=${id}`
     const [template] =
       await fixture.client`insert into document_templates (name,layout,accent_color) values ('Receipt design','modern','#225566') returning id`
-    await fixture.client`update company_settings set default_template_id=${template!.id} where id=1`
+    await fixture.client`update company_settings set default_template_id=${template!.id}, legal_name='Renamed Holding', city='Fes' where id=1`
+    await fixture.client`update clients set legal_name='Renamed Client' where id=${clientId}`
+    vi.mocked(renderModule.renderDocument).mockClear()
     const regenerated = await post(`/api/v1/documents/payment_receipt/${id}/regenerate-pdf`, {
       design: 'latest',
     })
     expect(regenerated.statusCode, regenerated.body).toBe(200)
     expect(regenerated.json().id).toBe(prepared.json().id)
+    // The latest design changes the look only: the receipt still prints the identity stored at recording.
+    const printed = JSON.stringify(vi.mocked(renderModule.renderDocument).mock.calls[0]![0])
+    expect(printed).toContain('Slama Agricole')
+    expect(printed).toContain('Atlas SARL')
+    expect(printed).not.toContain('Renamed')
     const [after] = await fixture.client`select receipt_snapshot from payments where id=${id}`
     const {
       appearance: _oldAppearance,
@@ -674,7 +692,7 @@ describe('Payments lifecycle', () => {
     expect(authorizedTransfer.statusCode, JSON.stringify(authorizedTransfer.json())).toBe(201)
   })
 
-  it('restores prior pending and confirmed states, then deletes a confirmed payment without recreating its operation', async () => {
+  it('restores prior pending and confirmed states, and never deletes a confirmed payment', async () => {
     const input = payment({ amount: '40.00' })
     const pending = await post('/api/v1/payments', input)
     expect(pending.statusCode, JSON.stringify(pending.json())).toBe(201)
@@ -729,23 +747,19 @@ describe('Payments lifecycle', () => {
       outstandingAmount: '60.00',
     })
     expect((await remove(id, 5)).statusCode).toBe(409)
-    expect((await remove(id, 6)).statusCode).toBe(204)
-    expect((await app.inject({ url: `/api/v1/payments/${id}`, cookies })).statusCode).toBe(404)
+    const refused = await remove(id, 6)
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('PAYMENT_NOT_DELETABLE')
+    expect((await app.inject({ url: `/api/v1/payments/${id}`, cookies })).statusCode).toBe(200)
     expect(
       (await app.inject({ url: `/api/v1/invoices/${invoiceId}`, cookies })).json(),
     ).toMatchObject({
-      paidAmount: '0.00',
-      availableBalance: '100.00',
+      paidAmount: '40.00',
+      outstandingAmount: '60.00',
     })
-    const retried = await post('/api/v1/payments', input)
-    expect(retried.statusCode).toBe(409)
-    expect(retried.json().code).toBe('PAYMENT_DELETED')
-    const audit =
-      await fixture.client`select before_values->>'operationId' as operation_id from audit_events where entity_table='payments' and action='delete' and entity_key->>'id'=${id}`
-    expect(audit[0]?.operation_id).toBe(input.operationId)
   })
 
-  it('prevents overpayment when restoring and allows deleting pending payments', async () => {
+  it('prevents overpayment when restoring and frees the balance by cancelling payments', async () => {
     const pending = await post('/api/v1/payments', payment({ amount: '60.00' }))
     expect(pending.statusCode).toBe(201)
     const id = pending.json().id
@@ -768,11 +782,21 @@ describe('Payments lifecycle', () => {
     const blocked = await post(`/api/v1/payments/${id}/restore`, { expectedVersion: 2 })
     expect(blocked.statusCode).toBe(409)
     expect(blocked.json().code).toBe('OVERPAYMENT')
-    expect((await remove(replacement.json().id, 1)).statusCode).toBe(204)
+    expect(
+      (
+        await post(`/api/v1/payments/${replacement.json().id}/cancel`, {
+          expectedVersion: 1,
+          reason: 'Replaced',
+        })
+      ).statusCode,
+    ).toBe(200)
     expect((await post(`/api/v1/payments/${id}/restore`, { expectedVersion: 2 })).statusCode).toBe(
       200,
     )
-    expect((await remove(id, 3)).statusCode).toBe(204)
+    expect(
+      (await post(`/api/v1/payments/${id}/cancel`, { expectedVersion: 3, reason: 'Hold again' }))
+        .statusCode,
+    ).toBe(200)
     expect(
       (await app.inject({ url: `/api/v1/invoices/${invoiceId}`, cookies })).json(),
     ).toMatchObject({
@@ -780,7 +804,7 @@ describe('Payments lifecycle', () => {
     })
   })
 
-  it('rejects restoration after invoice cancellation but permits deleting the cancelled payment', async () => {
+  it('rejects restoration after invoice cancellation and keeps the cancelled payment', async () => {
     const pending = await post('/api/v1/payments', payment({ amount: '20.00' }))
     expect(pending.statusCode).toBe(201)
     const id = pending.json().id
@@ -796,7 +820,8 @@ describe('Payments lifecycle', () => {
     const restore = await post(`/api/v1/payments/${id}/restore`, { expectedVersion: 2 })
     expect(restore.statusCode).toBe(409)
     expect(restore.json().code).toBe('INVOICE_NOT_PAYABLE')
-    expect((await remove(id, 2)).statusCode).toBe(204)
+    expect((await remove(id, 2)).statusCode).toBe(409)
+    expect((await app.inject({ url: `/api/v1/payments/${id}`, cookies })).statusCode).toBe(200)
   })
 
   it('serializes restoration against a new payment on the same invoice', async () => {

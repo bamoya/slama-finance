@@ -2,7 +2,7 @@ paths:
   /api/v1/payments/{id}/receipt:
     post:
       operationId: preparePaymentReceipt
-      description: Prepare a receipt on demand or reuse its current PDF. Requires payments.read; issuing the first receipt additionally requires payments.update. Previously issued receipts remain downloadable with read access. Successful publication prevents permanent payment deletion. Historical balances are captured at recording; legacy payments explicitly have no historical balance. Pending cheques are acknowledged as received, not collected.
+      description: Prepare a receipt on demand or reuse its current PDF. Requires payments.read; issuing the first receipt additionally requires payments.update. Previously issued receipts remain downloadable with read access. Historical balances are captured at recording; legacy payments explicitly have no historical balance. Pending cheques are acknowledged as received, not collected.
       x-permissions: [payments.read]
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       responses:
@@ -104,7 +104,7 @@ paths:
           }
     delete:
       operationId: deletePayment
-      description: Permanently deletes a payment only if no receipt has been issued, after an expectedVersion check. Otherwise returns 409 RECEIPT_ISSUED; cancel the payment instead. The deletion is audited and releases any confirmed or pending invoice balance.
+      description: Payments are numbered when recorded and are never deleted. Always returns 409 PAYMENT_NOT_DELETABLE after the expectedVersion check; cancel the payment instead. Only an organization teardown may remove payment rows.
       x-permissions: [payments.delete]
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
@@ -114,7 +114,7 @@ paths:
             { application/json: { schema: { $ref: '#/components/schemas/PaymentVersion' } } },
         }
       responses:
-        '204': { description: Payment deleted }
+        '204': { description: Never returned; payments cannot be deleted }
         default:
           {
             description: Error,

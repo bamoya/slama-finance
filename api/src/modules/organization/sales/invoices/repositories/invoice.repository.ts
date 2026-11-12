@@ -23,6 +23,7 @@ import { paymentBalancesForInvoices } from '../../payments/repositories/payment.
 import { documentBankSnapshot } from '../../shared/repositories/document-bank.js'
 import { documentClientNameSql } from '../../shared/repositories/document-client.js'
 import { snapshotClientName } from '../../shared/repositories/document-client.js'
+import { nextDocumentNumber } from '../../shared/repositories/document-number.js'
 
 export type InvoiceRow = typeof invoices.$inferSelect
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect
@@ -48,6 +49,7 @@ export function createInvoiceRepository(database: () => Database) {
       return Boolean(row)
     },
     bankSnapshot: documentBankSnapshot,
+    nextNumber: nextDocumentNumber,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     authorize: requireActorPermission,
     async one(id: string, tx: Database | Transaction = database(), lock = false) {

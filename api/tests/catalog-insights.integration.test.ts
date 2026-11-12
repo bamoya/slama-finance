@@ -25,6 +25,8 @@ describe('Catalog insights', () => {
   let cookies: { slama_session: string }
   beforeEach(async () => {
     fixture = await isolatedDatabase()
+    // These fixtures seed reporting data directly, adding lines to already issued invoices.
+    await fixture.client`alter table invoice_lines disable trigger invoice_lines_issued_guard`
     const hash = await createPasswordService().hash('insights-password-123')
     await fixture.client`update users set password_hash=${hash} where id=${testUserId}`
     await fixture.client`insert into user_roles (user_id,role_id) select ${testUserId},id from roles where key='admin'`

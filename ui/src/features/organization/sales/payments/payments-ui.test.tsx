@@ -287,28 +287,12 @@ describe('sales payment screens', () => {
     )
   })
 
-  it('deletes a payment only after confirmation and returns to the list', async () => {
+  it('never offers permanent deletion of a payment, even with the delete permission', async () => {
     mocks.permissions.add('payments.delete')
-    const { location } = setup(<PaymentActions payment={payment} />, `/payments/${paymentId}`)
+    setup(<PaymentActions payment={payment} />, `/payments/${paymentId}`)
     await openMore()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete permanently' }))
-    expect(mocks.delete).not.toHaveBeenCalled()
-    const button = within(await screen.findByRole('dialog')).getByRole('button', {
-      name: 'Delete permanently',
-    })
-    await waitFor(() => expect(button).toBeEnabled())
-    fireEvent.click(button)
-    await waitFor(() =>
-      expect(mocks.confirmDeletion).toHaveBeenCalledWith({
-        data: {
-          resource: 'payments',
-          cascadeInvoices: false,
-          records: [{ id: paymentId, expectedVersion: 3 }],
-          token: 'delete-preview',
-        },
-      }),
-    )
-    await waitFor(() => expect(location.history.at(-1)).toBe('/payments'))
+    expect(screen.queryByRole('menuitem', { name: 'Delete permanently' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Cancel payment' })).toBeInTheDocument()
   })
 
   it('confirms a pending payment with its current version', async () => {

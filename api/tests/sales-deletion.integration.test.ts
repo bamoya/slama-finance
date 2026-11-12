@@ -187,6 +187,12 @@ describe('Impact-confirmed sales deletion', () => {
       await fixture.client`update outbound_messages set status='sending',lease_token=${randomUUID()},locked_until=now()+interval '1 minute' where id=${row!.id}`
     return row!.id as string
   }
+  /** Privileged purge as a future organization teardown would do it: the only way to remove numbered rows. */
+  const teardown = <T>(work: (tx: typeof fixture.client) => Promise<T>) =>
+    fixture.client.begin(async (tx) => {
+      await tx`select set_config('app.sales_teardown','on',true)`
+      return work(tx as unknown as typeof fixture.client)
+    })
   async function deleteEntity(path: string, input: object) {
     const preview = await post(`${path}/preview`, input)
     expect(preview.statusCode, preview.body).toBe(200)
@@ -217,11 +223,10 @@ describe('Impact-confirmed sales deletion', () => {
     const invalid = await post('/api/v1/invoices', { ...base(), clientId: null, dueDate: null })
     expect(invalid.statusCode).toBe(400)
   })
-  it('cascades client-owned document chains only after explicit confirmation', async () => {
-    const source = await estimate()
-    const owner = await invoice(source)
-    await delivery(owner)
-    await payment(owner)
+  it('cascades client-owned draft chains only after explicit confirmation', async () => {
+    const draft = await post('/api/v1/estimates', { ...base(), validUntil: null })
+    expect(draft.statusCode, draft.body).toBe(201)
+    await invoice(undefined, false)
     await deleteEntity('/api/v1/clients/deletion', {
       records: [{ id: clientId, expectedVersion: 1 }],
       cascadeDocuments: true,
@@ -231,6 +236,25 @@ describe('Impact-confirmed sales deletion', () => {
         (await fixture.client.unsafe(`select count(*)::integer as n from ${table}`))[0]!.n,
       ).toBe(0)
     }
+  })
+  it('refuses to cascade-delete a client that owns numbered documents and keeps the chain intact', async () => {
+    const source = await estimate()
+    const owner = await invoice(source)
+    await payment(owner)
+    const input = {
+      records: [{ id: clientId, expectedVersion: 1 }],
+      cascadeDocuments: true,
+    }
+    const impact = await post('/api/v1/clients/deletion/preview', input)
+    expect(impact.statusCode, impact.body).toBe(200)
+    expect(impact.json().blockers).toContain('NUMBERED_DOCUMENTS')
+    const refused = await post('/api/v1/clients/deletion', { ...input, token: impact.json().token })
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('NUMBERED_DOCUMENTS')
+    for (const table of ['clients', 'estimates', 'invoices', 'payments'])
+      expect(
+        (await fixture.client.unsafe(`select count(*)::integer as n from ${table}`))[0]!.n,
+      ).toBe(1)
   })
   it('rejects stale client impact without deleting any selected client', async () => {
     const input = { records: [{ id: clientId, expectedVersion: 1 }], cascadeDocuments: true }
@@ -532,7 +556,10 @@ describe('Impact-confirmed sales deletion', () => {
     const put = storage.putImmutable.bind(storage)
     vi.spyOn(storage, 'putImmutable').mockImplementationOnce(async (input) => {
       const result = await put(input)
-      await remove(selection('invoices', [owner]))
+      await teardown(async (tx) => {
+        await tx`update background_jobs set status='cancelled',lease_token=null,last_error_code='OWNER_DELETED',payload='{}'::jsonb`
+        await tx`delete from invoices where id=${owner.id}`
+      })
       return result
     })
     await expect(
@@ -549,58 +576,39 @@ describe('Impact-confirmed sales deletion', () => {
     expect(objects.size).toBe(0)
   })
   it('deletes a bulk graph once and preserves it completely when any child deletion fails', async () => {
-    const first = await invoice()
-    const second = await invoice()
-    await payment(first)
-    await payment(second)
-    await delivery(first)
-    await delivery(second)
+    const first = await invoice(undefined, false)
+    const second = await invoice(undefined, false)
     const input = selection('invoices', [first, second])
     const impact = await preview(input)
-    expect(impact.groups.map((group: { records: unknown[] }) => group.records.length)).toEqual([
-      2, 2, 2,
-    ])
+    expect(impact.groups.map((group: { records: unknown[] }) => group.records.length)).toEqual([2])
     await fixture.client.unsafe(
-      `create function reject_payment_deletion() returns trigger language plpgsql as $$ begin raise exception 'test rollback'; end $$; create trigger reject_payment_deletion before delete on payments for each row execute function reject_payment_deletion();`,
+      `create function reject_invoice_deletion() returns trigger language plpgsql as $$ begin raise exception 'test rollback'; end $$; create trigger reject_invoice_deletion before delete on invoices for each row execute function reject_invoice_deletion();`,
     )
     expect(
       (await post('/api/v1/sales/deletion', { ...input, token: impact.token })).statusCode,
     ).toBe(500)
     expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('2')
-    expect((await fixture.client`select count(*) from delivery_notes`)[0]!.count).toBe('2')
     expect(
       (await fixture.client`select count(*) from audit_events where action='delete'`)[0]!.count,
     ).toBe('0')
-    await fixture.client.unsafe('drop trigger reject_payment_deletion on payments')
+    await fixture.client.unsafe('drop trigger reject_invoice_deletion on invoices')
     const removed = await remove(input)
-    expect(removed.groups.map((group: { records: unknown[] }) => group.records.length)).toEqual([
-      2, 2, 2,
-    ])
+    expect(removed.groups.map((group: { records: unknown[] }) => group.records.length)).toEqual([2])
     expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('0')
     expect(
       (await fixture.client`select count(*) from audit_events where action='delete'`)[0]!.count,
-    ).toBe('6')
+    ).toBe('2')
   })
-  it('deletes issued invoice chains and exclusive files while preserving clients and unrelated records', async () => {
-    const owner = await invoice()
-    const note = await delivery(owner)
-    const paid = await payment(owner)
-    const unrelated = await invoice()
+  it('deletes draft invoice chains and exclusive files while preserving clients and unrelated records', async () => {
+    const owner = await invoice(undefined, false)
+    const unrelated = await invoice(undefined, false)
     const key = await file('invoice', owner.id, owner.contentVersion)
-    const receiptKey = await file('payment_receipt', paid.id, paid.version)
-    await fixture.client`update payments set receipt_issued_at=now() where id=${paid.id}`
+    await fixture.client`insert into background_jobs(job_type,payload,idempotency_key,status,lease_token,locked_until) values('prepare_pdf',${JSON.stringify({ documentType: 'invoice', documentId: owner.id })}::jsonb,${randomUUID()},'running',${randomUUID()},now()+interval '1 minute')`
     await message(owner, key)
-    await fixture.client`update background_jobs set status='running',lease_token=${randomUUID()},locked_until=now()+interval '1 minute' where payload->>'documentId'=${owner.id}`
     const impact = await remove(selection('invoices', [owner]))
-    expect(impact.groups.map((group: { resource: string }) => group.resource)).toEqual([
-      'invoices',
-      'delivery_notes',
-      'payments',
-    ])
-    expect(impact).toMatchObject({ files: 2, jobs: 1, emails: 1, blockers: [] })
+    expect(impact.groups.map((group: { resource: string }) => group.resource)).toEqual(['invoices'])
+    expect(impact).toMatchObject({ files: 1, jobs: 1, emails: 1, blockers: [] })
     expect((await fixture.client`select id from invoices where id=${owner.id}`).length).toBe(0)
-    expect((await fixture.client`select id from delivery_notes where id=${note.id}`).length).toBe(0)
-    expect((await fixture.client`select id from payments where id=${paid.id}`).length).toBe(0)
     expect((await fixture.client`select id from invoices where id=${unrelated.id}`).length).toBe(1)
     expect((await fixture.client`select id from clients where id=${clientId}`).length).toBe(1)
     expect(
@@ -609,49 +617,96 @@ describe('Impact-confirmed sales deletion', () => {
       )[0],
     ).toMatchObject({ status: 'cancelled', lease_token: null, payload: {} })
     expect(objects.has(key)).toBe(false)
-    expect(objects.has(receiptKey)).toBe(false)
     expect(
       (await fixture.client`select count(*) from audit_events where action='delete'`)[0]!.count,
-    ).toBe('3')
+    ).toBe('1')
   })
-  it('detaches invoices and revisions by default, preserves source numbers and leaves preserved drafts usable', async () => {
+  it('refuses to delete numbered documents and payments, from the bulk action and the database', async () => {
+    const source = await estimate()
+    const owner = await invoice(source)
+    const note = await delivery(owner)
+    const paid = await payment(owner)
+    const delivered = await post(`/api/v1/delivery-notes/${note.id}/deliver`, {
+      expectedVersion: note.version,
+      receivedByName: null,
+    })
+    expect(delivered.statusCode, delivered.body).toBe(200)
+    const numberedNote = delivered.json<DeliveryNote>()
+    const targets = [
+      selection('invoices', [owner]),
+      selection('estimates', [source]),
+      selection('estimates', [source], true),
+      selection('delivery_notes', [numberedNote]),
+      selection('payments', [paid]),
+    ]
+    for (const input of targets) {
+      const impact = await preview(input)
+      expect(impact.blockers, input.resource).toContain('NUMBERED_DOCUMENTS')
+      const refused = await post('/api/v1/sales/deletion', { ...input, token: impact.token })
+      expect(refused.statusCode, refused.body).toBe(409)
+      expect(refused.json().code).toBe('NUMBERED_DOCUMENTS')
+    }
+    const single = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/payments/${paid.id}`,
+      headers,
+      cookies,
+      payload: { expectedVersion: paid.version },
+    })
+    expect(single.statusCode, single.body).toBe(409)
+    expect(single.json().code).toBe('PAYMENT_NOT_DELETABLE')
+    for (const table of ['estimates', 'invoices', 'delivery_notes', 'payments'])
+      expect(
+        (await fixture.client.unsafe(`select count(*)::integer as n from ${table}`))[0]!.n,
+      ).toBe(1)
+    // Defence in depth: the database itself refuses, even for the owner role, without the teardown flag.
+    for (const table of ['payments', 'delivery_notes', 'estimates'])
+      await expect(fixture.client.unsafe(`delete from ${table}`)).rejects.toThrow(
+        /cannot be deleted/,
+      )
+    await expect(fixture.client`delete from invoices where id=${owner.id}`).rejects.toThrow(
+      /cannot be deleted/,
+    )
+    // Cancellation remains the correction path.
+    const cancelled = await post('/api/v1/sales/cancellation/preview', {
+      resource: 'payments',
+      records: [{ id: paid.id, expectedVersion: paid.version }],
+    })
+    expect(cancelled.statusCode, cancelled.body).toBe(200)
+  })
+  it('does not delete an issued estimate, so its invoices and revisions are never detached by deletion', async () => {
     const source = await estimate()
     const preserved = await invoice(source, false)
     const revision = await post(`/api/v1/estimates/${source.id}/revisions`, {
       expectedVersion: source.version,
     })
     expect(revision.statusCode, revision.body).toBe(200)
-    const impact = await remove(selection('estimates', [source]))
+    const impact = await preview(selection('estimates', [source]))
     expect(impact.groups.map((group: { operation: string }) => group.operation)).toEqual([
       'delete',
       'detach',
       'detach',
     ])
+    expect(impact.blockers).toEqual(['NUMBERED_DOCUMENTS'])
+    const refused = await post('/api/v1/sales/deletion', {
+      ...selection('estimates', [source]),
+      token: impact.token,
+    })
+    expect(refused.statusCode).toBe(409)
     const current = (
       await app.inject({ url: `/api/v1/invoices/${preserved.id}`, cookies })
     ).json<Invoice>()
-    expect(current).toMatchObject({
-      sourceEstimateId: null,
-      sourceEstimateNumber: source.number,
-      status: 'draft',
-      contentVersion: preserved.contentVersion,
-    })
-    expect(
-      (await post(`/api/v1/invoices/${current.id}/issue`, { expectedVersion: current.version }))
-        .statusCode,
-    ).toBe(200)
+    expect(current).toMatchObject({ sourceEstimateId: source.id, status: 'draft' })
     expect(
       (
-        await fixture.client`select revision_of_id,status from estimates where id=${revision.json().id}`
+        await fixture.client`select revision_of_id from estimates where id=${revision.json().id}`
       )[0],
-    ).toMatchObject({ revision_of_id: null, status: 'draft' })
+    ).toMatchObject({ revision_of_id: source.id })
   })
-  it('requires an explicit cascade and binds the checkbox option to its preview', async () => {
+  it('requires an explicit cascade, binds the checkbox to its preview and still refuses numbered invoices', async () => {
     const source = await estimate()
-    const first = await invoice(source)
-    const second = await invoice(source)
-    await payment(first)
-    await delivery(second)
+    await invoice(source)
+    await invoice(source)
     const input = selection('estimates', [source])
     const impact = await preview(input)
     expect(
@@ -663,15 +718,21 @@ describe('Impact-confirmed sales deletion', () => {
         })
       ).statusCode,
     ).toBe(409)
-    const cascaded = await remove({ ...input, cascadeInvoices: true })
+    const cascade = await preview({ ...input, cascadeInvoices: true })
     expect(
-      cascaded.groups.find((group: { resource: string }) => group.resource === 'invoices').records,
+      cascade.groups.find((group: { resource: string }) => group.resource === 'invoices').records,
     ).toHaveLength(2)
-    expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('0')
-    expect((await fixture.client`select count(*) from payments`)[0]!.count).toBe('0')
-    expect((await fixture.client`select count(*) from delivery_notes`)[0]!.count).toBe('0')
+    expect(cascade.blockers).toEqual(['NUMBERED_DOCUMENTS'])
+    const refused = await post('/api/v1/sales/deletion', {
+      ...input,
+      cascadeInvoices: true,
+      token: cascade.token,
+    })
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('NUMBERED_DOCUMENTS')
+    expect((await fixture.client`select count(*) from invoices`)[0]!.count).toBe('2')
   })
-  it('deletes a billed BL without deleting invoice lines or payments; issued receipts do not block payment deletion', async () => {
+  it('deletes a draft billed BL without deleting invoice lines or payments; payments are never deletable', async () => {
     const owner = await invoice()
     const note = await delivery(owner)
     const paid = await payment(owner)
@@ -685,16 +746,15 @@ describe('Impact-confirmed sales deletion', () => {
         await fixture.client`select quantity,product_name from invoice_lines where invoice_id=${owner.id}`
       )[0],
     ).toMatchObject({ quantity: 10, product_name: 'Wheat' })
-    await file('payment_receipt', paid.id, paid.version)
-    await fixture.client`update payments set receipt_issued_at=now() where id=${paid.id}`
-    await remove(selection('payments', [paid]))
+    const refused = await preview(selection('payments', [paid]))
+    expect(refused.blockers).toEqual(['NUMBERED_DOCUMENTS'])
     const current = (
       await app.inject({ url: `/api/v1/invoices/${owner.id}`, cookies })
     ).json<Invoice>()
     expect(current).toMatchObject({
       status: 'issued',
-      paidAmount: '0.00',
-      outstandingAmount: '200.00',
+      paidAmount: '40.00',
+      outstandingAmount: '160.00',
     })
   })
   it('rejects stale or unauthorized whole batches and prevents duplicate or missing selections', async () => {
@@ -744,8 +804,8 @@ describe('Impact-confirmed sales deletion', () => {
     ).toBe(403)
   })
   it('preserves shared attachments, blocks in-flight mail and retries storage cleanup after commit', async () => {
-    const owner = await invoice()
-    const other = await invoice()
+    const owner = await invoice(undefined, false)
+    const other = await invoice(undefined, false)
     const shared = await file('invoice', owner.id, owner.contentVersion)
     const ownMessage = await message(owner, shared, true)
     await message(other, shared)
@@ -773,8 +833,7 @@ describe('Impact-confirmed sales deletion', () => {
     expect(objects.size).toBe(0)
   })
   it('rolls back children, work and audits on failure, then applies a concurrent confirmation only once', async () => {
-    const owner = await invoice()
-    const paid = await payment(owner)
+    const owner = await invoice(undefined, false)
     const key = await file('invoice', owner.id, owner.contentVersion)
     const input = selection('invoices', [owner])
     const impact = await preview(input)
@@ -784,7 +843,9 @@ describe('Impact-confirmed sales deletion', () => {
     expect(
       (await post('/api/v1/sales/deletion', { ...input, token: impact.token })).statusCode,
     ).toBe(500)
-    expect((await fixture.client`select id from payments where id=${paid.id}`).length).toBe(1)
+    expect(
+      (await fixture.client`select id from invoice_lines where invoice_id=${owner.id}`).length,
+    ).toBe(1)
     expect(
       (await fixture.client`select count(*) from audit_events where action='delete'`)[0]!.count,
     ).toBe('0')
@@ -804,10 +865,10 @@ describe('Impact-confirmed sales deletion', () => {
       )[0]!.count,
     ).toBe('1')
   })
-  it('does not recreate a deleted conversion on retry, and deleting a revision never reactivates its predecessor', async () => {
+  it('does not recreate a deleted conversion on retry, and an issued revision cannot be deleted', async () => {
     const source = await estimate()
     const operationId = randomUUID()
-    const owner = await invoice(source, true, operationId)
+    const owner = await invoice(source, false, operationId)
     await remove(selection('invoices', [owner]))
     const retry = await post(`/api/v1/estimates/${source.id}/invoices`, {
       operationId,
@@ -822,7 +883,17 @@ describe('Impact-confirmed sales deletion', () => {
       expectedVersion: draft.json().version,
     })
     expect(revision.statusCode, revision.body).toBe(200)
-    await remove(selection('estimates', [revision.json<Estimate>()]))
+    const numbered = revision.json<Estimate>()
+    const impact = await preview(selection('estimates', [numbered]))
+    expect(impact.blockers).toEqual(['NUMBERED_DOCUMENTS'])
+    expect(
+      (
+        await post('/api/v1/sales/deletion', {
+          ...selection('estimates', [numbered]),
+          token: impact.token,
+        })
+      ).statusCode,
+    ).toBe(409)
     expect(
       (await fixture.client`select status from estimates where id=${source.id}`)[0]!.status,
     ).toBe('superseded')

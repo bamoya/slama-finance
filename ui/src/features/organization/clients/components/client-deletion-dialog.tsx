@@ -9,6 +9,11 @@ import { DeletionImpactSummary } from '../../../../components/management/deletio
 import { ImpactConfirmationDialog } from '../../../../components/management/impact-confirmation-dialog'
 import { translate } from '../../../../lib/i18n'
 
+const blockerMessages: Record<string, string> = {
+  NUMBERED_DOCUMENTS:
+    'This client has issued documents or payments. They keep their numbers and cannot be deleted: delete the client without its documents to keep them, or cancel them first.',
+}
+
 export function ClientDeletionDialog({
   selected,
   compact,
@@ -61,7 +66,7 @@ export function ClientDeletionDialog({
               <DeletionImpactSummary {...impact} />
               {impact.blockers.map((reason) => (
                 <p key={reason} className="text-[var(--error-text)]">
-                  {translate(reason)}
+                  {translate(blockerMessages[reason] ?? reason)}
                 </p>
               ))}
             </>
