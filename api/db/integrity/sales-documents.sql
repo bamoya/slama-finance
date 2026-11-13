@@ -31,6 +31,7 @@ BEGIN
   PERFORM "public".guard_document_status(OLD.status, NEW.status, OLD.cancelled_at, NEW.cancelled_at, OLD.cancellation_reason, NEW.cancellation_reason);
   IF OLD.status = 'sent' AND NEW.status = 'issued' THEN PERFORM "public".reject_issued_document_change_field('status'); END IF;
   IF NEW.number IS DISTINCT FROM OLD.number THEN PERFORM "public".reject_issued_document_change_field('number'); END IF;
+  IF NEW.kind IS DISTINCT FROM OLD.kind THEN PERFORM "public".reject_issued_document_change_field('kind'); END IF;
   IF NEW.issued_at IS DISTINCT FROM OLD.issued_at THEN PERFORM "public".reject_issued_document_change_field('issued_at'); END IF;
   IF NEW.issue_date IS DISTINCT FROM OLD.issue_date THEN PERFORM "public".reject_issued_document_change_field('issue_date'); END IF;
   IF NEW.due_date IS DISTINCT FROM OLD.due_date THEN PERFORM "public".reject_issued_document_change_field('due_date'); END IF;

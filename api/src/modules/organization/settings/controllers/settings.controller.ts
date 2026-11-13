@@ -20,6 +20,7 @@ export function createSettingsController(
 ) {
   return {
     company: () => service.getCompany(),
+    legalRequirements: () => service.legalRequirements(),
     updateCompany: (r: FastifyRequest) =>
       service.updateCompany(UpdateCompanySettingsSchema.parse(r.body), r.actor!.userId),
     banks: () => service.listBanks(),

@@ -64,18 +64,18 @@ describe('Catalog insights', () => {
       currency: string,
       issueDate: string,
     ) => {
-      const taxed = number === 'INV-INS-1'
+      const taxed = number === 'FAC-INS-1'
       const [row] = await fixture.client`
-        insert into invoices(number, status, client_id, issue_date, due_date, currency,
+        insert into invoices(number, kind, status, client_id, issue_date, due_date, currency,
           issuer_snapshot, client_snapshot, appearance_snapshot, subtotal, tax_total, total, issued_at)
-        values(${number}, ${status}, ${client!.id}, ${issueDate}::date, '2026-10-30', ${currency},
+        values(${number}, 'legal', ${status}, ${client!.id}, ${issueDate}::date, '2026-10-30', ${currency},
           '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '50.00', ${taxed ? '4.00' : '0.00'}, ${taxed ? '54.00' : '50.00'}, now()) returning id
       `
       return row!.id as string
     }
-    const invoice = await createInvoice('INV-INS-1', 'issued', 'MAD', '2026-09-15')
-    const euroInvoice = await createInvoice('INV-INS-2', 'sent', 'EUR', '2026-09-16')
-    const cancelled = await createInvoice('INV-INS-3', 'cancelled', 'MAD', '2026-09-17')
+    const invoice = await createInvoice('FAC-INS-1', 'issued', 'MAD', '2026-09-15')
+    const euroInvoice = await createInvoice('FAC-INS-2', 'sent', 'EUR', '2026-09-16')
+    const cancelled = await createInvoice('FAC-INS-3', 'cancelled', 'MAD', '2026-09-17')
     const line = async (
       invoiceId: string,
       product: typeof wheat,
@@ -192,9 +192,9 @@ describe('Catalog insights', () => {
       ]),
     )
     const [secondInvoice] = await fixture.client`
-      insert into invoices(number, status, client_id, issue_date, due_date, currency,
+      insert into invoices(number, kind, status, client_id, issue_date, due_date, currency,
         issuer_snapshot, client_snapshot, appearance_snapshot, subtotal, tax_total, total, issued_at)
-      select 'INV-INS-4', 'issued', client_id, '2026-09-20', due_date, 'MAD',
+      select 'FAC-INS-4', 'legal', 'issued', client_id, '2026-09-20', due_date, 'MAD',
         issuer_snapshot, client_snapshot, appearance_snapshot, '10.00', '0.00', '10.00', now()
       from invoices where id=${invoice} returning id
     `

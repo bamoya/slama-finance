@@ -13,4 +13,4 @@ export {
   useNotificationRules,
 } from './notifications/queries'
 export { SettingsRecordPage } from './shared/pages/settings-record-page'
-export { useBankAccounts, useDocumentTemplates } from './shared/queries'
+export { useBankAccounts, useCompanySettings, useDocumentTemplates } from './shared/queries'

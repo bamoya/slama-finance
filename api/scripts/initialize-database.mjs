@@ -101,6 +101,7 @@ export function runtimeGrantStatements(role, schema = 'public') {
         'plan_entitlements',
         'plan_version_prices',
         'plan_selling',
+        'legal_type_requirements',
       ],
     ],
     ['SELECT, INSERT', ['organizations']],

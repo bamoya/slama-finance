@@ -14,6 +14,11 @@ export function registerOwnerOrganizationRoutes(
       { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
       onboarding.slugAvailability,
     )
+    app.get(
+      '/legal-type-requirements',
+      { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+      onboarding.legalRequirements,
+    )
     app.post(
       '/organizations',
       { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },

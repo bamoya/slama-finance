@@ -102,6 +102,8 @@ paths:
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organizations~1{organizationId}~1onboarding~1complete
   '/api/v1/owner/organizations/{organizationId}/onboarding':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organizations~1{organizationId}~1onboarding
+  /api/v1/owner/legal-type-requirements:
+    $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1legal-type-requirements
   '/api/v1/owner/organization-slugs/availability':
     $ref: ./modules/identity/owner-onboarding.yaml#/paths/~1api~1v1~1owner~1organization-slugs~1availability
   '/api/v1/admin/organizations/{organizationId}/slug':
@@ -352,6 +354,8 @@ paths:
     $ref: ./modules/media/media.yaml#/paths/~1api~1v1~1media~1{id}~1download
   /api/v1/company-settings:
     $ref: ./modules/settings/settings.yaml#/paths/~1api~1v1~1company-settings
+  /api/v1/company-settings/legal-requirements:
+    $ref: ./modules/settings/settings.yaml#/paths/~1api~1v1~1company-settings~1legal-requirements
   /api/v1/bank-accounts:
     $ref: ./modules/settings/settings.yaml#/paths/~1api~1v1~1bank-accounts
   /api/v1/bank-accounts/{id}:
@@ -774,6 +778,12 @@ components:
       $ref: ./modules/catalog/catalog.yaml#/components/schemas/ProductVariant
     Product:
       $ref: ./modules/catalog/catalog.yaml#/components/schemas/Product
+    LegalType:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/LegalType
+    VatRegime:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/VatRegime
+    LegalTypeRequirements:
+      $ref: ./modules/settings/settings.yaml#/components/schemas/LegalTypeRequirements
     CompanySettings:
       $ref: ./modules/settings/settings.yaml#/components/schemas/CompanySettings
     UpdateCompanySettings:

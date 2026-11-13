@@ -19,6 +19,8 @@ import { DocumentFilters } from '../../components/document-filters'
 import { type DocumentColumn, DocumentTable } from '../../components/document-table'
 import { SalesBulkActions } from '../../components/sales-bulk-actions'
 import { useDocumentFilters } from '../../components/use-document-filters'
+import { InvoiceKindBadge } from '../components/invoice-kind-badge'
+import { SimpleInvoiceNotice } from '../components/simple-invoice-notice'
 import { useInvoices } from '../queries'
 
 const statusValues = ['draft', 'issued', 'sent', 'cancelled'] as const
@@ -73,9 +75,12 @@ export function InvoicesPage() {
     {
       title: t('invoice'),
       render: (row) => (
-        <Link href={`/invoices/${row.id}`} className="font-semibold hover:text-[var(--accent)]">
-          {row.number ?? t('draftInvoice')}
-        </Link>
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <Link href={`/invoices/${row.id}`} className="font-semibold hover:text-[var(--accent)]">
+            {row.number ?? t('draftInvoice')}
+          </Link>
+          <InvoiceKindBadge kind={row.kind} />
+        </span>
       ),
     },
     {
@@ -153,6 +158,7 @@ export function InvoicesPage() {
           </Can>
         }
       />
+      <SimpleInvoiceNotice />
       <section className="overflow-hidden rounded-panel border border-[var(--border)] bg-[var(--surface)]">
         <DocumentFilters
           filters={filters}

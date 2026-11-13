@@ -22,8 +22,11 @@ import { DocumentNotificationHistory } from '../../notifications/components/docu
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
 import { InvoiceBalance } from '../../payments/components/invoice-balance'
 import { InvoiceCancellationDialog } from '../components/invoice-cancellation-dialog'
+import { InvoiceKindBadge } from '../components/invoice-kind-badge'
 import { InvoicePaymentHistory } from '../components/invoice-payment-history'
 import { InvoiceRelationships } from '../components/invoice-relationships'
+import { isMissingLegalIdentity } from '../components/legal-identity-error'
+import { MissingLegalIdentity } from '../components/missing-legal-identity'
 import { refreshInvoices, useInvoice, useInvoiceActions, useInvoiceArtifacts } from '../queries'
 
 export function InvoiceDetailPage() {
@@ -86,6 +89,7 @@ export function InvoiceDetailPage() {
       <PageHeader
         eyebrow={translate('Sales')}
         title={row.number ?? translate('Draft invoice')}
+        status={<InvoiceKindBadge kind={row.kind} />}
         description={translate('Created {{value0}}', {
           value0: displayDateTime(row.createdAt).split(' ')[0],
         })}
@@ -192,7 +196,11 @@ export function InvoiceDetailPage() {
           </div>
         }
       />
-      <FormError error={error} />
+      {isMissingLegalIdentity(error) ? (
+        <MissingLegalIdentity error={error} />
+      ) : (
+        <FormError error={error} />
+      )}
       <div className="grid gap-section lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
         <div className="grid content-start gap-section">
           <section className="rounded-panel border border-[var(--border)] bg-[var(--surface)] p-panel">

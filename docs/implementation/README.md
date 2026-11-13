@@ -6,6 +6,8 @@ it does not mark multi-tenancy as implemented or replace the current delivery ba
 
 Folder structure and naming rules for all features and modules: [feature structure](feature-structure.md).
 
+Organization legal types, simple invoices and VAT exemption: [organization legal types](organization-legal-types.md).
+
 Latest approved cross-module change: [flexible deletion and cancellation](destructive-actions.md).
 That spec records the agreed cascade/detachment rules, shared impact dialogs and staged implementation.
 

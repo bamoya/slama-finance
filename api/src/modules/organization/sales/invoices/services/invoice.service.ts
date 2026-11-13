@@ -18,6 +18,11 @@ import type { createArtifactSupport } from '../../../../../support/artifacts/ind
 import type { createJobSupport } from '../../../../../support/jobs/index.js'
 import { documentClient } from '../../shared/services/document-client.js'
 import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
+import {
+  assertNoVatWhenExempt,
+  invoiceKind,
+  issuerSnapshot,
+} from '../../shared/services/legal-identity.js'
 import type { createInvoiceRepository, InvoiceRow } from '../repositories/invoice.repository.js'
 
 type Repository = ReturnType<typeof createInvoiceRepository>
@@ -53,8 +58,11 @@ export function createInvoiceService(
         row.status === 'draft'
           ? resolveLocale(
               row.localeOverride,
-              (await (tx ? repo.company(tx) : repo.transaction((inner) => repo.company(inner))))
-                .locale,
+              (
+                await (tx
+                  ? repo.company(tx, false)
+                  : repo.transaction((inner) => repo.company(inner, false)))
+              ).locale,
             )
           : row.locale,
       clientDisplayName,
@@ -74,6 +82,7 @@ export function createInvoiceService(
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
     const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
     const template = await repo.template(input.templateId ?? company.defaultTemplateId, tx)
+    assertNoVatWhenExempt(company, input.lines)
     let subtotal = new FinancialDecimal(0)
     let taxTotal = new FinancialDecimal(0)
     const lines = []
@@ -111,25 +120,11 @@ export function createInvoiceService(
         currency: company.currency,
         locale: resolveLocale(input.localeOverride, company.locale),
         localeOverride: input.localeOverride ?? null,
-        issuerSnapshot: {
-          locale: resolveLocale(input.localeOverride, company.locale),
-          legalName: company.legalName,
-          tradeName: company.tradeName,
-          legalForm: company.legalForm,
-          shareCapital: company.shareCapital,
-          addressLine1: company.addressLine1,
-          addressLine2: company.addressLine2,
-          city: company.city,
-          postalCode: company.postalCode,
-          countryCode: company.countryCode,
-          ice: company.ice,
-          taxIdentifier: company.taxIdentifier,
-          registrationNumber: company.registrationNumber,
-          registrationCity: company.registrationCity,
-          professionalTaxNumber: company.professionalTaxNumber,
-          email: company.email,
-          phone: company.phone,
-        },
+        issuerSnapshot: issuerSnapshot(
+          company,
+          resolveLocale(input.localeOverride, company.locale),
+          await repo.legalFields(tx, company.legalType),
+        ),
         clientSnapshot: client.snapshot,
         appearanceSnapshot: documentAppearance(template, company),
         bankDetailsSnapshot,
@@ -347,7 +342,7 @@ export function createInvoiceService(
         assertVersion(before.version, expectedVersion)
         if (before.status !== 'draft')
           throw new AppError(409, 'INVALID_STATUS', 'Invoice is already issued.')
-        const company = await repo.company(tx)
+        const company = await repo.company(tx, false, true)
         const finalDate =
           before.dueDate ?? documentDefaultDate(before.issueDate, company.paymentDueDays)
         const defaultTemplate = !before.templateId
@@ -355,15 +350,27 @@ export function createInvoiceService(
           : null
         if (finalDate < before.issueDate)
           throw new AppError(400, 'INVALID_DATE', 'A due date is required before issuing.')
-        if (!(await repo.lines(id, tx)).length)
+        const draftLines = await repo.lines(id, tx)
+        if (!draftLines.length)
           throw new AppError(400, 'EMPTY_INVOICE', 'Add at least one product before issuing.')
-        const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
+        assertNoVatWhenExempt(company, draftLines)
+        // Gate on the current company identity: individual -> simple invoice (FS), registered type with
+        // every required field -> legal invoice (FAC), otherwise 409 MISSING_LEGAL_IDENTITY.
+        const legalFields = await repo.legalFields(tx, company.legalType)
+        const kind = invoiceKind(company, legalFields)
+        // A registered type was checked field by field above; an individual still needs the basics.
+        if (kind === 'simple') await repo.company(tx)
+        const issuedLocale = resolveLocale(before.localeOverride, company.locale)
         const currentClientSnapshot = (
           await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)
         ).snapshot
         const bankDetailsSnapshot = await repo.bankSnapshot(tx, before.bankAccountId)
         // Number and issue instant are taken last, under the series counter lock.
-        const { number, issuedAt } = await repo.nextNumber(tx, 'FAC', company.timezone)
+        const { number, issuedAt } = await repo.nextNumber(
+          tx,
+          kind === 'simple' ? 'FS' : 'FAC',
+          company.timezone,
+        )
         const row = await repo.update(
           id,
           {
@@ -376,10 +383,8 @@ export function createInvoiceService(
                 }
               : {}),
             locale: issuedLocale,
-            issuerSnapshot: {
-              ...(before.issuerSnapshot as Record<string, unknown>),
-              locale: issuedLocale,
-            },
+            kind,
+            issuerSnapshot: issuerSnapshot(company, issuedLocale, legalFields, kind),
             number,
             issuedAt,
             updatedByActorId: actor,
@@ -493,6 +498,7 @@ export function createInvoiceService(
           )
         const lines = await repo.estimateLines(id, tx)
         const company = await repo.company(tx)
+        assertNoVatWhenExempt(company, lines)
         if (await repo.wasDeletedOperation(input.operationId, tx))
           throw new AppError(
             409,

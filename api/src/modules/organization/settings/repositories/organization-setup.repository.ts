@@ -44,10 +44,25 @@ export async function applyOrganizationSetup(
     createdByActorId: actorId,
     updatedByActorId: actorId,
   })
+  const registryCity =
+    company.registrationNumber?.trim() && company.registrationCity?.trim()
+      ? company.registrationCity.trim()
+      : null
   await tx
     .update(companySettings)
     .set({
       legalName: company.legalName ?? null,
+      legalType: company.legalType ?? 'individual',
+      professionalTaxNumber: company.professionalTaxNumber || null,
+      // Onboarding never blocks: an unusable capital is ignored rather than failing the activation.
+      shareCapital: /^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$/.test(
+        (company.shareCapital ?? '').replace(/\s/g, ''),
+      )
+        ? company.shareCapital!.replace(/\s/g, '')
+        : null,
+      // An auto-entrepreneur who does not charge VAT starts VAT exempt; everyone else keeps the subject regime.
+      vatRegime:
+        company.legalType === 'auto_entrepreneur' && !c.defaults.vatEnabled ? 'exempt' : 'subject',
       tradeName: c.name,
       email: company.email ?? null,
       phone: company.phone ?? null,
@@ -55,8 +70,9 @@ export async function applyOrganizationSetup(
       city: company.city ?? null,
       ice: company.ice ?? null,
       taxIdentifier: company.taxIdentifier ?? null,
-      registrationNumber: company.registrationNumber ?? null,
-      registrationCity: company.registrationNumber ? (company.city ?? null) : null,
+      // RC and its registry city are a pair; without the city the pair stays empty until company settings.
+      registrationNumber: registryCity ? company.registrationNumber!.trim() : null,
+      registrationCity: registryCity,
       locale: c.defaults.language === 'fr' ? 'fr-MA' : 'en-GB',
       currency: 'MAD',
       timezone: 'Africa/Casablanca',

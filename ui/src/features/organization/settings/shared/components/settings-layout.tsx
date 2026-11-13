@@ -5,10 +5,12 @@ import type { SettingsField } from './settings-form'
 
 export function SettingsColumns({
   fields,
+  values,
   renderField,
   preview,
 }: {
   fields: SettingsField[]
+  values?: Record<string, unknown>
   renderField: (field: SettingsField) => ReactNode
   preview?: ReactNode
 }) {
@@ -16,7 +18,7 @@ export function SettingsColumns({
 
   const groups: { title: string; side: boolean; fields: SettingsField[] }[] = []
   for (const field of fields) {
-    if (field.hidden) continue
+    if (field.hidden || (values && field.visibleWhen && !field.visibleWhen(values))) continue
     const side = field.column === 'side'
     const last = groups.at(-1)
     if (field.section || !last || last.side !== side)

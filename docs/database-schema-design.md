@@ -631,7 +631,8 @@ erDiagram
 ```
 
 Public numbers are gap-free and sequential per organization, series and year:
-`FAC-YYYY-NNNNNN`, `DEV-YYYY-NNNNNN`, `BL-YYYY-NNNNNN` and `PAY-YYYY-NNNNNN`
+`FAC-YYYY-NNNNNN` (legal invoice), `FS-YYYY-NNNNNN` (simple invoice of an unregistered individual, see
+[organization legal types](implementation/organization-legal-types.md)), `DEV-YYYY-NNNNNN`, `BL-YYYY-NNNNNN` and `PAY-YYYY-NNNNNN`
 (payments are stored as PAY and displayed as REC). NNNNNN is zero-padded to six
 digits and grows beyond that without truncation. The counter table
 `document_number_counters` is keyed `(organization_id, series, year)` with

@@ -42,6 +42,8 @@ export const invoices = pgTable(
     currency: text('currency').notNull().default('MAD'),
     locale: text('locale').notNull().default('fr-MA'),
     localeOverride: text('locale_override'),
+    /** Set at issue: 'legal' (FAC series) or 'simple' (FS series, not a legal tax invoice). Null for drafts. */
+    kind: text('kind', { enum: ['simple', 'legal'] }),
     issuerSnapshot: jsonb('issuer_snapshot').notNull(),
     clientSnapshot: jsonb('client_snapshot').notNull(),
     appearanceSnapshot: jsonb('appearance_snapshot').notNull(),
@@ -100,6 +102,11 @@ export const invoices = pgTable(
     check(
       'invoices_issued_data',
       sql`(${t.status} = 'draft' and ${t.number} is null and ${t.issuedAt} is null) or (${t.status} <> 'draft' and ${t.number} is not null and ${t.issuedAt} is not null and ${t.dueDate} is not null)`,
+    ),
+    check('invoices_kind_issued', sql`(${t.status} = 'draft') = (${t.kind} is null)`),
+    check(
+      'invoices_kind',
+      sql`${t.kind} is null or (${t.kind} = 'legal' and ${t.number} like 'FAC-%') or (${t.kind} = 'simple' and ${t.number} like 'FS-%')`,
     ),
     check(
       'invoices_conversion_pair',

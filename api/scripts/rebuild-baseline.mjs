@@ -75,6 +75,7 @@ try {
   for (const file of [
     'reference/permissions.sql',
     'reference/plans.sql',
+    'reference/legal-types.sql',
     'integrity/domain-triggers.sql',
     'integrity/actors.sql',
     'integrity/organization-defaults.sql',

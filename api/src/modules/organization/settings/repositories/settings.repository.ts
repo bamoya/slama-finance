@@ -5,6 +5,7 @@ import {
   bankAccounts,
   companySettings,
   documentTemplates,
+  legalTypeRequirements,
 } from '../../../../../db/schema/settings.js'
 import type {
   CreateBankAccount,
@@ -25,6 +26,12 @@ export function createSettingsRepository(database: () => Database) {
         throw new AppError(503, 'SETTINGS_NOT_INITIALIZED', 'Apply the company settings migration.')
       return row
     },
+    /** Reference data, read-only for the application. */
+    legalRequirements: () =>
+      database()
+        .select()
+        .from(legalTypeRequirements)
+        .orderBy(legalTypeRequirements.legalType, legalTypeRequirements.field),
     async updateCompany(
       input: Omit<UpdateCompanySettings, 'expectedVersion'>,
       actor: string,

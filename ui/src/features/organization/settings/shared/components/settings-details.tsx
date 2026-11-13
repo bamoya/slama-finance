@@ -20,6 +20,7 @@ export function SettingsDetails({
   return (
     <SettingsColumns
       fields={fields}
+      values={values}
       preview={preview ? <PreviewPane values={values} /> : undefined}
       renderField={(field) => {
         const value = values[field.name]

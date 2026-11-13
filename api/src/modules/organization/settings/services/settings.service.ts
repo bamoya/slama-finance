@@ -6,6 +6,7 @@ import {
   type CreateDocumentTemplate,
   CreateDocumentTemplateSchema,
   DocumentTemplateSchema,
+  LegalTypeRequirementsSchema,
   type UpdateBankAccount,
   UpdateBankAccountSchema,
   type UpdateCompanySettings,
@@ -67,7 +68,17 @@ export function createSettingsService(
       throw new AppError(400, 'VALIDATION_ERROR', 'Upload a signature before enabling it.')
     return data
   }
+  async function legalRequirements() {
+    const rows = await repo.legalRequirements()
+    const groups = new Map<string, { field: string; requiredForLegalInvoice: boolean }[]>()
+    for (const { legalType, field, requiredForLegalInvoice } of rows)
+      groups.set(legalType, [...(groups.get(legalType) ?? []), { field, requiredForLegalInvoice }])
+    return LegalTypeRequirementsSchema.parse({
+      items: [...groups].map(([legalType, fields]) => ({ legalType, fields })),
+    })
+  }
   return {
+    legalRequirements,
     getCompany: async () => companyDto(await repo.company()),
     async updateCompany(input: UpdateCompanySettings, actor: string) {
       const { expectedVersion, ...data } = UpdateCompanySettingsSchema.parse(normalized(input))
@@ -82,6 +93,16 @@ export function createSettingsService(
         await repo.authorizeWrite(tx, actor, 'company_settings.update')
         const before = await repo.company(tx)
         assertVersion(before.version, expectedVersion)
+        const regime = data.vatRegime ?? before.vatRegime
+        const defaultRate =
+          data.defaultVatRate === undefined ? before.defaultVatRate : data.defaultVatRate
+        if (regime === 'exempt' && defaultRate !== null && Number(defaultRate) > 0)
+          throw new AppError(
+            400,
+            'VAT_EXEMPT_REGIME',
+            'A VAT exempt company cannot have a default VAT rate.',
+            { defaultVatRate: ['Remove the default VAT rate or choose the subject regime.'] },
+          )
         if (data.logoAssetId !== before.logoAssetId)
           await media.assertAttach(tx, data.logoAssetId, 'company_logo', actor)
         if (data.defaultTemplateId) active(await repo.template(data.defaultTemplateId, tx))

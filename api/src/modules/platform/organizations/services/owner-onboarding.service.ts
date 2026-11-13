@@ -134,6 +134,11 @@ export function createOwnerOnboardingService(
           }),
       )
     },
+    /** Read-only reference data for the Company identity step; never blocks onboarding. */
+    async legalRequirements(token: string | undefined) {
+      await owners.session(token)
+      return activation?.settings().legalRequirements() ?? { items: [] }
+    },
     /** Advisory only: creation enforces uniqueness atomically (unique index and slug guard). */
     async slugAvailability(token: string | undefined, input: string) {
       await owners.session(token)

@@ -191,7 +191,7 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
         headers: { 'x-organization-id': orgA },
       })
       expect(foreign.statusCode).toBe(404)
-      await fixture.client`update company_settings set legal_name='Company A',address_line1='Rue Atlas',city='Rabat' where organization_id=${orgA}`
+      await fixture.client`update company_settings set legal_name='Company A',address_line1='Rue Atlas',city='Rabat', legal_type='auto_entrepreneur', ice='001122334455667' where organization_id=${orgA}`
       const invoiceA = randomUUID(),
         invoiceB = randomUUID(),
         artifactB = randomUUID()

@@ -62,7 +62,7 @@ describe('consent-aware sales notifications', () => {
   beforeEach(async () => {
     files.clear()
     fixture = await isolatedDatabase()
-    await fixture.client`update company_settings set legal_name='Slama',address_line1='Rue Atlas',city='Casablanca' where id=1`
+    await fixture.client`update company_settings set legal_name='Slama',address_line1='Rue Atlas',city='Casablanca', legal_type='auto_entrepreneur', ice='001122334455667' where id=1`
     await fixture.client`insert into clients(id,type,legal_name,address_line1,city,email) values (${clientId},'company','Client SARL','Rue Hassan','Rabat','client@example.test')`
     const hash = await createPasswordService().hash('notifications-password-123')
     await fixture.client`update users set password_hash=${hash} where id=${testUserId}`

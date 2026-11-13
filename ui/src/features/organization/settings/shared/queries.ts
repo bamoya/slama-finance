@@ -17,6 +17,8 @@ export const settingsKeys = {
 }
 export const useCompanySettings = (enabled = true) =>
   api.useGetCompanySettings({ query: { enabled } })
+export const useLegalRequirements = (enabled = true) =>
+  api.useGetLegalTypeRequirements({ query: { enabled, staleTime: 5 * 60_000 } })
 export const useBankAccounts = (enabled = true) => api.useListBankAccounts({ query: { enabled } })
 export const useDocumentTemplates = (enabled = true) =>
   api.useListDocumentTemplates({ query: { enabled } })

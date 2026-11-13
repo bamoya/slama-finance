@@ -76,6 +76,28 @@ export const companySettings = pgTable(
     legalName: text('legal_name'),
     tradeName: text('trade_name'),
     legalForm: text('legal_form'),
+    /** Registration status of the organization; 'individual' (not registered) needs no identifier. */
+    legalType: text('legal_type', {
+      enum: [
+        'individual',
+        'auto_entrepreneur',
+        'sole_trader',
+        'sarl',
+        'sarl_au',
+        'sa',
+        'other_company',
+        'association',
+        'cooperative',
+      ],
+    })
+      .notNull()
+      .default('individual'),
+    /** subject = VAT may be charged per line; exempt = no VAT on documents, with a printed mention. */
+    vatRegime: text('vat_regime', { enum: ['subject', 'exempt'] })
+      .notNull()
+      .default('subject'),
+    /** Optional replacement of the default exemption mention printed on exempt documents. */
+    vatExemptionMention: text('vat_exemption_mention'),
     shareCapital: numeric('share_capital', { precision: 18, scale: 2 }),
     addressLine1: text('address_line1'),
     addressLine2: text('address_line2'),
@@ -112,6 +134,19 @@ export const companySettings = pgTable(
       sql`${t.defaultVatRate} is null or ${t.defaultVatRate} between 0 and 100`,
     ),
     check('company_singleton', sql`${t.id} = 1`),
+    check(
+      'company_legal_type',
+      sql`${t.legalType} in ('individual','auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')`,
+    ),
+    check('company_vat_regime', sql`${t.vatRegime} in ('subject','exempt')`),
+    check(
+      'company_exempt_vat',
+      sql`${t.vatRegime} = 'subject' or ${t.defaultVatRate} is null or ${t.defaultVatRate} = 0`,
+    ),
+    check(
+      'company_exemption_mention',
+      sql`${t.vatExemptionMention} is null or char_length(${t.vatExemptionMention}) between 1 and 300`,
+    ),
     check('company_locale', sql`${t.locale} in ('fr-MA','en-GB')`),
     check('company_capital', sql`${t.shareCapital} is null or ${t.shareCapital} >= 0`),
     check(
@@ -168,3 +203,28 @@ export const auditEvents = pgTable(
   },
   (t) => [tenantPolicy(t.organizationId)],
 ).enableRLS()
+
+/**
+ * Reference data: which company fields a legal type shows, and which of them must be complete before
+ * a legal (numbered FAC) invoice can be issued. A type without rows (individual) asks for nothing.
+ * Read-only for the application; changed by editing db/reference/legal-types.sql.
+ */
+export const legalTypeRequirements = pgTable(
+  'legal_type_requirements',
+  {
+    legalType: text('legal_type').notNull(),
+    field: text('field').notNull(),
+    requiredForLegalInvoice: boolean('required_for_legal_invoice').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.legalType, t.field] }),
+    check(
+      'legal_requirement_type',
+      sql`${t.legalType} in ('auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')`,
+    ),
+    check(
+      'legal_requirement_field',
+      sql`${t.field} in ('legalName','ice','taxIdentifier','registrationNumber','professionalTaxNumber','shareCapital','addressLine1','city')`,
+    ),
+  ],
+)

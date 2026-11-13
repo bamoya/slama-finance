@@ -24,6 +24,7 @@ import { protectedRoutes } from './router/protected-routes'
 const api = {
   getCompanySettings: vi.fn<typeof GeneratedApi.getCompanySettings>(),
   updateCompanySettings: vi.fn<typeof GeneratedApi.updateCompanySettings>(),
+  getLegalTypeRequirements: vi.fn<typeof GeneratedApi.getLegalTypeRequirements>(),
   listBankAccounts: vi.fn<typeof GeneratedApi.listBankAccounts>(),
   getBankAccount: vi.fn<typeof GeneratedApi.getBankAccount>(),
   createBankAccount: vi.fn<typeof GeneratedApi.createBankAccount>(),
@@ -62,6 +63,9 @@ const company: CompanySettings = {
   legalName: null,
   tradeName: null,
   legalForm: null,
+  legalType: 'individual',
+  vatRegime: 'subject',
+  vatExemptionMention: null,
   shareCapital: null,
   addressLine1: null,
   addressLine2: null,
@@ -158,6 +162,33 @@ beforeEach(() => {
   )
   vi.mocked(auth.getSession).mockResolvedValue(session)
   vi.mocked(api.getCompanySettings).mockResolvedValue(company)
+  vi.mocked(api.getLegalTypeRequirements).mockResolvedValue({
+    items: [
+      {
+        legalType: 'auto_entrepreneur',
+        fields: [
+          { field: 'legalName', requiredForLegalInvoice: true },
+          { field: 'ice', requiredForLegalInvoice: true },
+          { field: 'addressLine1', requiredForLegalInvoice: true },
+          { field: 'city', requiredForLegalInvoice: true },
+          { field: 'professionalTaxNumber', requiredForLegalInvoice: false },
+        ],
+      },
+      {
+        legalType: 'sarl',
+        fields: [
+          'legalName',
+          'ice',
+          'taxIdentifier',
+          'registrationNumber',
+          'professionalTaxNumber',
+          'shareCapital',
+          'addressLine1',
+          'city',
+        ].map((field) => ({ field, requiredForLegalInvoice: true })),
+      },
+    ] as never,
+  })
   vi.mocked(api.listBankAccounts).mockResolvedValue([bank])
   vi.mocked(api.getBankAccount).mockResolvedValue(bank)
   vi.mocked(api.listDocumentTemplates).mockResolvedValue([template])
@@ -203,6 +234,58 @@ describe('API-integrated company settings pages', () => {
       expect.objectContaining({ legalName: 'Slama', expectedVersion: 1, currency: 'MAD' }),
     )
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+  })
+  it('asks nothing of an individual and reveals the fields of the chosen legal type', async () => {
+    visit('/settings/company/edit')
+    await screen.findByLabelText('Legal company name')
+    expect(screen.getByRole('combobox', { name: 'Legal type' })).toHaveTextContent(
+      'Individual (not registered)',
+    )
+    expect(screen.getByText(/you issue simple invoices \(FS series\)/)).toBeInTheDocument()
+    for (const hidden of [
+      'ICE',
+      'Tax identifier (IF)',
+      'Commercial register (RC)',
+      'Share capital (MAD)',
+    ])
+      expect(screen.queryByLabelText(hidden)).not.toBeInTheDocument()
+    expect(screen.queryByText('Required for legal invoices')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('combobox', { name: 'Legal type' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Auto-entrepreneur' }))
+    expect(await screen.findByLabelText(/^ICE/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Commercial register/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Share capital/)).not.toBeInTheDocument()
+    expect(screen.getAllByText('Required for legal invoices').length).toBeGreaterThanOrEqual(4)
+    expect(screen.getByLabelText(/^Professional tax/)).toBeInTheDocument()
+    expect(screen.getByText(/This never blocks you/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('combobox', { name: 'Legal type' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'SARL' }))
+    for (const shown of [/^Share capital/, /^Commercial register/, /^Tax identifier/])
+      expect(await screen.findByLabelText(shown)).toBeInTheDocument()
+  })
+  it('saves the legal type and VAT regime, showing the exemption mention only when exempt', async () => {
+    vi.mocked(api.updateCompanySettings).mockResolvedValue({ ...company, version: 2 })
+    visit('/settings/company/edit')
+    await screen.findByLabelText('Legal company name')
+    expect(screen.queryByLabelText('VAT exemption mention')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('combobox', { name: 'VAT regime' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'VAT exempt' }))
+    fireEvent.change(await screen.findByLabelText('VAT exemption mention'), {
+      target: { value: 'Mention validée' },
+    })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Legal type' }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Auto-entrepreneur' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(api.updateCompanySettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          legalType: 'auto_entrepreneur',
+          vatRegime: 'exempt',
+          vatExemptionMention: 'Mention validée',
+          expectedVersion: 1,
+        }),
+      ),
+    )
   })
   it('preserves edits on conflict until explicit reload', async () => {
     vi.mocked(api.updateCompanySettings).mockRejectedValue(

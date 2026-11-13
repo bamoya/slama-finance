@@ -27,6 +27,11 @@ export function registerSettingsRoutes(
     { preHandler: requirePermission('company_settings.read') },
     controller.company,
   )
+  app.get(
+    '/company-settings/legal-requirements',
+    { preHandler: requirePermission('company_settings.read') },
+    controller.legalRequirements,
+  )
   app.patch(
     '/company-settings',
     { preHandler: requirePermission('company_settings.update') },

@@ -631,7 +631,7 @@ CREATE TABLE IF NOT EXISTS "document_number_counters" (
 	"last" integer NOT NULL,
 	CONSTRAINT "document_number_counters_organization_id_series_year_pk" PRIMARY KEY("organization_id","series","year"),
 	CONSTRAINT "document_number_counter_last" CHECK ("document_number_counters"."last" > 0),
-	CONSTRAINT "document_number_counter_series" CHECK ("document_number_counters"."series" in ('FAC','DEV','BL','PAY'))
+	CONSTRAINT "document_number_counter_series" CHECK ("document_number_counters"."series" in ('FAC','FS','DEV','BL','PAY'))
 );
 
 --> statement-breakpoint
@@ -778,6 +778,7 @@ CREATE TABLE IF NOT EXISTS "invoices" (
 	"currency" text DEFAULT 'MAD' NOT NULL,
 	"locale" text DEFAULT 'fr-MA' NOT NULL,
 	"locale_override" text,
+	"kind" text,
 	"issuer_snapshot" jsonb NOT NULL,
 	"client_snapshot" jsonb NOT NULL,
 	"appearance_snapshot" jsonb NOT NULL,
@@ -807,6 +808,8 @@ CREATE TABLE IF NOT EXISTS "invoices" (
 	CONSTRAINT "invoices_versions" CHECK ("invoices"."version" > 0 and "invoices"."content_version" > 0),
 	CONSTRAINT "invoices_totals" CHECK ("invoices"."subtotal" >= 0 and "invoices"."tax_total" >= 0 and "invoices"."total" = "invoices"."subtotal" + "invoices"."tax_total"),
 	CONSTRAINT "invoices_issued_data" CHECK (("invoices"."status" = 'draft' and "invoices"."number" is null and "invoices"."issued_at" is null) or ("invoices"."status" <> 'draft' and "invoices"."number" is not null and "invoices"."issued_at" is not null and "invoices"."due_date" is not null)),
+	CONSTRAINT "invoices_kind_issued" CHECK (("invoices"."status" = 'draft') = ("invoices"."kind" is null)),
+	CONSTRAINT "invoices_kind" CHECK ("invoices"."kind" is null or ("invoices"."kind" = 'legal' and "invoices"."number" like 'FAC-%') or ("invoices"."kind" = 'simple' and "invoices"."number" like 'FS-%')),
 	CONSTRAINT "invoices_conversion_pair" CHECK (("invoices"."conversion_operation_id" is null) = ("invoices"."conversion_request" is null) and ("invoices"."source_estimate_id" is null or "invoices"."conversion_operation_id" is not null))
 );
 
@@ -1349,6 +1352,9 @@ CREATE TABLE IF NOT EXISTS "company_settings" (
 	"legal_name" text,
 	"trade_name" text,
 	"legal_form" text,
+	"legal_type" text DEFAULT 'individual' NOT NULL,
+	"vat_regime" text DEFAULT 'subject' NOT NULL,
+	"vat_exemption_mention" text,
 	"share_capital" numeric(18, 2),
 	"address_line1" text,
 	"address_line2" text,
@@ -1379,6 +1385,10 @@ CREATE TABLE IF NOT EXISTS "company_settings" (
 	CONSTRAINT "company_settings_organization_id_id_pk" PRIMARY KEY("organization_id","id"),
 	CONSTRAINT "company_default_vat" CHECK ("company_settings"."default_vat_rate" is null or "company_settings"."default_vat_rate" between 0 and 100),
 	CONSTRAINT "company_singleton" CHECK ("company_settings"."id" = 1),
+	CONSTRAINT "company_legal_type" CHECK ("company_settings"."legal_type" in ('individual','auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')),
+	CONSTRAINT "company_vat_regime" CHECK ("company_settings"."vat_regime" in ('subject','exempt')),
+	CONSTRAINT "company_exempt_vat" CHECK ("company_settings"."vat_regime" = 'subject' or "company_settings"."default_vat_rate" is null or "company_settings"."default_vat_rate" = 0),
+	CONSTRAINT "company_exemption_mention" CHECK ("company_settings"."vat_exemption_mention" is null or char_length("company_settings"."vat_exemption_mention") between 1 and 300),
 	CONSTRAINT "company_locale" CHECK ("company_settings"."locale" in ('fr-MA','en-GB')),
 	CONSTRAINT "company_capital" CHECK ("company_settings"."share_capital" is null or "company_settings"."share_capital" >= 0),
 	CONSTRAINT "company_rc_pair" CHECK (("company_settings"."registration_number" is null) = ("company_settings"."registration_city" is null)),
@@ -1421,6 +1431,17 @@ CREATE TABLE IF NOT EXISTS "document_templates" (
 --> statement-breakpoint
 
 ALTER TABLE "document_templates" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "legal_type_requirements" (
+	"legal_type" text NOT NULL,
+	"field" text NOT NULL,
+	"required_for_legal_invoice" boolean NOT NULL,
+	CONSTRAINT "legal_type_requirements_legal_type_field_pk" PRIMARY KEY("legal_type","field"),
+	CONSTRAINT "legal_requirement_type" CHECK ("legal_type_requirements"."legal_type" in ('auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')),
+	CONSTRAINT "legal_requirement_field" CHECK ("legal_type_requirements"."field" in ('legalName','ice','taxIdentifier','registrationNumber','professionalTaxNumber','shareCapital','addressLine1','city'))
+);
+
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "staff_invitation_roles" (
@@ -4340,6 +4361,68 @@ INSERT INTO subscription_plans(code,name,rank,monthly_ht,annual_ht,entitlements)
 INSERT INTO billing_settings(id) VALUES (1);
 
 --> statement-breakpoint
+-- Company fields shown per legal type and whether each is required to issue a LEGAL (FAC) invoice.
+-- PENDING ACCOUNTANT CONFIRMATION: the field sets below are a working proposal, not accounting advice.
+-- registrationNumber stands for RC and its registration city (they are stored as a pair); addressLine1 and
+-- city are listed separately. 'individual' has no rows: it asks for nothing and issues simple invoices.
+INSERT INTO legal_type_requirements (legal_type, field, required_for_legal_invoice) VALUES
+  ('auto_entrepreneur', 'legalName', true),
+  ('auto_entrepreneur', 'ice', true),
+  ('auto_entrepreneur', 'addressLine1', true),
+  ('auto_entrepreneur', 'city', true),
+  ('auto_entrepreneur', 'taxIdentifier', false),
+  ('auto_entrepreneur', 'professionalTaxNumber', false),
+  ('sole_trader', 'legalName', true),
+  ('sole_trader', 'ice', true),
+  ('sole_trader', 'taxIdentifier', true),
+  ('sole_trader', 'registrationNumber', true),
+  ('sole_trader', 'professionalTaxNumber', true),
+  ('sole_trader', 'addressLine1', true),
+  ('sole_trader', 'city', true),
+  ('sarl', 'legalName', true),
+  ('sarl', 'ice', true),
+  ('sarl', 'taxIdentifier', true),
+  ('sarl', 'registrationNumber', true),
+  ('sarl', 'professionalTaxNumber', true),
+  ('sarl', 'shareCapital', true),
+  ('sarl', 'addressLine1', true),
+  ('sarl', 'city', true),
+  ('sarl_au', 'legalName', true),
+  ('sarl_au', 'ice', true),
+  ('sarl_au', 'taxIdentifier', true),
+  ('sarl_au', 'registrationNumber', true),
+  ('sarl_au', 'professionalTaxNumber', true),
+  ('sarl_au', 'shareCapital', true),
+  ('sarl_au', 'addressLine1', true),
+  ('sarl_au', 'city', true),
+  ('sa', 'legalName', true),
+  ('sa', 'ice', true),
+  ('sa', 'taxIdentifier', true),
+  ('sa', 'registrationNumber', true),
+  ('sa', 'professionalTaxNumber', true),
+  ('sa', 'shareCapital', true),
+  ('sa', 'addressLine1', true),
+  ('sa', 'city', true),
+  ('other_company', 'legalName', true),
+  ('other_company', 'ice', true),
+  ('other_company', 'taxIdentifier', true),
+  ('other_company', 'registrationNumber', true),
+  ('other_company', 'professionalTaxNumber', true),
+  ('other_company', 'shareCapital', true),
+  ('other_company', 'addressLine1', true),
+  ('other_company', 'city', true),
+  ('association', 'legalName', true),
+  ('association', 'ice', true),
+  ('association', 'addressLine1', true),
+  ('association', 'city', true),
+  ('association', 'taxIdentifier', false),
+  ('cooperative', 'legalName', true),
+  ('cooperative', 'ice', true),
+  ('cooperative', 'addressLine1', true),
+  ('cooperative', 'city', true),
+  ('cooperative', 'taxIdentifier', false);
+
+--> statement-breakpoint
 CREATE FUNCTION lock_variant_product() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE parent_id uuid;
 BEGIN
@@ -5798,6 +5881,7 @@ BEGIN
   PERFORM "public".guard_document_status(OLD.status, NEW.status, OLD.cancelled_at, NEW.cancelled_at, OLD.cancellation_reason, NEW.cancellation_reason);
   IF OLD.status = 'sent' AND NEW.status = 'issued' THEN PERFORM "public".reject_issued_document_change_field('status'); END IF;
   IF NEW.number IS DISTINCT FROM OLD.number THEN PERFORM "public".reject_issued_document_change_field('number'); END IF;
+  IF NEW.kind IS DISTINCT FROM OLD.kind THEN PERFORM "public".reject_issued_document_change_field('kind'); END IF;
   IF NEW.issued_at IS DISTINCT FROM OLD.issued_at THEN PERFORM "public".reject_issued_document_change_field('issued_at'); END IF;
   IF NEW.issue_date IS DISTINCT FROM OLD.issue_date THEN PERFORM "public".reject_issued_document_change_field('issue_date'); END IF;
   IF NEW.due_date IS DISTINCT FROM OLD.due_date THEN PERFORM "public".reject_issued_document_change_field('due_date'); END IF;

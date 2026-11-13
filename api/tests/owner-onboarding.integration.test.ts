@@ -161,6 +161,103 @@ describe('Owner onboarding persistence and isolation', () => {
     ).toEqual([{ email: 'staff@example.test', delivery_state: 'queued' }])
     expect((await fixture.client`select count(*)::int n from outbound_messages`)[0]!.n).toBe(0)
   })
+  const activateWith = async (company: Record<string, string | null> | null) => {
+    const draft = await create()
+    let saved = draft
+    if (company) {
+      draft.configuration.company = company as typeof draft.configuration.company
+      saved = (await save(draft)).json<OwnerOnboarding>()
+    }
+    const done = await request(
+      'POST',
+      `/api/v1/owner/organizations/${saved.organization.id}/onboarding/complete`,
+      { expectedVersion: saved.version },
+    )
+    expect(done.statusCode, done.body).toBe(200)
+    return { saved, organizationId: saved.organization.id }
+  }
+  it('serves the legal requirements to owners only', async () => {
+    const requirements = await request('GET', '/api/v1/owner/legal-type-requirements')
+    expect(requirements.statusCode, requirements.body).toBe(200)
+    expect(requirements.json().items.map((i: { legalType: string }) => i.legalType)).toContain(
+      'sarl',
+    )
+    const anonymous = await app.inject({
+      method: 'GET',
+      url: '/api/v1/owner/legal-type-requirements',
+    })
+    expect(anonymous.statusCode).toBeGreaterThanOrEqual(401)
+  })
+  it('rate limits the owner legal requirements endpoint like its siblings', async () => {
+    let limited = 0
+    for (let i = 0; i < 35; i++)
+      if ((await request('GET', '/api/v1/owner/legal-type-requirements')).statusCode === 429)
+        limited++
+    expect(limited).toBeGreaterThan(0)
+  })
+  it('activates as an individual when no legal type was chosen', async () => {
+    const { organizationId } = await activateWith(null)
+    expect(
+      (
+        await fixture.client`select legal_type, vat_regime from company_settings where organization_id=${organizationId}`
+      )[0],
+    ).toEqual({ legal_type: 'individual', vat_regime: 'subject' })
+  })
+  it('persists the chosen legal type and never blocks activation on incomplete or unusable details', async () => {
+    const { saved, organizationId } = await activateWith({
+      legalType: 'sarl',
+      legalName: 'Atlas SARL',
+      professionalTaxNumber: '4455',
+      shareCapital: 'not a number',
+    })
+    expect(saved.configuration.company.legalType).toBe('sarl')
+    expect(
+      (
+        await fixture.client`select legal_type, legal_name, professional_tax_number, share_capital from company_settings where organization_id=${organizationId}`
+      )[0],
+    ).toEqual({
+      legal_type: 'sarl',
+      legal_name: 'Atlas SARL',
+      professional_tax_number: '4455',
+      share_capital: null,
+    })
+  })
+  it('never fabricates the registry city: an RC without its city leaves the pair empty', async () => {
+    const { organizationId } = await activateWith({
+      legalType: 'sarl',
+      city: 'Casablanca',
+      registrationNumber: '998877',
+    })
+    expect(
+      (
+        await fixture.client`select registration_number, registration_city from company_settings where organization_id=${organizationId}`
+      )[0],
+    ).toEqual({ registration_number: null, registration_city: null })
+  })
+  it('stores the registry city the owner entered, not the company city', async () => {
+    const { organizationId } = await activateWith({
+      legalType: 'sarl',
+      city: 'Casablanca',
+      registrationNumber: '998877',
+      registrationCity: 'Fès',
+    })
+    expect(
+      (
+        await fixture.client`select city, registration_number, registration_city from company_settings where organization_id=${organizationId}`
+      )[0],
+    ).toEqual({ city: 'Casablanca', registration_number: '998877', registration_city: 'Fès' })
+  })
+  it('starts an auto-entrepreneur without VAT as VAT exempt', async () => {
+    const { organizationId } = await activateWith({
+      legalType: 'auto_entrepreneur',
+      shareCapital: '1500.50',
+    })
+    expect(
+      (
+        await fixture.client`select legal_type, vat_regime, share_capital from company_settings where organization_id=${organizationId}`
+      )[0],
+    ).toEqual({ legal_type: 'auto_entrepreneur', vat_regime: 'exempt', share_capital: '1500.50' })
+  })
   it('rejects duplicate/owner invitations and restricts every setup route to its owner and portal', async () => {
     const draft = await create()
     draft.configuration.invitations = [

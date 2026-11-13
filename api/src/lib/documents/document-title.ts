@@ -1,6 +1,7 @@
 const titles = {
   fr: {
     invoice: 'Facture',
+    simple_invoice: 'Facture simple',
     estimate: 'Devis',
     delivery: 'Bon de livraison',
     payment_receipt: 'Reçu de paiement',
@@ -8,6 +9,7 @@ const titles = {
   },
   en: {
     invoice: 'Invoice',
+    simple_invoice: 'Simple invoice',
     estimate: 'Estimate',
     delivery: 'Delivery note',
     payment_receipt: 'Payment receipt',

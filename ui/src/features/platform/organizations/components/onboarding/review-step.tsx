@@ -2,6 +2,7 @@ import { Pencil } from 'lucide-react'
 
 import { Button } from '../../../../../components/ui/button'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { legalTypeOptions } from '../../../../../lib/legal-types'
 import { onboardingSteps } from '../../onboarding-steps'
 import { companyFields } from './onboarding-options'
 import type { OnboardingFieldsProps } from './onboarding-types'
@@ -26,6 +27,12 @@ export function ReviewStep({ configuration: c, onEdit }: OnboardingFieldsProps) 
             </>
           ) : s === 2 ? (
             <>
+              {c.company.legalType && (
+                <p>
+                  <span>{translate('Legal type')}</span>
+                  {legalTypeOptions().find((o) => o.value === c.company.legalType)?.label}
+                </p>
+              )}
               {companyFields
                 .filter(([key]) => c.company[key])
                 .map(([key, label]) => (
@@ -34,9 +41,8 @@ export function ReviewStep({ configuration: c, onEdit }: OnboardingFieldsProps) 
                     {c.company[key]}
                   </p>
                 ))}
-              {!Object.values(c.company).some(Boolean) && (
-                <small>{translate('No optional details added.')}</small>
-              )}
+              {!Object.entries(c.company).some(([key, value]) => key !== 'legalType' && value) &&
+                !c.company.legalType && <small>{translate('No optional details added.')}</small>}
             </>
           ) : s === 3 ? (
             <>

@@ -23,6 +23,7 @@ export function createOwnerOnboardingController(
         .send(await service.create(token(r), CreateOwnerOrganizationSchema.parse(r.body))),
     slugAvailability: (r: FastifyRequest) =>
       service.slugAvailability(token(r), checkOwnerOrganizationSlugQuerySchema.parse(r.query).slug),
+    legalRequirements: (r: FastifyRequest) => service.legalRequirements(token(r)),
     get: (r: FastifyRequest) => service.get(token(r), id(r)),
     save: (r: FastifyRequest) =>
       service.save(token(r), id(r), SaveOwnerOnboardingSchema.parse(r.body)),

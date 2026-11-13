@@ -327,6 +327,39 @@
           }
         }
       }
+    },
+    "/api/v1/owner/legal-type-requirements": {
+      "get": {
+        "operationId": "getOwnerLegalTypeRequirements",
+        "security": [
+          {
+            "ownerSessionCookie": []
+          }
+        ],
+        "description": "Reference data (read-only) shown by the Company identity step: the company fields each legal type shows and whether each is required before a legal invoice can be issued. Never blocks organization creation or activation.",
+        "responses": {
+          "200": {
+            "description": "Requirements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/LegalTypeRequirements"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Authorization error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -401,7 +434,31 @@
                 ],
                 "maxLength": 200
               },
+              "registrationCity": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
               "taxIdentifier": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "legalType": {
+                "$ref": "../../openapi.yaml#/components/schemas/LegalType"
+              },
+              "professionalTaxNumber": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "shareCapital": {
                 "type": [
                   "string",
                   "null"

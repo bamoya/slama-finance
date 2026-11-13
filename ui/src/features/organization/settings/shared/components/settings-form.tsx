@@ -26,6 +26,10 @@ import { UnsavedChanges } from './unsaved-changes'
 
 export type SettingsField = {
   hidden?: boolean
+  /** Evaluated against the current form values; false hides the field (values stay in the form). */
+  visibleWhen?: (values: Record<string, unknown>) => boolean
+  /** Small note next to the label, for example "Required for legal invoices". */
+  note?: (values: Record<string, unknown>) => string | undefined
   column?: 'side'
   name: string
   label: string
@@ -44,13 +48,15 @@ export type SettingsField = {
     | 'color'
   nullable?: boolean
   options?: { value: string; label: string }[]
-  hint?: string
+  hint?: string | ((values: Record<string, unknown>) => string | undefined)
   section?: string
   disabled?: boolean
   loading?: boolean
   error?: boolean
   onRetry?: () => void
 }
+const hintText = (field: SettingsField, values: Record<string, unknown>) =>
+  typeof field.hint === 'function' ? field.hint(values) : field.hint
 type Validator = {
   safeParse: (
     value: unknown,
@@ -121,141 +127,164 @@ export function SettingsForm({
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(pending) => (
           <fieldset disabled={pending || readOnly} className="min-w-0">
-            <SettingsColumns
-              fields={fields}
-              preview={
-                preview ? (
-                  <form.Subscribe selector={(state) => state.values}>
-                    {(values) => <PreviewPane values={values} />}
-                  </form.Subscribe>
-                ) : undefined
-              }
-              renderField={(config) => (
-                <form.Field key={config.name} name={config.name}>
-                  {(field) => (
-                    <div
-                      className={
-                        ['textarea', 'logo', 'signature', 'layout', 'density', 'color'].includes(
-                          config.type ?? '',
-                        )
-                          ? 'min-w-0 sm:col-span-full'
-                          : 'min-w-0'
-                      }
-                    >
-                      <Label htmlFor={config.name}>{config.label}</Label>
-                      <div className="mt-2">
-                        {config.type === 'layout' ? (
-                          <LayoutPicker
-                            value={String(field.state.value)}
-                            onChange={field.handleChange}
-                          />
-                        ) : config.type === 'density' ? (
-                          <DensityPicker
-                            value={String(field.state.value)}
-                            onChange={field.handleChange}
-                          />
-                        ) : config.type === 'logo' || config.type === 'signature' ? (
-                          <AssetField
-                            kind={config.type}
-                            value={typeof field.state.value === 'string' ? field.state.value : null}
-                            onChange={field.handleChange}
-                            disabled={readOnly}
-                            onBusy={(value) =>
-                              setBusyAssets((current) => ({ ...current, [config.name]: value }))
-                            }
-                          />
-                        ) : config.type === 'color' ? (
-                          <ColorPicker
-                            id={config.name}
-                            aria-label={config.label}
-                            aria-invalid={!!issues[config.name]}
-                            disabled={config.disabled}
-                            value={String(field.state.value ?? '')}
-                            onValueChange={field.handleChange}
-                            onBlur={field.handleBlur}
-                          />
-                        ) : config.type === 'boolean' ? (
-                          <Switch
-                            id={config.name}
-                            checked={field.state.value === true}
-                            onCheckedChange={field.handleChange}
-                          />
-                        ) : config.type === 'combobox' ? (
-                          <Combobox
-                            id={config.name}
-                            aria-label={config.label}
-                            disabled={config.disabled}
-                            value={String(field.state.value ?? '')}
-                            onValueChange={(value) =>
-                              field.handleChange(config.nullable && !value ? null : value)
-                            }
-                            options={config.options ?? []}
-                            placeholder={config.nullable ? translate('None') : config.label}
-                            clearLabel={config.nullable ? translate('None') : undefined}
-                            loading={config.loading}
-                            error={config.error}
-                            onRetry={config.onRetry}
-                          />
-                        ) : config.type === 'select' ? (
-                          <Select
-                            id={config.name}
-                            disabled={config.disabled}
-                            value={String(field.state.value ?? '')}
-                            onValueChange={(value) =>
-                              field.handleChange(config.nullable && !value ? null : value)
-                            }
-                          >
-                            {config.nullable && (
-                              <SelectOption value="">{translate('None')}</SelectOption>
+            <form.Subscribe selector={(state) => state.values}>
+              {(currentValues) => (
+                <SettingsColumns
+                  fields={fields}
+                  values={currentValues}
+                  preview={
+                    preview ? (
+                      <form.Subscribe selector={(state) => state.values}>
+                        {(values) => <PreviewPane values={values} />}
+                      </form.Subscribe>
+                    ) : undefined
+                  }
+                  renderField={(config) => (
+                    <form.Field key={config.name} name={config.name}>
+                      {(field) => (
+                        <div
+                          className={
+                            [
+                              'textarea',
+                              'logo',
+                              'signature',
+                              'layout',
+                              'density',
+                              'color',
+                            ].includes(config.type ?? '')
+                              ? 'min-w-0 sm:col-span-full'
+                              : 'min-w-0'
+                          }
+                        >
+                          <Label htmlFor={config.name}>
+                            {config.label}
+                            {config.note?.(currentValues) && (
+                              <small className="ms-2 font-normal text-[var(--muted)]">
+                                {config.note(currentValues)}
+                              </small>
                             )}
-                            {config.options?.map((option) => (
-                              <SelectOption key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectOption>
-                            ))}
-                          </Select>
-                        ) : config.type === 'textarea' ? (
-                          <Textarea
-                            id={config.name}
-                            className="min-h-24"
-                            value={String(field.state.value ?? '')}
-                            onChange={(event) =>
-                              field.handleChange(
-                                config.nullable && !event.target.value ? null : event.target.value,
-                              )
-                            }
-                          />
-                        ) : (
-                          <Input
-                            id={config.name}
-                            type={config.type ?? 'text'}
-                            value={String(field.state.value ?? '')}
-                            aria-invalid={!!issues[config.name]}
-                            onChange={(event) =>
-                              field.handleChange(
-                                config.nullable && event.target.value === ''
-                                  ? null
-                                  : config.type === 'number' && event.target.value !== ''
-                                    ? Number(event.target.value)
-                                    : event.target.value,
-                              )
-                            }
-                          />
-                        )}
-                      </div>
-                      {config.hint && (
-                        <p className="mt-2 text-xs text-[var(--muted)]">{config.hint}</p>
+                          </Label>
+                          <div className="mt-2">
+                            {config.type === 'layout' ? (
+                              <LayoutPicker
+                                value={String(field.state.value)}
+                                onChange={field.handleChange}
+                              />
+                            ) : config.type === 'density' ? (
+                              <DensityPicker
+                                value={String(field.state.value)}
+                                onChange={field.handleChange}
+                              />
+                            ) : config.type === 'logo' || config.type === 'signature' ? (
+                              <AssetField
+                                kind={config.type}
+                                value={
+                                  typeof field.state.value === 'string' ? field.state.value : null
+                                }
+                                onChange={field.handleChange}
+                                disabled={readOnly}
+                                onBusy={(value) =>
+                                  setBusyAssets((current) => ({ ...current, [config.name]: value }))
+                                }
+                              />
+                            ) : config.type === 'color' ? (
+                              <ColorPicker
+                                id={config.name}
+                                aria-label={config.label}
+                                aria-invalid={!!issues[config.name]}
+                                disabled={config.disabled}
+                                value={String(field.state.value ?? '')}
+                                onValueChange={field.handleChange}
+                                onBlur={field.handleBlur}
+                              />
+                            ) : config.type === 'boolean' ? (
+                              <Switch
+                                id={config.name}
+                                checked={field.state.value === true}
+                                onCheckedChange={field.handleChange}
+                              />
+                            ) : config.type === 'combobox' ? (
+                              <Combobox
+                                id={config.name}
+                                aria-label={config.label}
+                                disabled={config.disabled}
+                                value={String(field.state.value ?? '')}
+                                onValueChange={(value) =>
+                                  field.handleChange(config.nullable && !value ? null : value)
+                                }
+                                options={config.options ?? []}
+                                placeholder={config.nullable ? translate('None') : config.label}
+                                clearLabel={config.nullable ? translate('None') : undefined}
+                                loading={config.loading}
+                                error={config.error}
+                                onRetry={config.onRetry}
+                              />
+                            ) : config.type === 'select' ? (
+                              <Select
+                                id={config.name}
+                                disabled={config.disabled}
+                                value={String(field.state.value ?? '')}
+                                onValueChange={(value) =>
+                                  field.handleChange(config.nullable && !value ? null : value)
+                                }
+                              >
+                                {config.nullable && (
+                                  <SelectOption value="">{translate('None')}</SelectOption>
+                                )}
+                                {config.options?.map((option) => (
+                                  <SelectOption key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectOption>
+                                ))}
+                              </Select>
+                            ) : config.type === 'textarea' ? (
+                              <Textarea
+                                id={config.name}
+                                className="min-h-24"
+                                value={String(field.state.value ?? '')}
+                                onChange={(event) =>
+                                  field.handleChange(
+                                    config.nullable && !event.target.value
+                                      ? null
+                                      : event.target.value,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <Input
+                                id={config.name}
+                                type={config.type ?? 'text'}
+                                value={String(field.state.value ?? '')}
+                                aria-invalid={!!issues[config.name]}
+                                onChange={(event) =>
+                                  field.handleChange(
+                                    config.nullable && event.target.value === ''
+                                      ? null
+                                      : config.type === 'number' && event.target.value !== ''
+                                        ? Number(event.target.value)
+                                        : event.target.value,
+                                  )
+                                }
+                              />
+                            )}
+                          </div>
+                          {hintText(config, currentValues) && (
+                            <p className="mt-2 text-xs text-[var(--muted)]">
+                              {hintText(config, currentValues)}
+                            </p>
+                          )}
+                          {issues[config.name] && (
+                            <p role="alert" className="mt-1 text-sm text-[var(--error-text)]">
+                              {issues[config.name]}
+                            </p>
+                          )}
+                        </div>
                       )}
-                      {issues[config.name] && (
-                        <p role="alert" className="mt-1 text-sm text-[var(--error-text)]">
-                          {issues[config.name]}
-                        </p>
-                      )}
-                    </div>
+                    </form.Field>
                   )}
-                </form.Field>
+                />
               )}
-            />
+            </form.Subscribe>
           </fieldset>
         )}
       </form.Subscribe>

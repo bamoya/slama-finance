@@ -1,5 +1,5 @@
 {
-  "id": "5342dbb8-decb-4fa6-aff7-58eef1543ffa",
+  "id": "94b6d08c-0d12-4b18-a5ab-81ba2e723908",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -5011,7 +5011,7 @@
         },
         "document_number_counter_series": {
           "name": "document_number_counter_series",
-          "value": "\"document_number_counters\".\"series\" in ('FAC','DEV','BL','PAY')"
+          "value": "\"document_number_counters\".\"series\" in ('FAC','FS','DEV','BL','PAY')"
         }
       },
       "isRLSEnabled": true
@@ -6193,6 +6193,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "issuer_snapshot": {
           "name": "issuer_snapshot",
           "type": "jsonb",
@@ -6558,6 +6564,14 @@
         "invoices_issued_data": {
           "name": "invoices_issued_data",
           "value": "(\"invoices\".\"status\" = 'draft' and \"invoices\".\"number\" is null and \"invoices\".\"issued_at\" is null) or (\"invoices\".\"status\" <> 'draft' and \"invoices\".\"number\" is not null and \"invoices\".\"issued_at\" is not null and \"invoices\".\"due_date\" is not null)"
+        },
+        "invoices_kind_issued": {
+          "name": "invoices_kind_issued",
+          "value": "(\"invoices\".\"status\" = 'draft') = (\"invoices\".\"kind\" is null)"
+        },
+        "invoices_kind": {
+          "name": "invoices_kind",
+          "value": "\"invoices\".\"kind\" is null or (\"invoices\".\"kind\" = 'legal' and \"invoices\".\"number\" like 'FAC-%') or (\"invoices\".\"kind\" = 'simple' and \"invoices\".\"number\" like 'FS-%')"
         },
         "invoices_conversion_pair": {
           "name": "invoices_conversion_pair",
@@ -10748,6 +10762,26 @@
           "primaryKey": false,
           "notNull": false
         },
+        "legal_type": {
+          "name": "legal_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'individual'"
+        },
+        "vat_regime": {
+          "name": "vat_regime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'subject'"
+        },
+        "vat_exemption_mention": {
+          "name": "vat_exemption_mention",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "share_capital": {
           "name": "share_capital",
           "type": "numeric(18, 2)",
@@ -11032,6 +11066,22 @@
           "name": "company_singleton",
           "value": "\"company_settings\".\"id\" = 1"
         },
+        "company_legal_type": {
+          "name": "company_legal_type",
+          "value": "\"company_settings\".\"legal_type\" in ('individual','auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')"
+        },
+        "company_vat_regime": {
+          "name": "company_vat_regime",
+          "value": "\"company_settings\".\"vat_regime\" in ('subject','exempt')"
+        },
+        "company_exempt_vat": {
+          "name": "company_exempt_vat",
+          "value": "\"company_settings\".\"vat_regime\" = 'subject' or \"company_settings\".\"default_vat_rate\" is null or \"company_settings\".\"default_vat_rate\" = 0"
+        },
+        "company_exemption_mention": {
+          "name": "company_exemption_mention",
+          "value": "\"company_settings\".\"vat_exemption_mention\" is null or char_length(\"company_settings\".\"vat_exemption_mention\") between 1 and 300"
+        },
         "company_locale": {
           "name": "company_locale",
           "value": "\"company_settings\".\"locale\" in ('fr-MA','en-GB')"
@@ -11290,6 +11340,54 @@
         }
       },
       "isRLSEnabled": true
+    },
+    "public.legal_type_requirements": {
+      "name": "legal_type_requirements",
+      "schema": "",
+      "columns": {
+        "legal_type": {
+          "name": "legal_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "field": {
+          "name": "field",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required_for_legal_invoice": {
+          "name": "required_for_legal_invoice",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "legal_type_requirements_legal_type_field_pk": {
+          "name": "legal_type_requirements_legal_type_field_pk",
+          "columns": [
+            "legal_type",
+            "field"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "legal_requirement_type": {
+          "name": "legal_requirement_type",
+          "value": "\"legal_type_requirements\".\"legal_type\" in ('auto_entrepreneur','sole_trader','sarl','sarl_au','sa','other_company','association','cooperative')"
+        },
+        "legal_requirement_field": {
+          "name": "legal_requirement_field",
+          "value": "\"legal_type_requirements\".\"field\" in ('legalName','ice','taxIdentifier','registrationNumber','professionalTaxNumber','shareCapital','addressLine1','city')"
+        }
+      },
+      "isRLSEnabled": false
     },
     "public.staff_invitation_roles": {
       "name": "staff_invitation_roles",

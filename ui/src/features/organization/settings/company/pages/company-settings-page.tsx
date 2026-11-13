@@ -11,6 +11,7 @@ import { PageHeader } from '../../../../../components/management/page-header'
 import { RequestState } from '../../../../../components/management/request-state'
 import { buttonVariants } from '../../../../../components/ui/button'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
+import { legalRules, legalTypeOptions } from '../../../../../lib/legal-types'
 import { Can } from '../../../identity'
 import { useAuthorization } from '../../../identity'
 import {
@@ -27,6 +28,7 @@ import {
   useBankAccounts,
   useCompanySettings,
   useDocumentTemplates,
+  useLegalRequirements,
   useSettingsActions,
 } from '../../shared/queries'
 
@@ -79,6 +81,15 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
   const templates = useDocumentTemplates(hasAccess('templates.read'))
   const banks = useBankAccounts(hasAccess('bank_accounts.read'))
   const cache = useQueryClient()
+  const requirements = useLegalRequirements(hasAccess('company_settings.read'))
+  const rulesOf = (values: Record<string, unknown>) =>
+    legalRules(requirements.data, String(values.legalType ?? record.legalType))
+  const legalField = (field: SettingsField): SettingsField => ({
+    ...field,
+    visibleWhen: (values) => rulesOf(values).shows(field.name),
+    note: (values) =>
+      rulesOf(values).required(field.name) ? translate('Required for legal invoices') : undefined,
+  })
   const templateOptions = (templates.data ?? [])
     .filter((item) => !item.archivedAt)
     .map((item) => ({ value: item.id, label: item.name }))
@@ -90,9 +101,49 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
       value: snapshot.defaultTemplateId,
       label: translate('Current template (unavailable)'),
     })
+  const identity = companyIdentityFields.map(legalField)
   const fields: SettingsField[] = [
-    ...companyIdentityFields,
-    ...addressFields,
+    {
+      name: 'legalType',
+      label: translate('Legal type'),
+      type: 'select',
+      options: legalTypeOptions(),
+      section: translate('Company identity'),
+      hint: (values) =>
+        rulesOf(values).registered
+          ? translate(
+              'Complete the fields marked “Required for legal invoices” to issue legal invoices. This never blocks you: save now and finish later.',
+            )
+          : translate(
+              'As an individual you issue simple invoices (FS series), clearly labelled as not a legal tax invoice. Choose a registered type to issue legal invoices.',
+            ),
+    },
+    { ...identity[0]!, section: undefined },
+    ...identity.slice(1),
+    {
+      name: 'vatRegime',
+      label: translate('VAT regime'),
+      type: 'select',
+      options: [
+        { value: 'subject', label: translate('Subject to VAT') },
+        { value: 'exempt', label: translate('VAT exempt') },
+      ],
+      section: translate('VAT'),
+      hint: translate(
+        'A VAT exempt company charges no VAT: line VAT rates are refused and the exemption mention is printed on documents.',
+      ),
+    },
+    {
+      name: 'vatExemptionMention',
+      label: translate('VAT exemption mention'),
+      type: 'textarea',
+      nullable: true,
+      visibleWhen: (values) => values.vatRegime === 'exempt',
+      hint: translate(
+        'Leave empty to print the default wording. Confirm the exact wording with your accountant.',
+      ),
+    },
+    ...addressFields.map(legalField),
     {
       name: 'logoAssetId',
       label: translate('Company logo'),
@@ -163,7 +214,7 @@ function CompanyIdentityForm({ record, edit }: { record: CompanySettings; edit: 
     <div>
       <p className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
         {translate(
-          'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.',
+          'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / FS / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.',
         )}
       </p>
 

@@ -78,7 +78,9 @@ export const companyIdentityFields: SettingsField[] = [
     },
     nullable: true,
     get hint() {
-      return translate('For example: SARL, SA or sole trader.')
+      return translate(
+        'Optional text printed instead of the legal type name, for example “SARL au capital variable”.',
+      )
     },
   },
   {
@@ -88,7 +90,7 @@ export const companyIdentityFields: SettingsField[] = [
     },
     nullable: true,
     get hint() {
-      return translate('Optional amount with up to two decimal places.')
+      return translate('Amount with up to two decimal places.')
     },
   },
   {

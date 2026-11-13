@@ -16,6 +16,7 @@ import { documentBankSnapshot } from '../../shared/repositories/document-bank.js
 import { documentClientNameSql } from '../../shared/repositories/document-client.js'
 import { snapshotClientName } from '../../shared/repositories/document-client.js'
 import { nextDocumentNumber } from '../../shared/repositories/document-number.js'
+import { legalFields } from '../../shared/repositories/legal-requirements.js'
 
 export type EstimateRow = typeof estimates.$inferSelect
 export type EstimateLineRow = typeof estimateLines.$inferSelect
@@ -26,6 +27,7 @@ export function createEstimateRepository(database: () => Database) {
   return {
     bankSnapshot: documentBankSnapshot,
     nextNumber: nextDocumentNumber,
+    legalFields,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     authorize: requireActorPermission,
     async one(id: string, tx: Database | Transaction = database(), lock = false) {

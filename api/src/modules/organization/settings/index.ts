@@ -2,6 +2,7 @@ import type { FastifyInstance, preHandlerHookHandler } from 'fastify'
 
 import type { Database } from '../../../lib/db.js'
 import type { Transaction } from '../../../lib/db.js'
+import { shownIdentity } from '../../../lib/documents/shown-identity.js'
 import type { NotificationPublicApi } from '../../../support/notifications/index.js'
 import type { MediaPublicApi } from '../media/index.js'
 import type { SalesSettingsDeletionApi } from '../sales/index.js'
@@ -30,6 +31,7 @@ export function createSettingsModule(
     publicApi: {
       applyOrganizationSetup,
       getCompany: service.getCompany,
+      legalRequirements: service.legalRequirements,
       getBank: service.getBank,
       getTemplate: service.getTemplate,
     },
@@ -50,7 +52,18 @@ export function createSettingsModule(
                 const bank = company.defaultBankAccountId
                   ? await service.getBank(company.defaultBankAccountId).catch(() => null)
                   : null
-                return { company, bank, locale: company.locale, logoAssetId: company.logoAssetId }
+                const shown = (await service.legalRequirements()).items.find(
+                  (item) => item.legalType === company.legalType,
+                )
+                return {
+                  company: shownIdentity(
+                    company,
+                    (shown?.fields ?? []).map((f) => f.field),
+                  ),
+                  bank,
+                  locale: company.locale,
+                  logoAssetId: company.logoAssetId,
+                }
               }),
             ),
             permission,

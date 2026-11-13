@@ -86,11 +86,11 @@ describe('Live and frozen reporting', () => {
       tax = '0.00',
     ) => {
       const [row] =
-        await fixture.client`insert into invoices(number,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values(${number},${status},${clientId},${date}::date,'2026-01-01',${currency},'{}','{"legalName":" =SUM(1,1)"}','{}',${net},${tax},${total},'2026-09-01T12:00:00Z') returning id`
+        await fixture.client`insert into invoices(number,kind,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values(${number},'legal',${status},${clientId},${date}::date,'2026-01-01',${currency},'{}','{"legalName":" =SUM(1,1)"}','{}',${net},${tax},${total},'2026-09-01T12:00:00Z') returning id`
       return row!.id as string
     }
     invoiceId = await invoice(
-      'INV-REPORT-MAD',
+      'FAC-REPORT-MAD',
       'issued',
       'MAD',
       '2026-09-15',
@@ -98,9 +98,9 @@ describe('Live and frozen reporting', () => {
       '100.00',
       '20.00',
     )
-    await invoice('INV-REPORT-EUR', 'sent', 'EUR', '2026-09-16', '50.00')
-    await invoice('INV-REPORT-CANCEL', 'cancelled', 'MAD', '2026-09-17', '900.00')
-    const prior = await invoice('INV-REPORT-PRIOR', 'issued', 'MAD', '2026-08-15', '40.00')
+    await invoice('FAC-REPORT-EUR', 'sent', 'EUR', '2026-09-16', '50.00')
+    await invoice('FAC-REPORT-CANCEL', 'cancelled', 'MAD', '2026-09-17', '900.00')
+    const prior = await invoice('FAC-REPORT-PRIOR', 'issued', 'MAD', '2026-08-15', '40.00')
     await fixture.client`insert into invoices(status,client_id,issue_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,total,subtotal,tax_total) values('draft',${clientId},'2026-09-18','MAD','{}','{}','{}','1000','1000','0')`
     const [category] =
       await fixture.client`insert into product_categories(name) values('Grains') returning id`
@@ -115,7 +115,7 @@ describe('Live and frozen reporting', () => {
     const [original] =
       await fixture.client`insert into estimates(number,status,client_id,issue_date,valid_until,currency,issuer_snapshot,client_snapshot,appearance_snapshot,issued_at,accepted_at) values('EST-REPORT-ORIGINAL','superseded',${clientId},'2026-09-01','2026-09-30','MAD','{}','{}','{}','2026-09-01T12:00:00Z','2026-09-02T12:00:00Z') returning id`
     await fixture.client`insert into estimates(number,status,revision_of_id,client_id,issue_date,valid_until,currency,issuer_snapshot,client_snapshot,appearance_snapshot,issued_at) values('EST-REPORT-REVISION','issued',${original!.id},${clientId},'2026-09-03','2026-10-30','MAD','{}','{}','{}','2026-09-03T12:00:00Z')`
-    await fixture.client`update invoices set source_estimate_id=${original!.id},conversion_operation_id=gen_random_uuid(),conversion_request='{}' where number in ('INV-REPORT-MAD','INV-REPORT-EUR')`
+    await fixture.client`update invoices set source_estimate_id=${original!.id},conversion_operation_id=gen_random_uuid(),conversion_request='{}' where number in ('FAC-REPORT-MAD','FAC-REPORT-EUR')`
     for (const [index, id, amount, collected, status, method] of [
       [1, invoiceId, '30.00', '2026-09-15', 'confirmed', 'cash'],
       [2, invoiceId, '20.00', '2026-09-25', 'confirmed', 'bank_transfer'],
@@ -852,7 +852,7 @@ describe('Live and frozen reporting', () => {
     expect(objects.size).toBe(2)
   })
   it('rejects oversized PDF details but captures all rows for an Excel-only schedule', async () => {
-    await fixture.client`insert into invoices(number,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) select 'INV-SYNTH-'||n,'issued',${clientId},'2026-09-10','2026-10-30','MAD','{}','{}','{}','1.00','0.00','1.00',now() from generate_series(1,2500) n`
+    await fixture.client`insert into invoices(number,kind,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) select 'FAC-SYNTH-'||n,'legal','issued',${clientId},'2026-09-10','2026-10-30','MAD','{}','{}','{}','1.00','0.00','1.00',now() from generate_series(1,2500) n`
     const result = await get(`/api/v1/reports/analysis?${criteria}&sections=revenue&limit=25`)
     expect(result.statusCode, result.body).toBe(200)
     expect(result.json().sections[0]).toMatchObject({ total: 2502, rows: expect.any(Array) })

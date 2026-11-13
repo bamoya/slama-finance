@@ -56,6 +56,34 @@ function setup(start?: OwnerOnboarding, createFailure?: { status: number; body: 
   let conflict = false
   const request = vi.spyOn(httpClient, 'request').mockImplementation(async (config) => {
     if (config.url === '/api/v1/owner-auth/session') return response({ owner })
+    if (config.url === '/api/v1/owner/legal-type-requirements')
+      return response({
+        items: [
+          {
+            legalType: 'auto_entrepreneur',
+            fields: [
+              { field: 'legalName', requiredForLegalInvoice: true },
+              { field: 'ice', requiredForLegalInvoice: true },
+              { field: 'addressLine1', requiredForLegalInvoice: true },
+              { field: 'city', requiredForLegalInvoice: true },
+              { field: 'professionalTaxNumber', requiredForLegalInvoice: false },
+            ],
+          },
+          {
+            legalType: 'sarl',
+            fields: [
+              'legalName',
+              'ice',
+              'taxIdentifier',
+              'registrationNumber',
+              'professionalTaxNumber',
+              'shareCapital',
+              'addressLine1',
+              'city',
+            ].map((field) => ({ field, requiredForLegalInvoice: true })),
+          },
+        ],
+      })
     if (config.url === '/api/v1/owner/organization-slugs/availability') {
       const slug = (config.params as { slug: string }).slug
       const reason = slug === 'taken-shop' ? 'taken' : slug === 'www' ? 'reserved' : null
@@ -239,6 +267,31 @@ describe('Guided owner organization onboarding', () => {
         url: expect.stringContaining('/onboarding/complete'),
       }),
     )
+  })
+  it('shows only the fields of the chosen legal type and marks the required ones', async () => {
+    const { stored } = setup(initial(2))
+    expect(await screen.findByText(/you issue simple invoices/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^ICE/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Legal company name/)).toBeInTheDocument()
+    const type = screen.getByRole('combobox', { name: /Legal type/ })
+    fireEvent.click(type)
+    fireEvent.click(await screen.findByRole('option', { name: 'Auto-entrepreneur' }))
+    expect(await screen.findByLabelText(/^ICE/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Commercial register/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Share capital/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Professional tax/).closest('label')).toHaveTextContent(
+      'Optional',
+    )
+    expect(screen.getByLabelText(/^ICE/).closest('label')).toHaveTextContent(
+      'Required for legal invoices',
+    )
+    fireEvent.click(screen.getByRole('combobox', { name: /Legal type/ }))
+    fireEvent.click(await screen.findByRole('option', { name: 'SARL' }))
+    expect(await screen.findByLabelText(/^Share capital/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Commercial register/)).toBeInTheDocument()
+    expect(screen.getByText(/This never blocks you/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save & exit' }))
+    await waitFor(() => expect(stored()!.configuration.company.legalType).toBe('sarl'))
   })
   it('preserves changes when going back and saves the current step on exit', async () => {
     const { stored, location } = setup(initial(2))

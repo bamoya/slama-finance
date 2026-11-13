@@ -27,6 +27,7 @@ import {
 } from '../../components/document-payment-fields'
 import { TemplatePicker } from '../../components/template-picker'
 import { EstimateLinesEditor } from '../../estimates/components/estimate-lines-editor'
+import { SimpleInvoiceNotice } from '../components/simple-invoice-notice'
 import { refreshInvoices, useInvoice, useInvoiceActions } from '../queries'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -148,6 +149,7 @@ function InvoiceEditor({ invoice }: { invoice: Invoice | null }) {
         title={invoice ? translate('Edit invoice') : translate('Create invoice')}
         description={translate('Save a draft, review it, then issue the final invoice.')}
       />
+      {!invoice && <SimpleInvoiceNotice />}
       <form
         id="invoice-form-page"
         noValidate

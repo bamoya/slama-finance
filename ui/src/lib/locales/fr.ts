@@ -916,8 +916,8 @@ export const french: Record<string, string> = {
   'VAT is off unless you choose a rate for a line.':
     'La TVA est désactivée tant qu’aucun taux n’est choisi pour une ligne.',
   'VAT rate': 'Taux de TVA',
-  'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.':
-    'La TVA reste facultative et désactivée par défaut. Les numéros se suivent sans trou pour chaque série (FAC / DEV / BL / PAY) et chaque année. Confirmez les exigences de numérotation exactes avec votre expert-comptable.',
+  'VAT remains optional and off by default. Document numbers run in sequence per series (FAC / FS / DEV / BL / PAY) and year, without gaps. Confirm the exact numbering requirements with your accountant.':
+    'La TVA reste facultative et désactivée par défaut. Les numéros se suivent sans trou pour chaque série (FAC / FS / DEV / BL / PAY) et chaque année. Confirmez les exigences de numérotation exactes avec votre expert-comptable.',
   'VAT:': 'TVA :',
   'Valid until': 'Valable jusqu’au',
   Variants: 'Variantes',
@@ -1373,8 +1373,7 @@ export const french: Record<string, string> = {
   'Open draft revision': 'Ouvrir la révision en brouillon',
   'Open full list': 'Ouvrir la liste complète',
   Optional: 'Facultatif',
-  'Optional amount with up to two decimal places.':
-    'Montant facultatif avec deux décimales maximum.',
+  'Amount with up to two decimal places.': 'Montant avec deux décimales maximum.',
   'Optional note about this payment': 'Note facultative sur ce paiement',
   'Optional suggestion. It is never added to an invoice automatically.':
     'Suggestion facultative. Elle n’est jamais ajoutée automatiquement à une facture.',
@@ -2746,4 +2745,50 @@ export const french: Record<string, string> = {
   'Edit billing details': 'Modifier les informations de facturation',
   'Download PDF {{number}}': 'Télécharger le PDF {{number}}',
   'Preparing…': 'Préparation…',
+  'Legal type': 'Type juridique',
+  'Individual (not registered)': 'Particulier (non immatriculé)',
+  'Auto-entrepreneur': 'Auto-entrepreneur',
+  'Sole trader': 'Personne physique (commerçant)',
+  SARL: 'SARL',
+  'SARL AU': 'SARL AU',
+  SA: 'SA',
+  'Other company': 'Autre société',
+  Association: 'Association',
+  Cooperative: 'Coopérative',
+  'Required for legal invoices': 'Obligatoire pour les factures légales',
+  'Complete the fields marked “Required for legal invoices” to issue legal invoices. This never blocks you: save now and finish later.':
+    'Complétez les champs marqués « Obligatoire pour les factures légales » pour émettre des factures légales. Rien ne vous bloque : enregistrez maintenant et terminez plus tard.',
+  'As an individual you issue simple invoices (FS series), clearly labelled as not a legal tax invoice. Choose a registered type to issue legal invoices.':
+    'En tant que particulier, vous émettez des factures simples (série FS), clairement indiquées comme n’étant pas des factures fiscales légales. Choisissez un type immatriculé pour émettre des factures légales.',
+  'Optional text printed instead of the legal type name, for example “SARL au capital variable”.':
+    'Texte facultatif imprimé à la place du nom du type juridique, par exemple « SARL au capital variable ».',
+  'VAT regime': 'Régime de TVA',
+  'Subject to VAT': 'Assujetti à la TVA',
+  'VAT exempt': 'Exonéré de TVA',
+  'VAT exemption mention': 'Mention d’exonération de TVA',
+  'A VAT exempt company charges no VAT: line VAT rates are refused and the exemption mention is printed on documents.':
+    'Une entreprise exonérée ne facture pas de TVA : les taux de TVA sur les lignes sont refusés et la mention d’exonération est imprimée sur les documents.',
+  'Leave empty to print the default wording. Confirm the exact wording with your accountant.':
+    'Laissez vide pour imprimer la formulation par défaut. Confirmez la formulation exacte avec votre comptable.',
+  'Simple invoice': 'Facture simple',
+  'This invoice cannot be issued as a legal invoice yet.':
+    'Cette facture ne peut pas encore être émise comme facture légale.',
+  'Complete these company details, then issue the invoice again:':
+    'Complétez ces informations de l’entreprise, puis émettez à nouveau la facture :',
+  'Registry city (RC)': 'Ville du registre (RC)',
+  'Ask an administrator to complete the company settings.':
+    'Demandez à un administrateur de compléter les paramètres de l’entreprise.',
+  'Your organization is set up as an individual: invoices are issued as simple invoices (FS series), labelled as not a legal tax invoice. Choose a registered legal type to issue legal invoices.':
+    'Votre organisation est configurée comme particulier : les factures sont émises en factures simples (série FS), indiquées comme n’étant pas une facture fiscale légale. Choisissez un type juridique enregistré pour émettre des factures légales.',
+  'Open company settings': 'Ouvrir les paramètres de l’entreprise',
+  'Complete the company legal identity in company settings before issuing a legal invoice.':
+    'Complétez l’identité juridique de l’entreprise dans les paramètres avant d’émettre une facture légale.',
+  'This company is VAT exempt: remove the VAT rate from the lines or change the VAT regime in company settings.':
+    'Cette entreprise est exonérée de TVA : retirez le taux de TVA des lignes ou changez le régime de TVA dans les paramètres de l’entreprise.',
+  'A VAT exempt company cannot have a default VAT rate.':
+    'Une entreprise exonérée de TVA ne peut pas avoir de taux de TVA par défaut.',
+  'Remove the default VAT rate or choose the subject regime.':
+    'Supprimez le taux de TVA par défaut ou choisissez le régime assujetti.',
+  'Required to issue a legal invoice for this company type.':
+    'Obligatoire pour émettre une facture légale pour ce type d’entreprise.',
 }

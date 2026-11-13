@@ -40,6 +40,25 @@ paths:
             application/json:
               schema:
                 $ref: ../../openapi.yaml#/components/schemas/Error
+  /api/v1/company-settings/legal-requirements:
+    get:
+      operationId: getLegalTypeRequirements
+      x-permissions:
+        - company_settings.read
+      description: Reference data (read-only). For each legal type, the company fields it shows and whether each is required before a legal (FAC) invoice can be issued. The individual type has no entry and asks for nothing.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalTypeRequirements"
+        default:
+          description: Authorization or service error
+          content:
+            application/json:
+              schema:
+                $ref: ../../openapi.yaml#/components/schemas/Error
   /api/v1/bank-accounts:
     get:
       operationId: listBankAccounts
@@ -440,6 +459,62 @@ components:
       type: string
       enum: [ standard, compact ]
       default: standard
+    LegalType:
+      type: string
+      enum:
+        - individual
+        - auto_entrepreneur
+        - sole_trader
+        - sarl
+        - sarl_au
+        - sa
+        - other_company
+        - association
+        - cooperative
+    VatRegime:
+      type: string
+      enum:
+        - subject
+        - exempt
+    LegalTypeRequirements:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - legalType
+              - fields
+            properties:
+              legalType:
+                $ref: "#/components/schemas/LegalType"
+              fields:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - field
+                    - requiredForLegalInvoice
+                  properties:
+                    field:
+                      type: string
+                      enum:
+                        - legalName
+                        - ice
+                        - taxIdentifier
+                        - registrationNumber
+                        - professionalTaxNumber
+                        - shareCapital
+                        - addressLine1
+                        - city
+                    requiredForLegalInvoice:
+                      type: boolean
     CompanySettings:
       type: object
       additionalProperties: false
@@ -463,6 +538,17 @@ components:
             - string
             - "null"
           maxLength: 80
+        legalType:
+          $ref: "#/components/schemas/LegalType"
+        vatRegime:
+          $ref: "#/components/schemas/VatRegime"
+        vatExemptionMention:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 300
+          description: Custom exemption mention; null prints the default wording for the legal type (pending accountant wording).
         shareCapital:
           type:
             - string
@@ -593,6 +679,9 @@ components:
         - legalName
         - tradeName
         - legalForm
+        - legalType
+        - vatRegime
+        - vatExemptionMention
         - shareCapital
         - addressLine1
         - addressLine2
@@ -638,6 +727,17 @@ components:
             - string
             - "null"
           maxLength: 80
+        legalType:
+          $ref: "#/components/schemas/LegalType"
+        vatRegime:
+          $ref: "#/components/schemas/VatRegime"
+        vatExemptionMention:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 300
+          description: Custom exemption mention; null prints the default wording for the legal type (pending accountant wording).
         shareCapital:
           type:
             - string

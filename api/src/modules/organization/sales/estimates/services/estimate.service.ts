@@ -13,6 +13,10 @@ import type { createArtifactSupport } from '../../../../../support/artifacts/ind
 import type { createJobSupport } from '../../../../../support/jobs/index.js'
 import { documentClient } from '../../shared/services/document-client.js'
 import { documentAppearance, documentDefaultDate } from '../../shared/services/document-defaults.js'
+import {
+  assertNoVatWhenExempt,
+  issuerSnapshot as buildIssuerSnapshot,
+} from '../../shared/services/legal-identity.js'
 import type { createEstimateRepository, EstimateRow } from '../repositories/estimate.repository.js'
 
 type Repository = ReturnType<typeof createEstimateRepository>
@@ -89,6 +93,7 @@ export function createEstimateService(
       throw new AppError(400, 'INVALID_DATE', 'Valid-until date must not precede the issue date.')
     const client = await documentClient(input.clientId, tx, repo.client, retained)
     const company = await repo.company(tx)
+    assertNoVatWhenExempt(company, input.lines)
     const bankAccountId =
       input.bankAccountId === undefined ? company.defaultBankAccountId : input.bankAccountId
     const bankDetailsSnapshot = await repo.bankSnapshot(tx, bankAccountId)
@@ -123,25 +128,11 @@ export function createEstimateService(
         updatedByActorId: actor,
       })
     }
-    const issuerSnapshot = {
-      locale: resolveLocale(input.localeOverride, company.locale),
-      legalName: company.legalName,
-      tradeName: company.tradeName,
-      legalForm: company.legalForm,
-      shareCapital: company.shareCapital,
-      addressLine1: company.addressLine1,
-      addressLine2: company.addressLine2,
-      city: company.city,
-      postalCode: company.postalCode,
-      countryCode: company.countryCode,
-      ice: company.ice,
-      taxIdentifier: company.taxIdentifier,
-      registrationNumber: company.registrationNumber,
-      registrationCity: company.registrationCity,
-      professionalTaxNumber: company.professionalTaxNumber,
-      email: company.email,
-      phone: company.phone,
-    }
+    const issuerSnapshot = buildIssuerSnapshot(
+      company,
+      resolveLocale(input.localeOverride, company.locale),
+      await repo.legalFields(tx, company.legalType),
+    )
     const clientSnapshot = client.snapshot
     const appearanceSnapshot = documentAppearance(template, company)
     return {
@@ -379,8 +370,10 @@ export function createEstimateService(
           : null
         if (finalDate < before.issueDate)
           throw new AppError(400, 'INVALID_DATE', 'A valid-until date is required before issuing.')
-        if (!(await repo.lines(id, tx)).length)
+        const draftLines = await repo.lines(id, tx)
+        if (!draftLines.length)
           throw new AppError(400, 'EMPTY_ESTIMATE', 'Add at least one product before issuing.')
+        assertNoVatWhenExempt(company, draftLines)
         const issuedLocale = resolveLocale(before.localeOverride, (await repo.company(tx)).locale)
         const currentClientSnapshot = (
           await documentClient(before.clientId, tx, repo.client, before.clientSnapshot)

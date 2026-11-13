@@ -133,7 +133,7 @@ paths:
     post:
       operationId: issueInvoice
       x-permissions: [invoices.update]
-      description: Finalize a draft using the current client identity and contact details. The client snapshot is frozen from this point; later client edits and PDF regeneration never change it. Products, prices and payment data are not refreshed.
+      description: Finalize a draft using the current client identity and contact details and the current company identity (legal type, identifiers, VAT regime and exemption mention). An individual (not registered) issues a simple invoice (FS series). A registered type with every required field issues a legal invoice (FAC series); with a missing required field the issue is refused with 409 MISSING_LEGAL_IDENTITY and fieldErrors listing each missing company field (legalName, ice, taxIdentifier, registrationNumber, professionalTaxNumber, shareCapital, addressLine1, city). An exempt VAT regime refuses positive line VAT rates (400 VAT_EXEMPT_REGIME, also on create and update). The issuer and client snapshots are frozen from this point; later client edits and PDF regeneration never change it. Products, prices and payment data are not refreshed.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         {
@@ -328,6 +328,7 @@ components:
           id,
           number,
           status,
+          kind,
           clientId,
           clientDisplayName,
           templateId,
@@ -360,6 +361,10 @@ components:
         id: { type: string, format: uuid }
         number: { type: [string, 'null'] }
         status: { type: string, enum: [draft, issued, sent, cancelled] }
+        kind:
+          type: [string, 'null']
+          enum: [simple, legal, null]
+          description: Set at issue. legal = FAC series legal invoice; simple = FS series simple invoice (not a legal tax invoice), issued when the organization is an unregistered individual. Null for drafts.
         clientId: { type: [string, 'null'], format: uuid }
         clientDisplayName: { type: string }
         templateId: { type: [string, 'null'], format: uuid }

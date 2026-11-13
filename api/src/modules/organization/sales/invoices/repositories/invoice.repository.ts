@@ -24,6 +24,7 @@ import { documentBankSnapshot } from '../../shared/repositories/document-bank.js
 import { documentClientNameSql } from '../../shared/repositories/document-client.js'
 import { snapshotClientName } from '../../shared/repositories/document-client.js'
 import { nextDocumentNumber } from '../../shared/repositories/document-number.js'
+import { legalFields } from '../../shared/repositories/legal-requirements.js'
 
 export type InvoiceRow = typeof invoices.$inferSelect
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect
@@ -50,6 +51,7 @@ export function createInvoiceRepository(database: () => Database) {
     },
     bankSnapshot: documentBankSnapshot,
     nextNumber: nextDocumentNumber,
+    legalFields,
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     authorize: requireActorPermission,
     async one(id: string, tx: Database | Transaction = database(), lock = false) {
@@ -229,9 +231,13 @@ export function createInvoiceRepository(database: () => Database) {
         throw new AppError(400, 'INVALID_CLIENT', 'Select an active client.')
       return row
     },
-    async company(tx: Transaction) {
-      const [row] = await tx.select().from(companySettings).where(eq(companySettings.id, 1))
-      if (!row?.legalName || !row.addressLine1 || !row.city)
+    /** `checked: false` leaves the identity check to the legal-type gate (issue time). */
+    async company(tx: Transaction, checked = true, lock = false) {
+      const query = tx.select().from(companySettings).where(eq(companySettings.id, 1))
+      const [row] = lock ? await query.for('update') : await query
+      if (!row)
+        throw new AppError(503, 'SETTINGS_NOT_INITIALIZED', 'Apply the company settings migration.')
+      if (checked && (!row.legalName || !row.addressLine1 || !row.city))
         throw new AppError(
           409,
           'COMPANY_INCOMPLETE',

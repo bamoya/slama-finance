@@ -106,7 +106,7 @@ describe('Independent remaining-feature regression QA', () => {
     hash = await createPasswordService().hash(password)
     await fixture.client`update users set password_hash=${hash} where id=${testUserId}`
     await fixture.client`insert into user_roles(user_id,role_id) select ${testUserId},id from roles where key='admin'`
-    await fixture.client`update company_settings set legal_name='Slama',address_line1='Atlas',city='Casablanca' where id=1`
+    await fixture.client`update company_settings set legal_name='Slama',address_line1='Atlas',city='Casablanca', legal_type='auto_entrepreneur', ice='001122334455667' where id=1`
     const [client] =
       await fixture.client`insert into clients(type,legal_name,address_line1,city,email) values('company','QA Client','Atlas','Casablanca','qa-client@example.test') returning id`
     clientId = client!.id as string
@@ -783,7 +783,7 @@ describe('Independent remaining-feature regression QA', () => {
   )
 
   it('retries partial artifact production from its frozen capture and preserves the published PDF', async () => {
-    await fixture.client`insert into invoices(number,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values('QA-FROZEN','issued',${clientId},'2026-09-15','2026-10-15','MAD','{}','{}','{}','100','0','100','2026-09-15T12:00:00Z')`
+    await fixture.client`insert into invoices(number,kind,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values('FAC-QA-FROZEN','legal','issued',${clientId},'2026-09-15','2026-10-15','MAD','{}','{}','{}','100','0','100','2026-09-15T12:00:00Z')`
     const id = await schedule(testUserId)
     const { reporting } = reportWorkers()
     const runId = await materialize(id, reporting)
@@ -800,7 +800,7 @@ describe('Independent remaining-feature regression QA', () => {
     // Edit an issued invoice behind the guard to prove frozen report figures stay unchanged.
     await fixture.client.begin(async (tx) => {
       await tx`alter table invoices disable trigger invoices_issued_guard`
-      await tx`update invoices set total='900',subtotal='900' where number='QA-FROZEN'`
+      await tx`update invoices set total='900',subtotal='900' where number='FAC-QA-FROZEN'`
       await tx`alter table invoices enable trigger invoices_issued_guard`
     })
     failExcelUpload = false
@@ -909,7 +909,7 @@ describe('Independent remaining-feature regression QA', () => {
       [1, 'Previous legal name', '100'],
       [2, 'Renamed client', '200'],
     ] as const) {
-      await fixture.client`insert into invoices(number,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values(${`QA-CLIENT-${index}`},'issued',${clientId},'2026-09-15','2026-10-15','MAD','{}',${JSON.stringify({ legalName: label })}::jsonb,'{}',${total},'0',${total},'2026-09-15T12:00:00Z')`
+      await fixture.client`insert into invoices(number,kind,status,client_id,issue_date,due_date,currency,issuer_snapshot,client_snapshot,appearance_snapshot,subtotal,tax_total,total,issued_at) values(${`FAC-QA-CLIENT-${index}`},'legal','issued',${clientId},'2026-09-15','2026-10-15','MAD','{}',${JSON.stringify({ legalName: label })}::jsonb,'{}',${total},'0',${total},'2026-09-15T12:00:00Z')`
     }
     const response = await request(
       'GET',

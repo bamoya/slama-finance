@@ -14,6 +14,7 @@ import type { createArtifactSupport } from '../../../../../support/artifacts/ind
 import type { createJobSupport } from '../../../../../support/jobs/index.js'
 import { documentClient } from '../../shared/services/document-client.js'
 import { documentAppearance } from '../../shared/services/document-defaults.js'
+import { issuerSnapshot, withoutDocumentKind } from '../../shared/services/legal-identity.js'
 import type {
   createDeliveryNoteRepository,
   DeliveryNoteRow,
@@ -127,22 +128,9 @@ export function createDeliveryNoteService(
         instructions: input.instructions?.trim() || null,
         includeReceptionSignature: input.includeReceptionSignature,
         localeOverride: input.localeOverride ?? null,
-        issuerSnapshot: invoice?.issuerSnapshot ?? {
-          locale: company.locale,
-          legalName: company.legalName,
-          tradeName: company.tradeName,
-          addressLine1: company.addressLine1,
-          addressLine2: company.addressLine2,
-          city: company.city,
-          postalCode: company.postalCode,
-          countryCode: company.countryCode,
-          ice: company.ice,
-          taxIdentifier: company.taxIdentifier,
-          registrationNumber: company.registrationNumber,
-          registrationCity: company.registrationCity,
-          email: company.email,
-          phone: company.phone,
-        },
+        issuerSnapshot:
+          withoutDocumentKind(invoice?.issuerSnapshot) ??
+          issuerSnapshot(company, company.locale, await repo.legalFields(tx, company.legalType)),
         clientSnapshot: client.snapshot,
       },
       lines,
