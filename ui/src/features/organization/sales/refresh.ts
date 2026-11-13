@@ -12,6 +12,7 @@ export const refreshSales = (client: QueryClient) =>
         (isLiveReportingPath(key) ||
           [
             '/api/v1/clients',
+            '/api/v1/credit-notes',
             '/api/v1/estimates',
             '/api/v1/invoices',
             '/api/v1/delivery-notes',

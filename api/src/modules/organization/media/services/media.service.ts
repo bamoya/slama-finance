@@ -68,7 +68,7 @@ export function createMediaService(
     // The sales caller authorizes explicit template selection; raw media HTTP
     // authorization is unchanged.
     async documentImages(
-      type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt',
+      type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt' | 'credit_note',
       id: string,
       version: number,
       design: 'saved' | 'latest' = 'saved',

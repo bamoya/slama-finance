@@ -1,5 +1,5 @@
 {
-  "id": "94b6d08c-0d12-4b18-a5ab-81ba2e723908",
+  "id": "6524114f-02d8-463b-8c78-5119f4a25435",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1058,7 +1058,7 @@
         },
         "document_artifacts_type": {
           "name": "document_artifacts_type",
-          "value": "\"document_artifacts\".\"document_type\" in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt')"
+          "value": "\"document_artifacts\".\"document_type\" in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt', 'credit_note')"
         },
         "document_artifacts_version": {
           "name": "document_artifacts_version",
@@ -4176,6 +4176,677 @@
       },
       "isRLSEnabled": true
     },
+    "public.credit_note_lines": {
+      "name": "credit_note_lines",
+      "schema": "",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "nullif(current_setting('app.organization_id', true), '')::uuid"
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "credit_note_id": {
+          "name": "credit_note_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_line_id": {
+          "name": "invoice_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_name": {
+          "name": "product_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_reference": {
+          "name": "product_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_rate": {
+          "name": "vat_rate",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "net_amount": {
+          "name": "net_amount",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_amount": {
+          "name": "tax_amount",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_amount": {
+          "name": "total_amount",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "credit_note_lines_position_uq": {
+          "name": "credit_note_lines_position_uq",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "credit_note_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "position",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "credit_note_lines_invoice_line_uq": {
+          "name": "credit_note_lines_invoice_line_uq",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "credit_note_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "credit_note_lines_invoice_line_idx": {
+          "name": "credit_note_lines_invoice_line_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "credit_note_lines_organization_id_organizations_id_fk": {
+          "name": "credit_note_lines_organization_id_organizations_id_fk",
+          "tableFrom": "credit_note_lines",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "credit_note_lines_credit_note_id_credit_notes_id_fk": {
+          "name": "credit_note_lines_credit_note_id_credit_notes_id_fk",
+          "tableFrom": "credit_note_lines",
+          "tableTo": "credit_notes",
+          "columnsFrom": [
+            "credit_note_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "credit_note_lines_invoice_line_id_invoice_lines_id_fk": {
+          "name": "credit_note_lines_invoice_line_id_invoice_lines_id_fk",
+          "tableFrom": "credit_note_lines",
+          "tableTo": "invoice_lines",
+          "columnsFrom": [
+            "invoice_line_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "credit_note_lines_created_by_actor_id_actors_id_fk": {
+          "name": "credit_note_lines_created_by_actor_id_actors_id_fk",
+          "tableFrom": "credit_note_lines",
+          "tableTo": "actors",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "credit_note_lines_updated_by_actor_id_actors_id_fk": {
+          "name": "credit_note_lines_updated_by_actor_id_actors_id_fk",
+          "tableFrom": "credit_note_lines",
+          "tableTo": "actors",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "tenant_isolation": {
+          "name": "tenant_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "\"credit_note_lines\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid",
+          "withCheck": "\"credit_note_lines\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {
+        "credit_note_lines_position": {
+          "name": "credit_note_lines_position",
+          "value": "\"credit_note_lines\".\"position\" >= 0"
+        },
+        "credit_note_lines_quantity": {
+          "name": "credit_note_lines_quantity",
+          "value": "\"credit_note_lines\".\"quantity\" >= 0"
+        },
+        "credit_note_lines_price": {
+          "name": "credit_note_lines_price",
+          "value": "\"credit_note_lines\".\"unit_price\" >= 0"
+        },
+        "credit_note_lines_vat": {
+          "name": "credit_note_lines_vat",
+          "value": "\"credit_note_lines\".\"vat_rate\" is null or (\"credit_note_lines\".\"vat_rate\" >= 0 and \"credit_note_lines\".\"vat_rate\" <= 100)"
+        },
+        "credit_note_lines_totals": {
+          "name": "credit_note_lines_totals",
+          "value": "\"credit_note_lines\".\"net_amount\" >= 0 and (\"credit_note_lines\".\"net_amount\" > 0 or \"credit_note_lines\".\"quantity\" > 0) and \"credit_note_lines\".\"tax_amount\" >= 0 and \"credit_note_lines\".\"total_amount\" = \"credit_note_lines\".\"net_amount\" + \"credit_note_lines\".\"tax_amount\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.credit_notes": {
+      "name": "credit_notes",
+      "schema": "",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "nullif(current_setting('app.organization_id', true), '')::uuid"
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_number": {
+          "name": "invoice_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invoice_issue_date": {
+          "name": "invoice_issue_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issuer_snapshot": {
+          "name": "issuer_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_snapshot": {
+          "name": "client_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "appearance_snapshot": {
+          "name": "appearance_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_details_snapshot": {
+          "name": "bank_details_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subtotal": {
+          "name": "subtotal",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "tax_total": {
+          "name": "tax_total",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "issue_date": {
+          "name": "issue_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "content_version": {
+          "name": "content_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_actor_id": {
+          "name": "created_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by_actor_id": {
+          "name": "updated_by_actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "credit_notes_number_tenant_unique": {
+          "name": "credit_notes_number_tenant_unique",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "credit_notes_invoice_idx": {
+          "name": "credit_notes_invoice_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "invoice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "credit_notes_client_idx": {
+          "name": "credit_notes_client_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "credit_notes_organization_id_organizations_id_fk": {
+          "name": "credit_notes_organization_id_organizations_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "credit_notes_invoice_id_invoices_id_fk": {
+          "name": "credit_notes_invoice_id_invoices_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "invoices",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "credit_notes_client_id_clients_id_fk": {
+          "name": "credit_notes_client_id_clients_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "credit_notes_created_by_actor_id_actors_id_fk": {
+          "name": "credit_notes_created_by_actor_id_actors_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "actors",
+          "columnsFrom": [
+            "created_by_actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "credit_notes_updated_by_actor_id_actors_id_fk": {
+          "name": "credit_notes_updated_by_actor_id_actors_id_fk",
+          "tableFrom": "credit_notes",
+          "tableTo": "actors",
+          "columnsFrom": [
+            "updated_by_actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "tenant_isolation": {
+          "name": "tenant_isolation",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "\"credit_notes\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid",
+          "withCheck": "\"credit_notes\".\"organization_id\" = nullif(current_setting('app.organization_id', true), '')::uuid"
+        }
+      },
+      "checkConstraints": {
+        "credit_notes_status": {
+          "name": "credit_notes_status",
+          "value": "\"credit_notes\".\"status\" in ('draft','issued')"
+        },
+        "credit_notes_currency": {
+          "name": "credit_notes_currency",
+          "value": "\"credit_notes\".\"currency\" ~ '^[A-Z]{3}$'"
+        },
+        "credit_notes_locale": {
+          "name": "credit_notes_locale",
+          "value": "\"credit_notes\".\"locale\" in ('fr-MA','en-GB')"
+        },
+        "credit_notes_reason": {
+          "name": "credit_notes_reason",
+          "value": "length(trim(\"credit_notes\".\"reason\")) > 0"
+        },
+        "credit_notes_versions": {
+          "name": "credit_notes_versions",
+          "value": "\"credit_notes\".\"version\" > 0 and \"credit_notes\".\"content_version\" > 0"
+        },
+        "credit_notes_totals": {
+          "name": "credit_notes_totals",
+          "value": "\"credit_notes\".\"subtotal\" >= 0 and \"credit_notes\".\"tax_total\" >= 0 and \"credit_notes\".\"total\" = \"credit_notes\".\"subtotal\" + \"credit_notes\".\"tax_total\""
+        },
+        "credit_notes_issued_data": {
+          "name": "credit_notes_issued_data",
+          "value": "(\"credit_notes\".\"status\" = 'draft' and \"credit_notes\".\"number\" is null and \"credit_notes\".\"issued_at\" is null and \"credit_notes\".\"issue_date\" is null) or (\"credit_notes\".\"status\" = 'issued' and \"credit_notes\".\"number\" is not null and \"credit_notes\".\"issued_at\" is not null and \"credit_notes\".\"issue_date\" is not null)"
+        },
+        "credit_notes_kind": {
+          "name": "credit_notes_kind",
+          "value": "\"credit_notes\".\"number\" is null or (\"credit_notes\".\"kind\" = 'legal' and \"credit_notes\".\"number\" like 'AVO-%') or (\"credit_notes\".\"kind\" = 'simple' and \"credit_notes\".\"number\" like 'AVS-%')"
+        }
+      },
+      "isRLSEnabled": true
+    },
     "public.delivery_invoice_allocations": {
       "name": "delivery_invoice_allocations",
       "schema": "",
@@ -5011,7 +5682,7 @@
         },
         "document_number_counter_series": {
           "name": "document_number_counter_series",
-          "value": "\"document_number_counters\".\"series\" in ('FAC','FS','DEV','BL','PAY')"
+          "value": "\"document_number_counters\".\"series\" in ('FAC','FS','AVO','AVS','DEV','BL','PAY')"
         }
       },
       "isRLSEnabled": true

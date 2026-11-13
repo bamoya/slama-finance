@@ -1,3 +1,4 @@
+export { CreditNoteDetailPage, CreditNoteFormPage, CreditNotesPage } from './credit-notes'
 export {
   DeliveryConvertPage,
   DeliveryNoteDetailPage,

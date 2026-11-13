@@ -31,6 +31,14 @@ import { createSettingsReferenceService } from './actions/services/settings-refe
 import { createArtifactController } from './artifacts/controllers/artifact.controller.js'
 import { registerArtifactRoutes } from './artifacts/routes/artifact.routes.js'
 import { createRegeneratePdfService } from './artifacts/services/regenerate-pdf.service.js'
+import { createCreditNoteController } from './credit-notes/controllers/credit-note.controller.js'
+import { createCreditNoteRepository } from './credit-notes/repositories/credit-note.repository.js'
+import { registerCreditNoteRoutes } from './credit-notes/routes/credit-note.routes.js'
+import {
+  createCreditNoteOwnerAccess,
+  createCreditNoteService,
+} from './credit-notes/services/credit-note.service.js'
+import { renderCreditNotePdf } from './credit-notes/services/credit-note-pdf.service.js'
 import { createDeliveryNoteController } from './delivery-notes/controllers/delivery-note.controller.js'
 import { createDeliveryNoteRepository } from './delivery-notes/repositories/delivery-note.repository.js'
 import { registerDeliveryNoteRoutes } from './delivery-notes/routes/delivery-note.routes.js'
@@ -88,6 +96,7 @@ export function createSalesModule(
 ) {
   const estimatesRepo = createEstimateRepository(database)
   const invoicesRepo = createInvoiceRepository(database)
+  const creditNotesRepo = createCreditNoteRepository(database)
   const deliveryNotesRepo = createDeliveryNoteRepository(database)
   const paymentsRepo = createPaymentRepository(database)
   let notificationCallbacks:
@@ -123,6 +132,7 @@ export function createSalesModule(
   const receiptOwner = createPaymentReceiptOwner(paymentsRepo)
   const estimateOwner = createEstimateOwnerAccess(estimatesRepo)
   const invoiceOwner = createInvoiceOwnerAccess(invoicesRepo)
+  const creditNoteOwner = createCreditNoteOwnerAccess(creditNotesRepo)
   const deliveryNoteOwner = createDeliveryNoteOwnerAccess(deliveryNotesRepo)
   const owners: ArtifactOwnerAccess = {
     assertPublishable(tx, type, id, version) {
@@ -131,6 +141,7 @@ export function createSalesModule(
       if (type === 'payment_receipt') return receiptOwner.assertPublishable(tx, type, id, version)
       if (type === 'estimate') return estimateOwner.assertPublishable(tx, id, version)
       if (type === 'invoice') return invoiceOwner.assertPublishable(tx, id, version)
+      if (type === 'credit_note') return creditNoteOwner.assertPublishable(tx, id, version)
       if (type === 'delivery_note') return deliveryNoteOwner.assertPublishable(tx, id, version)
       throw new AppError(404, 'ARTIFACT_NOT_FOUND', 'Document owner is unavailable.')
     },
@@ -140,6 +151,7 @@ export function createSalesModule(
       if (type === 'payment_receipt') return receiptOwner.assertReadable(tx, type, id, actor)
       if (type === 'estimate') return estimateOwner.assertReadable(tx, id, actor)
       if (type === 'invoice') return invoiceOwner.assertReadable(tx, id, actor)
+      if (type === 'credit_note') return creditNoteOwner.assertReadable(tx, id, actor)
       if (type === 'delivery_note') return deliveryNoteOwner.assertReadable(tx, id, actor)
       throw new AppError(404, 'ARTIFACT_NOT_FOUND', 'Document owner is unavailable.')
     },
@@ -182,6 +194,7 @@ export function createSalesModule(
     changed,
     finalized('invoice'),
   )
+  const creditNotes = createCreditNoteService(creditNotesRepo, jobs, artifacts.service, changed)
   const deliveryNotes = createDeliveryNoteService(
     deliveryNotesRepo,
     jobs,
@@ -190,7 +203,12 @@ export function createSalesModule(
     changed,
   )
   const regenerate = createRegeneratePdfService(
-    { invoice: invoicesRepo, estimate: estimatesRepo, delivery_note: deliveryNotesRepo },
+    {
+      invoice: invoicesRepo,
+      estimate: estimatesRepo,
+      delivery_note: deliveryNotesRepo,
+      credit_note: creditNotesRepo,
+    },
     artifacts.service,
     async (type, id, version, design, templateId) => {
       const images = await media.documentImages(type, id, version, design, templateId)
@@ -200,6 +218,15 @@ export function createSalesModule(
           bytes: await renderDeliveryPdf(row, await deliveryNotesRepo.lines(id), images),
           design: images,
         }
+      }
+      if (type === 'credit_note') {
+        const row = await creditNotesRepo.one(id)
+        const bytes = await renderCreditNotePdf(
+          { ...row, appearanceSnapshot: images.appearance },
+          await creditNotesRepo.lines(id),
+          images,
+        )
+        return { bytes, design: images }
       }
       if (type === 'invoice') {
         const row = await invoicesRepo.one(id)
@@ -244,6 +271,18 @@ export function createSalesModule(
       const bytes = await renderSalesPdf(row, lines, 'INVOICE', images)
       await artifacts.service.publishPdf({
         type: 'invoice',
+        documentId: row.id,
+        sourceVersion: payload.sourceVersion,
+        bytes,
+        actor,
+      })
+    } else if (payload.documentType === 'credit_note') {
+      const row = await creditNotesRepo.one(payload.documentId)
+      const lines = await creditNotesRepo.lines(row.id)
+      const images = await media.documentImages('credit_note', row.id, payload.sourceVersion)
+      const bytes = await renderCreditNotePdf(row, lines, images)
+      await artifacts.service.publishPdf({
+        type: 'credit_note',
         documentId: row.id,
         sourceVersion: payload.sourceVersion,
         bytes,
@@ -313,6 +352,7 @@ export function createSalesModule(
           registerEstimateRoutes(scope, createEstimateController(estimates), permission)
           registerPaymentRoutes(scope, createPaymentController(payments, receipts), permission)
           registerInvoiceRoutes(scope, createInvoiceController(invoices), permission)
+          registerCreditNoteRoutes(scope, createCreditNoteController(creditNotes), permission)
           registerCancellationRoutes(scope, createCancellationController(cancellations), permission)
           registerSalesCancellationRoutes(
             scope,

@@ -56,6 +56,8 @@ export const writableTables = [
   'estimate_lines',
   'invoices',
   'invoice_lines',
+  'credit_notes',
+  'credit_note_lines',
   'delivery_notes',
   'delivery_note_lines',
   'client_notification_preferences',

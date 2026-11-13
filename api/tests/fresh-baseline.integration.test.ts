@@ -6,7 +6,7 @@ it('installs the final schema and only required defaults on a fresh database', a
   const fixture = await isolatedDatabase()
   try {
     const permissions = await fixture.client`select key from permissions order by key`
-    expect(permissions).toHaveLength(53)
+    expect(permissions).toHaveLength(57)
     expect(permissions.every((p) => /^[a-z_]+\.(read|create|update|delete)$/.test(p.key))).toBe(
       true,
     )

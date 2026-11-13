@@ -6,6 +6,7 @@ export function routePermission(path: string): string | undefined {
   if (path.startsWith('/reports')) return 'reports.read'
   if (path.startsWith('/settings/notifications')) return 'notification_rules.read'
   if (path.startsWith('/invoices')) return 'invoices.read'
+  if (path.startsWith('/credit-notes')) return 'credit_notes.read'
   if (path.startsWith('/estimates')) return 'estimates.read'
   if (path.startsWith('/delivery-notes')) return 'delivery_notes.read'
   if (path.startsWith('/payments')) return 'payments.read'
@@ -43,12 +44,13 @@ export function routePermissions(path: string): string[] {
     ['estimates', 'estimates'],
     ['delivery-notes', 'delivery_notes'],
     ['payments', 'payments'],
+    ['credit-notes', 'credit_notes'],
   ]) {
     if (path === `/${route}/new`) required.push(`${resource}.create`)
     if (new RegExp(`^/${route}/[^/]+/edit$`).test(path)) required.push(`${resource}.update`)
   }
   if (/^\/(estimates|delivery-notes)\/[^/]+\/convert$/.test(path)) required.push('invoices.create')
-  if (path === '/payments/new') required.push('invoices.read')
+  if (path === '/payments/new' || path === '/credit-notes/new') required.push('invoices.read')
   if (path === '/clients/new') required.push('clients.create')
   if (/^\/clients\/[^/]+\/edit$/.test(path)) required.push('clients.update')
   if (path === '/products/new') required.push('products.create')

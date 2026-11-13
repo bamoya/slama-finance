@@ -26,6 +26,9 @@ import { ReportSchedulesPage } from '../../features/organization/reports'
 import { LiveReportsPage, ReportsPage } from '../../features/organization/reports'
 import { ReportRunPage, ReportScheduleDetailPage } from '../../features/organization/reports'
 import {
+  CreditNoteDetailPage,
+  CreditNoteFormPage,
+  CreditNotesPage,
   PaymentCreatePage,
   PaymentDetailPage,
   PaymentsPage,
@@ -150,6 +153,26 @@ export const protectedRoutes = (
     <Route path="/invoices">
       <ProtectedRoute>
         <InvoicesPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/credit-notes/new">
+      <ProtectedRoute>
+        <CreditNoteFormPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/credit-notes/:creditNoteId/edit">
+      <ProtectedRoute>
+        <CreditNoteFormPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/credit-notes/:creditNoteId">
+      <ProtectedRoute>
+        <CreditNoteDetailPage />
+      </ProtectedRoute>
+    </Route>
+    <Route path="/credit-notes">
+      <ProtectedRoute>
+        <CreditNotesPage />
       </ProtectedRoute>
     </Route>
     <Route path="/estimates/new">

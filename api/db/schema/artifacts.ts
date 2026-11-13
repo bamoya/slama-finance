@@ -49,7 +49,7 @@ export const documentArtifacts = pgTable(
     index('document_artifacts_owner_idx').on(t.organizationId, t.documentType, t.documentId),
     check(
       'document_artifacts_type',
-      sql`${t.documentType} in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt')`,
+      sql`${t.documentType} in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt', 'credit_note')`,
     ),
     check('document_artifacts_version', sql`${t.sourceVersion} > 0`),
     check(

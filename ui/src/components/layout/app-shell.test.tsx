@@ -28,6 +28,7 @@ beforeEach(() => {
         'categories.read',
         'clients.read',
         'invoices.read',
+        'credit_notes.read',
         'estimates.read',
         'delivery_notes.read',
         'payments.read',
@@ -86,6 +87,9 @@ describe('shadcn application sidebar', () => {
       'aria-current',
       'page',
     )
+    expect(
+      within(within(nav).getByLabelText('Sales')).getByRole('link', { name: 'Credit notes' }),
+    ).toHaveAttribute('href', '/credit-notes')
     expect(within(nav).getByRole('link', { name: 'Reports' })).not.toHaveAttribute('aria-current')
     expect(
       within(within(nav).getByLabelText('Identity')).getByRole('link', { name: 'Staff' }),

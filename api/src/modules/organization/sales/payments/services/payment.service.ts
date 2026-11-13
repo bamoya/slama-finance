@@ -244,6 +244,9 @@ export function createPaymentService(
         if (!['issued', 'sent'].includes(invoice.status))
           throw new AppError(409, 'INVOICE_NOT_PAYABLE', 'Invoice is not payable.')
         validateCollectionDate(collectedOn, await repo.timezone(tx))
+        const balance = await paymentBalanceForInvoice(tx, invoice.id)
+        if (!balance || new FinancialDecimal(balance.pendingAmount).gt(balance.outstandingAmount))
+          throw new AppError(409, 'OVERPAYMENT', 'Payment exceeds the available invoice balance.')
         const row = await repo.update(
           id,
           { status: 'confirmed', collectedOn, confirmedAt: new Date(), updatedByActorId: actor },

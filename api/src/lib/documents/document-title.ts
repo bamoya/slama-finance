@@ -6,6 +6,7 @@ const titles = {
     delivery: 'Bon de livraison',
     payment_receipt: 'Reçu de paiement',
     credit_note: 'Avoir',
+    simple_credit_note: 'Avoir simple',
   },
   en: {
     invoice: 'Invoice',
@@ -14,6 +15,7 @@ const titles = {
     delivery: 'Delivery note',
     payment_receipt: 'Payment receipt',
     credit_note: 'Credit note',
+    simple_credit_note: 'Simple credit note',
   },
 }
 

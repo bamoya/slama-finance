@@ -290,6 +290,20 @@ paths:
     $ref: ./modules/sales/invoices.yaml#/paths/~1api~1v1~1invoices~1{id}~1pdf
   /api/v1/invoices/{id}/artifacts:
     $ref: ./modules/sales/invoices.yaml#/paths/~1api~1v1~1invoices~1{id}~1artifacts
+  /api/v1/credit-notes:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1credit-notes
+  /api/v1/credit-notes/{id}:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1credit-notes~1{id}
+  /api/v1/credit-notes/{id}/issue:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1credit-notes~1{id}~1issue
+  /api/v1/credit-notes/{id}/pdf:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1credit-notes~1{id}~1pdf
+  /api/v1/credit-notes/{id}/artifacts:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1credit-notes~1{id}~1artifacts
+  /api/v1/invoices/{id}/credit-notes:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1invoices~1{id}~1credit-notes
+  /api/v1/invoices/{id}/creditable-lines:
+    $ref: ./modules/sales/credit-notes.yaml#/paths/~1api~1v1~1invoices~1{id}~1creditable-lines
   /api/v1/estimates/{id}/invoices:
     $ref: ./modules/sales/invoices.yaml#/paths/~1api~1v1~1estimates~1{id}~1invoices
   /api/v1/artifacts/{id}/download:
@@ -702,6 +716,28 @@ components:
       $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoicePdfJob
     InvoiceArtifact:
       $ref: ./modules/sales/invoices.yaml#/components/schemas/InvoiceArtifact
+    CreditNoteVersion:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteVersion
+    CreditNoteLineInput:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteLineInput
+    CreditNoteInput:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteInput
+    CreditNoteUpdate:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteUpdate
+    CreditNoteLine:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteLine
+    CreditNote:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNote
+    CreditNotePage:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNotePage
+    CreditNotePdfJob:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNotePdfJob
+    CreditNoteArtifact:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/CreditNoteArtifact
+    InvoiceCreditableLine:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/InvoiceCreditableLine
+    InvoiceCreditableLines:
+      $ref: ./modules/sales/credit-notes.yaml#/components/schemas/InvoiceCreditableLines
     EstimateVersion:
       $ref: ./modules/sales/estimates.yaml#/components/schemas/EstimateVersion
     EstimateCancellation:

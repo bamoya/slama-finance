@@ -15,6 +15,7 @@ const french: Record<string, string> = {
   'Authorized signature': 'Signature autorisée',
   Invoice: 'Facture',
   'Simple invoice': 'Facture simple',
+  'Simple credit note': 'Avoir simple',
   'Due date': 'Échéance',
   'Valid until': 'Valable jusqu’au',
   Subtotal: 'Sous-total',

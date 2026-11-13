@@ -67,7 +67,7 @@ export function validateComposedMessage(input: ComposedMessage, allowedFrom: str
     throw new AppError(400, 'INVALID_ATTACHMENTS', 'Attachments exceed delivery limits.')
   for (const a of input.attachments)
     if (
-      !/^organizations\/[a-f0-9-]{36}\/artifacts\/(invoice|estimate|delivery_note|payment_receipt|report_run)\/[a-f0-9-]{36}\.(pdf|csv|xlsx)$/.test(
+      !/^organizations\/[a-f0-9-]{36}\/artifacts\/(invoice|estimate|delivery_note|payment_receipt|credit_note|report_run)\/[a-f0-9-]{36}\.(pdf|csv|xlsx)$/.test(
         a.objectKey,
       ) ||
       !/^[^/\\]{1,150}$/.test(a.filename) ||

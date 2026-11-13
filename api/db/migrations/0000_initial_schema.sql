@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS "document_artifacts" (
 	"generated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by_actor_id" uuid,
 	CONSTRAINT "artifact_storage_scope" CHECK (starts_with("document_artifacts"."object_key", 'organizations/' || "document_artifacts"."organization_id"::text || '/artifacts/')),
-	CONSTRAINT "document_artifacts_type" CHECK ("document_artifacts"."document_type" in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt')),
+	CONSTRAINT "document_artifacts_type" CHECK ("document_artifacts"."document_type" in ('invoice', 'estimate', 'delivery_note', 'report_run', 'payment_receipt', 'credit_note')),
 	CONSTRAINT "document_artifacts_version" CHECK ("document_artifacts"."source_version" > 0),
 	CONSTRAINT "document_artifacts_format" CHECK ("document_artifacts"."format" in ('pdf', 'csv', 'xlsx') and ("document_artifacts"."format" <> 'xlsx' or "document_artifacts"."document_type" = 'report_run')),
 	CONSTRAINT "document_artifacts_size" CHECK ("document_artifacts"."byte_size" > 0 and "document_artifacts"."byte_size" <= 8388608),
@@ -544,6 +544,80 @@ CREATE TABLE IF NOT EXISTS "clients" (
 ALTER TABLE "clients" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 
+CREATE TABLE IF NOT EXISTS "credit_note_lines" (
+	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"credit_note_id" uuid NOT NULL,
+	"invoice_line_id" uuid NOT NULL,
+	"position" integer NOT NULL,
+	"product_name" text NOT NULL,
+	"product_reference" text,
+	"quantity" integer DEFAULT 0 NOT NULL,
+	"unit_price" numeric(18, 2) NOT NULL,
+	"vat_rate" numeric(5, 2),
+	"net_amount" numeric(18, 2) NOT NULL,
+	"tax_amount" numeric(18, 2) NOT NULL,
+	"total_amount" numeric(18, 2) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by_actor_id" uuid,
+	"updated_by_actor_id" uuid,
+	CONSTRAINT "credit_note_lines_position" CHECK ("credit_note_lines"."position" >= 0),
+	CONSTRAINT "credit_note_lines_quantity" CHECK ("credit_note_lines"."quantity" >= 0),
+	CONSTRAINT "credit_note_lines_price" CHECK ("credit_note_lines"."unit_price" >= 0),
+	CONSTRAINT "credit_note_lines_vat" CHECK ("credit_note_lines"."vat_rate" is null or ("credit_note_lines"."vat_rate" >= 0 and "credit_note_lines"."vat_rate" <= 100)),
+	CONSTRAINT "credit_note_lines_totals" CHECK ("credit_note_lines"."net_amount" >= 0 and ("credit_note_lines"."net_amount" > 0 or "credit_note_lines"."quantity" > 0) and "credit_note_lines"."tax_amount" >= 0 and "credit_note_lines"."total_amount" = "credit_note_lines"."net_amount" + "credit_note_lines"."tax_amount")
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "credit_note_lines" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "credit_notes" (
+	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"number" text,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"kind" text NOT NULL,
+	"invoice_id" uuid NOT NULL,
+	"invoice_number" text NOT NULL,
+	"invoice_issue_date" date NOT NULL,
+	"client_id" uuid,
+	"template_id" uuid,
+	"currency" text NOT NULL,
+	"locale" text NOT NULL,
+	"reason" text NOT NULL,
+	"issuer_snapshot" jsonb NOT NULL,
+	"client_snapshot" jsonb NOT NULL,
+	"appearance_snapshot" jsonb NOT NULL,
+	"bank_details_snapshot" jsonb,
+	"subtotal" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"tax_total" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"total" numeric(18, 2) DEFAULT '0' NOT NULL,
+	"issue_date" date,
+	"issued_at" timestamp with time zone,
+	"version" integer DEFAULT 1 NOT NULL,
+	"content_version" integer DEFAULT 1 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by_actor_id" uuid,
+	"updated_by_actor_id" uuid,
+	CONSTRAINT "credit_notes_status" CHECK ("credit_notes"."status" in ('draft','issued')),
+	CONSTRAINT "credit_notes_currency" CHECK ("credit_notes"."currency" ~ '^[A-Z]{3}$'),
+	CONSTRAINT "credit_notes_locale" CHECK ("credit_notes"."locale" in ('fr-MA','en-GB')),
+	CONSTRAINT "credit_notes_reason" CHECK (length(trim("credit_notes"."reason")) > 0),
+	CONSTRAINT "credit_notes_versions" CHECK ("credit_notes"."version" > 0 and "credit_notes"."content_version" > 0),
+	CONSTRAINT "credit_notes_totals" CHECK ("credit_notes"."subtotal" >= 0 and "credit_notes"."tax_total" >= 0 and "credit_notes"."total" = "credit_notes"."subtotal" + "credit_notes"."tax_total"),
+	CONSTRAINT "credit_notes_issued_data" CHECK (("credit_notes"."status" = 'draft' and "credit_notes"."number" is null and "credit_notes"."issued_at" is null and "credit_notes"."issue_date" is null) or ("credit_notes"."status" = 'issued' and "credit_notes"."number" is not null and "credit_notes"."issued_at" is not null and "credit_notes"."issue_date" is not null)),
+	CONSTRAINT "credit_notes_kind" CHECK ("credit_notes"."number" is null or ("credit_notes"."kind" = 'legal' and "credit_notes"."number" like 'AVO-%') or ("credit_notes"."kind" = 'simple' and "credit_notes"."number" like 'AVS-%'))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "credit_notes" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
 CREATE TABLE IF NOT EXISTS "delivery_invoice_allocations" (
 	"organization_id" uuid DEFAULT nullif(current_setting('app.organization_id', true), '')::uuid NOT NULL,
 	"invoice_line_id" uuid NOT NULL,
@@ -631,7 +705,7 @@ CREATE TABLE IF NOT EXISTS "document_number_counters" (
 	"last" integer NOT NULL,
 	CONSTRAINT "document_number_counters_organization_id_series_year_pk" PRIMARY KEY("organization_id","series","year"),
 	CONSTRAINT "document_number_counter_last" CHECK ("document_number_counters"."last" > 0),
-	CONSTRAINT "document_number_counter_series" CHECK ("document_number_counters"."series" in ('FAC','FS','DEV','BL','PAY'))
+	CONSTRAINT "document_number_counter_series" CHECK ("document_number_counters"."series" in ('FAC','FS','AVO','AVS','DEV','BL','PAY'))
 );
 
 --> statement-breakpoint
@@ -1923,6 +1997,24 @@ CREATE INDEX IF NOT EXISTS "clients_type_status_idx" ON "clients" USING btree ("
 CREATE INDEX IF NOT EXISTS "clients_email_idx" ON "clients" USING btree ("organization_id","email");
 --> statement-breakpoint
 
+CREATE UNIQUE INDEX IF NOT EXISTS "credit_note_lines_position_uq" ON "credit_note_lines" USING btree ("organization_id","credit_note_id","position");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "credit_note_lines_invoice_line_uq" ON "credit_note_lines" USING btree ("organization_id","credit_note_id","invoice_line_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "credit_note_lines_invoice_line_idx" ON "credit_note_lines" USING btree ("organization_id","invoice_line_id");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "credit_notes_number_tenant_unique" ON "credit_notes" USING btree ("organization_id","number");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "credit_notes_invoice_idx" ON "credit_notes" USING btree ("organization_id","invoice_id","status");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "credit_notes_client_idx" ON "credit_notes" USING btree ("organization_id","client_id","status");
+--> statement-breakpoint
+
 CREATE INDEX IF NOT EXISTS "delivery_invoice_allocations_delivery_idx" ON "delivery_invoice_allocations" USING btree ("organization_id","delivery_note_line_id");
 --> statement-breakpoint
 
@@ -2545,6 +2637,86 @@ END $$;
 
 DO $$ BEGIN
  ALTER TABLE "clients" ADD CONSTRAINT "clients_updated_by_actor_id_actors_id_fk" FOREIGN KEY ("updated_by_actor_id") REFERENCES "public"."actors"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_note_lines" ADD CONSTRAINT "credit_note_lines_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_note_lines" ADD CONSTRAINT "credit_note_lines_credit_note_id_credit_notes_id_fk" FOREIGN KEY ("credit_note_id") REFERENCES "public"."credit_notes"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_note_lines" ADD CONSTRAINT "credit_note_lines_invoice_line_id_invoice_lines_id_fk" FOREIGN KEY ("invoice_line_id") REFERENCES "public"."invoice_lines"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_note_lines" ADD CONSTRAINT "credit_note_lines_created_by_actor_id_actors_id_fk" FOREIGN KEY ("created_by_actor_id") REFERENCES "public"."actors"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_note_lines" ADD CONSTRAINT "credit_note_lines_updated_by_actor_id_actors_id_fk" FOREIGN KEY ("updated_by_actor_id") REFERENCES "public"."actors"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_notes" ADD CONSTRAINT "credit_notes_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_notes" ADD CONSTRAINT "credit_notes_invoice_id_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."invoices"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_notes" ADD CONSTRAINT "credit_notes_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_notes" ADD CONSTRAINT "credit_notes_created_by_actor_id_actors_id_fk" FOREIGN KEY ("created_by_actor_id") REFERENCES "public"."actors"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+
+--> statement-breakpoint
+
+DO $$ BEGIN
+ ALTER TABLE "credit_notes" ADD CONSTRAINT "credit_notes_updated_by_actor_id_actors_id_fk" FOREIGN KEY ("updated_by_actor_id") REFERENCES "public"."actors"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -3765,6 +3937,12 @@ CREATE POLICY "tenant_isolation" ON "products" AS PERMISSIVE FOR ALL TO public U
 CREATE POLICY "tenant_isolation" ON "clients" AS PERMISSIVE FOR ALL TO public USING ("clients"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("clients"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
+CREATE POLICY "tenant_isolation" ON "credit_note_lines" AS PERMISSIVE FOR ALL TO public USING ("credit_note_lines"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("credit_note_lines"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
+
+CREATE POLICY "tenant_isolation" ON "credit_notes" AS PERMISSIVE FOR ALL TO public USING ("credit_notes"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("credit_notes"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
+--> statement-breakpoint
+
 CREATE POLICY "tenant_isolation" ON "delivery_invoice_allocations" AS PERMISSIVE FOR ALL TO public USING ("delivery_invoice_allocations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid) WITH CHECK ("delivery_invoice_allocations"."organization_id" = nullif(current_setting('app.organization_id', true), '')::uuid);
 --> statement-breakpoint
 
@@ -4029,6 +4207,10 @@ ALTER TABLE "products" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "clients" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
+ALTER TABLE "credit_note_lines" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "credit_notes" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
 ALTER TABLE "delivery_invoice_allocations" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "delivery_note_lines" FORCE ROW LEVEL SECURITY;
@@ -4119,17 +4301,19 @@ CREATE UNIQUE INDEX "tenant_key_5114e86a30dee11e" ON "product_categories" ("orga
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_4dc7358f9e16f7b9" ON "media_assets" ("organization_id","id");
 --> statement-breakpoint
+CREATE UNIQUE INDEX "tenant_key_ac8043099448a6c5" ON "credit_notes" ("organization_id","id");
+--> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_a3c56ac6556d9ae4" ON "invoice_lines" ("organization_id","id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "tenant_key_34f0f6681a2a468e" ON "invoices" ("organization_id","id");
+--> statement-breakpoint
+CREATE UNIQUE INDEX "tenant_key_b39824b4cc004237" ON "clients" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_1b105028533b975c" ON "delivery_note_lines" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_527360eb5be6c3b4" ON "delivery_notes" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_3b3d69106de3a587" ON "product_variants" ("organization_id","id");
---> statement-breakpoint
-CREATE UNIQUE INDEX "tenant_key_b39824b4cc004237" ON "clients" ("organization_id","id");
---> statement-breakpoint
-CREATE UNIQUE INDEX "tenant_key_34f0f6681a2a468e" ON "invoices" ("organization_id","id");
 --> statement-breakpoint
 CREATE UNIQUE INDEX "tenant_key_098c2eb8faebc39b" ON "document_templates" ("organization_id","id");
 --> statement-breakpoint
@@ -4171,6 +4355,18 @@ ALTER TABLE "products" ADD CONSTRAINT "tenant_fk_f2a2d3294fc7fae6" FOREIGN KEY (
 --> statement-breakpoint
 -- Tenant relationship: products_image_asset_id_media_assets_id_fk
 ALTER TABLE "products" ADD CONSTRAINT "tenant_fk_59ae671e91ea321c" FOREIGN KEY ("organization_id","image_asset_id") REFERENCES "public"."media_assets" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: credit_note_lines_credit_note_id_credit_notes_id_fk
+ALTER TABLE "credit_note_lines" ADD CONSTRAINT "tenant_fk_70ff457a2e15312d" FOREIGN KEY ("organization_id","credit_note_id") REFERENCES "public"."credit_notes" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: credit_note_lines_invoice_line_id_invoice_lines_id_fk
+ALTER TABLE "credit_note_lines" ADD CONSTRAINT "tenant_fk_e0077ac3c9f13560" FOREIGN KEY ("organization_id","invoice_line_id") REFERENCES "public"."invoice_lines" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: credit_notes_invoice_id_invoices_id_fk
+ALTER TABLE "credit_notes" ADD CONSTRAINT "tenant_fk_58def23c8bd16047" FOREIGN KEY ("organization_id","invoice_id") REFERENCES "public"."invoices" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+--> statement-breakpoint
+-- Tenant relationship: credit_notes_client_id_clients_id_fk
+ALTER TABLE "credit_notes" ADD CONSTRAINT "tenant_fk_1a08746fd3b4f1c8" FOREIGN KEY ("organization_id","client_id") REFERENCES "public"."clients" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
 --> statement-breakpoint
 -- Tenant relationship: delivery_invoice_allocations_invoice_line_id_invoice_lines_id_fk
 ALTER TABLE "delivery_invoice_allocations" ADD CONSTRAINT "tenant_fk_deb0b9f635021465" FOREIGN KEY ("organization_id","invoice_line_id") REFERENCES "public"."invoice_lines" ("organization_id","id") ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
@@ -4312,6 +4508,10 @@ INSERT INTO permissions (key, description) VALUES
   ('clients.update', 'Edit clients and change their state'),
   ('company_settings.read', 'View company settings and download existing documents'),
   ('company_settings.update', 'Edit company settings and change their state'),
+  ('credit_notes.create', 'Create credit notes'),
+  ('credit_notes.delete', 'Permanently delete draft credit notes'),
+  ('credit_notes.read', 'View credit notes and download existing documents'),
+  ('credit_notes.update', 'Edit draft credit notes, issue them and regenerate PDFs'),
   ('delivery_notes.create', 'Create delivery notes'),
   ('delivery_notes.delete', 'Permanently delete delivery notes when allowed'),
   ('delivery_notes.read', 'View delivery notes and download existing documents'),
@@ -5853,7 +6053,7 @@ CREATE CONSTRAINT TRIGGER billing_allocation_bounds AFTER INSERT ON billing_allo
 -- appearance chosen at PDF regeneration, detached live references) may still change. Draft editing and the
 -- draft -> issued transition are unrestricted. Numbering counters only ever advance by one.
 -- Cancelled is terminal (status and cancellation fields freeze) and status never goes back to draft.
--- Numbered documents (and every payment and counter) cannot be deleted, so numbers stay gap-free, unless the
+-- Numbered documents (credit notes included, and every payment and counter) cannot be deleted, so numbers stay gap-free, unless the
 -- transaction-local flag app.sales_teardown = 'on' is set. Product code never sets it: it is reserved for a
 -- future organization teardown routine and for privileged test fixtures that purge data.
 CREATE FUNCTION sales_teardown_enabled() RETURNS boolean LANGUAGE sql
@@ -5880,6 +6080,11 @@ BEGIN
   IF OLD.status = 'draft' THEN RETURN NEW; END IF;
   PERFORM "public".guard_document_status(OLD.status, NEW.status, OLD.cancelled_at, NEW.cancelled_at, OLD.cancellation_reason, NEW.cancellation_reason);
   IF OLD.status = 'sent' AND NEW.status = 'issued' THEN PERFORM "public".reject_issued_document_change_field('status'); END IF;
+  -- An invoice corrected by an issued credit note stays on the books: it can no longer be cancelled.
+  IF NEW.status = 'cancelled' AND OLD.status <> 'cancelled'
+     AND EXISTS (SELECT 1 FROM "public".credit_notes WHERE invoice_id = OLD.id AND status = 'issued') THEN
+    RAISE EXCEPTION 'Invoices with issued credit notes cannot be cancelled' USING ERRCODE = '23514';
+  END IF;
   IF NEW.number IS DISTINCT FROM OLD.number THEN PERFORM "public".reject_issued_document_change_field('number'); END IF;
   IF NEW.kind IS DISTINCT FROM OLD.kind THEN PERFORM "public".reject_issued_document_change_field('kind'); END IF;
   IF NEW.issued_at IS DISTINCT FROM OLD.issued_at THEN PERFORM "public".reject_issued_document_change_field('issued_at'); END IF;
@@ -5947,7 +6152,24 @@ END $$;
 -- design) are frozen immediately. The receipt snapshot and bank snapshot may be filled once when null.
 CREATE FUNCTION guard_payment() RETURNS trigger LANGUAGE plpgsql
 SET search_path = pg_catalog, pg_temp AS $$
+DECLARE parent record; reserved numeric;
 BEGIN
+  -- Invoice first for balance decisions. Existing payments may exceed net after a later credit;
+  -- only recording/restoring/confirming a payment consumes availability again.
+  IF TG_OP = 'INSERT' OR NEW.status IS DISTINCT FROM OLD.status THEN
+    SELECT status, total INTO parent FROM "public".invoices WHERE id=NEW.invoice_id FOR UPDATE;
+    IF NEW.status IN ('pending','confirmed') THEN
+      IF parent.status IS NULL OR parent.status NOT IN ('issued','sent') THEN
+        RAISE EXCEPTION 'Invoice is not payable' USING ERRCODE='23514';
+      END IF;
+      SELECT coalesce(sum(amount),0) INTO reserved FROM "public".payments
+        WHERE invoice_id=NEW.invoice_id AND id<>NEW.id AND status IN ('pending','confirmed');
+      IF reserved + NEW.amount > parent.total - "public".invoice_credited_total(NEW.invoice_id) THEN
+        RAISE EXCEPTION 'Payment exceeds the available invoice balance' USING ERRCODE='23514';
+      END IF;
+    END IF;
+  END IF;
+  IF TG_OP = 'INSERT' THEN RETURN NEW; END IF;
   IF NEW.number IS DISTINCT FROM OLD.number THEN PERFORM "public".reject_issued_document_change_field('number'); END IF;
   IF NEW.operation_id IS DISTINCT FROM OLD.operation_id OR NEW.creation_request IS DISTINCT FROM OLD.creation_request THEN
     PERFORM "public".reject_issued_document_change_field('operation');
@@ -5980,7 +6202,7 @@ CREATE TRIGGER estimates_issued_guard BEFORE UPDATE ON estimates FOR EACH ROW EX
 --> statement-breakpoint
 CREATE TRIGGER delivery_notes_issued_guard BEFORE UPDATE ON delivery_notes FOR EACH ROW EXECUTE FUNCTION guard_issued_delivery_note();
 --> statement-breakpoint
-CREATE TRIGGER payments_guard BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION guard_payment();
+CREATE TRIGGER payments_guard BEFORE INSERT OR UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION guard_payment();
 --> statement-breakpoint
 -- Lines of a document that left draft cannot be inserted, changed or deleted, except that live catalogue
 -- references (product, variant) may be cleared. A missing parent (cascade of a deleted document) is allowed.
@@ -6040,6 +6262,135 @@ CREATE TRIGGER estimates_delete_guard BEFORE DELETE ON estimates FOR EACH ROW EX
 CREATE TRIGGER delivery_notes_delete_guard BEFORE DELETE ON delivery_notes FOR EACH ROW EXECUTE FUNCTION guard_numbered_document_delete();
 --> statement-breakpoint
 CREATE TRIGGER payments_delete_guard BEFORE DELETE ON payments FOR EACH ROW EXECUTE FUNCTION guard_numbered_document_delete();
+--> statement-breakpoint
+-- Credit notes (avoirs). Rows are inserted as drafts; the draft -> issued transition re-checks, under a per-invoice
+-- lock, that the credited invoice is still issued or sent, that the header equals the sum of its lines, and that the
+-- issued credit notes of the invoice never exceed it (HT, VAT and TTC overall, and quantity, HT and VAT per line).
+-- After issue only presentation fields (template, appearance, versions, audit columns) may change; the note
+-- cannot be cancelled or deleted (number, delete guard below).
+CREATE FUNCTION guard_credit_note_insert() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE parent record;
+BEGIN
+  IF NEW.status <> 'draft' THEN
+    RAISE EXCEPTION 'Credit notes are created as drafts and issued afterwards' USING ERRCODE = '23514';
+  END IF;
+  SELECT status, kind, currency, number, issue_date INTO parent FROM "public".invoices WHERE id = NEW.invoice_id FOR UPDATE;
+  IF parent.status IS NULL OR parent.status NOT IN ('issued','sent') THEN
+    RAISE EXCEPTION 'Only issued or sent invoices can be credited' USING ERRCODE = '23514';
+  END IF;
+  IF parent.kind IS DISTINCT FROM NEW.kind OR parent.currency <> NEW.currency OR parent.number <> NEW.invoice_number THEN
+    RAISE EXCEPTION 'A credit note must match the kind, currency and number of its invoice' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE FUNCTION guard_issued_credit_note() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE invoice record; lines record; breached record;
+BEGIN
+  IF OLD.status = 'draft' THEN
+    IF NEW.invoice_id IS DISTINCT FROM OLD.invoice_id OR NEW.kind IS DISTINCT FROM OLD.kind
+       OR NEW.invoice_number IS DISTINCT FROM OLD.invoice_number OR NEW.currency IS DISTINCT FROM OLD.currency THEN
+      PERFORM "public".reject_issued_document_change_field('invoice reference');
+    END IF;
+    IF NEW.status = 'issued' THEN
+      SELECT status, subtotal, tax_total, total INTO invoice FROM "public".invoices WHERE id = OLD.invoice_id FOR UPDATE;
+      IF invoice.status IS NULL OR invoice.status NOT IN ('issued','sent') THEN
+        RAISE EXCEPTION 'Only issued or sent invoices can be credited' USING ERRCODE = '23514';
+      END IF;
+      SELECT count(*) AS n, coalesce(sum(net_amount),0) AS net, coalesce(sum(tax_amount),0) AS tax, coalesce(sum(total_amount),0) AS total
+        INTO lines FROM "public".credit_note_lines WHERE credit_note_id = OLD.id;
+      IF lines.n = 0 OR lines.net <> NEW.subtotal OR lines.tax <> NEW.tax_total OR lines.total <> NEW.total THEN
+        RAISE EXCEPTION 'The credit note totals must equal the sum of its lines' USING ERRCODE = '23514';
+      END IF;
+      SELECT coalesce(sum(subtotal),0) AS net, coalesce(sum(tax_total),0) AS tax, coalesce(sum(total),0) AS total
+        INTO breached FROM "public".credit_notes WHERE invoice_id = OLD.invoice_id AND status = 'issued' AND id <> OLD.id;
+      IF breached.net + NEW.subtotal > invoice.subtotal OR breached.tax + NEW.tax_total > invoice.tax_total OR breached.total + NEW.total > invoice.total THEN
+        RAISE EXCEPTION 'Credit notes cannot exceed the credited invoice' USING ERRCODE = '23514';
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM "public".invoice_lines il
+        JOIN "public".credit_note_lines mine ON mine.invoice_line_id = il.id AND mine.credit_note_id = OLD.id
+        WHERE (SELECT coalesce(sum(c.quantity),0) FROM "public".credit_note_lines c JOIN "public".credit_notes n ON n.id = c.credit_note_id
+               WHERE c.invoice_line_id = il.id AND (n.status = 'issued' OR n.id = OLD.id)) > il.quantity
+           OR (SELECT coalesce(sum(c.net_amount),0) FROM "public".credit_note_lines c JOIN "public".credit_notes n ON n.id = c.credit_note_id
+               WHERE c.invoice_line_id = il.id AND (n.status = 'issued' OR n.id = OLD.id)) > il.net_amount
+           OR (SELECT coalesce(sum(c.tax_amount),0) FROM "public".credit_note_lines c JOIN "public".credit_notes n ON n.id = c.credit_note_id
+               WHERE c.invoice_line_id = il.id AND (n.status = 'issued' OR n.id = OLD.id)) > il.tax_amount
+      ) THEN
+        RAISE EXCEPTION 'Credit notes cannot exceed the credited invoice lines' USING ERRCODE = '23514';
+      END IF;
+    ELSIF NEW.number IS NOT NULL OR NEW.issued_at IS NOT NULL THEN
+      PERFORM "public".reject_issued_document_change_field('number');
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF NEW.status IS DISTINCT FROM OLD.status THEN PERFORM "public".reject_issued_document_change_field('status'); END IF;
+  IF NEW.number IS DISTINCT FROM OLD.number THEN PERFORM "public".reject_issued_document_change_field('number'); END IF;
+  IF NEW.kind IS DISTINCT FROM OLD.kind THEN PERFORM "public".reject_issued_document_change_field('kind'); END IF;
+  IF NEW.invoice_id IS DISTINCT FROM OLD.invoice_id OR NEW.invoice_number IS DISTINCT FROM OLD.invoice_number
+     OR NEW.invoice_issue_date IS DISTINCT FROM OLD.invoice_issue_date OR NEW.client_id IS DISTINCT FROM OLD.client_id THEN
+    PERFORM "public".reject_issued_document_change_field('invoice reference');
+  END IF;
+  IF NEW.issued_at IS DISTINCT FROM OLD.issued_at THEN PERFORM "public".reject_issued_document_change_field('issued_at'); END IF;
+  IF NEW.issue_date IS DISTINCT FROM OLD.issue_date THEN PERFORM "public".reject_issued_document_change_field('issue_date'); END IF;
+  IF NEW.currency IS DISTINCT FROM OLD.currency THEN PERFORM "public".reject_issued_document_change_field('currency'); END IF;
+  IF NEW.locale IS DISTINCT FROM OLD.locale THEN PERFORM "public".reject_issued_document_change_field('locale'); END IF;
+  IF NEW.reason IS DISTINCT FROM OLD.reason THEN PERFORM "public".reject_issued_document_change_field('reason'); END IF;
+  IF NEW.issuer_snapshot IS DISTINCT FROM OLD.issuer_snapshot THEN PERFORM "public".reject_issued_document_change_field('issuer_snapshot'); END IF;
+  IF NEW.client_snapshot IS DISTINCT FROM OLD.client_snapshot THEN PERFORM "public".reject_issued_document_change_field('client_snapshot'); END IF;
+  IF NEW.bank_details_snapshot IS DISTINCT FROM OLD.bank_details_snapshot THEN PERFORM "public".reject_issued_document_change_field('bank_details_snapshot'); END IF;
+  IF NEW.subtotal IS DISTINCT FROM OLD.subtotal OR NEW.tax_total IS DISTINCT FROM OLD.tax_total OR NEW.total IS DISTINCT FROM OLD.total THEN
+    PERFORM "public".reject_issued_document_change_field('amounts');
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER credit_notes_insert_guard BEFORE INSERT ON credit_notes FOR EACH ROW EXECUTE FUNCTION guard_credit_note_insert();
+--> statement-breakpoint
+CREATE TRIGGER credit_notes_issued_guard BEFORE UPDATE ON credit_notes FOR EACH ROW EXECUTE FUNCTION guard_issued_credit_note();
+--> statement-breakpoint
+CREATE TRIGGER credit_notes_delete_guard BEFORE DELETE ON credit_notes FOR EACH ROW EXECUTE FUNCTION guard_numbered_document_delete();
+--> statement-breakpoint
+CREATE TRIGGER credit_note_lines_issued_guard BEFORE INSERT OR UPDATE OR DELETE ON credit_note_lines FOR EACH ROW EXECUTE FUNCTION guard_issued_document_lines('credit_note_id', 'credit_notes');
+--> statement-breakpoint
+-- A credit note line must credit a line of the SAME invoice and never more than that invoice line holds.
+CREATE FUNCTION guard_credit_note_line() RETURNS trigger LANGUAGE plpgsql
+SET search_path = pg_catalog, pg_temp AS $$
+DECLARE source record;
+BEGIN
+  SELECT il.quantity, il.net_amount, il.tax_amount, il.vat_rate, il.unit_price, il.invoice_id INTO source
+    FROM "public".invoice_lines il JOIN "public".credit_notes cn ON cn.invoice_id = il.invoice_id
+    WHERE il.id = NEW.invoice_line_id AND cn.id = NEW.credit_note_id;
+  IF source.invoice_id IS NULL THEN
+    RAISE EXCEPTION 'A credit note line must credit a line of the credited invoice' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.quantity > source.quantity OR NEW.net_amount > source.net_amount OR NEW.tax_amount > source.tax_amount
+     OR NEW.vat_rate IS DISTINCT FROM source.vat_rate OR NEW.unit_price <> source.unit_price THEN
+    RAISE EXCEPTION 'A credit note line cannot exceed or alter the credited invoice line' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER credit_note_lines_source_guard BEFORE INSERT OR UPDATE ON credit_note_lines FOR EACH ROW EXECUTE FUNCTION guard_credit_note_line();
+--> statement-breakpoint
+-- TTC total of the issued credit notes of an invoice: the one definition reports, balances and reminders net their
+-- invoice totals with (SECURITY INVOKER: row level security still scopes it to the calling tenant).
+CREATE FUNCTION invoice_credited_total(target uuid) RETURNS numeric LANGUAGE sql STABLE
+SET search_path = pg_catalog, pg_temp AS $$
+  SELECT coalesce(sum(total), 0) FROM "public".credit_notes WHERE invoice_id = target AND status = 'issued'
+$$;
+--> statement-breakpoint
+CREATE FUNCTION invoice_credited_subtotal(target uuid) RETURNS numeric LANGUAGE sql STABLE
+SET search_path = pg_catalog, pg_temp AS $$
+  SELECT coalesce(sum(subtotal), 0) FROM "public".credit_notes WHERE invoice_id = target AND status = 'issued'
+$$;
+--> statement-breakpoint
+CREATE FUNCTION invoice_credited_tax(target uuid) RETURNS numeric LANGUAGE sql STABLE
+SET search_path = pg_catalog, pg_temp AS $$
+  SELECT coalesce(sum(tax_total), 0) FROM "public".credit_notes WHERE invoice_id = target AND status = 'issued'
+$$;
 
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "document_artifacts" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id');
@@ -6053,6 +6404,10 @@ CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "product_variants" F
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "products" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id','updated_by_actor_id');
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "clients" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id','updated_by_actor_id');
+--> statement-breakpoint
+CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "credit_note_lines" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id','updated_by_actor_id');
+--> statement-breakpoint
+CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "credit_notes" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id','updated_by_actor_id');
 --> statement-breakpoint
 CREATE TRIGGER actor_scope_guard BEFORE INSERT OR UPDATE ON "delivery_note_lines" FOR EACH ROW EXECUTE FUNCTION enforce_actor_organization('created_by_actor_id','updated_by_actor_id');
 --> statement-breakpoint

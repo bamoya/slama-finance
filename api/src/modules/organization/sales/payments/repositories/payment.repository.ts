@@ -20,7 +20,13 @@ export type PaymentBalance = {
   pendingAmount: string
   outstandingAmount: string
   availableBalance: string
-  paymentStatus: 'unpaid' | 'partial' | 'paid'
+  /** Issued credit notes (TTC), the net amount (total minus credit), the surplus paid over it and what can still be credited. */
+  creditedAmount: string
+  netAmount: string
+  refundDueAmount: string
+  creditableAmount: string
+  creditNoteCount: number
+  paymentStatus: 'unpaid' | 'partial' | 'paid' | 'credited'
   overdue: boolean
 }
 
@@ -38,6 +44,8 @@ export async function paymentBalancesForInvoices(db: Db, invoiceIds: string[]) {
         status: invoices.status,
         paid: sql<string>`coalesce(sum(case when ${payments.status} = 'confirmed' then ${payments.amount} else 0 end), 0)::text`,
         pending: sql<string>`coalesce(sum(case when ${payments.status} = 'pending' then ${payments.amount} else 0 end), 0)::text`,
+        credited: sql<string>`invoice_credited_total(${invoices.id})::text`,
+        creditNoteCount: sql<number>`(select count(*)::int from credit_notes cn where cn.invoice_id = ${invoices.id} and cn.status = 'issued')`,
       })
       .from(invoices)
       .leftJoin(payments, eq(payments.invoiceId, invoices.id))
@@ -53,15 +61,33 @@ export async function paymentBalancesForInvoices(db: Db, invoiceIds: string[]) {
     const total = new FinancialDecimal(row.total)
     const paid = new FinancialDecimal(row.paid)
     const pending = new FinancialDecimal(row.pending)
+    const credited = new FinancialDecimal(row.credited)
     const active = row.status === 'issued' || row.status === 'sent'
-    const outstanding = active ? total.minus(paid) : new FinancialDecimal(0)
-    const available = outstanding.minus(active ? pending : new FinancialDecimal(0))
+    const zero = new FinancialDecimal(0)
+    const net = total.minus(credited)
+    // Credit notes reduce the amount due. Confirmed payments never change: any surplus is reported as a refund due.
+    const outstanding = active ? FinancialDecimal.max(net.minus(paid), zero) : zero
+    const refundDue = active ? FinancialDecimal.max(paid.minus(net), zero) : zero
+    const available = FinancialDecimal.max(outstanding.minus(active ? pending : zero), zero)
     result.set(row.id, {
-      paidAmount: money(active ? paid : new FinancialDecimal(0)),
-      pendingAmount: money(active ? pending : new FinancialDecimal(0)),
+      paidAmount: money(active ? paid : zero),
+      pendingAmount: money(active ? pending : zero),
       outstandingAmount: money(outstanding),
       availableBalance: money(available),
-      paymentStatus: !active || paid.isZero() ? 'unpaid' : outstanding.lte(0) ? 'paid' : 'partial',
+      creditedAmount: money(credited),
+      netAmount: money(net),
+      refundDueAmount: money(refundDue),
+      creditableAmount: money(active ? total.minus(credited) : zero),
+      creditNoteCount: row.creditNoteCount,
+      paymentStatus: !active
+        ? 'unpaid'
+        : paid.isZero()
+          ? net.lte(0) && credited.gt(0)
+            ? 'credited'
+            : 'unpaid'
+          : outstanding.lte(0)
+            ? 'paid'
+            : 'partial',
       overdue: active && Boolean(row.dueDate && row.dueDate < today && outstanding.gt(0)),
     })
   }

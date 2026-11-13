@@ -3,6 +3,7 @@ import {
   Box,
   Building2,
   ChartNoAxesCombined,
+  FileMinus,
   FileText,
   Landmark,
   LayoutDashboard,
@@ -33,6 +34,7 @@ export const navigationGroups: { label: string; items: NavigationItem[] }[] = [
     items: [
       { label: 'Estimates', to: '/estimates', icon: FileText },
       { label: 'Invoices', to: '/invoices', icon: ReceiptText },
+      { label: 'Credit notes', to: '/credit-notes', icon: FileMinus },
       { label: 'Payments', to: '/payments', icon: WalletCards },
       { label: 'Delivery notes', to: '/delivery-notes', icon: Truck },
     ],

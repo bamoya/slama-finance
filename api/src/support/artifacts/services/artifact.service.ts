@@ -10,7 +10,7 @@ import type {
 } from '../repositories/artifact.repository.js'
 
 export type DocumentType =
-  'invoice' | 'estimate' | 'delivery_note' | 'report_run' | 'payment_receipt'
+  'invoice' | 'estimate' | 'delivery_note' | 'report_run' | 'payment_receipt' | 'credit_note'
 
 export interface ArtifactOwnerAccess {
   // Implemented by each business module. Must lock the owner while publishing.

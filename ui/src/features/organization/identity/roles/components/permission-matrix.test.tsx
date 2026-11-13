@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 
 import type { Permission } from '../../../../../api/generated/schemas/identity/rbac.schemas'
+import i18n from '../../../../../lib/i18n'
 import { PermissionMatrix } from './permission-matrix'
 
 it('renders one reporting permission without per-section or schedule rows', () => {
@@ -32,4 +33,25 @@ it('renders one reporting permission without per-section or schedule rows', () =
   fireEvent.click(within(row).getByRole('switch'))
   expect(onChange).toHaveBeenCalledWith(['reports.read'])
   expect(within(row).getAllByText('—')).toHaveLength(3)
+})
+
+it('labels the credit notes module in English and French', async () => {
+  const permissions = ['read', 'create', 'update', 'delete'].map((action) => ({
+    id: action,
+    key: `credit_notes.${action}`,
+    description: action,
+  })) as Permission[]
+  const props = {
+    permissions,
+    selected: [],
+    allowedKeys: permissions.map((item) => item.key),
+    disabled: false,
+    onChange: vi.fn(),
+  }
+  const { unmount } = render(<PermissionMatrix {...props} />)
+  expect(screen.getByRole('rowheader', { name: 'credit notes' })).toBeInTheDocument()
+  unmount()
+  await i18n.changeLanguage('fr')
+  render(<PermissionMatrix {...props} />)
+  expect(screen.getByRole('rowheader', { name: 'avoirs' })).toBeInTheDocument()
 })

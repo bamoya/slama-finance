@@ -30,6 +30,7 @@ writes recheck authorization inside transactions. No administrator-name bypass.
 | Products                        | `products.read/create/update/delete`                           |
 | Estimates                       | `estimates.read/create/update/delete`                          |
 | Invoices                        | `invoices.read/create/update/delete`                           |
+| Credit notes                    | `credit_notes.read/create/update/delete`; issue is Edit        |
 | Delivery notes                  | `delivery_notes.read/create/update/delete`                     |
 | Payments                        | `payments.read/create/update/delete`                           |
 | Notification rules              | `notification_rules.read/update`                               |
@@ -54,6 +55,11 @@ Slash notation abbreviates separate permission keys, not a wildcard.
   permanent payment deletion.
 - PDF regeneration does not change frozen business data. Download may rebuild an expired
   PDF cache without issuing or changing that document.
+
+Credit note creation additionally requires `invoices.read`. Invoice credit-note lists require
+`credit_notes.read` + `invoices.read`; creditable lines require `credit_notes.create` +
+`invoices.read`. Issue, draft editing and explicit PDF regeneration require `credit_notes.update`;
+PDF download requires `credit_notes.read`.
 
 ## Reports exception
 

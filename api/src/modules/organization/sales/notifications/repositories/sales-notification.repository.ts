@@ -249,7 +249,7 @@ export function createSalesNotificationRepository(database: () => Database) {
           and(
             cursor.invoice ? gt(invoices.id, cursor.invoice) : undefined,
             inArray(invoices.status, ['issued', 'sent']),
-            sql`${invoices.total} > coalesce((select sum(p.amount) from payments p where p.invoice_id=${invoices.id} and p.status='confirmed'),0)`,
+            sql`${invoices.total} - invoice_credited_total(${invoices.id}) > coalesce((select sum(p.amount) from payments p where p.invoice_id=${invoices.id} and p.status='confirmed'),0)`,
           ),
         )
         .orderBy(invoices.id)
@@ -269,7 +269,7 @@ export function createSalesNotificationRepository(database: () => Database) {
     },
     async outstanding(id: string, tx: Transaction) {
       const [row] = await tx.execute<{ amount: string }>(
-        sql`select (i.total-coalesce((select sum(p.amount) from payments p where p.invoice_id=i.id and p.status='confirmed'),0))::text as amount from invoices i where i.id=${id}::uuid`,
+        sql`select greatest(i.total-invoice_credited_total(i.id)-coalesce((select sum(p.amount) from payments p where p.invoice_id=i.id and p.status='confirmed'),0),0)::text as amount from invoices i where i.id=${id}::uuid`,
       )
       return row?.amount ?? '0'
     },

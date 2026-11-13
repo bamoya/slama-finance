@@ -110,6 +110,7 @@ const salesEnglish = {
   allPaymentStatuses: 'All payment states',
   unpaid: 'Unpaid',
   partial: 'Partially paid',
+  credited: 'Credited',
   paid: 'Paid',
   overdueOnly: 'Overdue only',
   actions: 'Actions',

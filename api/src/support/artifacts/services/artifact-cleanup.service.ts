@@ -18,7 +18,7 @@ export function createArtifactCleanupService(
       (item) =>
         item.key.startsWith(prefix) &&
         item.lastModified.getTime() <= now.getTime() - GRACE_MS &&
-        /^organizations\/[a-f0-9-]{36}\/artifacts\/(?:invoice|estimate|delivery_note|report_run|payment_receipt)\/[a-f0-9-]{36}\.(pdf|csv|xlsx)$/.test(
+        /^organizations\/[a-f0-9-]{36}\/artifacts\/(?:invoice|estimate|delivery_note|report_run|payment_receipt|credit_note)\/[a-f0-9-]{36}\.(pdf|csv|xlsx)$/.test(
           item.key,
         ),
     )

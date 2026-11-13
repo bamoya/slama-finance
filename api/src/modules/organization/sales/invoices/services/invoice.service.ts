@@ -413,6 +413,12 @@ export function createInvoiceService(
           throw new AppError(409, 'INVALID_STATUS', 'Only issued invoices can be cancelled.')
         if (!reason.trim())
           throw new AppError(400, 'CANCELLATION_REASON_REQUIRED', 'Enter a cancellation reason.')
+        if (await repo.hasIssuedCreditNotes(id, tx))
+          throw new AppError(
+            409,
+            'INVOICE_HAS_CREDIT_NOTES',
+            'An invoice with issued credit notes cannot be cancelled.',
+          )
         if (await repo.hasAllocations(id, tx))
           throw new AppError(
             409,

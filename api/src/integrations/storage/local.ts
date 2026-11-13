@@ -9,7 +9,7 @@ import type { ObjectStorage } from '../contracts.js'
 export function createLocalStorage(directory: string): ObjectStorage {
   const root = path.resolve(directory)
   const isArtifactKey = (key: string) =>
-    /^organizations\/[a-f0-9-]{36}\/artifacts\/(?:invoice|estimate|delivery_note|payment_receipt|report_run)\/[a-f0-9-]{36}\.pdf$/.test(
+    /^organizations\/[a-f0-9-]{36}\/artifacts\/(?:invoice|estimate|delivery_note|payment_receipt|credit_note|report_run)\/[a-f0-9-]{36}\.pdf$/.test(
       key,
     ) ||
     /^organizations\/[a-f0-9-]{36}\/artifacts\/report_run\/[a-f0-9-]{36}\.(csv|xlsx)$/.test(key)
@@ -57,7 +57,7 @@ export function createLocalStorage(directory: string): ObjectStorage {
         throw new AppError(400, 'INVALID_ASSET_KEY', 'Invalid listing prefix.')
       const entries = []
       const kinds = prefix.endsWith('/artifacts/')
-        ? ['invoice', 'estimate', 'delivery_note', 'payment_receipt', 'report_run']
+        ? ['invoice', 'estimate', 'delivery_note', 'payment_receipt', 'credit_note', 'report_run']
         : ['']
       for (const kind of kinds) {
         const directory = path.join(root, prefix, kind)

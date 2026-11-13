@@ -8,7 +8,7 @@ paths:
             name: documentType,
             in: path,
             required: true,
-            schema: { type: string, enum: [invoice, estimate, delivery_note, payment_receipt] },
+            schema: { type: string, enum: [invoice, estimate, delivery_note, payment_receipt, credit_note] },
           }
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:

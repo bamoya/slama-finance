@@ -1,3 +1,28 @@
+# Credit-note recovery COMPLETE — 2026-11-13
+
+All interrupted P2/P3 review corrections and two follow-up findings fixed; independent final recheck clear.
+Final pnpm check exit0; full isolated integration548pass/1skip across54files. Raw logs/reports:
+/tmp/slama-s6/recovery-1113/{check-final.log,integration.log,api-result.md,ui-result.md,review-result.md}.
+Common invoice locks cover cancel/credit/payment; zero-value quantities, monetary eligibility, UI VAT caps,
+own-credit-date reporting, net impact amounts and PDF update authorization corrected with regressions.
+All exhausted Claude and finished Codex worker/reviewer panes closed; coordinator w1:pW remains.
+No active runners. Base5cb09fc; entire credit-note delta still UNCOMMITTED. No push/deploy/devDB operation.
+Existing dev volume replacement remains operator-owned; no recovery browser rerun claimed.
+No further phase started. This completion checkpoint supersedes historical in-progress notes below.
+
+# Credit-note recovery underway — 2026-11-13
+
+User authorized Codex to finish interrupted Claude work and stop exhausted agents. Closed Claude panes
+w1:pQ, w1:pS, w1:pT. Current coordinator w1:pW. Herdr credit-api (Sol LOW, w1:pX) owns API/schema/contracts/
+reporting/permission fixes; credit-ui (Terra LOW, w1:pY) owns editor arithmetic/validation and UI tests.
+Task files and reports: /tmp/slama-s6/recovery-1113/. Source review: /tmp/slama-s6/review6.md.
+Base 5cb09fc; prior S2/S4 and S6 billing phases committed by Claude. Current organization-credit-note delta
+uncommitted. Initial gates before review: pnpm check API291/UI660; integration539 pass/1skip.
+Pending: P2 cancel/issue race + eight P3s, final gates and independent recheck. Never treat earlier gates as
+validation of recovery changes. Root owns final pnpm check and isolated localhost:55439 integration after
+both workers complete; no simultaneous full suites. Preserve all partial work, no development database ops.
+No commit/push authorized for recovery. This checkpoint supersedes historical handoff/pending notes below.
+
 # Primary coordination transferred to Claude — 2026-11-10
 
 User explicitly requested Claude take over now so Codex can stop. Herdr pane w1:pQ is the primary

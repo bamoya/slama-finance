@@ -1,3 +1,5 @@
+import '../../credit-notes/translations'
+
 import { Pencil, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -34,7 +36,7 @@ const sortValues = [
   'outstandingAmount',
 ] as const
 const sources = ['direct', 'estimate', 'delivery'] as const
-const paymentStates = ['unpaid', 'partial', 'paid'] as const
+const paymentStates = ['unpaid', 'partial', 'paid', 'credited'] as const
 const allowed = {
   status: ['', ...statusValues],
   sortBy: ['', ...sortValues],
@@ -48,6 +50,7 @@ export function InvoicesPage() {
   useUiLanguage()
 
   const { t } = useTranslation('sales')
+  const { t: tc } = useTranslation('creditNotes')
   const filters = useDocumentFilters(allowed)
   const { can } = useAuthorization()
   const canBulk = ['read', 'update', 'delete'].some((action) => can(`invoices.${action}`))
@@ -106,7 +109,29 @@ export function InvoicesPage() {
     },
     {
       title: t('outstandingAmount'),
-      render: (row) => `${displayNumber(row.outstandingAmount)} ${row.currency}`,
+      render: (row) => (
+        <span className="grid">
+          <span>
+            {displayNumber(row.outstandingAmount)} {row.currency}
+          </span>
+          {Number(row.creditedAmount) > 0 && (
+            <span className="text-xs text-[var(--muted)]">
+              {tc('creditedBadge', {
+                amount: displayNumber(row.creditedAmount),
+                currency: row.currency,
+              })}
+            </span>
+          )}
+          {Number(row.refundDueAmount) > 0 && (
+            <span className="text-xs font-semibold text-[var(--error-text)]">
+              {tc('refundDueBadge', {
+                amount: displayNumber(row.refundDueAmount),
+                currency: row.currency,
+              })}
+            </span>
+          )}
+        </span>
+      ),
       align: 'right',
     },
     {

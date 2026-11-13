@@ -1,0 +1,287 @@
+paths:
+  /api/v1/credit-notes:
+    get:
+      operationId: listCreditNotes
+      x-permissions: [credit_notes.read]
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [all, draft, issued], default: all } }
+        - { name: invoiceId, in: query, schema: { type: string, format: uuid } }
+        - { name: clientId, in: query, schema: { type: string, format: uuid } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          description: Credit note page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNotePage' }
+    post:
+      operationId: createCreditNote
+      x-permissions: [credit_notes.create, invoices.read]
+      description: Create a draft credit note against ONE issued or sent invoice. Each line credits a quantity (returns, at the invoice unit price) or an amount excluding VAT (price correction, discount) of an invoice line, never both. VAT rates and the issuer, client, appearance and bank snapshots are copied from the credited invoice, not from live data. The total credited by issued credit notes can never exceed the invoice HT, VAT and TTC (checked again at issue). 409 INVOICE_NOT_CREDITABLE for a draft or cancelled invoice, 409 CREDIT_EXCEEDS_INVOICE above the remaining creditable amount of a line.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreditNoteInput' }
+      responses:
+        '201':
+          description: Draft credit note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNote' }
+  /api/v1/credit-notes/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getCreditNote
+      x-permissions: [credit_notes.read]
+      responses:
+        '200':
+          description: Credit note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNote' }
+    patch:
+      operationId: updateCreditNote
+      x-permissions: [credit_notes.update]
+      description: Update a draft credit note (reason and lines). An issued credit note is immutable (409 INVALID_STATUS).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreditNoteUpdate' }
+      responses:
+        '200':
+          description: Updated draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNote' }
+    delete:
+      operationId: deleteCreditNote
+      x-permissions: [credit_notes.delete]
+      description: Permanently delete a draft credit note. A numbered (issued) credit note can never be deleted or cancelled; correct it with another invoice.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreditNoteVersion' }
+      responses:
+        '204': { description: 'Deleted draft' }
+  /api/v1/credit-notes/{id}/issue:
+    post:
+      operationId: issueCreditNote
+      x-permissions: [credit_notes.update]
+      description: Number and freeze a draft credit note (series AVO for a legal invoice, AVS for a simple invoice, gap-free per organization and year). The credited invoice must still be issued or sent and the remaining creditable amounts are re-checked under lock (409 CREDIT_EXCEEDS_INVOICE).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreditNoteVersion' }
+      responses:
+        '200':
+          description: Issued credit note
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNote' }
+  /api/v1/credit-notes/{id}/pdf:
+    post:
+      operationId: prepareCreditNotePdf
+      x-permissions: [credit_notes.update]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '202':
+          description: PDF preparation queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreditNotePdfJob' }
+  /api/v1/credit-notes/{id}/artifacts:
+    get:
+      operationId: listCreditNoteArtifacts
+      x-permissions: [credit_notes.read]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: Stored PDFs
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CreditNoteArtifact' } }
+  /api/v1/invoices/{id}/credit-notes:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listInvoiceCreditNotes
+      x-permissions: [credit_notes.read, invoices.read]
+      description: Draft and issued credit notes of one invoice, newest first.
+      responses:
+        '200':
+          description: Credit notes of the invoice
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CreditNote' } }
+  /api/v1/invoices/{id}/creditable-lines:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getInvoiceCreditableLines
+      x-permissions: [credit_notes.create, invoices.read]
+      description: Remaining creditable quantity and amounts (HT, VAT, TTC) per invoice line, after the issued credit notes. Empty remaining amounts for an invoice that cannot be credited.
+      responses:
+        '200':
+          description: Creditable lines
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvoiceCreditableLines' }
+components:
+  schemas:
+    CreditNoteVersion:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties: { expectedVersion: { type: integer, minimum: 1 } }
+    CreditNoteLineInput:
+      type: object
+      additionalProperties: false
+      required: [invoiceLineId]
+      properties:
+        invoiceLineId: { type: string, format: uuid }
+        quantity:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 1000000
+          description: Units credited at the invoice unit price. Exactly one of quantity and amount is required.
+        amount:
+          type: [string, 'null']
+          pattern: '^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$'
+          description: Amount excluding VAT credited on the line (price correction or discount); the VAT follows the line rate. Exactly one of quantity and amount is required.
+    CreditNoteInput:
+      type: object
+      additionalProperties: false
+      required: [invoiceId, reason, lines]
+      properties:
+        invoiceId: { type: string, format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/CreditNoteLineInput' }
+    CreditNoteUpdate:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason, lines]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/CreditNoteLineInput' }
+    CreditNoteLine:
+      type: object
+      additionalProperties: false
+      required: [id, position, invoiceLineId, productName, productReference, quantity, unitPrice, vatRate, netAmount, taxAmount, totalAmount]
+      properties:
+        id: { type: string, format: uuid }
+        position: { type: integer }
+        invoiceLineId: { type: string, format: uuid }
+        productName: { type: string }
+        productReference: { type: [string, 'null'] }
+        quantity: { type: integer, description: 'Credited units; 0 for an amount-only correction.' }
+        unitPrice: { type: string }
+        vatRate: { type: [string, 'null'] }
+        netAmount: { type: string }
+        taxAmount: { type: string }
+        totalAmount: { type: string }
+    CreditNote:
+      type: object
+      additionalProperties: false
+      required:
+        [id, number, status, kind, invoiceId, invoiceNumber, invoiceIssueDate, clientId, clientDisplayName, currency, locale, reason, issueDate, issuedAt, subtotal, taxTotal, total, version, contentVersion, lines, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: [string, 'null'] }
+        status: { type: string, enum: [draft, issued] }
+        kind:
+          type: string
+          enum: [simple, legal]
+          description: Inherited from the credited invoice. legal = AVO series; simple = AVS series (not a legal tax document).
+        invoiceId: { type: string, format: uuid }
+        invoiceNumber: { type: string }
+        invoiceIssueDate: { type: string, format: date }
+        clientId: { type: [string, 'null'], format: uuid }
+        clientDisplayName: { type: string }
+        currency: { type: string }
+        locale: { type: string }
+        reason: { type: string }
+        issueDate: { type: [string, 'null'], format: date }
+        issuedAt: { type: [string, 'null'], format: date-time }
+        subtotal: { type: string }
+        taxTotal: { type: string }
+        total: { type: string }
+        version: { type: integer }
+        contentVersion: { type: integer }
+        lines: { type: array, items: { $ref: '#/components/schemas/CreditNoteLine' } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreditNotePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CreditNote' } }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    CreditNotePdfJob:
+      type: object
+      additionalProperties: false
+      required: [jobId, status]
+      properties:
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
+    CreditNoteArtifact:
+      type: object
+      additionalProperties: false
+      required: [id, sourceVersion, format, byteSize, generatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sourceVersion: { type: integer }
+        format: { type: string, enum: [pdf] }
+        byteSize: { type: integer }
+        generatedAt: { type: string, format: date-time }
+    InvoiceCreditableLine:
+      type: object
+      additionalProperties: false
+      required: [invoiceLineId, position, productName, productReference, vatRate, unitPrice, quantity, netAmount, taxAmount, totalAmount, creditedQuantity, creditedNetAmount, creditedTaxAmount, creditedTotalAmount, remainingQuantity, remainingNetAmount, remainingTaxAmount, remainingTotalAmount]
+      properties:
+        invoiceLineId: { type: string, format: uuid }
+        position: { type: integer }
+        productName: { type: string }
+        productReference: { type: [string, 'null'] }
+        vatRate: { type: [string, 'null'] }
+        unitPrice: { type: string }
+        quantity: { type: integer }
+        netAmount: { type: string }
+        taxAmount: { type: string }
+        totalAmount: { type: string }
+        creditedQuantity: { type: integer }
+        creditedNetAmount: { type: string }
+        creditedTaxAmount: { type: string }
+        creditedTotalAmount: { type: string }
+        remainingQuantity: { type: integer }
+        remainingNetAmount: { type: string }
+        remainingTaxAmount: { type: string }
+        remainingTotalAmount: { type: string }
+    InvoiceCreditableLines:
+      type: object
+      additionalProperties: false
+      required: [invoiceId, invoiceNumber, currency, creditable, creditedAmount, remainingAmount, lines]
+      properties:
+        invoiceId: { type: string, format: uuid }
+        invoiceNumber: { type: string }
+        currency: { type: string }
+        creditable: { type: boolean, description: 'False for a draft or cancelled invoice or when nothing remains.' }
+        creditedAmount: { type: string, description: 'TTC already credited by issued credit notes.' }
+        remainingAmount: { type: string, description: 'TTC still creditable.' }
+        lines: { type: array, items: { $ref: '#/components/schemas/InvoiceCreditableLine' } }

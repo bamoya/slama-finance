@@ -23,18 +23,25 @@ export async function enrichReportRows(
     ids.map((id) => sql`${id}::uuid`),
     sql`, `,
   )
-  const client = (alias: 'i' | 'e' | 'd') =>
+  const client = (alias: 'i' | 'e' | 'd' | 'c') =>
     sql.raw(
       `coalesce(nullif(${alias}.client_snapshot->>'tradeName',''),nullif(${alias}.client_snapshot->>'legalName',''),nullif(concat_ws(' ',${alias}.client_snapshot->>'firstName',${alias}.client_snapshot->>'lastName'),''),'Client')`,
     )
   let details: Record<string, unknown>[] = []
   if (
     ['revenue', 'vat', 'outstanding', 'overdue'].includes(key) ||
-    rows[0]?.resource === 'invoices'
+    rows.some((row) => row.resource === 'invoices')
   ) {
     details = await tx.execute(
-      sql`select i.id::text as id, ${client('i')} as "clientName",i.due_date::text as "dueDate",i.total::text as gross,coalesce(p.paid,0)::text as collected,(i.total-coalesce(p.paid,0))::text as balance from invoices i left join lateral(select sum(amount) as paid from payments where invoice_id=i.id and status='confirmed') p on true where i.id in (${list})`,
+      sql`select i.id::text as id, ${client('i')} as "clientName",i.due_date::text as "dueDate",(i.total-invoice_credited_total(i.id))::text as gross,coalesce(p.paid,0)::text as collected,greatest(i.total-invoice_credited_total(i.id)-coalesce(p.paid,0),0)::text as balance from invoices i left join lateral(select sum(amount) as paid from payments where invoice_id=i.id and status='confirmed') p on true where i.id in (${list})`,
     )
+    // Credit note rows (booked in the period of their own issue date) carry the client and the credited invoice.
+    if (key === 'revenue' || key === 'vat' || key === 'sales_by_client')
+      details = details.concat(
+        await tx.execute(
+          sql`select c.id::text as id, ${client('c')} as "clientName", c.invoice_number as "invoiceNumber" from credit_notes c where c.id in (${list})`,
+        ),
+      )
   } else if (['collections', 'pending_cheques', 'payment_methods'].includes(key)) {
     details = await tx.execute(
       sql`select m.id::text as id,${client('i')} as "clientName",i.number as "invoiceNumber",m.method,coalesce(m.cheque_number,m.reference) as reference from payments m join invoices i on i.id=m.invoice_id where m.id in (${list})`,
@@ -45,12 +52,12 @@ export async function enrichReportRows(
     )
   } else if (key === 'estimates') {
     details = await tx.execute(
-      sql`select e.id::text as id,${client('e')} as "clientName",e.total::text as amount from estimates e where e.id in (${list}) union all select i.id::text as id,${client('i')} as "clientName",i.total::text as amount from invoices i where i.id in (${list})`,
+      sql`select e.id::text as id,${client('e')} as "clientName",e.total::text as amount from estimates e where e.id in (${list}) union all select i.id::text as id,${client('i')} as "clientName",(i.total-invoice_credited_total(i.id))::text as amount from invoices i where i.id in (${list})`,
     )
   }
   if (key === 'sales_by_client' && !rows[0]?.resource) {
     details = await tx.execute(
-      sql`select i.client_id::text as id,i.currency,coalesce(sum(p.paid),0)::text as collected,sum(i.total-coalesce(p.paid,0))::text as balance from invoices i left join lateral(select sum(amount) as paid from payments where invoice_id=i.id and status='confirmed') p on true where i.client_id in (${list}) and i.status in ('issued','sent') and i.issue_date>=${filters.from}::date and i.issue_date<=${filters.to}::date group by i.client_id,i.currency`,
+      sql`select i.client_id::text as id,i.currency,coalesce(sum(p.paid),0)::text as collected,sum(greatest(i.total-invoice_credited_total(i.id)-coalesce(p.paid,0),0))::text as balance from invoices i left join lateral(select sum(amount) as paid from payments where invoice_id=i.id and status='confirmed') p on true where i.client_id in (${list}) and i.status in ('issued','sent') and i.issue_date>=${filters.from}::date and i.issue_date<=${filters.to}::date group by i.client_id,i.currency`,
     )
   }
   const map = new Map(details.map((row) => [`${row.id}:${row.currency ?? ''}`, row]))
@@ -72,6 +79,7 @@ export async function enrichReportRows(
     return {
       ...row,
       ...detail,
+      ...(key === 'sales_by_client' && row.resource ? { gross: row.gross } : {}),
       ...(['outstanding', 'overdue'].includes(key) && row.date
         ? {
             daysOverdue: Math.max(

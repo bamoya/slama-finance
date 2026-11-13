@@ -2684,6 +2684,72 @@ export const french: Record<string, string> = {
   'Balance due': 'Solde dû',
   'Refund due': 'Remboursement dû',
   'Credit note': 'Avoir',
+  'Credit notes': 'Avoirs',
+  'Refund due to client': 'Remboursement à effectuer',
+  'credit notes': 'avoirs',
+  'Draft credit note': 'Avoir brouillon',
+  'Correct issued invoices with credit notes: returns, discounts and price corrections.':
+    'Corrigez les factures émises avec des avoirs : retours, remises et corrections de prix.',
+  'Create credit note': 'Créer un avoir',
+  'Edit credit note': 'Modifier l’avoir',
+  'Back to credit notes': 'Retour aux avoirs',
+  'Search number, invoice or client': 'Rechercher un numéro, une facture ou un client',
+  'No credit notes found': 'Aucun avoir trouvé',
+  'Corrects invoice N° {{number}}': 'Corrige la facture N° {{number}}',
+  'Simple credit note': 'Avoir simple',
+  'This document is not a legal tax credit note.': 'Ce document n’est pas un avoir fiscal légal.',
+  'Explain why this credit note is issued (required, 1000 characters maximum).':
+    'Expliquez pourquoi cet avoir est émis (obligatoire, 1000 caractères maximum).',
+  'Credited lines': 'Lignes créditées',
+  'Amount excl. VAT': 'Montant HT',
+  'Total incl. VAT': 'Total TTC',
+  'Total excl. VAT': 'Total HT',
+  'Issuing assigns the legal number and freezes this credit note. It can no longer be edited, deleted or cancelled.':
+    'L’émission attribue le numéro légal et fige cet avoir. Il ne pourra plus être modifié, supprimé ni annulé.',
+  'This permanently deletes the draft credit note. This cannot be undone.':
+    'Cette action supprime définitivement l’avoir brouillon. Elle est irréversible.',
+  'Save and issue': 'Enregistrer et émettre',
+  'Invoice lines to credit': 'Lignes de facture à créditer',
+  'Select the lines to correct. Credit a quantity (return, at the invoice unit price) or an amount excluding VAT (discount, price correction), never both.':
+    'Sélectionnez les lignes à corriger. Créditez une quantité (retour, au prix unitaire de la facture) ou un montant HT (remise, correction de prix), jamais les deux.',
+  'Credit line {{name}}': 'Créditer la ligne {{name}}',
+  'Credit mode for {{name}}': 'Mode de crédit pour {{name}}',
+  'Quantity to credit for {{name}}': 'Quantité à créditer pour {{name}}',
+  'Amount excl. VAT to credit for {{name}}': 'Montant HT à créditer pour {{name}}',
+  'Remaining: {{quantity}} units, {{amount}} {{currency}} excl. VAT':
+    'Reste : {{quantity}} unités, {{amount}} {{currency}} HT',
+  'This invoice cannot be credited (nothing remains or it is not issued).':
+    'Cette facture ne peut pas être créditée (rien ne reste à créditer ou elle n’est pas émise).',
+  'Enter a whole quantity of at most {{max}}.': 'Saisissez une quantité entière d’au plus {{max}}.',
+  'Enter an amount greater than zero, at most {{max}}.':
+    'Saisissez un montant supérieur à zéro, d’au plus {{max}}.',
+  'Select at least one line to credit.': 'Sélectionnez au moins une ligne à créditer.',
+  'Enter the reason for this credit note.': 'Saisissez le motif de cet avoir.',
+  Totals: 'Totaux',
+  'Estimated preview; final totals are computed when you save.':
+    'Aperçu estimé ; les totaux définitifs sont calculés à l’enregistrement.',
+  'No credit notes for this invoice.': 'Aucun avoir pour cette facture.',
+  'View credit note': 'Voir l’avoir',
+  'Credited amount': 'Montant crédité',
+  'Net amount': 'Montant net',
+  'Net due': 'Net à payer',
+  'Confirmed payments exceed the net amount after credit notes. This is reported only: refunds are not automated and recorded payments are unchanged.':
+    'Les paiements confirmés dépassent le montant net après avoirs. Cette information est indicative : les remboursements ne sont pas automatisés et les paiements enregistrés restent inchangés.',
+  Credited: 'Crédité',
+  'Credited {{amount}} {{currency}}': 'Crédité {{amount}} {{currency}}',
+  'Refund due {{amount}} {{currency}}': 'Remboursement à effectuer {{amount}} {{currency}}',
+  'The credited amount exceeds what remains creditable on this invoice. Reload and adjust the lines.':
+    'Le montant crédité dépasse ce qu’il reste à créditer sur cette facture. Rechargez la page et ajustez les lignes.',
+  'This invoice can no longer be credited. It must be issued or sent with an amount remaining.':
+    'Cette facture ne peut plus être créditée. Elle doit être émise ou envoyée avec un montant restant.',
+  'One of the credited lines is invalid. Check the quantities and amounts.':
+    'Une des lignes créditées est invalide. Vérifiez les quantités et les montants.',
+  'This credit note is already issued and can no longer be changed.':
+    'Cet avoir est déjà émis et ne peut plus être modifié.',
+  'This credit note was changed elsewhere. Reload the page and try again.':
+    'Cet avoir a été modifié ailleurs. Rechargez la page puis réessayez.',
+  'Created {{value}}': 'Créé le {{value}}',
+  'Reference: {{id}}': 'Référence : {{id}}',
   Balance: 'Solde',
   'Corrects {{number}}': 'Corrige {{number}}',
   'No invoices yet.': 'Aucune facture pour le moment.',

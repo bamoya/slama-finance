@@ -6,7 +6,7 @@ import { queueTime } from '../../../lib/queue-time.js'
 import type { BackgroundJob, createJobRepository } from '../repositories/job.repository.js'
 
 export interface PreparePdfPayload {
-  documentType: 'invoice' | 'estimate' | 'delivery_note' | 'report_run'
+  documentType: 'invoice' | 'estimate' | 'delivery_note' | 'report_run' | 'credit_note'
   documentId: string
   sourceVersion: number
 }
@@ -27,7 +27,9 @@ const canonical = (value: unknown): string =>
 
 function validPayload(value: PreparePdfPayload) {
   if (
-    !['invoice', 'estimate', 'delivery_note', 'report_run'].includes(value.documentType) ||
+    !['invoice', 'estimate', 'delivery_note', 'report_run', 'credit_note'].includes(
+      value.documentType,
+    ) ||
     !UUID.test(value.documentId) ||
     !Number.isInteger(value.sourceVersion) ||
     value.sourceVersion < 1

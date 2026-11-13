@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Plus, Send, Truck } from 'lucide-react'
+import { ArrowLeft, Download, FileMinus, Pencil, Plus, Send, Truck } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useParams } from 'wouter'
@@ -13,10 +13,12 @@ import { Button, buttonVariants } from '../../../../../components/ui/button'
 import { displayDateTime } from '../../../../../lib/dates'
 import { translate, useUiLanguage } from '../../../../../lib/i18n'
 import { displayNumber } from '../../../../../lib/number-format'
-import { Can } from '../../../identity'
+import { Can, useAuthorization } from '../../../identity'
 import { DocumentPaymentSummary } from '../../components/document-payment-summary'
 import { RegeneratePdfDialog } from '../../components/regenerate-pdf-dialog'
 import { SalesDeletionDialog } from '../../components/sales-deletion-dialog'
+import { InvoiceCreditNotes } from '../../credit-notes/components/invoice-credit-notes'
+import { useInvoiceCreditableLines } from '../../credit-notes/queries'
 import { useDeliveryActions } from '../../delivery-notes/queries'
 import { DocumentNotificationHistory } from '../../notifications/components/document-notification-history'
 import { SendDocumentDialog } from '../../notifications/components/send-document-dialog'
@@ -33,10 +35,21 @@ export function InvoiceDetailPage() {
   useUiLanguage()
 
   const { t } = useTranslation('sales')
+  const { t: tc } = useTranslation('creditNotes')
   const { documentId = '' } = useParams<{ documentId: string }>()
   const [, navigate] = useLocation()
   const cache = useQueryClient()
   const invoice = useInvoice(documentId)
+  const { can } = useAuthorization()
+  const creditable = useInvoiceCreditableLines(
+    documentId,
+    Boolean(
+      invoice.data &&
+      ['issued', 'sent'].includes(invoice.data.status) &&
+      can('credit_notes.create') &&
+      can('invoices.read'),
+    ),
+  )
   const artifacts = useInvoiceArtifacts(
     documentId,
     Boolean(invoice.data && invoice.data.status !== 'draft'),
@@ -122,6 +135,16 @@ export function InvoiceDetailPage() {
                   className={buttonVariants({})}
                 >
                   <Plus size={16} /> {t('recordPayment')}
+                </Link>
+              </Can>
+            )}
+            {['issued', 'sent'].includes(row.status) && creditable.data?.creditable && (
+              <Can permission={['credit_notes.create', 'invoices.read']}>
+                <Link
+                  href={`/credit-notes/new?invoiceId=${row.id}`}
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  <FileMinus size={16} /> {tc('newCreditNote')}
                 </Link>
               </Can>
             )}
@@ -265,6 +288,7 @@ export function InvoiceDetailPage() {
             </div>
           </section>
           <InvoicePaymentHistory invoice={row} />
+          <InvoiceCreditNotes invoiceId={row.id} />
         </div>
         <div className="grid content-start gap-section">
           <InvoiceBalance invoice={row} />

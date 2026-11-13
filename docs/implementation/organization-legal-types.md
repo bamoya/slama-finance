@@ -95,4 +95,4 @@ proposal PENDING ACCOUNTANT CONFIRMATION**; nothing here is accounting or legal 
 
 - Accountant to confirm field sets, wording, and whether TP/capital must print.
 - The invoice line editor still offers VAT rates for exempt companies; the API refuses them with a clear error.
-- Credit notes for the finance product are out of scope (2c).
+- Credit notes are specified in [organization credit notes](organization-credit-notes.md) (2c).

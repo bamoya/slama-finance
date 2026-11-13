@@ -34,6 +34,12 @@ export function createInvoiceCancellationService(
       assertVersion(row.version, item.expectedVersion)
       if (!['issued', 'sent'].includes(row.status))
         throw new AppError(409, 'INVALID_STATUS', 'Every selected invoice must be issued.')
+      if (await invoices.hasIssuedCreditNotes(row.id, tx))
+        throw new AppError(
+          409,
+          'INVOICE_HAS_CREDIT_NOTES',
+          'An invoice with issued credit notes cannot be cancelled.',
+        )
       roots.push(row)
       for (const id of await invoices.relatedDeliveryNoteIds(row.id, tx)) noteIds.add(id)
     }

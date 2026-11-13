@@ -51,7 +51,7 @@ paths:
         - {
             name: paymentStatus,
             in: query,
-            schema: { type: string, enum: [all, unpaid, partial, paid], default: all },
+            schema: { type: string, enum: [all, unpaid, partial, paid, credited], default: all },
           }
         - { name: overdue, in: query, schema: { type: boolean } }
         - {
@@ -349,6 +349,11 @@ components:
           pendingAmount,
           outstandingAmount,
           availableBalance,
+          creditedAmount,
+          netAmount,
+          refundDueAmount,
+          creditableAmount,
+          creditNoteCount,
           paymentStatus,
           overdue,
           version,
@@ -404,9 +409,14 @@ components:
         total: { type: string }
         paidAmount: { type: string }
         pendingAmount: { type: string }
-        outstandingAmount: { type: string }
-        availableBalance: { type: string }
-        paymentStatus: { type: string, enum: [unpaid, partial, paid] }
+        outstandingAmount: { type: string, description: 'Net amount due = total minus issued credit notes minus confirmed payments, never negative.' }
+        availableBalance: { type: string, description: 'Net amount due minus pending payments, never negative; payments cannot exceed it.' }
+        creditedAmount: { type: string, description: 'TTC total of the issued credit notes of this invoice.' }
+        netAmount: { type: string, description: 'Invoice total minus issued credit notes (TTC).' }
+        refundDueAmount: { type: string, description: 'Confirmed payments above the net amount (surplus after credit notes). Reported only; refunds are not automated and confirmed payments never change.' }
+        creditableAmount: { type: string, description: 'TTC still creditable by new credit notes; zero unless the invoice is issued or sent.' }
+        creditNoteCount: { type: integer, description: 'Number of issued credit notes.' }
+        paymentStatus: { type: string, enum: [unpaid, partial, paid, credited], description: 'credited = fully credited with no confirmed payment (nothing due). paid = net amount settled, possibly with a refund due.' }
         overdue: { type: boolean }
         version: { type: integer }
         contentVersion: { type: integer }

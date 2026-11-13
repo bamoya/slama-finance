@@ -1,6 +1,7 @@
 import { and, eq, lte, or, sql } from 'drizzle-orm'
 
 import { products } from '../../../../../db/schema/catalog.js'
+import { creditNotes } from '../../../../../db/schema/credit-notes.js'
 import { deliveryNotes } from '../../../../../db/schema/delivery-notes.js'
 import { estimates } from '../../../../../db/schema/estimates.js'
 import { invoices } from '../../../../../db/schema/invoices.js'
@@ -22,7 +23,7 @@ export function createMediaRepository(database: () => Database) {
     storageKey: (path: string) => tenantObjectKey(database(), path),
     transaction: <T>(work: (tx: Transaction) => Promise<T>) => database().transaction(work),
     async documentAppearance(
-      type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt',
+      type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt' | 'credit_note',
       id: string,
       version: number,
       tx: Transaction,
@@ -54,7 +55,7 @@ export function createMediaRepository(database: () => Database) {
           templateId: saved.templateId,
         }
       }
-      const table = type === 'invoice' ? invoices : estimates
+      const table = type === 'invoice' ? invoices : type === 'credit_note' ? creditNotes : estimates
       const [row] =
         type === 'payment_receipt'
           ? [receipt]
@@ -144,6 +145,7 @@ export function createMediaRepository(database: () => Database) {
         .limit(1)
       const documentRefs =
         await tx.execute(sql`select 1 from invoices where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
+        union all select 1 from credit_notes where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
         union all select 1 from estimates where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
         union all select 1 from delivery_notes where appearance_snapshot->>'logoAssetId' = ${id} or appearance_snapshot->>'signatureAssetId' = ${id}
         union all select 1 from payments where receipt_snapshot->'appearance'->>'logoAssetId' = ${id} or receipt_snapshot->'appearance'->>'signatureAssetId' = ${id} limit 1`)

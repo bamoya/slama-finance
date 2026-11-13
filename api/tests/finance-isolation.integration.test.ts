@@ -60,13 +60,13 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
     await fixture?.cleanup()
   })
 
-  it('forces RLS and required organization scope across all 38 organization tables', async () => {
+  it('forces RLS and required organization scope across all 40 organization tables', async () => {
     const rows =
       await fixture.client`select c.relname,c.relrowsecurity,c.relforcerowsecurity,a.attnotnull
       from pg_class c join pg_attribute a on a.attrelid=c.oid and a.attname='organization_id'
       join pg_policy p on p.polrelid=c.oid and p.polname='tenant_isolation'
       where c.relnamespace=(select oid from pg_namespace where nspname=current_schema())`
-    expect(rows).toHaveLength(38)
+    expect(rows).toHaveLength(40)
     for (const row of rows) {
       expect(row.relrowsecurity, row.relname).toBe(true)
       expect(row.relforcerowsecurity, row.relname).toBe(true)
@@ -146,7 +146,7 @@ describe('Finance tenant isolation under the non-bypass runtime role', () => {
     await expect(aForeignStorage()).rejects.toMatchObject({ code: '23514' })
     const guards =
       await fixture.client`select count(*)::int n from pg_constraint where conname like 'tenant_fk_%' and connamespace=(select oid from pg_namespace where nspname=current_schema())`
-    expect(guards[0]!.n).toBe(50)
+    expect(guards[0]!.n).toBe(54)
   })
 
   it('checks credentials and permissions against the selected organization for every HTTP request', async () => {

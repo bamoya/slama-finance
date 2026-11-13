@@ -30,7 +30,9 @@ export type InvoiceRow = typeof invoices.$inferSelect
 export type InvoiceLineRow = typeof invoiceLines.$inferSelect
 type ListFilters = Omit<ListInvoicesQuery, 'page' | 'pageSize'>
 const paidSql = sql<number>`coalesce((select sum(p.amount) from payments p where p.invoice_id = ${invoices.id} and p.status = 'confirmed'), 0)`
-const outstandingSql = sql<number>`case when ${invoices.status} in ('issued','sent') then greatest(${invoices.total} - ${paidSql}, 0) else 0 end`
+// Credit notes reduce the amount due: net = total - issued credit notes; payments never change.
+const netSql = sql<number>`(${invoices.total} - invoice_credited_total(${invoices.id}))`
+const outstandingSql = sql<number>`case when ${invoices.status} in ('issued','sent') then greatest(${netSql} - ${paidSql}, 0) else 0 end`
 const clientNameSql = documentClientNameSql(invoices.clientSnapshot)
 
 export function createInvoiceRepository(database: () => Database) {
@@ -99,6 +101,12 @@ export function createInvoiceRepository(database: () => Database) {
             sql`, `,
           )})`,
         )
+    },
+    async hasIssuedCreditNotes(id: string, tx: Transaction) {
+      const result = await tx.execute(
+        sql`select 1 from credit_notes where invoice_id = ${id} and status = 'issued' limit 1`,
+      )
+      return result.length > 0
     },
     async hasActivePayments(id: string, tx: Transaction) {
       const result = await tx.execute(
@@ -328,13 +336,16 @@ export function createInvoiceRepository(database: () => Database) {
           ? and(isNull(invoices.sourceEstimateId), isNull(invoices.conversionOperationId))
           : undefined,
         filters.paymentStatus === 'paid'
-          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} > 0 and ${paidSql} >= ${invoices.total}`
+          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} > 0 and ${paidSql} >= ${netSql}`
           : undefined,
         filters.paymentStatus === 'partial'
-          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} > 0 and ${paidSql} < ${invoices.total}`
+          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} > 0 and ${paidSql} < ${netSql}`
           : undefined,
         filters.paymentStatus === 'unpaid'
-          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} = 0`
+          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} = 0 and not (${netSql} <= 0 and invoice_credited_total(${invoices.id}) > 0)`
+          : undefined,
+        filters.paymentStatus === 'credited'
+          ? sql`${invoices.status} in ('issued','sent') and ${paidSql} = 0 and ${netSql} <= 0 and invoice_credited_total(${invoices.id}) > 0`
           : undefined,
         filters.overdue === true
           ? sql`${invoices.status} in ('issued','sent') and ${invoices.dueDate} < ${today} and ${outstandingSql} > 0`

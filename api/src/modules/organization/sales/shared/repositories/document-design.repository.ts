@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 
+import { creditNotes } from '../../../../../../db/schema/credit-notes.js'
 import { deliveryNotes } from '../../../../../../db/schema/delivery-notes.js'
 import { estimates } from '../../../../../../db/schema/estimates.js'
 import { invoices } from '../../../../../../db/schema/invoices.js'
@@ -18,7 +19,7 @@ export interface RenderedDesign {
 /** Called in the same transaction as artifact replacement: failed renders never change the owner. */
 export async function saveDocumentDesign(
   tx: Transaction,
-  type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt',
+  type: 'invoice' | 'estimate' | 'delivery_note' | 'payment_receipt' | 'credit_note',
   id: string,
   actor: string,
   design: RenderedDesign,
@@ -50,7 +51,14 @@ export async function saveDocumentDesign(
     if (!asset || asset.status !== 'ready' || asset.purpose !== purpose)
       throw new AppError(409, 'MEDIA_NOT_FOUND', 'Document image changed during regeneration.')
   }
-  const table = type === 'invoice' ? invoices : type === 'estimate' ? estimates : deliveryNotes
+  const table =
+    type === 'invoice'
+      ? invoices
+      : type === 'estimate'
+        ? estimates
+        : type === 'credit_note'
+          ? creditNotes
+          : deliveryNotes
   if (type === 'payment_receipt') {
     await tx
       .update(payments)

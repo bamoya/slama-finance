@@ -23,8 +23,8 @@ type Filters = Omit<ListClientsQuery, 'page' | 'pageSize' | 'q'> & { q: string }
 const displayNameSql = sql<string>`coalesce(${clients.legalName}, concat_ws(' ', ${clients.firstName}, ${clients.lastName}))`
 const financeSql = (kind: 'invoiced' | 'outstanding') =>
   kind === 'invoiced'
-    ? sql<number>`coalesce((select sum(i.total) from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1)),0)`
-    : sql<number>`coalesce((select sum(greatest(i.total - coalesce((select sum(p.amount) from payments p where p.invoice_id = i.id and p.status = 'confirmed'),0),0)) from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1)),0)`
+    ? sql<number>`coalesce((select sum(i.total - invoice_credited_total(i.id)) from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1)),0)`
+    : sql<number>`coalesce((select sum(greatest(i.total - invoice_credited_total(i.id) - coalesce((select sum(p.amount) from payments p where p.invoice_id = i.id and p.status = 'confirmed'),0),0)) from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1)),0)`
 const lastActivitySql = sql<Date | null>`(select max(activity_at) from (select max(e.created_at) as activity_at from estimates e where e.client_id = clients.id union all select max(d.created_at) from delivery_notes d where d.client_id = clients.id union all select max(i.created_at) from invoices i where i.client_id = clients.id union all select max(p.created_at) from payments p join invoices i on p.invoice_id = i.id where i.client_id = clients.id) activities)`
 
 export function createClientRepository(database: () => Database) {
@@ -80,7 +80,7 @@ export function createClientRepository(database: () => Database) {
           ? sql`${financeSql('outstanding')} <= ${filters.balanceMax}::numeric`
           : undefined,
         filters.overdueOnly
-          ? sql`exists (select 1 from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1) and i.due_date < ${todaySql} and i.total > coalesce((select sum(p.amount) from payments p where p.invoice_id = i.id and p.status = 'confirmed'),0))`
+          ? sql`exists (select 1 from invoices i where i.client_id = clients.id and i.status in ('issued','sent') and i.currency = (select currency from company_settings where id = 1) and i.due_date < ${todaySql} and i.total - invoice_credited_total(i.id) > coalesce((select sum(p.amount) from payments p where p.invoice_id = i.id and p.status = 'confirmed'),0))`
           : undefined,
         filters.lastActivityFrom
           ? sql`${lastActivitySql} >= ${filters.lastActivityFrom}::date`
@@ -148,10 +148,10 @@ export function createClientRepository(database: () => Database) {
       const todaySql = sql`${companyDate(new Date(), company?.timezone)}::date`
       const result = await database().execute(sql`
         select i.client_id as "clientId", i.currency,
-          sum(i.total)::text as "invoicedAmount",
+          sum(i.total-invoice_credited_total(i.id))::text as "invoicedAmount",
           sum(coalesce(p.paid,0))::text as "receivedAmount",
-          sum(greatest(i.total-coalesce(p.paid,0),0))::text as "outstandingAmount",
-          sum(case when i.due_date < ${todaySql} then greatest(i.total-coalesce(p.paid,0),0) else 0 end)::text as "overdueAmount"
+          sum(greatest(i.total-invoice_credited_total(i.id)-coalesce(p.paid,0),0))::text as "outstandingAmount",
+          sum(case when i.due_date < ${todaySql} then greatest(i.total-invoice_credited_total(i.id)-coalesce(p.paid,0),0) else 0 end)::text as "overdueAmount"
         from invoices i
         left join lateral (select sum(amount) paid from payments where invoice_id = i.id and status = 'confirmed') p on true
         where i.client_id in (${sql.join(

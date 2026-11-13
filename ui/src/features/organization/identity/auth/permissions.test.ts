@@ -8,6 +8,7 @@ describe('sales route permissions', () => {
     ['/estimates', 'estimates'],
     ['/delivery-notes', 'delivery_notes'],
     ['/payments', 'payments'],
+    ['/credit-notes', 'credit_notes'],
   ])('protects %s list, detail and creation', (path, resource) => {
     expect(canAccessRoute([], path)).toBe(false)
     expect(canAccessRoute([`${resource}.read`], `${path}/record`)).toBe(true)
@@ -22,6 +23,26 @@ describe('sales route permissions', () => {
       true,
     )
     expect(canAccessRoute(['delivery_notes.read'], '/delivery-notes/source/convert')).toBe(false)
+  })
+})
+describe('credit note routes', () => {
+  it('requires credit_notes.read for the list and detail', () => {
+    expect(canAccessRoute([], '/credit-notes')).toBe(false)
+    expect(canAccessRoute(['invoices.read'], '/credit-notes/id')).toBe(false)
+    expect(canAccessRoute(['credit_notes.read'], '/credit-notes')).toBe(true)
+  })
+  it('requires create and invoices.read for the editor on a new credit note', () => {
+    const path = '/credit-notes/new'
+    expect(canAccessRoute(['credit_notes.read', 'credit_notes.create'], path)).toBe(false)
+    expect(canAccessRoute(['credit_notes.read', 'invoices.read'], path)).toBe(false)
+    expect(
+      canAccessRoute(['credit_notes.read', 'credit_notes.create', 'invoices.read'], path),
+    ).toBe(true)
+  })
+  it('requires update to edit a draft', () => {
+    const path = '/credit-notes/id/edit'
+    expect(canAccessRoute(['credit_notes.read'], path)).toBe(false)
+    expect(canAccessRoute(['credit_notes.read', 'credit_notes.update'], path)).toBe(true)
   })
 })
 describe('reporting and notification routes', () => {

@@ -1,5 +1,17 @@
 # Subscription redesign progress
 
+## Current credit-note recovery — 2026-11-13
+
+S2/S4 and subsequent billing/invoice foundations were committed by Claude through `5cb09fc`.
+The organization credit-note implementation and interrupted review fixes are now complete locally and remain
+uncommitted. Fixed cancellation/payment races, zero-value returns and credit eligibility, HT/VAT remainders,
+own-issue-period reporting, net impact amounts and PDF permission alignment. Independent final recheck found
+no actionable issue in scope. Final `pnpm check` passed; full isolated integration: **548 passed, 1 skipped,
+54 files**. Evidence: `/tmp/slama-s6/recovery-1113/`. No development database reset, deployment, commit or
+push was performed during recovery. See [credit notes](../organization-credit-notes.md) for remaining scope.
+
+Older counts and pending status below are historical.
+
 CI portability correction: fixed calendar assertions use historical November 2025 instants, avoiding an assumed
 UTC+1 offset in November 2026 that differs between Node timezone-data releases. The original CI failure was
 reproduced under Node 22.23.4/tzdata 2026e; patched override tests pass 9/9 under both tested Node versions with
